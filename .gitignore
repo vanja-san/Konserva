@@ -1,7 +1,7 @@
-## Build results
-publish/
+# Build results
 bin/
 obj/
+publish/
 *.exe
 *.dll
 *.deps.json
@@ -15,19 +15,8 @@ obj/
 *.userosscache
 *.suo.user
 
-# Publish profiles (contains absolute paths)
+# Publish profiles (contain absolute paths)
 konserva-app/Properties/PublishProfiles/
-
-# Build scripts
-*.bat
-*.ps1
-!build-publish.bat
-!build-publish-portable.bat
-
-# Encoding fix scripts
-fix-encoding*.ps1
-fix-russian-text.ps1
-update-encoding.ps1
 
 # User settings
 .qwen/settings.json.orig
@@ -35,10 +24,24 @@ update-encoding.ps1
 # Logs
 *.log
 Logs/
+TestResults/
+*coverage*.json
+coverage*.xml
 
-# Test builds
-publish/test_*/
-publish/portable_test/
+# Test artifacts
+TestResults/
+coverage*.json
+coverage*.xml
 
 # GitHub Actions temp files
 CHANGELOG_RELEASE.md
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# JetBrains Rider
+.idea/
+
+# VS Code
+.vscode/

@@ -1,233 +1,233 @@
-# Konserva — Менеджер серверов Minecraft
+# Konserva — Minecraft Server Manager
 
-**Konserva** — это современное приложение для управления локальными серверами Minecraft с поддержкой всех популярных модлоадеров.
-
----
-
-## 📋 Возможности
-
-### Управление серверами
-- ✅ Создание и удаление серверов
-- ✅ Запуск и остановка серверов в один клик
-- ✅ Автоматическая установка серверов (Vanilla, Fabric, Forge, NeoForge, Paper, Purpur)
-- ✅ Поддержка нескольких версий Minecraft одновременно
-- ✅ Авто-рестарт серверов после сбоя
-
-### Консоль и мониторинг
-- ✅ Встроенная консоль сервера с логами
-- ✅ Отправка команд на сервер
-- ✅ Мониторинг статуса сервера в реальном времени
-- ✅ Статистика использования ресурсов (RAM)
-
-### Настройки и конфигурация
-- ✅ GUI-редактор server.properties
-- ✅ Настройка выделения памяти (Min/Max RAM)
-- ✅ Управление портом сервера
-- ✅ Настройка авто-запуска
-
-### Управление модами и плагинами
-- ✅ Просмотр установленных модов
-- ✅ Просмотр установленных плагинов
-- ✅ Удаление модов и плагинов через интерфейс
-- ✅ Открытие папок с модами/плагинами
-
-### Система Java
-- ✅ Автоматическое определение установленных Java
-- ✅ Поддержка нескольких версий Java одновременно
-- ✅ Автоматический подбор совместимой Java для версии Minecraft
-- ✅ Ручное добавление путей к Java
+**Konserva** is a modern application for managing local Minecraft servers with support for all popular mod loaders.
 
 ---
 
-## 🖥️ Системные требования
+## 📋 Features
 
-### Минимальные
-- **ОС**: Windows 10 (версия 1903 или новее)
-- **Процессор**: 1.5 ГГц
-- **ОЗУ**: 2 ГБ (для приложения)
-- **Место на диске**: 200 МБ (для приложения)
-- **.NET**: Не требуется (встроено в приложение)
+### Server Management
+- ✅ Create and delete servers
+- ✅ Start and stop servers with one click
+- ✅ Automatic server installation (Vanilla, Fabric, Forge, NeoForge, Paper, Purpur)
+- ✅ Support for multiple Minecraft versions simultaneously
+- ✅ Auto-restart servers after crash
 
-### Рекомендуемые
-- **ОС**: Windows 11
-- **Процессор**: 2.0 ГГц или выше
-- **ОЗУ**: 4 ГБ или больше
-- **Место на диске**: 500 МБ
+### Console and Monitoring
+- ✅ Built-in server console with logs
+- ✅ Send commands to server
+- ✅ Real-time server status monitoring
+- ✅ Resource usage statistics (RAM)
 
-### Для серверов Minecraft
-| Версия Minecraft | Мин. RAM | Рек. RAM | Требуется Java |
+### Settings and Configuration
+- ✅ GUI editor for server.properties
+- ✅ Memory allocation settings (Min/Max RAM)
+- ✅ Server port management
+- ✅ Auto-start configuration
+
+### Mods and Plugins Management
+- ✅ View installed mods
+- ✅ View installed plugins
+- ✅ Delete mods and plugins via interface
+- ✅ Open mods/plugins folders
+
+### Java System
+- ✅ Automatic detection of installed Java versions
+- ✅ Support for multiple Java versions simultaneously
+- ✅ Automatic selection of compatible Java for Minecraft version
+- ✅ Manual Java path addition
+
+---
+
+## 🖥️ System Requirements
+
+### Minimum
+- **OS**: Windows 10 (version 1903 or later)
+- **Processor**: 1.5 GHz
+- **RAM**: 2 GB (for application)
+- **Storage**: 200 MB (for application)
+- **.NET**: Not required (built into application)
+
+### Recommended
+- **OS**: Windows 11
+- **Processor**: 2.0 GHz or higher
+- **RAM**: 4 GB or more
+- **Storage**: 500 MB
+
+### For Minecraft Servers
+| Minecraft Version | Min RAM | Rec RAM | Java Required |
 |-----------------|----------|----------|----------------|
-| 1.20.5+ | 2 ГБ | 4 ГБ | Java 21 |
-| 1.18–1.20.4 | 2 ГБ | 4 ГБ | Java 17 |
-| 1.17 | 1 ГБ | 2 ГБ | Java 16 |
-| 1.16 и ниже | 512 МБ | 1 ГБ | Java 8 |
+| 1.20.5+ | 2 GB | 4 GB | Java 21 |
+| 1.18–1.20.4 | 2 GB | 4 GB | Java 17 |
+| 1.17 | 1 GB | 2 GB | Java 16 |
+| 1.16 and below | 512 MB | 1 GB | Java 8 |
 
 ---
 
-## 📦 Установка
+## 📦 Installation
 
-### Быстрый старт
-1. Скачайте `Konserva.exe` из папки `publish`
-2. Запустите файл двойным кликом
-3. Приложение готово к работе!
+### Quick Start
+1. Download `Konserva.exe` from release
+2. Run the file with double-click
+3. Application is ready to use!
 
-**Важно**: Установка не требуется. Приложение автономное (self-contained).
+**Important**: No installation required. The application is self-contained.
 
-### Расположение данных
-Все данные приложения хранятся в:
+### Data Location
+All application data is stored in:
 ```
 %AppData%\Konserva\
 ```
 
-Структура папок:
+Folder structure:
 ```
 %AppData%\Konserva\
-├── config.json          # Конфигурация приложения
-├── servers.json         # Список серверов
-├── Servers\             # Папки серверов
+├── config.json          # Application configuration
+├── servers.json         # Server list
+├── Servers\             # Server folders
 │   ├── server-name-1\
 │   └── server-name-2\
-└── Logs\                # Логи приложения
-    └── logs-ДД.ММ.ГГ-ЧЧ.ММ.log
+└── Logs\                # Application logs
+    └── logs-DD.MM.YY-HH.MM.log
 ```
 
 ---
 
-## 🚀 Начало работы
+## 🚀 Getting Started
 
-### Создание первого сервера
+### Creating Your First Server
 
-1. **Запустите Konserva**
-2. **Перейдите на вкладку "Серверы"** (открывается по умолчанию)
-3. **Нажмите кнопку "+"** (Создать сервер)
-4. **Заполните параметры**:
-   - **Название**: Имя сервера (например, "My Server")
-   - **Версия Minecraft**: Выберите из списка
-   - **Модлоадер**: Vanilla, Fabric, Forge, NeoForge, Paper, Purpur
-   - **Папка**: Выберите расположение (по умолчанию: `%AppData%\Konserva\Servers`)
-5. **Нажмите "Создать"**
-6. **Дождитесь установки** (от 30 сек до 2 мин в зависимости от версии)
-7. **Запустите сервер** кнопкой ▶
+1. **Launch Konserva**
+2. **Go to "Servers" tab** (opens by default)
+3. **Click "+" button** (Create Server)
+4. **Fill in parameters**:
+   - **Name**: Server name (e.g., "My Server")
+   - **Minecraft Version**: Select from list
+   - **Mod Loader**: Vanilla, Fabric, Forge, NeoForge, Paper, Purpur
+   - **Folder**: Choose location (default: `%AppData%\Konserva\Servers`)
+5. **Click "Create"**
+6. **Wait for installation** (30 sec to 2 min depending on version)
+7. **Start server** with ▶ button
 
-### Первый запуск сервера
+### First Server Launch
 
-При первом запуске сервера:
-1. Дождитесь сообщения `Done (...)! For help, type "help"`
-2. Сервер готов к подключению
-3. По умолчанию порт: **25565**
+On first server launch:
+1. Wait for message `Done (...)! For help, type "help"`
+2. Server is ready for connections
+3. Default port: **25565**
 
-**Важно**: При остановке сервера **во время загрузки** (до сообщения `Done`) применяется принудительное завершение процесса. После полной загрузки используется корректная остановка командой `stop`.
-
----
-
-## ⚙️ Настройка сервера
-
-### Выделение памяти
-
-1. Откройте страницу сервера (кнопка ⚙️ в списке серверов)
-2. Перейдите на вкладку **"Настройки"**
-3. Измените параметры:
-   - **Min RAM**: Минимальный объем памяти (рекомендуется: 1024 МБ)
-   - **Max RAM**: Максимальный объем памяти (рекомендуется: 4096 МБ)
-4. Нажмите **"Сохранить"**
-
-**Рекомендации по RAM**:
-- Ванильный сервер: 2–4 ГБ
-- С модами (до 50): 4–6 ГБ
-- С модами (50+): 6–8 ГБ
-
-### Авто-рестарт
-
-1. Откройте вкладку **"Настройки"** сервера
-2. Включите **"Авто-рестарт"**
-3. Укажите задержку в секундах (по умолчанию: 10 сек)
+**Important**: When stopping server **during startup** (before `Done` message), force kill is applied. After full startup, graceful shutdown with `stop` command is used.
 
 ---
 
-## 🔧 Управление модами и плагинами
+## ⚙️ Server Configuration
 
-### Установка модов (Fabric/Forge)
+### Memory Allocation
 
-1. Откройте страницу сервера
-2. Перейдите на вкладку **"Моды"**
-3. Нажмите **"Папка mods"**
-4. Скопируйте `.jar` файлы модов в папку
-5. Обновите список (кнопка ⟳)
-6. Перезапустите сервер
+1. Open server page (⚙️ button in server list)
+2. Go to **"Settings"** tab
+3. Change parameters:
+   - **Min RAM**: Minimum memory (recommended: 1024 MB)
+   - **Max RAM**: Maximum memory (recommended: 4096 MB)
+4. Click **"Save"**
 
-### Установка плагинов (Paper/Spigot/Purpur)
+**RAM Recommendations**:
+- Vanilla server: 2–4 GB
+- With mods (up to 50): 4–6 GB
+- With mods (50+): 6–8 GB
 
-1. Откройте страницу сервера
-2. Перейдите на вкладку **"Плагины"**
-3. Нажмите **"Папка plugins"**
-4. Скопируйте `.jar` файлы плагинов в папку
-5. Обновите список (кнопка ⟳)
-6. Перезапустите сервер
+### Auto-Restart
 
-### Удаление модов/плагинов
-
-1. Откройте вкладку **"Моды"** или **"Плагины"**
-2. Найдите нужный элемент в списке
-3. Нажмите кнопку **🗑️** (Удалить)
-4. Подтвердите удаление
-5. Перезапустите сервер
+1. Open server **"Settings"** tab
+2. Enable **"Auto-Restart"**
+3. Set delay in seconds (default: 10 sec)
 
 ---
 
-## 🛠️ Настройка Java
+## 🔧 Mods and Plugins Management
 
-### Автоматический подбор Java
+### Installing Mods (Fabric/Forge/NeoForge)
 
-Приложение автоматически:
-- Находит установленные версии Java в системе
-- Подбирает совместимую версию для Minecraft
-- Использует Java по умолчанию
+1. Open server page
+2. Go to **"Mods"** tab
+3. Click **"mods folder"**
+4. Copy `.jar` mod files to folder
+5. Refresh list (⟳ button)
+6. Restart server
 
-### Ручное добавление Java
+### Installing Plugins (Paper/Spigot/Purpur)
 
-1. Перейдите в **"Настройки"** → **"Управление Java"**
-2. Нажмите **"Добавить Java"**
-3. Укажите путь к `java.exe` (например, `C:\Program Files\Java\jdk-17\bin\java.exe`)
-4. Нажмите **"Добавить"**
-5. При необходимости выберите как Java по умолчанию
+1. Open server page
+2. Go to **"Plugins"** tab
+3. Click **"plugins folder"**
+4. Copy `.jar` plugin files to folder
+5. Refresh list (⟳ button)
+6. Restart server
 
-### Смена Java для сервера
+### Deleting Mods/Plugins
 
-1. Откройте страницу сервера
-2. Перейдите на вкладку **"Настройки"**
-3. В разделе **"Java"** выберите нужную версию
-4. Нажмите **"Сохранить"**
-
----
-
-## 📊 Редактор server.properties
-
-Для редактирования настроек сервера:
-
-1. Откройте страницу сервера
-2. Перейдите на вкладку **"Свойства"**
-3. Измените нужные параметры в GUI
-4. Нажмите **"Сохранить"**
-
-**Доступные категории**:
-- **Основные**: Порт, макс. игроков, режим игры
-- **Мир**: Тип мира, сложность, генерация
-- **Сеть**: Whitelist, онлайн-режим, защита
-- **Производительность**: View distance, симуляция
-- **Геймплей**: Спавн мобов, животных, NPC
+1. Open **"Mods"** or **"Plugins"** tab
+2. Find needed element in list
+3. Click **🗑️** (Delete) button
+4. Confirm deletion
+5. Restart server
 
 ---
 
-## 🔍 Поиск и фильтры
+## 🛠️ Java Configuration
 
-### Поиск серверов
+### Automatic Java Selection
 
-В поле поиска введите название сервера (частичное совпадение работает).
+Application automatically:
+- Finds installed Java versions on system
+- Selects compatible version for Minecraft
+- Uses default Java
 
-### Фильтры
+### Manual Java Addition
 
-**По типу модлоадера**:
-- Все типы
+1. Go to **"Settings"** → **"Java Management"**
+2. Click **"Add Java"**
+3. Specify path to `java.exe` (e.g., `C:\Program Files\Java\jdk-17\bin\java.exe`)
+4. Click **"Add"**
+5. Select as default Java if needed
+
+### Changing Java for Server
+
+1. Open server page
+2. Go to **"Settings"** tab
+3. In **"Java"** section, select needed version
+4. Click **"Save"**
+
+---
+
+## 📊 server.properties Editor
+
+To edit server settings:
+
+1. Open server page
+2. Go to **"Properties"** tab
+3. Change needed parameters in GUI
+4. Click **"Save"**
+
+**Available categories**:
+- **Main**: Port, max players, game mode
+- **World**: World type, difficulty, generation
+- **Network**: Whitelist, online mode, protection
+- **Performance**: View distance, simulation
+- **Gameplay**: Mob spawning, animals, NPCs
+
+---
+
+## 🔍 Search and Filters
+
+### Server Search
+
+Enter server name in search field (partial match works).
+
+### Filters
+
+**By mod loader type**:
+- All types
 - Vanilla
 - Fabric
 - Forge
@@ -236,254 +236,135 @@
 - Spigot
 - Purpur
 
-**По статусу**:
-- Все серверы
-- Запущен (🟢)
-- Остановлен (⚫)
+**By status**:
+- All servers
+- Running (🟢)
+- Stopped (⚫)
 
 ---
 
-## ⌨️ Горячие клавиши
+## ⌨️ Hotkeys
 
-| Действие | Клавиша |
+| Action | Key |
 |----------|---------|
-| Запуск/Остановка сервера | Кнопка в интерфейсе |
-| Открыть папку сервера | Кнопка 📁 |
-| Настройки сервера | Кнопка ⚙️ |
-| Удалить сервер | Кнопка 🗑️ |
-| Отправить команду | Enter в поле консоли |
+| Start/Stop server | Button in interface |
+| Open server folder | 📁 button |
+| Server settings | ⚙️ button |
+| Delete server | 🗑️ button |
+| Send command | Enter in console field |
 
 ---
 
-## 📝 Логи приложения
+## 📝 Application Logs
 
-Логи работы приложения сохраняются в:
+Application logs are saved to:
 ```
-%AppData%\Konserva\Logs\logs-ДД.ММ.ГГ-ЧЧ.ММ.log
-```
-
-**Формат имени**: `logs-день.месяц.год-часы.минуты.log`
-
-Каждая сессия создаёт новый файл лога. Старые логи не удаляются автоматически.
-
----
-
-## ❓ Частые вопросы
-
-### Сервер не запускается
-
-**Проблема**: Ошибка при запуске сервера
-
-**Решение**:
-1. Проверьте логи в консоли приложения
-2. Убедитесь, что Java установлена и настроена
-3. Проверьте совместимость версии Java и Minecraft
-4. Убедитесь, что порт 25565 не занят другим сервером
-
-### Ошибка "EULA не принята"
-
-**Проблема**: Сервер требует принятия EULA
-
-**Решение**:
-1. Откройте файл `%AppData%\Konserva\Servers\<имя_сервера>\eula.txt`
-2. Измените `eula=false` на `eula=true`
-3. Сохраните файл
-4. Запустите сервер снова
-
-### Сервер зависает при остановке
-
-**Проблема**: Долгая остановка сервера
-
-**Решение**:
-- Если сервер ещё загружается (нет сообщения `Done`) — остановка мгновенная
-- Если сервер загружен — используется корректная остановка (до 30 сек)
-- При таймауте применяется принудительное завершение
-
-### Недостаточно памяти
-
-**Проблема**: Ошибка `OutOfMemoryError`
-
-**Решение**:
-1. Откройте настройки сервера
-2. Увеличьте **Max RAM**
-3. Убедитесь, что на системе достаточно свободной памяти
-4. Закройте другие ресурсоёмкие приложения
-
----
-
-## 📞 Поддержка
-
-При возникновении проблем:
-
-1. Проверьте логи приложения в `%AppData%\Konserva\Logs\`
-2. Проверьте логи сервера в папке сервера (`logs/`)
-3. Убедитесь, что системные требования соответствуют
-4. Попробуйте перезапустить приложение
-
----
-
-## 🛠️ Сборка
-
-### Локальная сборка
-
-Для сборки приложения вам потребуется:
-- **.NET 10 SDK** (или новее)
-- **Windows 10/11 x64**
-
-#### Варианты сборки
-
-**1. Self-contained (Full версия) — ~66 MB**
-- Один исполняемый файл
-- Не требует установленного .NET
-- Рекомендуется для распространения
-
-```bash
-# Запустить .bat файл
-build-publish.bat
-
-# Или через командную строку
-dotnet publish konserva-app\konserva-app.csproj ^
-  --configuration Release ^
-  --runtime win-x64 ^
-  --self-contained true ^
-  -p:PublishSingleFile=true ^
-  -p:EnableCompressionInSingleFile=true ^
-  -o publish\Full
+%AppData%\Konserva\Logs\logs-DD.MM.YY-HH.MM.log
 ```
 
-**2. Portable версия — ~3 MB**
-- Один исполняемый файл
-- Требует .NET 10 Runtime
-- Подходит для тестирования
+**Name format**: `logs-day.month.year-hours.minutes.log`
 
-```bash
-# Запустить .bat файл
-build-publish-portable.bat
-
-# Или через командную строку
-dotnet publish konserva-app\konserva-app.csproj ^
-  --configuration Release ^
-  --runtime win-x64 ^
-  --self-contained false ^
-  -p:PublishSingleFile=true ^
-  -o publish\Portable
-```
-
-### Сборка через GitHub Actions
-
-1. Перейдите на вкладку **Actions** в репозитории
-2. Выберите workflow **"Build Release"**
-3. Нажмите **"Run workflow"**
-4. Укажите параметры:
-   - **Version number**: Номер версии (например, `1.0.1`)
-   - **Create GitHub Release**: Создать релиз (опционально)
-   - **Generate changelog**: Авто-генерация changelog из коммитов (опционально)
-5. После завершения сборки скачайте артефакты:
-   - `Konserva-vX.X.X-Full.zip` — полная версия (~66 MB)
-   - `Konserva-vX.X.X-Portable.zip` — портативная версия (~3 MB)
-
-**Примечание**: Если включена опция "Create GitHub Release", то будет создан релиз на GitHub с описанием изменений между последней версией и текущей.
-
-### Сравнение версий
-
-| Параметр | Full | Portable |
-|----------|------|----------|
-| Размер | ~66 MB | ~3 MB |
-| Файлов | 1 | 1 |
-| .NET Runtime | Встроен | Требуется |
-| Рекомендуется | Для пользователей | Для разработки |
+Each session creates a new log file. Old logs are not automatically deleted.
 
 ---
 
-## 🛠️ Сборка
+## ❓ FAQ
 
-### Локальная сборка
+### Server won't start
 
-Для сборки приложения вам потребуется:
-- **.NET 10 SDK** (или новее)
-- **Windows 10/11 x64**
+**Problem**: Error on server startup
 
-#### Варианты сборки
+**Solution**:
+1. Check logs in application console
+2. Ensure Java is installed and configured
+3. Check Java and Minecraft version compatibility
+4. Ensure port 25565 is not occupied by another server
 
-**1. Full версия (Self-contained) — ~66 MB**
-- Один исполняемый файл
-- Не требует установленного .NET
-- Рекомендуется для распространения
+### "EULA not accepted" error
 
-```bash
-# Запустить .bat файл
-build-publish.bat
+**Problem**: Server requires EULA acceptance
 
-# Или через командную строку
-dotnet publish konserva-app\konserva-app.csproj ^
-  --configuration Release ^
-  --runtime win-x64 ^
-  --self-contained true ^
-  -p:PublishSingleFile=true ^
-  -p:EnableCompressionInSingleFile=true ^
-  -p:IncludeNativeLibrariesForSelfExtract=true ^
-  -o publish\Full
-```
+**Solution**:
+1. Open file `%AppData%\Konserva\Servers\<server_name>\eula.txt`
+2. Change `eula=false` to `eula=true`
+3. Save file
+4. Start server again
 
-**2. Portable версия (Single file) — ~3 MB**
-- Один исполняемый файл
-- Требует .NET 10 Runtime
-- Подходит для тестирования
+### Server freezes on stop
 
-```bash
-# Запустить .bat файл
-build-publish-portable.bat
+**Problem**: Long server shutdown
 
-# Или через pubxml профиль
-dotnet publish konserva-app\konserva-app.csproj /p:PublishProfile=Portable
-```
+**Solution**:
+- If server is still loading (no `Done` message) — instant stop
+- If server is loaded — graceful shutdown (up to 30 sec)
+- On timeout — force kill is applied
 
-### Сборка через GitHub Actions
+### Out of memory
 
-1. Перейдите на вкладку **Actions** в репозитории
-2. Выберите workflow **"Build Release"**
-3. Нажмите **"Run workflow"**
-4. Укажите параметры:
-   - **Version number**: Номер версии (например, `1.0.1`)
-   - **Create GitHub Release**: Создать релиз (опционально)
-   - **Generate changelog**: Авто-генерация changelog из коммитов (опционально)
-5. После завершения сборки скачайте артефакты:
-   - `Konserva-vX.X.X-Full.zip` — полная версия (~66 MB)
-   - `Konserva-vX.X.X-Portable.zip` — портативная версия (~3 MB)
+**Problem**: `OutOfMemoryError`
 
-**Примечание**: Если включена опция "Create GitHub Release", то будет создан релиз на GitHub с описанием изменений между последней версией и текущей.
-
-### Сравнение версий
-
-| Параметр | Full | Portable |
-|----------|------|----------|
-| Размер | ~66 MB | ~3 MB |
-| Файлов | 1 | 1 |
-| .NET Runtime | Встроен | Требуется |
-| Рекомендуется | Для пользователей | Для разработки |
+**Solution**:
+1. Open server settings
+2. Increase **Max RAM**
+3. Ensure system has enough free memory
+4. Close other resource-intensive applications
 
 ---
 
-## 📄 Лицензия
+## 📞 Support
 
-Konserva распространяется как бесплатное ПО для личного использования.
+If problems occur:
 
----
-
-## 🔄 Обновление
-
-Для обновления приложения:
-
-1. Скачайте новую версию `Konserva.exe`
-2. Закройте текущую версию приложения
-3. Замените старый файл новым
-4. Запустите обновлённую версию
-
-**Важно**: Конфигурация и серверы сохраняются между обновлениями.
+1. Check application logs in `%AppData%\Konserva\Logs\`
+2. Check server logs in server folder (`logs/`)
+3. Ensure system requirements are met
+4. Try restarting application
 
 ---
 
-**Версия приложения**: 1.2.0
-**Дата обновления**: 2026-04-01
-**Платформа**: Windows x64
-**Размер**: ~62 MB (Full), ~3 MB (Deps)
+## 🔄 Update
+
+To update application:
+
+1. Download new version `Konserva.exe`
+2. Close current application version
+3. Replace old file with new one
+4. Launch updated version
+
+**Important**: Configuration and servers are preserved between updates.
+
+---
+
+## 📄 License
+
+Konserva is distributed as free software for personal use.
+
+---
+
+## ⚠️ Disclaimer
+
+Konserva is an unofficial third-party tool and is not affiliated with or endorsed by Mojang Studios, Microsoft, or any Minecraft server developers. Use at your own risk. The application is provided "as is" without warranty of any kind.
+
+**Important Notes**:
+- Always backup your server data before using any management tool
+- The developers are not responsible for data loss or server corruption
+- Minecraft server files and EULA are property of Mojang Studios
+
+---
+
+## 🙏 Special Thanks
+
+This project was created with the assistance of **Qwen Code** — an AI-powered coding assistant by Alibaba Cloud.
+
+🔗 [Qwen Code](https://github.com/QwenLM/qwen-code)
+
+---
+
+**Application Version**: 1.2.0
+**Update Date**: 2026-04-01
+**Platform**: Windows x64
+**Size**: ~66 MB (Full), ~3 MB (Portable)
+
+📖 **Build Instructions**: See [BUILD.md](BUILD.md)
+
+🇷🇺 **Русская версия**: См. [README.ru.md](README.ru.md)
