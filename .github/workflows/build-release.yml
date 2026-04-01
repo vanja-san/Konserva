@@ -80,7 +80,7 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true `
           -p:DebugType=none `
           -p:DebugSymbols=false `
-          -o "publish/Full"
+          -o "konserva-app/bin/Release/net10.0-windows/publish/Full"
       shell: pwsh
 
     - name: Build Portable (Single file, ~3 MB, requires .NET)
@@ -91,15 +91,15 @@ jobs:
     - name: Copy README to builds
       run: |
         if (Test-Path README.md) {
-          Copy-Item README.md publish/Full/
-          Copy-Item README.md publish/Portable/
+          Copy-Item README.md konserva-app/bin/Release/net10.0-windows/publish/Full/
+          Copy-Item README.md konserva-app/bin/Release/net10.0-windows/publish/Portable/
         }
       shell: pwsh
 
     - name: Create Full archive (Self-contained, no dependencies)
       run: |
         $archiveName = "Konserva-v${{ inputs.version }}-Full.zip"
-        Compress-Archive -Path publish/Full/* -DestinationPath $archiveName -Force
+        Compress-Archive -Path "konserva-app/bin/Release/net10.0-windows/publish/Full/*" -DestinationPath $archiveName -Force
         Write-Host "Created: $archiveName"
         Get-Item $archiveName | Select-Object Name, Length
       shell: pwsh
@@ -107,7 +107,7 @@ jobs:
     - name: Create Deps archive (Single file, requires .NET 10)
       run: |
         $archiveName = "Konserva-v${{ inputs.version }}-Deps.zip"
-        Compress-Archive -Path publish/Portable/* -DestinationPath $archiveName -Force
+        Compress-Archive -Path "konserva-app/bin/Release/net10.0-windows/publish/Portable/*" -DestinationPath $archiveName -Force
         Write-Host "Created: $archiveName"
         Get-Item $archiveName | Select-Object Name, Length
       shell: pwsh

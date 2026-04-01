@@ -15,9 +15,6 @@ publish/
 *.userosscache
 *.suo.user
 
-# Publish profiles (contain absolute paths)
-konserva-app/Properties/PublishProfiles/
-
 # User settings
 .qwen/settings.json.orig
 
