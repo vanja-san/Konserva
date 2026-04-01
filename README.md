@@ -243,31 +243,6 @@ Enter server name in search field (partial match works).
 
 ---
 
-## ⌨️ Hotkeys
-
-| Action | Key |
-|----------|---------|
-| Start/Stop server | Button in interface |
-| Open server folder | 📁 button |
-| Server settings | ⚙️ button |
-| Delete server | 🗑️ button |
-| Send command | Enter in console field |
-
----
-
-## 📝 Application Logs
-
-Application logs are saved to:
-```
-%AppData%\Konserva\Logs\logs-DD.MM.YY-HH.MM.log
-```
-
-**Name format**: `logs-day.month.year-hours.minutes.log`
-
-Each session creates a new log file. Old logs are not automatically deleted.
-
----
-
 ## ❓ FAQ
 
 ### Server won't start
@@ -319,19 +294,6 @@ If problems occur:
 2. Check server logs in server folder (`logs/`)
 3. Ensure system requirements are met
 4. Try restarting application
-
----
-
-## 🔄 Update
-
-To update application:
-
-1. Download new version `Konserva.exe`
-2. Close current application version
-3. Replace old file with new one
-4. Launch updated version
-
-**Important**: Configuration and servers are preserved between updates.
 
 ---
 
