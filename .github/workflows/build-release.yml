@@ -55,35 +55,25 @@ jobs:
       run: |
         $previousTag = "${{ steps.previous_tag.outputs.tag }}"
         $outputFile = "CHANGELOG_RELEASE.md"
+        $compareUrl = ""
         
         if ($previousTag) {
           Write-Host "Generating changelog from $previousTag to HEAD"
           $commits = git log "$previousTag..HEAD" --pretty=format:"%s" --reverse
+          $compareUrl = "https://github.com/${{ github.repository }}/compare/$previousTag...v${{ inputs.version }}"
         } else {
           Write-Host "Generating changelog for all commits (initial release)"
           $commits = git log --pretty=format:"%s" --reverse
+          $compareUrl = "https://github.com/${{ github.repository }}/commits/v${{ inputs.version }}"
         }
         
         # Start changelog file
-        $changelog = "## Changes in v`${{ inputs.version }}`n`n"
+        $changelog = ""
         
-        if ($commits) {
-          foreach ($commit in $commits) {
-            # Skip merge commits, version bumps, and non-user-facing changes
-            if ($commit -notmatch "^Merge" `
-                -and $commit -notmatch "^Bump version" `
-                -and $commit -notmatch "^(chore|refactor|test|ci|build|style|perf):") {
-              $changelog += "- $commit`n"
-            }
-          }
-        }
-        
-        if ([string]::IsNullOrWhiteSpace($changelog.Trim())) {
-          $changelog += "- No user-facing changes recorded`n"
-        }
+        # Add full changelog link
+        $changelog += "**📋 [FULL CHANGELOG]($compareUrl)**`n`n"
         
         # Add file description section
-        $changelog += "`n---`n`n"
         $changelog += "## 📦 Файлы для скачивания`n`n"
         $changelog += "**Konserva-v`${{ inputs.version }}-Full.zip** (~62 MB)`n"
         $changelog += "- ✅ Всё включено (self-contained)`n"
@@ -103,7 +93,6 @@ jobs:
         Write-Host "Changelog generated successfully!"
         Write-Host "---"
         Get-Content $outputFile -Raw
-      shell: pwsh
 
     - name: Restore dependencies
       run: dotnet restore konserva-app/konserva-app.csproj
