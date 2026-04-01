@@ -37,8 +37,8 @@ jobs:
       if: inputs.create_release == true && inputs.generate_changelog == true
       id: last_tag
       run: |
-        $lastTag = git describe --tags --abbrev=0 2>$null
-        if ($lastTag) {
+        $lastTag = git describe --tags --abbrev=0 2>&1
+        if ($LASTEXITCODE -eq 0 -and $lastTag) {
           Write-Host "Last tag: $lastTag"
           echo "tag=$lastTag" >> $env:GITHUB_OUTPUT
         } else {
@@ -46,6 +46,7 @@ jobs:
           echo "tag=" >> $env:GITHUB_OUTPUT
         }
       shell: pwsh
+      continue-on-error: false
 
     - name: Generate changelog
       if: inputs.create_release == true && inputs.generate_changelog == true
