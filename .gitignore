@@ -27,6 +27,9 @@ Logs/
 TestResults/
 *coverage*.json
 coverage*.xml
+build-log.txt
+e2e-build-log.txt
+test-output*.txt
 
 # Test artifacts
 TestResults/
