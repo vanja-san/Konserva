@@ -1,6 +1,8 @@
 # Konserva — Minecraft Server Manager
 
-**Konserva** is a modern application for managing local Minecraft servers with support for all popular mod loaders.
+**Konserva** is a simple and user‑friendly graphical tool for creating, configuring, and running local Minecraft servers on Windows. The name is a blend of "**con**sole" and "**serv**er", reflecting the idea of a single interface that preserves your settings and world — everything is "canned" and ready to go.
+
+The utility eliminates the need to manually edit configuration files or use the command line. All server management tasks are performed through a unified dashboard.
 
 ---
 
@@ -299,7 +301,7 @@ If problems occur:
 
 ## 📄 License
 
-Konserva is distributed as free software for personal use.
+This project is licensed under the **MIT License** - see the [LICENSE.txt](LICENSE.txt) file for details.
 
 ---
 
