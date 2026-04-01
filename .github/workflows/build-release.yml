@@ -34,44 +34,17 @@ jobs:
       with:
         dotnet-version: '10.0.x'
 
-    - name: Get Previous Tag
-      id: previous_tag
-      shell: pwsh
-      run: |
-        # Try to get previous tag from HEAD^ (parent commit)
-        $previousTag = git describe --tags --abbrev=0 HEAD^ 2>$null
-        
-        if ($previousTag) {
-          Write-Host "Previous tag: $previousTag"
-          echo "tag=$previousTag" >> $env:GITHUB_OUTPUT
-        } else {
-          Write-Host "No previous tag found, will use all commits"
-          echo "tag=" >> $env:GITHUB_OUTPUT
-        }
-
     - name: Generate Changelog
       id: changelog
       shell: pwsh
       run: |
-        $previousTag = "${{ steps.previous_tag.outputs.tag }}"
         $outputFile = "CHANGELOG_RELEASE.md"
-        $compareUrl = ""
-        
-        if ($previousTag) {
-          Write-Host "Generating changelog from $previousTag to HEAD"
-          $commits = git log "$previousTag..HEAD" --pretty=format:"%s" --reverse
-          $compareUrl = "https://github.com/${{ github.repository }}/compare/$previousTag...v${{ inputs.version }}"
-        } else {
-          Write-Host "Generating changelog for all commits (initial release)"
-          $commits = git log --pretty=format:"%s" --reverse
-          $compareUrl = "https://github.com/${{ github.repository }}/commits/v${{ inputs.version }}"
-        }
         
         # Start changelog file
         $changelog = ""
         
         # Add full changelog link
-        $changelog += "**📋 [FULL CHANGELOG]($compareUrl)**`n`n"
+        $changelog += "**📋 [FULL CHANGELOG](https://github.com/${{ github.repository }}/compare/v${{ inputs.version }})**`n`n"
         
         # Add file description section
         $changelog += "## 📦 Файлы для скачивания`n`n"
@@ -91,7 +64,6 @@ jobs:
         $changelog | Out-File -FilePath $outputFile -Encoding utf8
         
         Write-Host "Changelog generated successfully!"
-        Write-Host "---"
         Get-Content $outputFile -Raw
 
     - name: Restore dependencies
