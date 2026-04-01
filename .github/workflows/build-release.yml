@@ -85,7 +85,14 @@ jobs:
 
     - name: Build Portable (Single file, ~3 MB, requires .NET)
       run: |
-        dotnet publish konserva-app/konserva-app.csproj /p:PublishProfile=Portable
+        dotnet publish konserva-app/konserva-app.csproj `
+          -c Release `
+          -r win-x64 `
+          --self-contained false `
+          -p:PublishSingleFile=true `
+          -p:DebugType=none `
+          -p:DebugSymbols=false `
+          -o "publish/Portable"
       shell: pwsh
 
     - name: Create Full archive (Self-contained, no dependencies)
