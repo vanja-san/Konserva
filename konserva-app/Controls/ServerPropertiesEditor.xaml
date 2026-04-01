@@ -2,6 +2,7 @@
     x:Class="Konserva.Controls.ServerPropertiesEditor"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Margin="0">
 
@@ -29,7 +30,7 @@
                             Symbol="TaskListSquareSettings20" />
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="Основные настройки" />
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_General}" />
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -39,7 +40,7 @@
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Порт сервера" />
+                            Text="{loc:Loc ServerProperties_ServerPort}" />
                         <ui:TextBox
                             x:Name="ServerPortBox"
                             Grid.Row="0"
@@ -52,7 +53,7 @@
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Server IP" />
+                            Text="{loc:Loc ServerProperties_ServerIp}" />
                         <ui:TextBox
                             x:Name="ServerIpBox"
                             Grid.Row="1"
@@ -65,7 +66,7 @@
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Макс. игроков" />
+                            Text="{loc:Loc ServerProperties_MaxPlayers}" />
                         <ui:TextBox
                             x:Name="MaxPlayersBox"
                             Grid.Row="2"
@@ -78,7 +79,7 @@
                             Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Дальность прорисовки" />
+                            Text="{loc:Loc ServerProperties_ViewDistance}" />
                         <ui:TextBox
                             x:Name="ViewDistanceBox"
                             Grid.Row="3"
@@ -91,7 +92,7 @@
                             Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Дальность симуляции" />
+                            Text="{loc:Loc ServerProperties_SimulationDistance}" />
                         <ui:TextBox
                             x:Name="SimulationDistanceBox"
                             Grid.Row="4"
@@ -104,7 +105,7 @@
                             Grid.Row="5"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="MOTD (описание)" />
+                            Text="{loc:Loc ServerProperties_MOTD}" />
                         <ui:TextBox
                             x:Name="MotdBox"
                             Grid.Row="5"
@@ -127,7 +128,7 @@
                             Symbol="Server20" />
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="Режим игры" />
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_Gamemode}" />
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -138,16 +139,25 @@
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Режим игры" />
+                            Text="{loc:Loc ServerProperties_Gamemode}" />
                         <ComboBox
                             x:Name="GamemodeBox"
                             Grid.Row="0"
                             Grid.Column="1"
-                            Margin="4">
-                            <ComboBoxItem Content="Выживание (Survival)" Tag="survival" />
-                            <ComboBoxItem Content="Творчество (Creative)" Tag="creative" />
-                            <ComboBoxItem Content="Приключение (Adventure)" Tag="adventure" />
-                            <ComboBoxItem Content="Наблюдатель (Spectator)" Tag="spectator" />
+                            Margin="4"
+                            ContextMenu="{x:Null}">
+                            <ComboBoxItem Tag="survival">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_Gamemode_Survival}" />
+                            </ComboBoxItem>
+                            <ComboBoxItem Tag="creative">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_Gamemode_Creative}" />
+                            </ComboBoxItem>
+                            <ComboBoxItem Tag="adventure">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_Gamemode_Adventure}" />
+                            </ComboBoxItem>
+                            <ComboBoxItem Tag="spectator">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_Gamemode_Spectator}" />
+                            </ComboBoxItem>
                         </ComboBox>
 
                         <ui:TextBlock
@@ -155,16 +165,25 @@
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Сложность" />
+                            Text="{loc:Loc ServerProperties_Difficulty}" />
                         <ComboBox
                             x:Name="DifficultyBox"
                             Grid.Row="1"
                             Grid.Column="1"
-                            Margin="4">
-                            <ComboBoxItem Content="Мирный (Peaceful)" Tag="peaceful" />
-                            <ComboBoxItem Content="Лёгкий (Easy)" Tag="easy" />
-                            <ComboBoxItem Content="Обычный (Normal)" Tag="normal" />
-                            <ComboBoxItem Content="Сложный (Hard)" Tag="hard" />
+                            Margin="4"
+                            ContextMenu="{x:Null}">
+                            <ComboBoxItem Tag="peaceful">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_Difficulty_Peaceful}" />
+                            </ComboBoxItem>
+                            <ComboBoxItem Tag="easy">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_Difficulty_Easy}" />
+                            </ComboBoxItem>
+                            <ComboBoxItem Tag="normal">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_Difficulty_Normal}" />
+                            </ComboBoxItem>
+                            <ComboBoxItem Tag="hard">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_Difficulty_Hard}" />
+                            </ComboBoxItem>
                         </ComboBox>
 
                         <ui:TextBlock
@@ -172,39 +191,39 @@
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Хардкор" />
+                            Text="{loc:Loc ServerProperties_Hardcore}" />
                         <CheckBox
                             x:Name="HardcoreBox"
                             Grid.Row="2"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Режим хардкора" />
+                            Content="{loc:Loc ServerProperties_Hardcore_Content}" />
 
                         <ui:TextBlock
                             Grid.Row="3"
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="PvP" />
+                            Text="{loc:Loc ServerProperties_PvP}" />
                         <CheckBox
                             x:Name="PvpBox"
                             Grid.Row="3"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Разрешить PvP" />
+                            Content="{loc:Loc ServerProperties_PvP_Content}" />
 
                         <ui:TextBlock
                             Grid.Row="4"
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Командные блоки" />
+                            Text="{loc:Loc ServerProperties_CommandBlocks}" />
                         <CheckBox
                             x:Name="CommandBlocksBox"
                             Grid.Row="4"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Разрешить командные блоки" />
+                            Content="{loc:Loc ServerProperties_CommandBlocks_Content}" />
                     </Grid>
                 </ui:CardExpander>
 
@@ -221,7 +240,7 @@
                             Symbol="Globe20" />
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="Мир" />
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_World}" />
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -231,8 +250,8 @@
                             Grid.Row="0"
                             Grid.Column="0"
                             Margin="0,4"
-                            VerticalAlignment="Center"
-                            Text="Имя мира" />
+                            VerticalAlignment="Top"
+                            Text="{loc:Loc ServerProperties_LevelName}" />
                         <ui:TextBox
                             x:Name="LevelNameBox"
                             Grid.Row="0"
@@ -245,7 +264,7 @@
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Сиды (seed)" />
+                            Text="{loc:Loc ServerProperties_LevelSeed}" />
                         <ui:TextBox
                             x:Name="LevelSeedBox"
                             Grid.Row="1"
@@ -258,18 +277,29 @@
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Тип мира" />
+                            Text="{loc:Loc ServerProperties_LevelType}" />
                         <ComboBox
                             x:Name="LevelTypeBox"
                             Grid.Row="2"
                             Grid.Column="1"
                             Margin="4"
-                            VerticalAlignment="Center">
-                            <ComboBoxItem Content="Обычный (Normal)" Tag="minecraft:normal" />
-                            <ComboBoxItem Content="Плоский (Flat)" Tag="minecraft:flat" />
-                            <ComboBoxItem Content="Крупные биомы (Large Biomes)" Tag="minecraft:large_biomes" />
-                            <ComboBoxItem Content="Амплифицированный (Amplified)" Tag="minecraft:amplified" />
-                            <ComboBoxItem Content="Один биом (Single Biome)" Tag="minecraft:single_biome_surface" />
+                            VerticalAlignment="Center"
+                            ContextMenu="{x:Null}">
+                            <ComboBoxItem Tag="minecraft:normal">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_LevelType_Normal}" />
+                            </ComboBoxItem>
+                            <ComboBoxItem Tag="minecraft:flat">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_LevelType_Flat}" />
+                            </ComboBoxItem>
+                            <ComboBoxItem Tag="minecraft:large_biomes">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_LevelType_LargeBiomes}" />
+                            </ComboBoxItem>
+                            <ComboBoxItem Tag="minecraft:amplified">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_LevelType_Amplified}" />
+                            </ComboBoxItem>
+                            <ComboBoxItem Tag="minecraft:single_biome_surface">
+                                <ui:TextBlock Text="{loc:Loc ServerProperties_LevelType_SingleBiome}" />
+                            </ComboBoxItem>
                         </ComboBox>
 
                         <ui:TextBlock
@@ -277,7 +307,7 @@
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Макс. размер мира" />
+                            Text="{loc:Loc ServerProperties_MaxWorldSize}" />
                         <ui:TextBox
                             x:Name="MaxWorldSizeBox"
                             Grid.Row="3"
@@ -291,26 +321,26 @@
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Генерация структур" />
+                            Text="{loc:Loc ServerProperties_SpawnStructures}" />
                         <CheckBox
                             x:Name="GenerateStructuresBox"
                             Grid.Row="4"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Генерировать структуры" />
+                            Content="{loc:Loc ServerProperties_SpawnStructures_Content}" />
 
                         <ui:TextBlock
                             Grid.Row="5"
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Доступ в Незер" />
+                            Text="{loc:Loc ServerProperties_AllowNether}" />
                         <CheckBox
                             x:Name="AllowNetherBox"
                             Grid.Row="5"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Разрешить Незер" />
+                            Content="{loc:Loc ServerProperties_AllowNether_Content}" />
                     </Grid>
                 </ui:CardExpander>
 
@@ -327,7 +357,7 @@
                             Symbol="ShieldLock20" />
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="Безопасность и ограничения" />
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_Network}" />
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -338,65 +368,65 @@
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Проверка лицензии" />
+                            Text="{loc:Loc ServerProperties_OnlineMode}" />
                         <CheckBox
                             x:Name="OnlineModeBox"
                             Grid.Row="0"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Проверять лицензию (online-mode)" />
+                            Content="{loc:Loc ServerProperties_OnlineMode_Content}" />
 
                         <ui:TextBlock
                             Grid.Row="1"
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Белый список" />
+                            Text="{loc:Loc ServerProperties_Whitelist}" />
                         <CheckBox
                             x:Name="WhiteListBox"
                             Grid.Row="1"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Использовать whitelist" />
+                            Content="{loc:Loc ServerProperties_Whitelist_Content}" />
 
                         <ui:TextBlock
                             Grid.Row="2"
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Принудительный whitelist" />
+                            Text="{loc:Loc ServerProperties_EnforceWhitelist}" />
                         <CheckBox
                             x:Name="EnforceWhitelistBox"
                             Grid.Row="2"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Принудительный whitelist" />
+                            Content="{loc:Loc ServerProperties_EnforceWhitelist_Content}" />
 
                         <ui:TextBlock
                             Grid.Row="3"
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Безопасный профиль" />
+                            Text="{loc:Loc ServerProperties_EnforceSecureProfile}" />
                         <CheckBox
                             x:Name="EnforceSecureProfileBox"
                             Grid.Row="3"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Требовать безопасный профиль" />
+                            Content="{loc:Loc ServerProperties_EnforceSecureProfile_Content}" />
 
                         <ui:TextBlock
                             Grid.Row="4"
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Полёты" />
+                            Text="{loc:Loc ServerProperties_AllowFlight}" />
                         <CheckBox
                             x:Name="AllowFlightBox"
                             Grid.Row="4"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Разрешить полёты" />
+                            Content="{loc:Loc ServerProperties_AllowFlight_Content}" />
                     </Grid>
                 </ui:CardExpander>
 
@@ -413,7 +443,7 @@
                             Symbol="Password16" />
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="RCON (удалённое управление)" />
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_RCON}" />
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -424,20 +454,20 @@
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Включить RCON" />
+                            Text="{loc:Loc ServerProperties_EnableRcon}" />
                         <CheckBox
                             x:Name="EnableRconBox"
                             Grid.Row="0"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Включить RCON" />
+                            Content="{loc:Loc ServerProperties_EnableRcon_Content}" />
 
                         <ui:TextBlock
                             Grid.Row="1"
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Пароль RCON" />
+                            Text="{loc:Loc ServerProperties_RconPassword}" />
                         <ui:TextBox
                             x:Name="RconPasswordBox"
                             Grid.Row="1"
@@ -450,7 +480,7 @@
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="Порт RCON" />
+                            Text="{loc:Loc ServerProperties_RconPort}" />
                         <ui:TextBox
                             x:Name="RconPortBox"
                             Grid.Row="2"
@@ -466,7 +496,7 @@
                             Grid.Column="0"
                             Margin="0,4"
                             VerticalAlignment="Center"
-                            Text="RCON IP" />
+                            Text="{loc:Loc ServerProperties_RconIp}" />
                         <ui:TextBox
                             x:Name="RconIpBox"
                             Grid.Row="3"
@@ -487,7 +517,7 @@
                             Symbol="TextboxMore20" />
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="Дополнительные настройки" />
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_Advanced}" />
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -497,7 +527,7 @@
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Защита спавна" />
+                            Text="{loc:Loc ServerProperties_SpawnProtection}" />
                         <ui:TextBox
                             x:Name="SpawnProtectionBox"
                             Grid.Row="0"
@@ -511,7 +541,7 @@
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Радиус спавна" />
+                            Text="{loc:Loc ServerProperties_SpawnRadius}" />
                         <ui:TextBox
                             x:Name="SpawnRadiusBox"
                             Grid.Row="1"
@@ -525,7 +555,7 @@
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Уровень прав OP" />
+                            Text="{loc:Loc ServerProperties_OpPermissionLevel}" />
                         <ui:TextBox
                             x:Name="OpPermissionLevelBox"
                             Grid.Row="2"
@@ -539,7 +569,7 @@
                             Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Max tick time (мс)" />
+                            Text="{loc:Loc ServerProperties_MaxTickTime}" />
                         <ui:TextBox
                             x:Name="MaxTickTimeBox"
                             Grid.Row="3"
@@ -553,7 +583,7 @@
                             Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Сжатие сети" />
+                            Text="{loc:Loc ServerProperties_NetworkCompression}" />
                         <ui:TextBox
                             x:Name="NetworkCompressionBox"
                             Grid.Row="4"
@@ -567,40 +597,40 @@
                             Grid.Row="5"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Спавн NPC" />
+                            Text="{loc:Loc ServerProperties_SpawnNPCs}" />
                         <CheckBox
                             x:Name="SpawnNpcsBox"
                             Grid.Row="5"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Спавнить NPC" />
+                            Content="{loc:Loc ServerProperties_SpawnNPCs}" />
                         <ui:TextBlock
                             Grid.Row="6"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Спавн животных" />
+                            Text="{loc:Loc ServerProperties_SpawnAnimals}" />
                         <CheckBox
                             x:Name="SpawnAnimalsBox"
                             Grid.Row="6"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Спавнить животных" />
+                            Content="{loc:Loc ServerProperties_SpawnAnimals}" />
                         <ui:TextBlock
                             Grid.Row="7"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Спавн монстров" />
+                            Text="{loc:Loc ServerProperties_SpawnMonsters}" />
                         <CheckBox
                             x:Name="SpawnMonstersBox"
                             Grid.Row="7"
                             Grid.Column="1"
                             Margin="4"
-                            Content="Спавнить монстров" />
+                            Content="{loc:Loc ServerProperties_SpawnMonsters}" />
                         <ui:TextBlock
                             Grid.Row="8"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Включенные датапаки" />
+                            Text="{loc:Loc ServerProperties_EnabledPacks}" />
                         <ui:TextBox
                             x:Name="InitialEnabledPacksBox"
                             Grid.Row="8"
@@ -612,7 +642,7 @@
                             Grid.Row="9"
                             Grid.Column="0"
                             VerticalAlignment="Center"
-                            Text="Отключённые датапаки" />
+                            Text="{loc:Loc ServerProperties_DisabledPacks}" />
                         <ui:TextBox
                             x:Name="InitialDisabledPacksBox"
                             Grid.Row="9"
@@ -639,7 +669,7 @@
                         Height="32"
                         Padding="0"
                         Click="Reset_Click"
-                        ToolTip="Сбросить server.properties на значения по умолчанию">
+                        ToolTip="{loc:Loc ServerProperties_Reset}">
                         <ui:SymbolIcon FontSize="20" Symbol="ArrowReset20" />
                     </ui:Button>
                     <ui:Button
@@ -649,7 +679,7 @@
                         Margin="8,0,8,0"
                         Padding="0"
                         Click="Load_Click"
-                        ToolTip="Загрузить">
+                        ToolTip="{loc:Loc ServerProperties_Refresh}">
                         <ui:SymbolIcon FontSize="20" Symbol="ArrowSyncCircle20" />
                     </ui:Button>
                     <ui:Button
@@ -657,13 +687,13 @@
                         Padding="8,4"
                         VerticalContentAlignment="Center"
                         Click="Save_Click"
-                        ToolTip="Сохранить изменения server.properties">
+                        ToolTip="{loc:Loc ServerProperties_Save}">
                         <StackPanel Orientation="Horizontal">
                             <ui:SymbolIcon
                                 Margin="0,0,8,0"
                                 FontSize="20"
                                 Symbol="Save20" />
-                            <ui:TextBlock VerticalAlignment="Top" Text="Сохранить" />
+                            <ui:TextBlock VerticalAlignment="Top" Text="{loc:Loc ServerProperties_Save}" />
                         </StackPanel>
                     </ui:Button>
                 </StackPanel>

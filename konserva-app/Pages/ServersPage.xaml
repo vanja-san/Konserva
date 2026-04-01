@@ -2,6 +2,7 @@
     x:Class="Konserva.Pages.ServersPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="Servers">
     <Grid Margin="16" RowDefinitions="Auto,*">
@@ -25,7 +26,7 @@
                         FontSize="14"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         IsHitTestVisible="False"
-                        Text="Поиск..."
+                        Text="{loc:Loc ServersPage_Search}"
                         Visibility="Visible" />
                 </Grid>
 
@@ -37,20 +38,21 @@
                     Margin="0,0,8,0"
                     Padding="8,6"
                     VerticalAlignment="Center"
+                    ContextMenu="{x:Null}"
                     SelectionChanged="FilterType_SelectionChanged">
                     <ComboBoxItem
-                        Content="Все типы"
+                        Content="{loc:Loc ServersPage_Filter_All}"
                         IsSelected="True"
                         Tag="All" />
-                    <ComboBoxItem Content="Vanilla" Tag="Vanilla" />
-                    <ComboBoxItem Content="Forge" Tag="Forge" />
-                    <ComboBoxItem Content="NeoForge" Tag="NeoForge" />
-                    <ComboBoxItem Content="Fabric" Tag="Fabric" />
-                    <ComboBoxItem Content="Paper" Tag="Paper" />
-                    <ComboBoxItem Content="Spigot" Tag="Spigot" />
-                    <ComboBoxItem Content="Purpur" Tag="Purpur" />
+                    <ComboBoxItem Content="{loc:Loc ModLoader_Vanilla}" Tag="Vanilla" />
+                    <ComboBoxItem Content="{loc:Loc ModLoader_Forge}" Tag="Forge" />
+                    <ComboBoxItem Content="{loc:Loc ModLoader_NeoForge}" Tag="NeoForge" />
+                    <ComboBoxItem Content="{loc:Loc ModLoader_Fabric}" Tag="Fabric" />
+                    <ComboBoxItem Content="{loc:Loc ModLoader_Paper}" Tag="Paper" />
+                    <ComboBoxItem Content="{loc:Loc ModLoader_Spigot}" Tag="Spigot" />
+                    <ComboBoxItem Content="{loc:Loc ModLoader_Purpur}" Tag="Purpur" />
                     <ComboBoxItem
-                        Content="Quilt (в разработке)"
+                        Content="{loc:Loc ModLoader_Quilt}"
                         IsEnabled="False"
                         Tag="Quilt" />
                 </ComboBox>
@@ -62,16 +64,18 @@
                     Width="130"
                     Margin="0,0,8,0"
                     Padding="8,6"
+                    ContextMenu="{x:Null}"
                     SelectionChanged="FilterStatus_SelectionChanged">
                     <ComboBoxItem
-                        Content="Все серверы"
                         IsSelected="True"
-                        Tag="All" />
+                        Tag="All">
+                        <ui:TextBlock Text="{loc:Loc ServersPage_Filter_AllServers}" />
+                    </ComboBoxItem>
                     <ComboBoxItem Tag="Running">
-                        <ui:TextBlock Padding="0,0,8,0" Text="Запущен" />
+                        <ui:TextBlock Padding="0,0,8,0" Text="{loc:Loc ServersPage_Filter_Running}" />
                     </ComboBoxItem>
                     <ComboBoxItem Tag="Stopped">
-                        <ui:TextBlock Padding="0,0,8,0" Text="Остановлен" />
+                        <ui:TextBlock Padding="0,0,8,0" Text="{loc:Loc ServersPage_Filter_Stopped}" />
                     </ComboBoxItem>
                 </ComboBox>
                 <!--  Кнопка создать сервер  -->
@@ -81,7 +85,7 @@
                     Height="33"
                     Padding="0"
                     Click="CreateServer_Click"
-                    ToolTip="Создать/добавить новый сервер">
+                    ToolTip="{loc:Loc ServersPage_Create}">
                     <ui:SymbolIcon FontSize="13" Symbol="Add32" />
                 </ui:Button>
             </Grid>
@@ -142,7 +146,7 @@
                                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                     Text="  •  " />
                                                 <ui:TextBlock FontSize="12" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
-                                                    <Run Text="Порт:" />
+                                                    <Run Text="Port:" />
                                                     <Run Text="{Binding Port}" />
                                                 </ui:TextBlock>
                                             </StackPanel>
@@ -178,7 +182,7 @@
                                                 Padding="4"
                                                 Click="OpenFolder_Click"
                                                 Tag="{Binding}"
-                                                ToolTip="Открыть папку сервера">
+                                                ToolTip="{loc:Loc ServersPage_OpenFolder}">
                                                 <ui:SymbolIcon FontSize="20" Symbol="Folder20" />
                                             </ui:Button>
                                             <ui:Button
@@ -186,7 +190,7 @@
                                                 Padding="4"
                                                 Click="Delete_Click"
                                                 Tag="{Binding}"
-                                                ToolTip="Удалить сервер и все его данные">
+                                                ToolTip="{loc:Loc ServersPage_Delete}">
                                                 <ui:SymbolIcon FontSize="20" Symbol="Delete20" />
                                             </ui:Button>
                                         </StackPanel>
@@ -206,13 +210,13 @@
                         HorizontalAlignment="Center"
                         FontSize="16"
                         Foreground="Gray"
-                        Text="Нет серверов" />
+                        Text="{loc:Loc ServersPage_NoServers}" />
                     <ui:TextBlock
                         Margin="0,4,0,0"
                         HorizontalAlignment="Center"
                         FontSize="13"
                         Foreground="Gray"
-                        Text="Создайте первый сервер для управления через кнопку [+] сверху" />
+                        Text="{loc:Loc ServersPage_NoServers_Description}" />
                 </StackPanel>
             </Grid>
         </Border>

@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:local="clr-namespace:Konserva"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pages="clr-namespace:Konserva.Pages"
@@ -50,7 +51,7 @@
                             VerticalAlignment="Center"
                             FontSize="12"
                             Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
-                            Text="Konserva Manager" />
+                            Text="{loc:Loc MainWindow_Header}" />
                     </StackPanel>
                 </Grid>
             </ui:TitleBar.Header>
@@ -63,7 +64,7 @@
                         BorderThickness="0"
                         Click="NavButton_Click"
                         CornerRadius="0"
-                        ToolTip="Настройки приложения">
+                        ToolTip="{loc:Loc MainWindow_Settings}">
                         <ui:SymbolIcon FontSize="18" Symbol="Settings20" />
                     </ui:Button>
                 </StackPanel>
@@ -90,7 +91,7 @@
                     Margin="0,0,12,0"
                     VerticalAlignment="Center"
                     Orientation="Horizontal"
-                    ToolTip="Всего серверов в списке">
+                    ToolTip="{loc:Loc StatusBar_TotalServers}">
                     <ui:SymbolIcon
                         Margin="0,0,6,0"
                         FontSize="16"
@@ -99,9 +100,10 @@
                     <ui:TextBlock
                         x:Name="StatusTotalServers"
                         FontSize="12"
-                        LineHeight="16"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                        Text="0" />
+                        LineHeight="16"
+                        Text="0"
+                        ToolTip="{loc:Loc StatusBar_TotalServers}" />
                 </StackPanel>
 
                 <!--  Running  -->
@@ -110,7 +112,7 @@
                     Margin="0,0,12,0"
                     VerticalAlignment="Center"
                     Orientation="Horizontal"
-                    ToolTip="Всего запущенных серверов">
+                    ToolTip="{loc:Loc StatusBar_Running}">
                     <ui:SymbolIcon
                         Margin="0,0,6,0"
                         FontSize="14"
@@ -119,9 +121,10 @@
                     <ui:TextBlock
                         x:Name="StatusRunningServers"
                         FontSize="12"
-                        LineHeight="16"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                        Text="0" />
+                        LineHeight="16"
+                        Text="0"
+                        ToolTip="{loc:Loc StatusBar_Running}" />
                 </StackPanel>
 
                 <!--  Memory  -->
@@ -130,7 +133,7 @@
                     Margin="0,0,12,0"
                     VerticalAlignment="Center"
                     Orientation="Horizontal"
-                    ToolTip="Память в использовании">
+                    ToolTip="{loc:Loc StatusBar_Memory}">
                     <ui:SymbolIcon
                         Margin="0,0,6,0"
                         FontSize="16"
@@ -139,9 +142,10 @@
                     <ui:TextBlock
                         x:Name="StatusMemoryUsage"
                         FontSize="12"
-                        LineHeight="16"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                        Text="0 MB" />
+                        LineHeight="16"
+                        Text="0 MB"
+                        ToolTip="{loc:Loc StatusBar_Memory}" />
                 </StackPanel>
 
                 <!--  Java  -->
@@ -149,28 +153,32 @@
                     Grid.Column="3"
                     Margin="0,0,12,0"
                     VerticalAlignment="Center"
-                    Orientation="Horizontal"
-                    ToolTip="Java не настроена">
+                    Orientation="Horizontal">
                     <ui:SymbolIcon
                         Margin="0,0,6,0"
                         FontSize="14"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                        Symbol="Braces24" />
+                        Symbol="Braces24"
+                        ToolTip="{x:Null}" />
                     <ui:TextBlock
                         x:Name="StatusJava"
                         FontSize="12"
-                        LineHeight="16"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                        Text="Java не настроена" />
+                        LineHeight="16"
+                        Text="{loc:Loc StatusBar_Java_NotConfigured}">
+                        <ui:TextBlock.ToolTip>
+                            <ToolTip Content="{loc:Loc StatusBar_Java_NotConfigured}" />
+                        </ui:TextBlock.ToolTip>
+                    </ui:TextBlock>
                 </StackPanel>
 
                 <!--  Version  -->
                 <ui:TextBlock
                     Grid.Column="4"
                     FontSize="12"
-                    LineHeight="16"
                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                    Text="v1.0" />
+                    LineHeight="16"
+                    Text="1.2" />
             </Grid>
         </Border>
     </Grid>

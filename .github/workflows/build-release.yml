@@ -185,6 +185,7 @@ jobs:
       with:
         name: build-logs
         path: |
-          konserva-app/bin/
-          konserva-app/obj/
+          konserva-app/bin/Release/
+          konserva-app/obj/Release/
         retention-days: 7
+        if-no-files-found: ignore

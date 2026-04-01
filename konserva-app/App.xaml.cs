@@ -2,9 +2,11 @@
 using Konserva.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
+using System.Globalization;
 using System.Net.Http;
 using System.Text;
 using System.Windows;
+using Konserva.Localization;
 
 namespace Konserva;
 
@@ -37,12 +39,32 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // 1. Сначала инициализируем логгер
+        Logger.Initialize();
+        _logger = new Logger();
+
         base.OnStartup(e);
 
-        // Регистрируем провайдер кодировок для поддержки OEM кодировок (866 и др.)
+        Logger.Info("Application starting...", "App");
+
+        // 2. Инициализация локализации
+        try
+        {
+            LocalizationManager.Initialize();
+            Logger.Info("Localization initialized", "App");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Failed to initialize localization: {ex.Message}", ex, "App");
+        }
+
+        // 3. Создаём файлы локализации если не существуют (уже сделано в Initialize)
+        var i18nPath = System.IO.Path.Combine(AppContext.BaseDirectory, "i18n");
+
+        // 4. Регистрируем провайдер кодировок для поддержки OEM кодировок (866 и др.)
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-        // Перехват глобальных исключений
+        // 5. Перехват глобальных исключений
         AppDomain.CurrentDomain.UnhandledException += (s, args) =>
         {
             var ex = args.ExceptionObject as Exception;
@@ -54,6 +76,7 @@ public partial class App : Application
             args.SetObserved();
         };
 
+        // 6. Запускаем асинхронную инициализацию
         _ = StartupAsync();
     }
 
@@ -61,35 +84,44 @@ public partial class App : Application
     {
         try
         {
-            // Инициализация логгера
-            Logger.Initialize();
-            _logger = new Logger();
-
-            Logger.Info("Application starting...", "App");
+            Logger.Info("Services initializing...", "App");
 
             // Настройка DI
             var services = ConfigureServices;
             _serviceProvider = services.BuildServiceProvider();
 
-            // Инициализация McServerInstaller с HttpClient
-            try
-            {
-                var httpClient = new HttpClient
-                {
-                    Timeout = TimeSpan.FromMinutes(5)
-                };
-                httpClient.DefaultRequestHeaders.Add("User-Agent", "Konserva/1.0");
-                McServerInstaller.Initialize(httpClient, App.ConfigService);
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"Failed to initialize McServerInstaller: {ex.Message}", "App");
-            }
+            Logger.Info("DI container built", "App");
 
             // Инициализация сервисов
             await InitializeServicesAsync();
 
             Logger.Info("Services initialized successfully", "App");
+
+            // Применяем язык из конфига
+            try
+            {
+                var config = ConfigService.GetConfig();
+                var language = config.Language ?? "System"; // По умолчанию - язык системы
+                
+                // Определяем фактический язык
+                string actualLanguage;
+                if (language == "System")
+                {
+                    var systemLanguage = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+                    actualLanguage = systemLanguage == "ru" ? "ru" : "en";
+                }
+                else
+                {
+                    actualLanguage = language;
+                }
+                
+                LocalizationManager.SetLanguage(actualLanguage);
+                Logger.Info($"Applied language from config: {language} ({actualLanguage})", "App");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to apply language from config: {ex.Message}", ex, "App");
+            }
 
             // Показываем главное окно
             var mainWindow = new MainWindow();
@@ -243,6 +275,143 @@ public partial class App : Application
     {
         await CleanupAsync();
         Current.Shutdown(exitCode);
+    }
+
+    /// <summary>
+    /// Возвращает словарь переводов для указанной культуры.
+    /// </summary>
+    private static Dictionary<string, string> GetTranslationsForCulture(string culture)
+    {
+        return culture switch
+        {
+            "ru" => new Dictionary<string, string>
+            {
+                { "MainWindow_Title", "Konserva — Менеджер серверов Minecraft" },
+                { "MainWindow_Servers", "Серверы" },
+                { "MainWindow_Settings", "Настройки" },
+                { "MainWindow_CreateServer", "Создать сервер" },
+                { "StatusBar_TotalServers", "Всего серверов" },
+                { "StatusBar_Running", "Запущено" },
+                { "StatusBar_Memory", "Память" },
+                { "StatusBar_Java_Configured", "Java настроена" },
+                { "StatusBar_Java_NotConfigured", "Java не настроена" },
+                { "StatusBar_Version", "Версия" },
+                { "Settings_Title", "Настройки" },
+                { "Settings_Java", "Java" },
+                { "Settings_Java_Add", "Добавить Java" },
+                { "Settings_Servers", "Серверы" },
+                { "Settings_Servers_Directory", "Папка серверов" },
+                { "Settings_Servers_Browse", "Обзор" },
+                { "Settings_RAM_Min", "Память и приложение" },
+                { "Settings_RAM_Min_Label", "Мин. ОЗУ (МБ)" },
+                { "Settings_RAM_Max_Label", "Макс. ОЗУ (МБ)" },
+                { "Settings_RAM_Min_Desc", "Начальный объем памяти" },
+                { "Settings_RAM_Max_Desc", "Максимальный объем памяти" },
+                { "Settings_App", "Приложение" },
+                { "Settings_CheckUpdates", "Проверка обновлений" },
+                { "Settings_CheckUpdates_Desc", "Автоматически проверять обновления" },
+                { "Settings_Theme", "Тема" },
+                { "Settings_Theme_Desc", "Выберите тему приложения" },
+                { "Settings_Theme_System", "Как в системе" },
+                { "Settings_Theme_Dark", "Тёмная" },
+                { "Settings_Theme_Light", "Светлая" },
+                { "Settings_About", "О программе" },
+                { "Settings_About_Version", "Версия" },
+                { "Settings_About_Description", "Менеджер серверов Minecraft" },
+                { "Settings_About_ModalLoaders", "Поддерживаемые модлоадеры:" },
+                { "Settings_About_InDevelopment", "В разработке" },
+                { "Message_SettingsSaved", "Настройки сохранены" },
+                { "CreateServer_Title", "Создать сервер" },
+                { "CreateServer_Name", "Название сервера" },
+                { "CreateServer_MinecraftVersion", "Версия Minecraft" },
+                { "CreateServer_ModLoader", "Модлоадер" },
+                { "CreateServer_Folder", "Папка" },
+                { "CreateServer_Browse", "Обзор" },
+                { "CreateServer_Create", "Создать" },
+                { "CreateServer_Cancel", "Отмена" },
+                { "CreateServer_Filter_Stable", "Только стабильные" },
+                { "CreateServer_Import", "Импортировать" },
+                { "ServersPage_Search", "Поиск..." },
+                { "ServersPage_Filter_All", "Все типы" },
+                { "ServersPage_Filter_AllServers", "Все серверы" },
+                { "ServersPage_Filter_Running", "Запущен" },
+                { "ServersPage_Filter_Stopped", "Остановлен" },
+                { "ServersPage_Create", "Создать сервер" },
+                { "Common_Cancel", "Отмена" },
+                { "ModLoader_Vanilla", "Vanilla" },
+                { "ModLoader_Forge", "Forge" },
+                { "ModLoader_NeoForge", "NeoForge" },
+                { "ModLoader_Fabric", "Fabric" },
+                { "ModLoader_Quilt", "Quilt" },
+                { "ModLoader_Paper", "Paper" },
+                { "ModLoader_Purpur", "Purpur" },
+                { "ModLoader_Spigot", "Spigot" }
+            },
+            "en" => new Dictionary<string, string>
+            {
+                { "MainWindow_Title", "Konserva — Minecraft Server Manager" },
+                { "MainWindow_Servers", "Servers" },
+                { "MainWindow_Settings", "Settings" },
+                { "MainWindow_CreateServer", "Create Server" },
+                { "StatusBar_TotalServers", "Total Servers" },
+                { "StatusBar_Running", "Running" },
+                { "StatusBar_Memory", "Memory" },
+                { "StatusBar_Java_Configured", "Java configured" },
+                { "StatusBar_Java_NotConfigured", "Java not configured" },
+                { "StatusBar_Version", "Version" },
+                { "Settings_Title", "Settings" },
+                { "Settings_Java", "Java" },
+                { "Settings_Java_Add", "Add Java" },
+                { "Settings_Servers", "Servers" },
+                { "Settings_Servers_Directory", "Servers Directory" },
+                { "Settings_Servers_Browse", "Browse" },
+                { "Settings_RAM_Min", "Memory and Application" },
+                { "Settings_RAM_Min_Label", "Min RAM (MB)" },
+                { "Settings_RAM_Max_Label", "Max RAM (MB)" },
+                { "Settings_RAM_Min_Desc", "Initial memory amount" },
+                { "Settings_RAM_Max_Desc", "Maximum memory amount" },
+                { "Settings_App", "Application" },
+                { "Settings_CheckUpdates", "Check for Updates" },
+                { "Settings_CheckUpdates_Desc", "Automatically check for updates" },
+                { "Settings_Theme", "Theme" },
+                { "Settings_Theme_Desc", "Select application theme" },
+                { "Settings_Theme_System", "System Default" },
+                { "Settings_Theme_Dark", "Dark" },
+                { "Settings_Theme_Light", "Light" },
+                { "Settings_About", "About" },
+                { "Settings_About_Version", "Version" },
+                { "Settings_About_Description", "Minecraft Server Manager" },
+                { "Settings_About_ModalLoaders", "Supported Mod Loaders:" },
+                { "Settings_About_InDevelopment", "In Development" },
+                { "Message_SettingsSaved", "Settings saved" },
+                { "CreateServer_Title", "Create Server" },
+                { "CreateServer_Name", "Server Name" },
+                { "CreateServer_MinecraftVersion", "Minecraft Version" },
+                { "CreateServer_ModLoader", "Mod Loader" },
+                { "CreateServer_Folder", "Folder" },
+                { "CreateServer_Browse", "Browse" },
+                { "CreateServer_Create", "Create" },
+                { "CreateServer_Cancel", "Cancel" },
+                { "CreateServer_Filter_Stable", "Stable only" },
+                { "CreateServer_Import", "Import" },
+                { "ServersPage_Search", "Search..." },
+                { "ServersPage_Filter_All", "All Types" },
+                { "ServersPage_Filter_AllServers", "All Servers" },
+                { "ServersPage_Filter_Running", "Running" },
+                { "ServersPage_Filter_Stopped", "Stopped" },
+                { "ServersPage_Create", "Create Server" },
+                { "Common_Cancel", "Cancel" },
+                { "ModLoader_Vanilla", "Vanilla" },
+                { "ModLoader_Forge", "Forge" },
+                { "ModLoader_NeoForge", "NeoForge" },
+                { "ModLoader_Fabric", "Fabric" },
+                { "ModLoader_Quilt", "Quilt" },
+                { "ModLoader_Paper", "Paper" },
+                { "ModLoader_Purpur", "Purpur" },
+                { "ModLoader_Spigot", "Spigot" }
+            },
+            _ => new Dictionary<string, string>()
+        };
     }
 
     private void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)

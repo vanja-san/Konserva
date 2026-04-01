@@ -322,10 +322,16 @@ This project was created with the assistance of **Qwen Code** — an AI-powered 
 
 🔗 [Qwen Code](https://github.com/QwenLM/qwen-code)
 
+### Libraries Used
+
+This application is built using the excellent **WPF UI** library by Bartosz Ciechanowski and contributors.
+
+🔗 [WPF UI](https://github.com/lepoide/wpfui)
+
 ---
 
-**Application Version**: 1.2.0
-**Update Date**: 2026-04-01
+**Application Version**: 1.2.1
+**Update Date**: 2026-04-02
 **Platform**: Windows x64
 **Size**: ~66 MB (Full), ~3 MB (Portable)
 

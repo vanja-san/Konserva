@@ -1,4 +1,5 @@
-﻿using Konserva.Models;
+﻿using Konserva.Localization;
+using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
 using System.Diagnostics;
@@ -135,7 +136,6 @@ public partial class ServerDetailPage : Page, IDisposable
 
         // Настройки
         SettingName.Text = _server.Name;
-        SettingPort.Text = _server.Port.ToString();
         SettingRamMin.Text = _server.Settings.RamMin.ToString();
         SettingRamMax.Text = _server.Settings.RamMax.ToString();
         SettingAutoRestart.IsChecked = _server.Settings.AutoRestart;
@@ -249,10 +249,10 @@ public partial class ServerDetailPage : Page, IDisposable
 
             StartStopButton.ToolTip = status switch
             {
-                ServerStatus.Running => "Остановить сервер",
-                ServerStatus.Starting => "Запускается...",
-                ServerStatus.Stopping => "Останавливается...",
-                _ => "Запустить сервер"
+                ServerStatus.Running => LocalizationManager.Get("ServerDetail_Stop"),
+                ServerStatus.Starting => LocalizationManager.Get("ServerDetail_Starting"),
+                ServerStatus.Stopping => LocalizationManager.Get("ServerDetail_Stopping"),
+                _ => LocalizationManager.Get("ServerDetail_Start")
             };
 
             StartStopButton.IsEnabled = status is not (ServerStatus.Starting or ServerStatus.Stopping);
@@ -519,12 +519,6 @@ public partial class ServerDetailPage : Page, IDisposable
         {
             _server.Name = newName;
             ServerNameText.Text = newName;
-        }
-
-        // Сохраняем порт
-        if (int.TryParse(SettingPort.Text, out var port) && port is > 0 and <= 65535 && port != _server.Port)
-        {
-            _server.Port = port;
         }
 
         // Сохраняем RAM

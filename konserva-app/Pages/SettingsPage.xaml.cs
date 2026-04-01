@@ -4,6 +4,7 @@ using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
 using System.Threading.Tasks;
+using Konserva.Localization;
 
 namespace Konserva.Pages;
 
@@ -27,11 +28,15 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         LoadSettings();
-        _isLoading = false; // Загрузка завершена
+        
+        // Скрываем InfoBar при загрузке
+        LanguageChangeInfoBar.IsOpen = false;
     }
 
     private void LoadSettings()
     {
+        _isLoading = true; // Блокируем сохранение во время загрузки
+        
         var config = _configService.GetConfig();
 
         ServersFolderPath.Text = config.ServersDirectory;
@@ -76,6 +81,16 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
         if (ThemeComboBox.SelectedItem == null)
             ThemeComboBox.SelectedIndex = 0;
+
+        // Загрузка языка - по умолчанию "System"
+        var language = config.Language ?? "System";
+        var languageItem = LanguageComboBox.Items
+            .Cast<ComboBoxItem>()
+            .FirstOrDefault(item => (string)item.Tag == language);
+
+        LanguageComboBox.SelectedItem = languageItem ?? LanguageComboBox.Items[0]; // "System" по умолчанию
+        
+        _isLoading = false; // Разрешаем сохранение после загрузки
     }
 
     /// <summary>
@@ -114,6 +129,18 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
             if (ThemeComboBox.SelectedItem is ComboBoxItem themeItem)
             {
                 config.Theme = (string)themeItem.Tag;
+            }
+            
+            // Сохранение языка
+            if (LanguageComboBox.SelectedItem is ComboBoxItem languageItem)
+            {
+                var selectedLanguage = (string)languageItem.Tag;
+
+                // Сохраняем выбранный язык (System, en, ru)
+                config.Language = selectedLanguage;
+
+                // Показываем InfoBar о необходимости перезапуска
+                LanguageChangeInfoBar.IsOpen = true;
             }
 
             _configService.SaveConfig(config);
@@ -238,6 +265,13 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
             ApplyTheme(theme);
             AutoSaveSettings();
         }
+    }
+
+    private void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoading) return;
+        
+        AutoSaveSettings();
     }
 
     /// <summary>
