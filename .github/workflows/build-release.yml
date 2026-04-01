@@ -47,18 +47,18 @@ jobs:
         $changelog += "**📋 [FULL CHANGELOG](https://github.com/${{ github.repository }}/compare/v${{ inputs.version }})**`n`n"
         
         # Add file description section
-        $changelog += "## 📦 Файлы для скачивания`n`n"
+        $changelog += "## 📦 Download Files`n`n"
         $changelog += "**Konserva-v`${{ inputs.version }}-Full.zip** (~62 MB)`n"
-        $changelog += "- ✅ Всё включено (self-contained)`n"
-        $changelog += "- ✅ Не требует .NET`n"
-        $changelog += "- ✅ Готов к запуску сразу`n"
-        $changelog += "- 📌 **Рекомендуется для большинства пользователей**`n`n"
+        $changelog += "- ✅ All-inclusive (self-contained)`n"
+        $changelog += "- ✅ No .NET required`n"
+        $changelog += "- ✅ Ready to run immediately`n"
+        $changelog += "- 📌 **Recommended for most users**`n`n"
         $changelog += "**Konserva-v`${{ inputs.version }}-Deps.zip** (~3 MB)`n"
-        $changelog += "- ⚠️ Требует .NET 10 Runtime`n"
-        $changelog += "- ⚡ Меньший размер файла`n"
-        $changelog += "- 💡 Для опытных пользователей`n`n"
+        $changelog += "- ⚠️ Requires .NET 10 Runtime`n"
+        $changelog += "- ⚡ Smaller file size`n"
+        $changelog += "- 💡 For experienced users`n`n"
         $changelog += "---`n`n"
-        $changelog += "**Скачать .NET 10 Runtime:** https://dotnet.microsoft.com/download/dotnet/10.0`n"
+        $changelog += "**Download .NET 10 Runtime:** https://dotnet.microsoft.com/download/dotnet/10.0`n"
         
         # Write changelog
         $changelog | Out-File -FilePath $outputFile -Encoding utf8
@@ -80,7 +80,7 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true `
           -p:DebugType=none `
           -p:DebugSymbols=false `
-          -o "konserva-app/bin/Release/net10.0-windows/publish/Full"
+          -o "publish/Full"
       shell: pwsh
 
     - name: Build Portable (Single file, ~3 MB, requires .NET)
@@ -91,15 +91,15 @@ jobs:
     - name: Copy README to builds
       run: |
         if (Test-Path README.md) {
-          Copy-Item README.md konserva-app/bin/Release/net10.0-windows/publish/Full/
-          Copy-Item README.md konserva-app/bin/Release/net10.0-windows/publish/Portable/
+          Copy-Item README.md publish/Full/
+          Copy-Item README.md publish/Portable/
         }
       shell: pwsh
 
     - name: Create Full archive (Self-contained, no dependencies)
       run: |
         $archiveName = "Konserva-v${{ inputs.version }}-Full.zip"
-        Compress-Archive -Path "konserva-app/bin/Release/net10.0-windows/publish/Full/*" -DestinationPath $archiveName -Force
+        Compress-Archive -Path "publish/Full/*" -DestinationPath $archiveName -Force
         Write-Host "Created: $archiveName"
         Get-Item $archiveName | Select-Object Name, Length
       shell: pwsh
@@ -107,7 +107,7 @@ jobs:
     - name: Create Deps archive (Single file, requires .NET 10)
       run: |
         $archiveName = "Konserva-v${{ inputs.version }}-Deps.zip"
-        Compress-Archive -Path "konserva-app/bin/Release/net10.0-windows/publish/Portable/*" -DestinationPath $archiveName -Force
+        Compress-Archive -Path "publish/Portable/*" -DestinationPath $archiveName -Force
         Write-Host "Created: $archiveName"
         Get-Item $archiveName | Select-Object Name, Length
       shell: pwsh
