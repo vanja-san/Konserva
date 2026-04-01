@@ -88,11 +88,10 @@ jobs:
           -o "publish/Full"
       shell: pwsh
 
-    - name: Build Portable (Single file, ~3 MB, requires .NET)
+    - name: Build Portable (~3 MB, requires .NET)
       run: |
         dotnet publish konserva-app/konserva-app.csproj `
           -c Release `
-          -r win-x64 `
           --self-contained false `
           -p:PublishSingleFile=true `
           -p:EnableCompressionInSingleFile=false `
