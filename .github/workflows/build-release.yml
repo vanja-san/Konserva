@@ -38,22 +38,19 @@ jobs:
       if: inputs.create_release == true && inputs.generate_changelog == true
       id: last_tag
       run: |
-        # Try to get the last tag, ignore errors if no tags exist
-        $lastTag = $null
-        try {
-          $lastTag = git describe --tags --abbrev=0 2>$null
-        } catch {
-          Write-Host "No tags found (expected for first release)"
-        }
+        # Get last tag or empty string if no tags exist
+        $lastTag = git describe --tags --abbrev=0 2>&1 | Out-String
         
-        if ($lastTag) {
+        # Check if we got a valid tag (not an error message)
+        if ($lastTag -and $lastTag.Trim() -notlike "*fatal*" -and $lastTag.Trim() -ne "") {
           Write-Host "Last tag: $lastTag"
-          echo "tag=$lastTag" >> $env:GITHUB_OUTPUT
+          echo "tag=$($lastTag.Trim())" >> $env:GITHUB_OUTPUT
         } else {
           Write-Host "No previous tags found, using initial release"
           echo "tag=" >> $env:GITHUB_OUTPUT
         }
       shell: pwsh
+      continue-on-error: true
 
     - name: Generate changelog
       if: inputs.create_release == true && inputs.generate_changelog == true
