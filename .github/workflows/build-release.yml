@@ -95,6 +95,8 @@ jobs:
           -r win-x64 `
           --self-contained false `
           -p:PublishSingleFile=true `
+          -p:EnableCompressionInSingleFile=false `
+          -p:IncludeNativeLibrariesForSelfExtract=false `
           -p:DebugType=none `
           -p:DebugSymbols=false `
           -o "publish/Portable"
