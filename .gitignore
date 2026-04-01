@@ -1,0 +1,44 @@
+## Build results
+publish/
+bin/
+obj/
+*.exe
+*.dll
+*.deps.json
+*.runtimeconfig.json
+*.pdb
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.suo.user
+
+# Publish profiles (contains absolute paths)
+konserva-app/Properties/PublishProfiles/
+
+# Build scripts
+*.bat
+*.ps1
+!build-publish.bat
+!build-publish-portable.bat
+
+# Encoding fix scripts
+fix-encoding*.ps1
+fix-russian-text.ps1
+update-encoding.ps1
+
+# User settings
+.qwen/settings.json.orig
+
+# Logs
+*.log
+Logs/
+
+# Test builds
+publish/test_*/
+publish/portable_test/
+
+# GitHub Actions temp files
+CHANGELOG_RELEASE.md

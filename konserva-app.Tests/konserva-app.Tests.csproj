@@ -1,0 +1,52 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>Konserva.Tests</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+    <!-- Помечаем как тестовый проект -->
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+    
+    <!-- Включаем WPF -->
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Ссылка на основной проект -->
+    <ProjectReference Include="..\konserva-app\konserva-app.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Пакеты для тестирования (последние версии) -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="8.0.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    
+    <!-- Moq для моков -->
+    <PackageReference Include="Moq" Version="4.20.72" />
+    
+    <!-- FluentAssertions для красивых ассертов -->
+    <PackageReference Include="FluentAssertions" Version="8.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="FluentAssertions" />
+    <Using Include="Moq" />
+    <Using Include="Konserva" />
+    <Using Include="Konserva.Models" />
+    <Using Include="Konserva.Services" />
+    <Using Include="Konserva.Utilities" />
+  </ItemGroup>
+
+</Project>

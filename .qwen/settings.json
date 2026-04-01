@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet *)",
+      "Bash(powershell *)",
+      "WebFetch(wpfui.lepo.co)"
+    ]
+  },
+  "$version": 3
+}

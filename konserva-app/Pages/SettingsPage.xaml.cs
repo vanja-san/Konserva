@@ -1,0 +1,251 @@
+﻿using Konserva.Models;
+using Konserva.Utilities;
+using Microsoft.Win32;
+using System.Windows;
+using System.Windows.Controls;
+using System.Threading.Tasks;
+
+namespace Konserva.Pages;
+
+using Konserva.Services;
+
+/// <summary>
+/// Страница настроек приложения
+/// </summary>
+public partial class SettingsPage(IConfigService? configService = null) : Page
+{
+    private readonly IConfigService _configService = configService ?? App.ConfigService;
+    private bool _isUpdating; // Флаг для предотвращения рекурсивного сохранения
+    private bool _isLoading = true; // Флаг загрузки страницы
+
+    public SettingsPage() : this(null)
+    {
+        InitializeComponent();
+        Loaded += OnLoaded;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        LoadSettings();
+        _isLoading = false; // Загрузка завершена
+    }
+
+    private void LoadSettings()
+    {
+        var config = _configService.GetConfig();
+
+        ServersFolderPath.Text = config.ServersDirectory;
+
+        // Загрузка Java в ComboBox
+        JavaComboBox.Items.Clear();
+        JavaComboBox.Items.Add(new ComboBoxItem { Content = "Не выбрано", Tag = (JavaInstallation?)null });
+
+        foreach (var java in config.JavaInstallations)
+        {
+            JavaComboBox.Items.Add(new ComboBoxItem
+            {
+                Content = java.DisplayName,
+                Tag = java
+            });
+        }
+
+        // Выбор выбранной Java по умолчанию
+        if (!string.IsNullOrEmpty(config.DefaultJavaId))
+        {
+            var defaultJava = config.JavaInstallations.FirstOrDefault(j => j.Id == config.DefaultJavaId);
+            if (defaultJava != null)
+            {
+                JavaComboBox.SelectedItem = JavaComboBox.Items
+                    .Cast<ComboBoxItem>()
+                    .FirstOrDefault(item => ((JavaInstallation)item.Tag)?.Id == defaultJava.Id);
+            }
+        }
+
+        if (JavaComboBox.SelectedItem == null)
+            JavaComboBox.SelectedIndex = 0;
+
+        DefaultRamMin.Text = config.DefaultRamMin.ToString();
+        DefaultRamMax.Text = config.DefaultRamMax.ToString();
+        CheckUpdatesBox.IsChecked = config.CheckUpdates;
+
+        // Загрузка темы
+        var theme = config.Theme ?? "System";
+        ThemeComboBox.SelectedItem = ThemeComboBox.Items
+            .Cast<ComboBoxItem>()
+            .FirstOrDefault(item => (string)item.Tag == theme);
+
+        if (ThemeComboBox.SelectedItem == null)
+            ThemeComboBox.SelectedIndex = 0;
+    }
+
+    /// <summary>
+    /// Автосохранение настроек
+    /// </summary>
+    private void AutoSaveSettings()
+    {
+        if (_isLoading || _isUpdating) return; // Защита от сохранения при загрузке и рекурсии
+
+        try
+        {
+            _isUpdating = true;
+
+            var config = _configService.GetConfig();
+
+            // Сохранение выбранной Java
+            if (JavaComboBox.SelectedItem is ComboBoxItem selectedItem &&
+                selectedItem.Tag is JavaInstallation selectedJava)
+            {
+                config.DefaultJavaId = selectedJava.Id;
+            }
+            else
+            {
+                config.DefaultJavaId = null;
+            }
+
+            if (int.TryParse(DefaultRamMin.Text, out var ramMin) && ramMin >= 256)
+                config.DefaultRamMin = ramMin;
+
+            if (int.TryParse(DefaultRamMax.Text, out var ramMax) && ramMax >= ramMin)
+                config.DefaultRamMax = ramMax;
+
+            config.CheckUpdates = CheckUpdatesBox.IsChecked ?? false;
+
+            // Сохранение темы
+            if (ThemeComboBox.SelectedItem is ComboBoxItem themeItem)
+            {
+                config.Theme = (string)themeItem.Tag;
+            }
+
+            _configService.SaveConfig(config);
+
+            // Показ уведомления об успешном сохранении
+            ShowSaveNotification();
+        }
+        finally
+        {
+            _isUpdating = false;
+        }
+    }
+
+    /// <summary>
+    /// Показ уведомления об успешном сохранении
+    /// </summary>
+    private void ShowSaveNotification()
+    {
+        SaveNotification.Visibility = Visibility.Visible;
+
+        // Автоматическое скрытие через 2 секунды
+        _ = Task.Delay(2000).ContinueWith(_ =>
+        {
+            Dispatcher.Invoke(() =>
+            {
+                SaveNotification.Visibility = Visibility.Collapsed;
+            });
+        });
+    }
+
+    private void ChangeServersPath_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Выберите папку для серверов",
+            InitialDirectory = _configService.GetConfig().ServersDirectory
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            var config = _configService.GetConfig();
+            config.ServersDirectory = dialog.FolderName;
+            _configService.SaveConfig(config);
+            ServersFolderPath.Text = dialog.FolderName;
+            ShowSaveNotification();
+        }
+    }
+
+    private async void AddJava_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Выберите java.exe или javaw.exe",
+            Filter = "Java executable|java.exe|JavaW executable|javaw.exe",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            var javaService = new JavaManagementService(_configService);
+            var java = javaService.AddJava(dialog.FileName);
+
+            if (java != null)
+            {
+                // Обновляем ComboBox с новой Java
+                LoadSettings();
+
+                // Выбираем добавленную Java
+                var selectedItem = JavaComboBox.Items
+                    .Cast<ComboBoxItem>()
+                    .FirstOrDefault(item => ((JavaInstallation)item.Tag)?.Id == java.Id);
+
+                if (selectedItem != null)
+                    JavaComboBox.SelectedItem = selectedItem;
+
+                await UiHelper.ShowInfo(
+                    $"Java успешно добавлена!\n\n" +
+                    $"Версия: {java.Version}\n" +
+                    $"Путь: {java.Path}");
+            }
+            else
+            {
+                await UiHelper.ShowWarning(
+                    $"Не удалось добавить Java. Проверьте путь к файлу.\n\n" +
+                    $"Убедитесь, что выбранный файл является java.exe или javaw.exe");
+            }
+        }
+    }
+
+    private void JavaComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        AutoSaveSettings();
+    }
+
+    private void DefaultRamMin_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        AutoSaveSettings();
+    }
+
+    private void DefaultRamMax_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        AutoSaveSettings();
+    }
+
+    private void CheckUpdatesBox_Checked(object sender, RoutedEventArgs e)
+    {
+        AutoSaveSettings();
+    }
+
+    private void CheckUpdatesBox_Unchecked(object sender, RoutedEventArgs e)
+    {
+        AutoSaveSettings();
+    }
+
+    private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoading) return;
+
+        if (ThemeComboBox.SelectedItem is ComboBoxItem selectedItem)
+        {
+            var theme = (string)selectedItem.Tag;
+            ApplyTheme(theme);
+            AutoSaveSettings();
+        }
+    }
+
+    /// <summary>
+    /// Применение темы
+    /// </summary>
+    private void ApplyTheme(string theme)
+    {
+        var mainWindow = Application.Current.MainWindow as MainWindow;
+        mainWindow?.ApplyTheme(theme);
+    }
+}

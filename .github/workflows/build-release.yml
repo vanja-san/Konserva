@@ -1,0 +1,188 @@
+name: Build Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.1)'
+        required: true
+        default: '1.0.1'
+      create_release:
+        description: 'Create GitHub Release after build'
+        required: true
+        type: boolean
+        default: true
+      generate_changelog:
+        description: 'Generate changelog from commits since last tag'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for changelog
+
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Get last tag for changelog
+      if: inputs.create_release == true && inputs.generate_changelog == true
+      id: last_tag
+      run: |
+        $lastTag = git describe --tags --abbrev=0 2>$null
+        if ($lastTag) {
+          Write-Host "Last tag: $lastTag"
+          echo "tag=$lastTag" >> $env:GITHUB_OUTPUT
+        } else {
+          Write-Host "No previous tags found, using initial release"
+          echo "tag=" >> $env:GITHUB_OUTPUT
+        }
+      shell: pwsh
+
+    - name: Generate changelog
+      if: inputs.create_release == true && inputs.generate_changelog == true
+      id: changelog
+      run: |
+        $lastTag = "${{ steps.last_tag.outputs.tag }}"
+        $outputFile = "CHANGELOG_RELEASE.md"
+
+        Write-Host "Generating changelog from commits since $lastTag..."
+
+        # Start changelog file
+        $changelog = "## Changes in v${{ inputs.version }}`n`n"
+
+        if ($lastTag) {
+          Write-Host "Getting commits from $lastTag to HEAD"
+          $commits = git log "$lastTag..HEAD" --pretty=format:"%s" --reverse
+        } else {
+          Write-Host "Getting all commits (initial release)"
+          $commits = git log --pretty=format:"%s" --reverse
+        }
+
+        if ($commits) {
+          foreach ($commit in $commits) {
+            # Skip merge commits and version bumps
+            if ($commit -notmatch "^Merge" -and $commit -notmatch "^Bump version" -and $commit -notmatch "^chore:") {
+              $changelog += "- $commit`n"
+            }
+          }
+        } else {
+          $changelog += "- No changes recorded`n"
+        }
+
+        # Add file description section
+        $changelog += "`n---`n`n"
+        $changelog += "## 📦 Файлы для скачивания`n`n"
+        $changelog += "**Konserva-v${{ inputs.version }}-Full.zip** (~62 MB)`n"
+        $changelog += "- ✅ Всё включено (self-contained)`n"
+        $changelog += "- ✅ Не требует .NET`n"
+        $changelog += "- ✅ Готов к запуску сразу`n"
+        $changelog += "- 📌 **Рекомендуется для большинства пользователей**`n`n"
+        $changelog += "**Konserva-v${{ inputs.version }}-Deps.zip** (~3 MB)`n"
+        $changelog += "- ⚠️ Требует .NET 10 Runtime`n"
+        $changelog += "- ⚡ Меньший размер файла`n"
+        $changelog += "- 💡 Для опытных пользователей`n`n"
+        $changelog += "---`n`n"
+        $changelog += "**Скачать .NET 10 Runtime:** https://dotnet.microsoft.com/download/dotnet/10.0`n"
+
+        # Write changelog
+        $changelog | Out-File -FilePath $outputFile -Encoding utf8
+
+        Write-Host "Changelog generated successfully!"
+        Write-Host "---"
+        Get-Content $outputFile -Raw
+      shell: pwsh
+
+    - name: Restore dependencies
+      run: dotnet restore konserva-app/konserva-app.csproj
+
+    - name: Build Full (Self-contained, ~62 MB)
+      run: |
+        dotnet publish konserva-app/konserva-app.csproj `
+          -c Release `
+          -r win-x64 `
+          --self-contained true `
+          -p:PublishSingleFile=true `
+          -p:EnableCompressionInSingleFile=true `
+          -p:IncludeNativeLibrariesForSelfExtract=true `
+          -p:DebugType=none `
+          -p:DebugSymbols=false `
+          -o "publish/Full"
+      shell: pwsh
+
+    - name: Build Portable (Single file, ~3 MB, requires .NET)
+      run: |
+        dotnet publish konserva-app/konserva-app.csproj /p:PublishProfile=Portable
+      shell: pwsh
+
+    - name: Copy README to builds
+      run: |
+        if (Test-Path README.md) {
+          Copy-Item README.md publish/Full/
+          Copy-Item README.md publish/Portable/
+        }
+      shell: pwsh
+
+    - name: Create Full archive (Self-contained, no dependencies)
+      run: |
+        $archiveName = "Konserva-v${{ inputs.version }}-Full.zip"
+        Compress-Archive -Path publish/Full/* -DestinationPath $archiveName -Force
+        Write-Host "Created: $archiveName"
+        Get-Item $archiveName | Select-Object Name, Length
+      shell: pwsh
+
+    - name: Create Deps archive (Single file, requires .NET 10)
+      run: |
+        $archiveName = "Konserva-v${{ inputs.version }}-Deps.zip"
+        Compress-Archive -Path publish/Portable/* -DestinationPath $archiveName -Force
+        Write-Host "Created: $archiveName"
+        Get-Item $archiveName | Select-Object Name, Length
+      shell: pwsh
+
+    - name: Upload Full artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Konserva-v${{ inputs.version }}-Full
+        path: Konserva-v${{ inputs.version }}-Full.zip
+        retention-days: 30
+
+    - name: Upload Deps artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Konserva-v${{ inputs.version }}-Deps
+        path: Konserva-v${{ inputs.version }}-Deps.zip
+        retention-days: 30
+
+    - name: Create GitHub Release
+      if: inputs.create_release == true
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ inputs.version }}
+        name: Konserva v${{ inputs.version }}
+        body_path: CHANGELOG_RELEASE.md
+        draft: false
+        prerelease: false
+        files: |
+          Konserva-v${{ inputs.version }}-Full.zip
+          Konserva-v${{ inputs.version }}-Deps.zip
+
+    - name: Upload build logs (on failure)
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          konserva-app/bin/
+          konserva-app/obj/
+        retention-days: 7

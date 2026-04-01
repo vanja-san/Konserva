@@ -1,0 +1,58 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>Konserva</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+	<!-- Имя выходного файла без .App -->
+	<AssemblyName>Konserva</AssemblyName>
+	<!-- Информация о приложении (для свойств файла) -->
+	<AssemblyTitle>Konserva - Minecraft Servers Manager</AssemblyTitle>
+	<AssemblyDescription>Minecraft Servers Manager</AssemblyDescription>
+	<AssemblyCopyright>Copyright © 2026 vanja-san</AssemblyCopyright>
+	<AssemblyCompany>vanja-san</AssemblyCompany>
+	<AssemblyProduct>Konserva</AssemblyProduct>
+	<AssemblyVersion>1.2.0.0</AssemblyVersion>
+	<FileVersion>1.2.0.0</FileVersion>
+	<InformationalVersion>1.2.0</InformationalVersion>
+	<!-- Метаданные для Win32 ресурса версии -->
+	<Version>1.2.0</Version>
+	<NeutralLanguage>ru-RU</NeutralLanguage>
+	<Copyright>Copyright © 2026 vanja-san</Copyright>
+
+	<!-- Оптимизации IL -->
+	<Optimize>true</Optimize>
+	<DebugType>none</DebugType>
+	
+	<!-- Настройки для portable single-file публикации -->
+	<EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+	<IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
+	<PublishReadyToRun>false</PublishReadyToRun>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="WPF-UI" Version="4.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Assets\" />
+  </ItemGroup>
+
+  <!-- Иконка приложения -->
+  <ItemGroup>
+    <Resource Include="Assets\app-icon.ico" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+</Project>

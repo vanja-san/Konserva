@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="konserva-app.Tests/konserva-app.Tests.csproj" Id="bb0e930f-42ef-4062-973e-283770c98dd8" />
+  <Project Path="konserva-app/konserva-app.csproj" />
+</Solution>

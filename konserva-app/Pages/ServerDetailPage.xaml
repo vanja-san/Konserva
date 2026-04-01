@@ -1,0 +1,733 @@
+﻿<Page
+    x:Class="Konserva.Pages.ServerDetailPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Konserva.Controls"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="Server Details">
+
+    <Grid Margin="20,0,20,16" RowDefinitions="Auto,Auto,*">
+        <!--  Заголовок с кнопками управления  -->
+        <Border Grid.Row="0" Margin="16,0,16,16">
+            <Grid ColumnDefinitions="*,Auto">
+                <!--  Название сервера  -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <ui:TextBlock
+                        x:Name="ServerNameText"
+                        FontSize="16"
+                        FontWeight="Bold"
+                        Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                        Text="Server Name" />
+                    <ui:TextBlock
+                        x:Name="ServerInfoText"
+                        FontSize="12"
+                        Foreground="{ui:ThemeResource TextFillColorDisabledBrush}"
+                        Text="1.20.4 • Fabric" />
+                </StackPanel>
+
+                <!--  Кнопки управления  -->
+                <StackPanel
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <!--  Старт/Стоп  -->
+                    <ui:Button
+                        x:Name="StartStopButton"
+                        Padding="4"
+                        Click="StartStop_Click"
+                        ToolTip="Запустить сервер">
+                        <ui:SymbolIcon
+                            x:Name="StartStopIcon"
+                            FontSize="20"
+                            Symbol="Play20" />
+                    </ui:Button>
+
+                    <!--  Открыть папку  -->
+                    <ui:Button
+                        Margin="8,0,8,0"
+                        Padding="4"
+                        Click="OpenFolder_Click"
+                        ToolTip="Открыть папку сервера">
+                        <ui:SymbolIcon FontSize="20" Symbol="Folder20" />
+                    </ui:Button>
+
+                    <!--  Удалить  -->
+                    <ui:Button
+                        Padding="4"
+                        Click="Delete_Click"
+                        ToolTip="Удалить сервер">
+                        <ui:SymbolIcon
+                            FontSize="20"
+                            Foreground="IndianRed"
+                            Symbol="Delete20" />
+                    </ui:Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!--  Навигация по разделам сервера  -->
+        <Border
+            Grid.Row="1"
+            Margin="0,0,0,8"
+            Background="{ui:ThemeResource ControlFillColorTertiaryBrush}"
+            BorderBrush="{ui:ThemeResource ControlStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="4">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <!--  Левая группа кнопок (Консоль, Моды, Плагины)  -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <!--  Консоль  -->
+                    <ui:Button
+                        x:Name="ConsoleNavButton"
+                        Padding="12,8"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="NavigationButton_Click"
+                        CornerRadius="4,0,0,4"
+                        Tag="Console"
+                        ToolTip="Консоль сервера">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon
+                                x:Name="ConsoleNavIcon"
+                                Margin="0,0,8,0"
+                                FontSize="20"
+                                Symbol="WindowConsole20" />
+                            <ui:TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="13"
+                                FontWeight="Medium"
+                                Text="Консоль" />
+                        </StackPanel>
+                    </ui:Button>
+
+                    <!--  Моды  -->
+                    <ui:Button
+                        x:Name="ModsNavButton"
+                        Padding="12,8"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="NavigationButton_Click"
+                        CornerRadius="0"
+                        Tag="Mods"
+                        ToolTip="Моды">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon
+                                x:Name="ModsNavIcon"
+                                Margin="0,0,8,0"
+                                FontSize="20"
+                                Symbol="CubeAdd20" />
+                            <ui:TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="13"
+                                FontWeight="Medium"
+                                Text="Моды" />
+                        </StackPanel>
+                    </ui:Button>
+
+                    <!--  Плагины  -->
+                    <ui:Button
+                        x:Name="PluginsNavButton"
+                        Padding="12,8"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="NavigationButton_Click"
+                        CornerRadius="0"
+                        Tag="Plugins"
+                        ToolTip="Плагины">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon
+                                x:Name="PluginsNavIcon"
+                                Margin="0,0,8,0"
+                                FontSize="20"
+                                Symbol="LightbulbFilament20" />
+                            <ui:TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="13"
+                                FontWeight="Medium"
+                                Text="Плагины" />
+                        </StackPanel>
+                    </ui:Button>
+                </StackPanel>
+
+                <!--  Правая группа кнопок (Свойства, Настройки)  -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <!--  Свойства  -->
+                    <ui:Button
+                        x:Name="PropertiesNavButton"
+                        Padding="8"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="NavigationButton_Click"
+                        CornerRadius="0"
+                        Tag="Properties"
+                        ToolTip="Свойства сервера">
+                        <ui:SymbolIcon
+                            x:Name="PropertiesNavIcon"
+                            FontSize="20"
+                            Symbol="DocumentText20" />
+                    </ui:Button>
+
+                    <!--  Настройки  -->
+                    <ui:Button
+                        x:Name="SettingsNavButton"
+                        Padding="8"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="NavigationButton_Click"
+                        CornerRadius="0,4,4,0"
+                        Tag="Settings"
+                        ToolTip="Настройки сервера">
+                        <ui:SymbolIcon
+                            x:Name="SettingsNavIcon"
+                            FontSize="20"
+                            Symbol="TaskListSquareSettings20" />
+                    </ui:Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!--  Содержимое разделов  -->
+        <Border Grid.Row="2" CornerRadius="8">
+            <Grid>
+                <!--  Консоль  -->
+                <Grid
+                    x:Name="ConsoleView"
+                    RowDefinitions="*,Auto"
+                    Visibility="Visible">
+                    <!--  Лог сервера  -->
+                    <ui:RichTextBox
+                        x:Name="LogBox"
+                        Grid.Row="0"
+                        Padding="8"
+                        Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                        BorderThickness="0"
+                        HorizontalScrollBarVisibility="Disabled"
+                        IsReadOnly="True"
+                        IsTextSelectionEnabled="True"
+                        VerticalScrollBarVisibility="Auto">
+                        <ui:RichTextBox.Document>
+                            <FlowDocument
+                                FontFamily="Consolas"
+                                FontSize="12"
+                                LineHeight="14"
+                                LineStackingStrategy="BlockLineHeight"
+                                PageWidth="5000">
+                                <Paragraph Margin="0" TextIndent="0" />
+                            </FlowDocument>
+                        </ui:RichTextBox.Document>
+                    </ui:RichTextBox>
+                    <!--  Placeholder для пустой консоли  -->
+                    <ui:TextBlock
+                        x:Name="ConsolePlaceholder"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Foreground="Gray"
+                        IsHitTestVisible="False"
+                        Text="Консоль пуста, запустите сервер" />
+                    <!--  Ввод команды  -->
+                    <Grid
+                        Grid.Row="1"
+                        Margin="0,8,0,0"
+                        ColumnDefinitions="*,Auto">
+                        <ui:TextBox x:Name="CommandBox" KeyDown="CommandBox_KeyDown" />
+                        <ui:Button
+                            Grid.Column="1"
+                            Margin="8,0,0,0"
+                            Padding="20,8"
+                            Click="SendCommand_Click"
+                            Content="Отправить" />
+                    </Grid>
+                </Grid>
+
+                <!--  Моды  -->
+                <Grid
+                    x:Name="ModsView"
+                    RowDefinitions="Auto,*"
+                    Visibility="Collapsed">
+                    <!--  Тулбар  -->
+                    <Border
+                        Grid.Row="0"
+                        Padding="12,8,8,8"
+                        Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4,4,0,0">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel
+                                Grid.Column="0"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                                <ui:SymbolIcon
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    Filled="True"
+                                    FontSize="20"
+                                    Symbol="AppsListDetail20" />
+                                <ui:TextBlock
+                                    FontSize="15"
+                                    FontWeight="SemiBold"
+                                    Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                    Text="Список установленных модов" />
+                                <ui:InfoBadge
+                                    x:Name="ModsCountBadge"
+                                    Margin="10,0,0,0"
+                                    Value="0"
+                                    Visibility="Collapsed" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <ui:Button
+                                    x:Name="OpenModsFolderBtn"
+                                    Width="32"
+                                    Height="32"
+                                    Margin="0,0,8,0"
+                                    Padding="0"
+                                    Click="OpenModsFolder_Click"
+                                    ToolTip="Открыть папку mods">
+                                    <ui:SymbolIcon FontSize="20" Symbol="FolderOpen20" />
+                                </ui:Button>
+                                <ui:Button
+                                    x:Name="RefreshModsBtn"
+                                    Width="32"
+                                    Height="32"
+                                    Padding="0"
+                                    Click="RefreshMods_Click"
+                                    ToolTip="Обновить список">
+                                    <ui:SymbolIcon FontSize="20" Symbol="ArrowClockwise20" />
+                                </ui:Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!--  Список модов  -->
+                    <Border
+                        Grid.Row="1"
+                        Padding="12"
+                        Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1,0,1,1"
+                        CornerRadius="0,0,4,4">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="ModsList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:CardControl
+                                            Margin="0,0,0,8"
+                                            Padding="12,8,8,8"
+                                            Tag="{Binding}">
+                                            <ui:CardControl.Icon>
+                                                <ui:SymbolIcon
+                                                    Filled="True"
+                                                    FontSize="20"
+                                                    Symbol="Cube20" />
+                                            </ui:CardControl.Icon>
+                                            <ui:CardControl.Header>
+                                                <ui:TextBlock
+                                                    FontSize="14"
+                                                    Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                                    Text="{Binding Name}"
+                                                    TextTrimming="CharacterEllipsis" />
+                                            </ui:CardControl.Header>
+                                            <ui:Button
+                                                Width="24"
+                                                Height="24"
+                                                Padding="0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Click="DeleteMod_Click"
+                                                Tag="{Binding}"
+                                                ToolTip="Удалить">
+                                                <ui:SymbolIcon
+                                                    Filled="True"
+                                                    FontSize="16"
+                                                    Foreground="IndianRed"
+                                                    Symbol="Delete20" />
+                                            </ui:Button>
+                                        </ui:CardControl>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+
+                <!--  Плагины  -->
+                <Grid
+                    x:Name="PluginsView"
+                    RowDefinitions="Auto,*"
+                    Visibility="Collapsed">
+                    <!--  Тулбар  -->
+                    <Border
+                        Grid.Row="0"
+                        Padding="12,8,8,8"
+                        Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4,4,0,0">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel
+                                Grid.Column="0"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                                <ui:SymbolIcon
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    Filled="True"
+                                    FontSize="20"
+                                    Symbol="AppsListDetail20" />
+                                <ui:TextBlock
+                                    FontSize="15"
+                                    FontWeight="SemiBold"
+                                    Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                    Text="Список установленных плагинов" />
+                                <ui:InfoBadge
+                                    x:Name="PluginsCountBadge"
+                                    Margin="8,0,0,0"
+                                    Value="0"
+                                    Visibility="Collapsed" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <ui:Button
+                                    x:Name="OpenPluginsFolderBtn"
+                                    Width="32"
+                                    Height="32"
+                                    Margin="0,0,8,0"
+                                    Padding="0"
+                                    Click="OpenPluginsFolder_Click"
+                                    ToolTip="Открыть папку plugins">
+                                    <ui:SymbolIcon FontSize="20" Symbol="FolderOpen20" />
+                                </ui:Button>
+                                <ui:Button
+                                    x:Name="RefreshPluginsBtn"
+                                    Width="32"
+                                    Height="32"
+                                    Padding="0"
+                                    Click="RefreshPlugins_Click"
+                                    ToolTip="Обновить список">
+                                    <ui:SymbolIcon FontSize="20" Symbol="ArrowClockwise20" />
+                                </ui:Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!--  Список плагинов  -->
+                    <Border
+                        Grid.Row="1"
+                        Padding="12"
+                        Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1,0,1,1"
+                        CornerRadius="0,0,4,4">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="PluginsList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:CardControl
+                                            Margin="0,0,0,8"
+                                            Padding="12,8,8,8"
+                                            Tag="{Binding}">
+                                            <ui:CardControl.Icon>
+                                                <ui:SymbolIcon
+                                                    Filled="True"
+                                                    FontSize="20"
+                                                    Symbol="LightbulbFilament20" />
+                                            </ui:CardControl.Icon>
+                                            <ui:CardControl.Header>
+                                                <ui:TextBlock
+                                                    FontSize="14"
+                                                    Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                                    Text="{Binding Name}"
+                                                    TextTrimming="CharacterEllipsis" />
+                                            </ui:CardControl.Header>
+                                            <ui:Button
+                                                Width="24"
+                                                Height="24"
+                                                Padding="0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Click="DeletePlugin_Click"
+                                                Tag="{Binding}"
+                                                ToolTip="Удалить">
+                                                <ui:SymbolIcon
+                                                    Filled="True"
+                                                    FontSize="16"
+                                                    Foreground="IndianRed"
+                                                    Symbol="Delete20" />
+                                            </ui:Button>
+                                        </ui:CardControl>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+
+                <!--  Свойства сервера (server.properties)  -->
+                <Grid x:Name="PropertiesView" Visibility="Collapsed">
+                    <controls:ServerPropertiesEditor x:Name="PropertiesEditor" />
+                </Grid>
+
+                <!--  Настройки сервера  -->
+                <Grid x:Name="SettingsView" Visibility="Collapsed">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <!--  Основные настройки  -->
+                            <ui:CardExpander
+                                Margin="0,0,0,8"
+                                Padding="12"
+                                ContentPadding="8"
+                                IsExpanded="True">
+                                <ui:CardExpander.Icon>
+                                    <ui:SymbolIcon
+                                        Filled="True"
+                                        FontSize="20"
+                                        Symbol="TaskListSquaresettings20" />
+                                </ui:CardExpander.Icon>
+                                <ui:CardExpander.Header>
+                                    <ui:TextBlock
+                                        FontSize="14"
+                                        FontWeight="SemiBold"
+                                        Text="Основные" />
+                                </ui:CardExpander.Header>
+                                <Grid Margin="8,0" RowDefinitions="Auto,Auto">
+                                    <Grid
+                                        Grid.Row="0"
+                                        Margin="0,8"
+                                        ColumnDefinitions="*,Auto">
+                                        <StackPanel>
+                                            <ui:TextBlock
+                                                Grid.Column="0"
+                                                VerticalAlignment="Center"
+                                                Text="Название" />
+                                            <ui:TextBlock
+                                                FontSize="11"
+                                                Foreground="Gray"
+                                                Text="Название сервера" />
+                                        </StackPanel>
+                                        <ui:TextBox
+                                            x:Name="SettingName"
+                                            Grid.Column="1"
+                                            MinWidth="100"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            LostFocus="Setting_LostFocus" />
+                                    </Grid>
+                                    <Grid
+                                        Grid.Row="1"
+                                        Margin="0,8"
+                                        ColumnDefinitions="*,Auto">
+                                        <StackPanel>
+                                            <ui:TextBlock
+                                                Grid.Column="0"
+                                                VerticalAlignment="Center"
+                                                Text="Порт" />
+                                            <ui:TextBlock
+                                                FontSize="11"
+                                                Foreground="Gray"
+                                                Text="Порт для сервера" />
+                                        </StackPanel>
+                                        <ui:TextBox
+                                            x:Name="SettingPort"
+                                            Grid.Column="1"
+                                            MinWidth="100"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            LostFocus="Setting_LostFocus"
+                                            PreviewTextInput="NumberValidationTextBox_PreviewTextInput"
+                                            TextAlignment="Center" />
+                                    </Grid>
+                                </Grid>
+                            </ui:CardExpander>
+
+                            <!--  Выделение памяти  -->
+                            <ui:CardExpander
+                                Margin="0,0,0,8"
+                                Padding="12"
+                                ContentPadding="8"
+                                IsExpanded="True">
+                                <ui:CardExpander.Icon>
+                                    <ui:SymbolIcon
+                                        Filled="True"
+                                        FontSize="20"
+                                        Symbol="Storage20" />
+                                </ui:CardExpander.Icon>
+                                <ui:CardExpander.Header>
+                                    <ui:TextBlock
+                                        FontSize="14"
+                                        FontWeight="SemiBold"
+                                        Text="Выделение памяти" />
+                                </ui:CardExpander.Header>
+                                <Grid Margin="8,0" RowDefinitions="Auto,Auto">
+                                    <Grid
+                                        Grid.Row="0"
+                                        Margin="0,8"
+                                        ColumnDefinitions="*,Auto">
+                                        <StackPanel>
+                                            <ui:TextBlock
+                                                Grid.Column="0"
+                                                VerticalAlignment="Center"
+                                                Text="Минимум RAM (MB)" />
+                                            <ui:TextBlock
+                                                FontSize="11"
+                                                Foreground="Gray"
+                                                Text="Минимальный размер памяти для сервера" />
+                                        </StackPanel>
+                                        <ui:TextBox
+                                            x:Name="SettingRamMin"
+                                            Grid.Column="1"
+                                            Width="100"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            LostFocus="Setting_LostFocus"
+                                            PreviewTextInput="NumberValidationTextBox_PreviewTextInput"
+                                            TextAlignment="Center" />
+                                    </Grid>
+                                    <Grid
+                                        Grid.Row="1"
+                                        Margin="0,8"
+                                        ColumnDefinitions="*,Auto">
+                                        <StackPanel Orientation="Vertical">
+                                            <ui:TextBlock
+                                                Grid.Column="0"
+                                                VerticalAlignment="Center"
+                                                Text="Максимум RAM (MB)" />
+                                            <ui:TextBlock
+                                                FontSize="11"
+                                                Foreground="Gray"
+                                                Text="Максимальный размер памяти для сервера" />
+                                        </StackPanel>
+                                        <ui:TextBox
+                                            x:Name="SettingRamMax"
+                                            Grid.Column="1"
+                                            Width="100"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            LostFocus="Setting_LostFocus"
+                                            PreviewTextInput="NumberValidationTextBox_PreviewTextInput"
+                                            TextAlignment="Center" />
+                                    </Grid>
+                                </Grid>
+                            </ui:CardExpander>
+
+                            <!--  Авто-рестарт  -->
+                            <ui:CardExpander
+                                Margin="0,0,0,8"
+                                Padding="12"
+                                ContentPadding="8"
+                                IsExpanded="True">
+                                <ui:CardExpander.Icon>
+                                    <ui:SymbolIcon
+                                        Filled="True"
+                                        FontSize="20"
+                                        Symbol="Power20" />
+                                </ui:CardExpander.Icon>
+                                <ui:CardExpander.Header>
+                                    <ui:TextBlock
+                                        FontSize="14"
+                                        FontWeight="SemiBold"
+                                        Text="Авто-рестарт" />
+                                </ui:CardExpander.Header>
+                                <Grid Margin="8,0" RowDefinitions="Auto,Auto">
+                                    <Grid
+                                        Grid.Row="0"
+                                        Margin="0,8"
+                                        ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0">
+                                            <ui:TextBlock FontSize="13" Text="Включить авто-рестарт" />
+                                            <ui:TextBlock
+                                                FontSize="11"
+                                                Foreground="Gray"
+                                                Text="Автоматически перезапускать сервер при остановке" />
+                                        </StackPanel>
+                                        <CheckBox
+                                            x:Name="SettingAutoRestart"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Click="Setting_Click" />
+                                    </Grid>
+                                    <Grid
+                                        Grid.Row="1"
+                                        Margin="0,8"
+                                        ColumnDefinitions="*,200">
+                                        <StackPanel Grid.Column="0">
+                                            <ui:TextBlock FontSize="13" Text="Задержка перед рестартом (сек)" />
+                                            <ui:TextBlock
+                                                FontSize="11"
+                                                Foreground="Gray"
+                                                Text="Задержка перед автоматическим перезапуском" />
+                                        </StackPanel>
+                                        <ui:TextBox
+                                            x:Name="SettingAutoRestartDelay"
+                                            Grid.Column="1"
+                                            MinWidth="100"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            LostFocus="Setting_LostFocus"
+                                            PreviewTextInput="NumberValidationTextBox_PreviewTextInput"
+                                            TextAlignment="Center" />
+                                    </Grid>
+                                </Grid>
+                            </ui:CardExpander>
+
+                            <!--  Настройки Java  -->
+                            <ui:CardExpander
+                                Margin="0,0,0,8"
+                                Padding="12"
+                                ContentPadding="8"
+                                IsExpanded="True">
+                                <ui:CardExpander.Icon>
+                                    <ui:SymbolIcon
+                                        Filled="True"
+                                        FontSize="20"
+                                        Symbol="SquareHintApps20" />
+                                </ui:CardExpander.Icon>
+                                <ui:CardExpander.Header>
+                                    <ui:TextBlock
+                                        FontSize="14"
+                                        FontWeight="SemiBold"
+                                        Text="Java" />
+                                </ui:CardExpander.Header>
+                                <Grid Margin="8,0" RowDefinitions="Auto,Auto">
+                                    <Grid
+                                        Grid.Row="0"
+                                        Margin="0,8"
+                                        ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0">
+                                            <ui:TextBlock FontSize="13" Text="Автовыбор версии Java" />
+                                            <ui:TextBlock
+                                                FontSize="11"
+                                                Foreground="Gray"
+                                                Text="Автоматически выбирать Java на основе версии Minecraft" />
+                                        </StackPanel>
+                                        <CheckBox
+                                            x:Name="SettingJavaAutoSelect"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Click="Setting_Click"
+                                            IsChecked="True" />
+                                    </Grid>
+                                    <Grid
+                                        x:Name="JavaSelectionGrid"
+                                        Grid.Row="1"
+                                        Margin="0,8"
+                                        ColumnDefinitions="150,*">
+                                        <ui:TextBlock
+                                            Grid.Column="0"
+                                            VerticalAlignment="Center"
+                                            Text="Версия Java" />
+                                        <ComboBox
+                                            x:Name="SettingJavaComboBox"
+                                            Grid.Column="1"
+                                            MinWidth="200"
+                                            HorizontalAlignment="Right"
+                                            SelectionChanged="SettingJavaComboBox_SelectionChanged" />
+                                    </Grid>
+                                </Grid>
+                            </ui:CardExpander>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>
