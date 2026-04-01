@@ -27,6 +27,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Fetch all history for changelog
+        fetch-tags: true  # Explicitly fetch tags
 
     - name: Setup .NET 10
       uses: actions/setup-dotnet@v4
@@ -37,8 +38,15 @@ jobs:
       if: inputs.create_release == true && inputs.generate_changelog == true
       id: last_tag
       run: |
-        $lastTag = git describe --tags --abbrev=0 2>&1
-        if ($LASTEXITCODE -eq 0 -and $lastTag) {
+        # Try to get the last tag, ignore errors if no tags exist
+        $lastTag = $null
+        try {
+          $lastTag = git describe --tags --abbrev=0 2>$null
+        } catch {
+          Write-Host "No tags found (expected for first release)"
+        }
+        
+        if ($lastTag) {
           Write-Host "Last tag: $lastTag"
           echo "tag=$lastTag" >> $env:GITHUB_OUTPUT
         } else {
@@ -46,7 +54,6 @@ jobs:
           echo "tag=" >> $env:GITHUB_OUTPUT
         }
       shell: pwsh
-      continue-on-error: false
 
     - name: Generate changelog
       if: inputs.create_release == true && inputs.generate_changelog == true
