@@ -165,12 +165,16 @@ public partial class App : Application
     {
         try
         {
-            // Инициализация API версий - для проверки
+            // Инициализация API версий
             var versionsApi = _serviceProvider?.GetService<IMcVersionsApi>();
-            if (versionsApi != null)
-            {
-                // Не загружаем версии сразу - это делается только при запросе от пользователя
-            }
+            
+            // Инициализация McServerInstaller (требуется для установки серверов)
+            var httpClient = _serviceProvider?.GetService<HttpClient>() 
+                ?? new HttpClient();
+            var configService = _serviceProvider?.GetService<IConfigService>();
+            McServerInstaller.Initialize(httpClient, configService);
+            
+            Logger.Info("McServerInstaller initialized", "App");
         }
         catch (Exception ex)
         {
