@@ -1358,12 +1358,6 @@ public static partial class McServerInstaller
 
     #endregion
 
-    #region Spigot
-
-    // В РАЗРАБОТКЕ - установка Spigot временно отключена
-
-    #endregion
-
     #region Purpur
 
     /// <summary>
@@ -1550,8 +1544,7 @@ public static partial class McServerInstaller
             "fabric-server-launch.jar",
             "quilt-server-launch.jar",
             "paper.jar",
-            "purpur.jar",
-            "spigot.jar"
+            "purpur.jar"
         };
 
         foreach (var priority in priorityNames)
@@ -1604,7 +1597,7 @@ public static partial class McServerInstaller
         if (Directory.GetFiles(serverPath, "neoforge-*.jar").Length > 0)
             return ServerLaunchType.NeoForge;
 
-        // Vanilla, Paper, Purpur, Spigot используют стандартный запуск
+        // Vanilla, Paper, Purpur используют стандартный запуск
         return ServerLaunchType.Standard;
     }
 
@@ -1644,7 +1637,7 @@ public static partial class McServerInstaller
     /// </summary>
     public enum ServerLaunchType
     {
-        Standard,  // Vanilla, Paper, Purpur, Spigot
+        Standard,  // Vanilla, Paper, Purpur
         Fabric,
         Quilt,
         Forge,

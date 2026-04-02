@@ -49,7 +49,6 @@
                     <ComboBoxItem Content="NeoForge" Tag="NeoForge" />
                     <ComboBoxItem Content="Fabric" Tag="Fabric" />
                     <ComboBoxItem Content="Paper" Tag="Paper" />
-                    <ComboBoxItem Content="Spigot" Tag="Spigot" />
                     <ComboBoxItem Content="Purpur" Tag="Purpur" />
                     <ComboBoxItem
                         Content="Quilt"

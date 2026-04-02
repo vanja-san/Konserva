@@ -65,10 +65,6 @@
                         <ComboBoxItem Content="Quilt" Tag="Quilt" />
                         <ComboBoxItem Content="Paper" Tag="Paper" />
                         <ComboBoxItem Content="Purpur" Tag="Purpur" />
-                        <ComboBoxItem
-                            Content="Spigot"
-                            IsEnabled="False"
-                            Tag="Spigot" />
                     </ComboBox>
                 </StackPanel>
 

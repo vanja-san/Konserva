@@ -868,7 +868,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 _serverReady = true;
                 AppendLog("[INFO] Сервер полностью загрузился");
             }
-            // Paper/Purpur/Spigot
+            // Paper/Purpur
             else if (line.Contains("Done (") || line.Contains("For help, type"))
             {
                 _serverReady = true;

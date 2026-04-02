@@ -253,34 +253,33 @@
                                 Text="{loc:Loc Settings_About_ModalLoaders}" />
                             <StackPanel Orientation="Horizontal">
                                 <ui:InfoBadge
-                                    Margin="0,0,8,0"
+                                    Margin="0,0,4,0"
                                     Severity="Attention"
                                     Value="Vanilla" />
                                 <ui:InfoBadge
-                                    Margin="0,0,8,0"
+                                    Margin="0,0,4,0"
                                     Severity="Caution"
                                     Value="Forge" />
                                 <ui:InfoBadge
-                                    Margin="0,0,8,0"
+                                    Margin="0,0,4,0"
                                     Severity="Caution"
                                     Value="NeoForge" />
                                 <ui:InfoBadge
-                                    Margin="0,0,8,0"
+                                    Margin="0,0,4,0"
                                     Severity="Caution"
                                     Value="Fabric" />
                                 <ui:InfoBadge
-                                    Margin="0,0,8,0"
+                                    Margin="0,0,4,0"
                                     Severity="Caution"
                                     Value="Quilt" />
                                 <ui:InfoBadge
-                                    Margin="0,0,8,0"
+                                    Margin="0,0,4,0"
                                     Severity="Attention"
                                     Value="Paper" />
                                 <ui:InfoBadge
-                                    Margin="0,0,8,0"
+                                    Margin="0,0,4,0"
                                     Severity="Attention"
                                     Value="Purpur" />
-                                <ui:InfoBadge Severity="Informational" Value="Spigot" />
                             </StackPanel>
                         </StackPanel>
                     </Border>

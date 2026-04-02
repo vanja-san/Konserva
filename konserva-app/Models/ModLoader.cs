@@ -11,7 +11,6 @@ public enum ModLoaderType
     Fabric,
     Quilt,
     Paper,
-    Spigot,
     Purpur
 }
 
