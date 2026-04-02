@@ -723,7 +723,17 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             _logLines.Add(logLine);
 
             if (_logLines.Count > MaxLogLines)
+            {
                 _logLines.RemoveAt(0);
+                // Ограничиваем размер StringBuilder (примерно 100KB)
+                if (_logs.Length > 100_000)
+                {
+                    var fullText = _logs.ToString();
+                    var startIndex = Math.Max(0, fullText.Length - 80_000);
+                    _logs.Clear();
+                    _logs.Append(fullText.Substring(startIndex));
+                }
+            }
 
             OnLog?.Invoke(logLine);
         }
