@@ -92,13 +92,7 @@ jobs:
       run: |
         dotnet publish konserva-app/konserva-app.csproj `
           -c Release `
-          -r win-x64 `
-          --self-contained false `
-          -p:PublishSingleFile=true `
-          -p:EnableCompressionInSingleFile=false `
-          -p:IncludeNativeLibrariesForSelfExtract=false `
-          -p:DebugType=none `
-          -p:DebugSymbols=false `
+          /p:PublishProfile=Portable `
           -o "publish/Portable"
       shell: pwsh
 
@@ -112,8 +106,10 @@ jobs:
 
     - name: Create Deps archive (Single file, requires .NET 10)
       run: |
+        if (!(Test-Path "publish/Deps")) { New-Item -ItemType Directory -Path "publish/Deps" | Out-Null }
+        Copy-Item "publish/Portable/Konserva.exe" "publish/Deps/"
         $archiveName = "Konserva-v${{ inputs.version }}-Deps.zip"
-        Compress-Archive -Path "publish/Portable/*" -DestinationPath $archiveName -Force
+        Compress-Archive -Path "publish/Deps/*" -DestinationPath $archiveName -Force
         Write-Host "Created: $archiveName"
         Get-Item $archiveName | Select-Object Name, Length
       shell: pwsh

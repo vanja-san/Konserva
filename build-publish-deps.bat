@@ -24,19 +24,17 @@ echo.
 echo [3/3] Publishing Portable (single file)...
 dotnet publish konserva-app/konserva-app.csproj ^
     -c Release ^
-    -r win-x64 ^
-    --self-contained false ^
-    -p:PublishSingleFile=true ^
-    -p:EnableCompressionInSingleFile=false ^
-    -p:IncludeNativeLibrariesForSelfExtract=false ^
-    -p:DebugType=none ^
-    -p:DebugSymbols=false ^
+    /p:PublishProfile=Properties\PublishProfiles\Portable.pubxml ^
     -o "konserva-app\publish\Portable"
-if errorlevel 1 goto :error
+if errorlevel 1 (
+    echo ERROR: Publishing failed with exit code %errorlevel%
+    pause
+    goto :error
+)
 
 echo.
 if not exist "publish\Portable" mkdir "publish\Portable"
-xcopy /Y "konserva-app\publish\Portable\*" "publish\Portable\" >nul
+copy /Y "konserva-app\publish\Portable\Konserva.exe" "publish\Portable\" >nul
 
 echo ============================================
 echo    Build Complete!
