@@ -5,9 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using Wpf.Ui.Controls;
-using Button = Wpf.Ui.Controls.Button;
 
 namespace Konserva.Pages;
 

@@ -8,7 +8,7 @@ namespace Konserva.Models;
 public class AppConfig
 {
     public string Theme { get; set; } = "System";
-    public string Language { get; set; } = "ru";
+    public string Language { get; set; } = "System";
 
     /// <summary>
     /// Список установленных Java

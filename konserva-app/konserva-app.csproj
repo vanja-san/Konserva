@@ -55,4 +55,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <!-- Открываем internal классы для тестов -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="konserva-app.Tests" />
+  </ItemGroup>
+
 </Project>

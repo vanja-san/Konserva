@@ -108,7 +108,7 @@ public static partial class McServerInstaller
             using var request = new HttpRequestMessage(HttpMethod.Get, versionEntry.Url);
             request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
             request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
-            
+
             using var response = await GetHttpClient().SendAsync(request, ct);
             response.EnsureSuccessStatusCode();
 
@@ -695,12 +695,16 @@ public static partial class McServerInstaller
 
             // 1. Скачиваем installer (0-30%)
             var installerPath = Path.Combine(destinationPath, "forge-installer.jar");
+            // Прогресс: 0-30% (умножаем на 0.3)
             var progressWrapper = new Progress<double>(p => progress?.Report(p * 0.3));
             var downloadResult = await DownloadFile(installerUrl, destinationPath, "forge-installer.jar", progressWrapper, ct);
             if (!downloadResult.success)
                 return false;
 
-            // 2. Запускаем installer (30-90%)
+            // После скачивания показываем 30%
+            progress?.Report(30);
+
+            // 2. Запускаем installer с прогрессом (30-95%)
             var success = await RunForgeInstaller(installerPath, destinationPath, ct, progress);
 
             // 3. Удаляем installer
@@ -710,7 +714,20 @@ public static partial class McServerInstaller
             }
 
             if (success)
+            {
+                // Ждём пока завершатся все файловые операции после установки
+                Logger.Info("Waiting for file operations to complete...", "McServerInstaller");
+                
+                // Плавно увеличиваем прогресс с 95% до 100% за 5 секунд
+                for (int i = 0; i < 50; i++)
+                {
+                    await Task.Delay(100);
+                    progress?.Report(95 + (i * 0.1)); // 95% -> 100% (плавное увеличение)
+                }
+                
                 progress?.Report(100);
+                Logger.Info("File operations completed", "McServerInstaller");
+            }
 
             return success;
         }
@@ -783,7 +800,7 @@ public static partial class McServerInstaller
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            // Обновляем прогресс во время ожидания (30% -> 90%)
+            // Обновляем прогресс во время ожидания (30% -> 95%)
             var startTime = DateTime.Now;
             var timeout = TimeSpan.FromMinutes(15); // Увеличенный таймаут для Forge
 
@@ -795,8 +812,9 @@ public static partial class McServerInstaller
                 var elapsed = DateTime.Now - startTime;
                 if (elapsed < timeout)
                 {
-                    var installProgress = 30 + (elapsed.TotalMilliseconds / timeout.TotalMilliseconds * 60);
-                    progress?.Report(Math.Min(installProgress, 90));
+                    // Плавно увеличиваем прогресс с 30% до 95%
+                    var installProgress = 30 + (elapsed.TotalMilliseconds / timeout.TotalMilliseconds * 65);
+                    progress?.Report(Math.Min(installProgress, 95));
                 }
                 else
                 {
@@ -907,42 +925,66 @@ public static partial class McServerInstaller
             }
 
             // Формируем URL с версией NeoForge
-            // Для latest/recommended используем resolved actualVersion (например, 21.10.64)
-            // Для конкретной версии используем только версию NeoForge (например, 21.10.64)
-            string mavenPath;
-            if (neoforgeVersion == "latest" || neoforgeVersion == "recommended")
-            {
-                // Используем разрешённую версию (например, 21.10.64 вместо 1.21.10-latest)
-                mavenPath = actualVersion;
-            }
-            else
-            {
-                // Используем только версию NeoForge (actualVersion уже содержит правильную версию)
-                mavenPath = actualVersion;
-            }
-            
+            // NeoForge использует формат: https://maven.neoforged.net/releases/net/neoforged/forge/{version}/forge-{version}-installer.jar
+            string mavenPath = actualVersion;
+
+            // Проверяем несколько форматов URL
             var urls = new[]
             {
+                // Формат 1: Maven классический
                 $"https://maven.neoforged.net/releases/net/neoforged/forge/{mavenPath}/forge-{mavenPath}-installer.jar",
-                $"https://maven.neoforged.net/api/v1/installer/{mavenPath}"
+                // Формат 2: Maven с mc версией
+                $"https://maven.neoforged.net/releases/net/neoforged/forge/{mcVersion}-{mavenPath}/forge-{mcVersion}-{mavenPath}-installer.jar",
+                // Формат 3: Прямой download
+                $"https://maven.neoforged.net/api/v1/installer/{mcVersion}-{mavenPath}"
             };
 
             foreach (var url in urls)
             {
                 Logger.Info($"Checking NeoForge URL: {url}", "McServerInstaller");
 
-                using var request = new HttpRequestMessage(HttpMethod.Head, url);
-                using var response = await GetHttpClient().SendAsync(request, ct);
+                try
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Head, url);
+                    using var response = await GetHttpClient().SendAsync(request, ct);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    Logger.Info($"NeoForge installer found: {url}", "McServerInstaller");
-                    return url;
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Logger.Info($"NeoForge installer found: {url}", "McServerInstaller");
+                        return url;
+                    }
+                    else
+                    {
+                        Logger.Warning($"NeoForge URL check failed: {response.StatusCode}", "McServerInstaller");
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Logger.Warning($"NeoForge URL check failed: {response.StatusCode}", "McServerInstaller");
+                    Logger.Warning($"NeoForge URL error: {ex.Message}", "McServerInstaller");
                 }
+            }
+
+            // Если все URL не работали, пробуем получить версию из Maven metadata
+            Logger.Info("Trying to fetch NeoForge version from Maven metadata...", "McServerInstaller");
+            
+            try
+            {
+                var metadataUrl = "https://maven.neoforged.net/releases/net/neoforged/forge/maven-metadata.xml";
+                var metadata = await GetHttpClient().GetStringAsync(metadataUrl, ct);
+                
+                // Ищем последнюю версию
+                var versionMatch = System.Text.RegularExpressions.Regex.Match(metadata, @"<version>([^<]+)</version>");
+                if (versionMatch.Success)
+                {
+                    var latestVersion = versionMatch.Groups[1].Value;
+                    var fallbackUrl = $"https://maven.neoforged.net/releases/net/neoforged/forge/{latestVersion}/forge-{latestVersion}-installer.jar";
+                    Logger.Info($"Using latest NeoForge version from metadata: {latestVersion}", "McServerInstaller");
+                    return fallbackUrl;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Failed to fetch NeoForge metadata: {ex.Message}", "McServerInstaller");
             }
 
             Logger.Error("All NeoForge URLs failed", null, "McServerInstaller");
@@ -1520,10 +1562,15 @@ public static partial class McServerInstaller
                 return found;
         }
 
-        // Ищем forge jar
+        // Ищем forge jar (может быть forge-*.jar или *-shim.jar)
         var forgeJars = Directory.GetFiles(serverPath, "forge-*.jar");
         if (forgeJars.Length > 0)
             return forgeJars[0];
+
+        // Ищем shim jar (новый формат Forge)
+        var shimJars = Directory.GetFiles(serverPath, "*-shim.jar");
+        if (shimJars.Length > 0)
+            return shimJars[0];
 
         // Ищем neoforge jar
         var neoforgeJars = Directory.GetFiles(serverPath, "neoforge-*.jar");
@@ -1547,7 +1594,11 @@ public static partial class McServerInstaller
         if (quiltJars.Length > 0)
             return ServerLaunchType.Quilt;
 
+        // Forge (старый формат forge-*.jar или новый *-shim.jar)
         if (Directory.GetFiles(serverPath, "forge-*.jar").Length > 0)
+            return ServerLaunchType.Forge;
+        
+        if (Directory.GetFiles(serverPath, "*-shim.jar").Length > 0)
             return ServerLaunchType.Forge;
 
         if (Directory.GetFiles(serverPath, "neoforge-*.jar").Length > 0)

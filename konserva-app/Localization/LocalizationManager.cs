@@ -127,21 +127,21 @@ public static class LocalizationManager
         {
             return value;
         }
-        
+
         // Если файлы не загружены, используем default translations
         var defaultTranslations = GetDefaultTranslationsForCulture(CurrentCulture.Name);
         if (defaultTranslations != null && defaultTranslations.TryGetValue(key, out var defaultValue))
         {
             return defaultValue;
         }
-        
+
         // Fallback на английский
         var enTranslations = GetDefaultTranslationsForCulture("en");
         if (enTranslations != null && enTranslations.TryGetValue(key, out var enValue))
         {
             return enValue;
         }
-        
+
         return key; // Возвращаем ключ если ничего не найдено
     }
 
@@ -161,7 +161,7 @@ public static class LocalizationManager
     {
         // Определяем фактический язык
         string actualCulture = culture;
-        
+
         if (culture == "System")
         {
             // Автоопределение языка системы
@@ -290,7 +290,7 @@ public static class LocalizationManager
                 { "CreateServer_Browse", "Обзор" },
                 { "CreateServer_Create", "Создать" },
                 { "CreateServer_Cancel", "Отмена" },
-                { "CreateServer_Filter_Stable", "Только стабильные" },
+                { "CreateServer_Filter_Stable", "Показывать тестовые версии" },
                 { "CreateServer_Import", "Импортировать" },
 
                 // ServersPage
@@ -314,6 +314,42 @@ public static class LocalizationManager
                 { "Common_Loading", "Загрузка..." },
                 { "Common_None", "Нет" },
                 { "Common_InDevelopment", "В разработке" },
+
+                // MessageBox Buttons
+                { "MsgBtn_OK", "ОК" },
+                { "MsgBtn_Yes", "Да" },
+                { "MsgBtn_No", "Нет" },
+                { "MsgBtn_Cancel", "Отмена" },
+                { "MsgBtn_Delete", "Удалить" },
+
+                // MessageBox Titles
+                { "MsgTitle_Info", "Информация" },
+                { "MsgTitle_Warning", "Предупреждение" },
+                { "MsgTitle_Error", "Ошибка" },
+                { "MsgTitle_Confirm", "Подтверждение" },
+                { "MsgTitle_DeleteServer", "Удаление сервера" },
+
+                // MessageBox Info Messages
+                { "MsgInfo_Title", "Информация" },
+
+                // MessageBox Warning Messages
+                { "MsgWarning_Title", "Предупреждение" },
+
+                // MessageBox Error Messages
+                { "MsgError_Title", "Ошибка" },
+
+                // MessageBox Confirm Messages
+                { "MsgConfirm_Title", "Подтверждение" },
+
+                // MessageBox Delete Messages
+                { "MsgDel_Title", "Удаление сервера" },
+                { "MsgDel_Confirm", "Вы уверены, что хотите удалить сервер \"{0}\"?" },
+                { "MsgDel_WillBeDeleted", "Будут удалены:" },
+                { "MsgDel_ServerFiles", "Все файлы сервера" },
+                { "MsgDel_ConfigFiles", "Конфигурационные файлы" },
+                { "MsgDel_WorldSaves", "Мир и сохранения" },
+                { "MsgDel_LogsBackups", "Логи и бэкапы" },
+                { "MsgDel_Irreversible", "Это действие необратимо!" },
 
                 // ServerDetail
                 { "ServerDetail_Title", "Детали сервера" },
@@ -512,7 +548,7 @@ public static class LocalizationManager
                 { "CreateServer_Browse", "Browse" },
                 { "CreateServer_Create", "Create" },
                 { "CreateServer_Cancel", "Cancel" },
-                { "CreateServer_Filter_Stable", "Stable only" },
+                { "CreateServer_Filter_Stable", "Show pre-releases" },
                 { "CreateServer_Import", "Import" },
 
                 // ServersPage
@@ -536,6 +572,42 @@ public static class LocalizationManager
                 { "Common_Loading", "Loading..." },
                 { "Common_None", "None" },
                 { "Common_InDevelopment", "In Development" },
+
+                // MessageBox Buttons
+                { "MsgBtn_OK", "OK" },
+                { "MsgBtn_Yes", "Yes" },
+                { "MsgBtn_No", "No" },
+                { "MsgBtn_Cancel", "Cancel" },
+                { "MsgBtn_Delete", "Delete" },
+
+                // MessageBox Titles
+                { "MsgTitle_Info", "Information" },
+                { "MsgTitle_Warning", "Warning" },
+                { "MsgTitle_Error", "Error" },
+                { "MsgTitle_Confirm", "Confirm" },
+                { "MsgTitle_DeleteServer", "Delete Server" },
+
+                // MessageBox Info Messages
+                { "MsgInfo_Title", "Information" },
+
+                // MessageBox Warning Messages
+                { "MsgWarning_Title", "Warning" },
+
+                // MessageBox Error Messages
+                { "MsgError_Title", "Error" },
+
+                // MessageBox Confirm Messages
+                { "MsgConfirm_Title", "Confirm" },
+
+                // MessageBox Delete Messages
+                { "MsgDel_Title", "Delete Server" },
+                { "MsgDel_Confirm", "Are you sure you want to delete server \"{0}\"?" },
+                { "MsgDel_WillBeDeleted", "The following will be deleted:" },
+                { "MsgDel_ServerFiles", "All server files" },
+                { "MsgDel_ConfigFiles", "Configuration files" },
+                { "MsgDel_WorldSaves", "World and saves" },
+                { "MsgDel_LogsBackups", "Logs and backups" },
+                { "MsgDel_Irreversible", "This action is irreversible!" },
 
                 // ServerDetail
                 { "ServerDetail_Title", "Server Details" },
@@ -713,21 +785,21 @@ public class LocExtension : MarkupExtension
         {
             return value;
         }
-        
+
         // Если файлы не загружены, используем default translations
         var defaultTranslations = LocalizationManager.GetDefaultTranslationsForCulture(LocalizationManager.CurrentCulture.Name);
         if (defaultTranslations != null && defaultTranslations.TryGetValue(Key, out var defaultValue))
         {
             return defaultValue;
         }
-        
+
         // Fallback на английский
         var enTranslations = LocalizationManager.GetDefaultTranslationsForCulture("en");
         if (enTranslations != null && enTranslations.TryGetValue(Key, out var enValue))
         {
             return enValue;
         }
-        
+
         return Key;
     }
 }

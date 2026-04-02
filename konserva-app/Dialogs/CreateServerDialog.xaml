@@ -8,7 +8,7 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="CreateServer"
     Width="480"
-    Height="485"
+    Height="500"
     Background="{ui:ThemeResource ApplicationBackgroundBrush}"
     ExtendsContentIntoTitleBar="True"
     ResizeMode="NoResize"
@@ -132,36 +132,68 @@
                     </Grid>
                 </StackPanel>
 
-                <!--  6. Кнопки  -->
-                <Grid Grid.Row="5" ColumnDefinitions="*,Auto,Auto,Auto">
+                <!--  6. Кнопки и прогресс  -->
+                <Grid
+                    Grid.Row="5"
+                    Margin="0,16,0,0"
+                    ColumnDefinitions="Auto,*,Auto">
+                    <!--  Кнопка Импорт  -->
                     <ui:Button
                         x:Name="ImportButton"
-                        Grid.Column="1"
+                        Grid.Column="0"
                         Margin="0,0,8,0"
                         Click="Import_Click"
                         Content="{loc:Loc CreateServer_Import}" />
+
+                    <!--  Прогресс бар (слева от кнопки, скрыт по умолчанию)  -->
+                    <Grid
+                        x:Name="ProgressGrid"
+                        Grid.Column="1"
+                        Margin="8,0"
+                        RowDefinitions="Auto,Auto"
+                        Visibility="Collapsed">
+                        <!--  Текст состояния и процент  -->
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                            <!--  Текст состояния  -->
+                            <TextBlock
+                                x:Name="ProgressText"
+                                Grid.Column="0"
+                                VerticalAlignment="Center"
+                                FontSize="12"
+                                Text="Подготовка..."
+                                TextTrimming="CharacterEllipsis" />
+
+                            <!--  Процент  -->
+                            <TextBlock
+                                x:Name="ProgressPercentText"
+                                Grid.Column="1"
+                                Margin="8,0,0,0"
+                                VerticalAlignment="Center"
+                                FontSize="12"
+                                FontWeight="SemiBold"
+                                Text="0%" />
+                        </Grid>
+
+                        <!--  Полоса прогресса (тонкая)  -->
+                        <ProgressBar
+                            x:Name="ProgressPanel"
+                            Grid.Row="1"
+                            Height="4"
+                            Margin="0,4,0,0"
+                            VerticalAlignment="Center"
+                            Maximum="100"
+                            Minimum="0"
+                            Value="0" />
+                    </Grid>
+
+                    <!--  Кнопка Создать/Отмена  -->
                     <ui:Button
-                        x:Name="CancelButton"
+                        x:Name="ActionOrCancelButton"
                         Grid.Column="2"
-                        Margin="0,0,8,0"
-                        Click="Cancel_Click"
-                        Content="{loc:Loc Common_Cancel}" />
-                    <ui:Button
-                        x:Name="CreateButton"
-                        Grid.Column="3"
-                        Click="Create_Click"
+                        Appearance="Success"
+                        Click="ActionOrCancel_Click"
                         Content="{loc:Loc CreateServer_Create}" />
                 </Grid>
-
-                <!--  7. Индикатор прогресса  -->
-                <ProgressBar
-                    x:Name="ProgressPanel"
-                    Grid.Row="6"
-                    Height="4"
-                    Margin="0,8,0,0"
-                    VerticalAlignment="Bottom"
-                    IsIndeterminate="True"
-                    Visibility="Collapsed" />
             </Grid>
         </Border>
     </Grid>

@@ -34,6 +34,7 @@ public interface IServerStorageService
 public interface IServerManager
 {
     event Action? OnServersChanged;
+    event Action<Server, string>? OnServerStartError;  // Событие об ошибке запуска
 
     IReadOnlyList<Server> GetServers();
     Server? GetServer(string id);

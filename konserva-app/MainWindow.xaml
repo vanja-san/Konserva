@@ -83,7 +83,9 @@
             Grid.Row="2"
             Padding="12,8"
             VerticalAlignment="Center"
-            Background="{ui:ThemeResource ApplicationBackgroundBrush}">
+            Background="{ui:ThemeResource LayerFillColorDefaultBrush}"
+            BorderBrush="{ui:ThemeResource ControlStrokeColorDefaultBrush}"
+            BorderThickness="0,1,0,0">
             <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
                 <!--  Total Servers  -->
                 <StackPanel
@@ -178,7 +180,7 @@
                     FontSize="12"
                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                     LineHeight="16"
-                    Text="1.2" />
+                    Text="v1.2" />
             </Grid>
         </Border>
     </Grid>

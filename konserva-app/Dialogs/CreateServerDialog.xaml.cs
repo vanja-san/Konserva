@@ -1,4 +1,5 @@
-﻿using Konserva.Models;
+﻿using Konserva.Localization;
+using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
 using Microsoft.Win32;
@@ -10,9 +11,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using Wpf.Ui.Controls;
-using MessageBox = System.Windows.MessageBox;
-using MessageBoxButton = System.Windows.MessageBoxButton;
-using MessageBoxImage = System.Windows.MessageBoxImage;
 
 namespace Konserva.Dialogs;
 
@@ -28,6 +26,8 @@ public partial class CreateServerDialog : FluentWindow
     private bool _isUpdating;
     private bool _isChangingSnapshots;
     private bool _isChangingModLoader; // Флаг для защиты от повторного вызова ModLoaderBox_SelectionChanged
+    private CancellationTokenSource? _installCts;
+    private bool _wasCancelled; // Флаг отмены пользователем
     private bool _isFindingCompatibleVersion;
     private string[] _allMcVersions = [];
     private HashSet<string> _paperVersions = [];
@@ -89,12 +89,12 @@ public partial class CreateServerDialog : FluentWindow
         if (msg == WM_GETMINMAXINFO)
         {
             // Устанавливаем минимальный размер
-            var mmi = System.Runtime.InteropServices.Marshal.PtrToStructure<MINMAXINFO>(lParam);
+            var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
             mmi.ptMinTrackSize.x = 480;
-            mmi.ptMinTrackSize.y = 485;
+            mmi.ptMinTrackSize.y = 500;
             mmi.ptMaxTrackSize.x = 480;
-            mmi.ptMaxTrackSize.y = 485;
-            System.Runtime.InteropServices.Marshal.StructureToPtr(mmi, lParam, true);
+            mmi.ptMaxTrackSize.y = 500;
+            Marshal.StructureToPtr(mmi, lParam, true);
             handled = true;
         }
 
@@ -320,7 +320,7 @@ public partial class CreateServerDialog : FluentWindow
             .Take(50)
             .ToArray();
 
-        using var httpClient = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
 
         foreach (var version in recentVersions.Take(20)) // Проверяем только первые 20 для скорости
         {
@@ -944,7 +944,7 @@ public partial class CreateServerDialog : FluentWindow
                         var jsonDoc = System.Text.Json.JsonDocument.Parse(json);
                         if (jsonDoc.RootElement.TryGetProperty("id", out var idElement))
                         {
-                            mcVersion = idElement.GetString() ?? "Неизвестно";
+                            mcVersion = idElement.GetString() ?? "Unknown";
                         }
                     }
                     catch { }
@@ -971,7 +971,77 @@ public partial class CreateServerDialog : FluentWindow
         Close();
     }
 
-    private async void Create_Click(object sender, RoutedEventArgs e)
+    private void SetInstallingState(bool isInstalling)
+    {
+        _isInstalling = isInstalling;
+
+        ServerNameBox.IsEnabled = !isInstalling;
+        McVersionBox.IsEnabled = !isInstalling;
+        ShowSnapshotsBox.IsEnabled = !isInstalling;
+        ModLoaderBox.IsEnabled = !isInstalling;
+        LoaderVersionBox.IsEnabled = !isInstalling;
+        ServerPathBox.IsEnabled = !isInstalling;
+
+        this.Invoke(() =>
+        {
+            if (isInstalling)
+            {
+                // Показываем прогресс
+                ProgressGrid.Visibility = Visibility.Visible;
+                ProgressPanel.Value = 0;
+                ProgressText.Text = "Подготовка...";
+                ProgressPercentText.Text = "0%";
+
+                // Меняем кнопку на "Отмена"
+                ActionOrCancelButton.Content = "Отмена";
+                ActionOrCancelButton.Appearance = ControlAppearance.Danger;
+                ActionOrCancelButton.IsEnabled = true; // Кнопка должна быть активна!
+
+                // Скрываем импорт
+                ImportButton.Visibility = Visibility.Collapsed;
+                ImportButton.IsEnabled = false;
+            }
+            else
+            {
+                // Скрываем прогресс
+                ProgressGrid.Visibility = Visibility.Collapsed;
+
+                // Возвращаем кнопку "Создать"
+                ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Create") ?? "Создать";
+                ActionOrCancelButton.Appearance = ControlAppearance.Success;
+                ActionOrCancelButton.IsEnabled = true;
+
+                // Показываем импорт
+                ImportButton.Visibility = Visibility.Visible;
+                ImportButton.IsEnabled = true;
+            }
+        });
+
+        Title = isInstalling ? "Установка сервера..." : "Создание сервера";
+    }
+
+    /// <summary>
+    /// Обработчик кнопки Создать/Отмена
+    /// </summary>
+    private async void ActionOrCancel_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isInstalling)
+        {
+            // Отмена установки
+            _wasCancelled = true;
+            _installCts?.Cancel();
+        }
+        else
+        {
+            // Создание сервера
+            await Create_Click_Handler();
+        }
+    }
+
+    /// <summary>
+    /// Логика создания сервера (из Create_Click)
+    /// </summary>
+    private async Task Create_Click_Handler()
     {
         try
         {
@@ -1045,38 +1115,67 @@ public partial class CreateServerDialog : FluentWindow
         }
     }
 
-    private void SetInstallingState(bool isInstalling)
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
-        _isInstalling = isInstalling;
+        if (_isInstalling && _installCts != null)
+        {
+            _installCts.Cancel();
+        }
+        base.OnClosing(e);
+    }
 
-        ServerNameBox.IsEnabled = !isInstalling;
-        McVersionBox.IsEnabled = !isInstalling;
-        ShowSnapshotsBox.IsEnabled = !isInstalling;
-        ModLoaderBox.IsEnabled = !isInstalling;
-        LoaderVersionBox.IsEnabled = !isInstalling;
-        ServerPathBox.IsEnabled = !isInstalling;
-
-        ProgressPanel.Visibility = isInstalling ? Visibility.Visible : Visibility.Collapsed;
-
-        CreateButton.IsEnabled = !isInstalling;
-        CancelButton.IsEnabled = !isInstalling;
-
-        Title = isInstalling ? "Установка сервера..." : "Создание сервера";
+    /// <summary>
+    /// Плавно обновляет прогресс
+    /// </summary>
+    private void UpdateProgress(double value, string statusText)
+    {
+        this.Invoke(() =>
+        {
+            ProgressPanel.Value = value;
+            ProgressText.Text = statusText;
+            ProgressPercentText.Text = $"{value:F0}%";
+        });
     }
 
     private async Task InstallServerInBackground(Server server, ModLoaderType modLoaderType,
         string mcVersion, string loaderVersion, string serverPath)
     {
-        using var installCts = new CancellationTokenSource();
+        _wasCancelled = false; // Сбрасываем флаг отмены
+        _installCts = new CancellationTokenSource();
 
         try
         {
+            // Явно показываем прогресс в начале
+            this.Invoke(() =>
+            {
+                ProgressGrid.Visibility = Visibility.Visible;
+                ProgressPanel.Value = 0;
+                ProgressText.Text = "Подготовка...";
+                ProgressPercentText.Text = "0%";
+            });
+
             server.InstallStatus = $"Установка {server.Name}...";
             MainWindow.ServerManager.UpdateServer(server);
 
+            // Создаём прогресс с обновлением UI
             var progress = new Progress<double>(percent =>
             {
-                server.InstallStatus = $"Установка {server.Name}...";
+                // Определяем текст задачи в зависимости от процента
+                string statusText = percent switch
+                {
+                    < 5 => "Получение данных...",
+                    < 15 => "Загрузка файлов...",
+                    < 30 => "Проверка совместимости...",
+                    < 50 => "Установка модлоадера...",
+                    < 70 => "Загрузка библиотек...",
+                    < 85 => "Настройка сервера...",
+                    < 95 => "Финализация...",
+                    _ => "Завершение..."
+                };
+
+                UpdateProgress(percent, statusText);
+
+                server.InstallStatus = $"{statusText} {percent:F0}%";
                 MainWindow.ServerManager.UpdateServer(server);
             });
 
@@ -1089,19 +1188,50 @@ public partial class CreateServerDialog : FluentWindow
                 server.Settings.RamMin,
                 server.Settings.RamMax,
                 progress,
-                installCts.Token);
+                _installCts.Token);
 
             if (!installResult.Success)
             {
-                server.InstallStatus = $"Ошибка: {installResult.Error}";
-                server.Status = ServerStatus.Error;
-                Logger.Error($"Server install failed: {installResult.Error}");
-
-                await this.InvokeAsync(async () =>
+                // Не показываем ошибку если отмена пользователем
+                if (!_wasCancelled)
                 {
-                    SetInstallingState(false);
-                    await UiHelper.ShowError($"Не удалось установить сервер:\n{installResult.Error}");
-                });
+                    server.InstallStatus = $"Ошибка: {installResult.Error}";
+                    server.Status = ServerStatus.Error;
+                    Logger.Error($"Server install failed: {installResult.Error}");
+
+                    await this.InvokeAsync(async () =>
+                    {
+                        SetInstallingState(false);
+                        await UiHelper.ShowError($"Не удалось установить сервер:\n{installResult.Error}");
+                    });
+                }
+                else
+                {
+                    server.InstallStatus = "Отменено";
+                    server.Status = ServerStatus.Stopped;
+                    Logger.Info("Server install cancelled by user");
+
+                    // Удаляем папку недосозданного сервера
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(server.Path) && System.IO.Directory.Exists(server.Path))
+                        {
+                            System.IO.Directory.Delete(server.Path, true);
+                            Logger.Info($"Deleted incomplete server folder: {server.Path}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"Failed to delete server folder on cancel: {ex.Message}");
+                    }
+
+                    await this.InvokeAsync(async () =>
+                    {
+                        SetInstallingState(false);
+                        // Удаляем сервер из списка
+                        await MainWindow.ServerManager.DeleteServerAsync(server.Id);
+                    });
+                }
             }
             else
             {
@@ -1111,6 +1241,7 @@ public partial class CreateServerDialog : FluentWindow
 
                 await this.InvokeAsync(() =>
                 {
+                    UpdateProgress(100, "Готово!");
                     DialogResult = true;
                     Close();
                 });
@@ -1122,7 +1253,10 @@ public partial class CreateServerDialog : FluentWindow
             server.Status = ServerStatus.Error;
             Logger.Info("Server install cancelled");
 
-            await this.InvokeAsync(() => SetInstallingState(false));
+            await this.InvokeAsync(() =>
+            {
+                SetInstallingState(false);
+            });
         }
         catch (Exception ex)
         {
@@ -1135,6 +1269,11 @@ public partial class CreateServerDialog : FluentWindow
                 SetInstallingState(false);
                 await UiHelper.ShowError($"Ошибка при установке сервера:\n{ex.Message}");
             });
+        }
+        finally
+        {
+            _installCts?.Dispose();
+            _installCts = null;
         }
 
         MainWindow.ServerManager.UpdateServer(server);

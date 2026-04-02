@@ -33,7 +33,7 @@ public class ModLoader
     /// Полное название модлоадера
     /// </summary>
     public string FullName => IsModded ? $"{Type} {LoaderVersion ?? Version}" : "Vanilla";
-    
+
     /// <summary>
     /// Клонирование модлоадера
     /// </summary>

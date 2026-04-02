@@ -8,6 +8,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
+using Wpf.Ui.Controls;
 
 namespace Konserva.Pages;
 
@@ -54,12 +56,17 @@ public partial class ServerDetailPage : Page, IDisposable
             _serverId = dataContextId;
         }
 
+        // Подписываемся на событие ошибки запуска
+        MainWindow.ServerManager.OnServerStartError += OnServerStartError;
+
         StartStatusTimer();
         LoadServer();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        // Отписываемся от события ошибки запуска
+        MainWindow.ServerManager.OnServerStartError -= OnServerStartError;
         StopStatusTimer();
         Dispose();
     }
@@ -121,10 +128,13 @@ public partial class ServerDetailPage : Page, IDisposable
         // Проверяем существующий процесс
         if (_process != null)
         {
+            // Сначала отписываемся от старого процесса (если был)
+            UnsubscribeFromProcess();
+
             // Загружаем существующие логи
             LoadExistingLogs();
 
-            // Подписываемся на события
+            // Подписываемся на события нового процесса
             _process.OnLog += UpdateLog;
             _process.OnStatusChanged += UpdateStatus;
             _process.OnPlayersChanged += UpdatePlayers;
@@ -290,6 +300,108 @@ public partial class ServerDetailPage : Page, IDisposable
         {
             MainWindow.Instance?.ContentFrame?.Navigate(new Pages.ServersPage());
         }
+    }
+
+    /// <summary>
+    /// Обработчик ошибки запуска сервера
+    /// </summary>
+    private async void OnServerStartError(Server server, string errorMessage)
+    {
+        // Проверяем, что это наш сервер
+        if (server.Id != _serverId)
+            return;
+
+        // Показываем информационное окно с ошибкой
+        await ShowJavaErrorDialog(errorMessage);
+    }
+
+    /// <summary>
+    /// Показывает диалог с ошибкой Java
+    /// </summary>
+    private async Task ShowJavaErrorDialog(string errorMessage)
+    {
+        // Проверяем, связана ли ошибка с Java
+        bool isJavaError = errorMessage.Contains("Java", StringComparison.OrdinalIgnoreCase) ||
+                          errorMessage.Contains("java", StringComparison.OrdinalIgnoreCase);
+
+        if (!isJavaError)
+        {
+            // Не Java ошибка - показываем обычное сообщение
+            await UiHelper.ShowError(errorMessage);
+            return;
+        }
+
+        // Java ошибка - показываем подробное сообщение с кнопкой
+        var dialog = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = "⚠️ Ошибка Java",
+            Content = new StackPanel
+            {
+                Margin = new Thickness(0, 8, 0, 0),
+                Children =
+                {
+                    new System.Windows.Controls.TextBlock
+                    {
+                        Text = errorMessage,
+                        TextWrapping = TextWrapping.Wrap,
+                        Margin = new Thickness(0, 0, 0, 16)
+                    },
+                    new Border
+                    {
+                        Background = new SolidColorBrush(Color.FromRgb(255, 243, 205)),
+                        BorderBrush = new SolidColorBrush(Color.FromRgb(255, 193, 7)),
+                        BorderThickness = new Thickness(1),
+                        CornerRadius = new CornerRadius(4),
+                        Padding = new Thickness(12),
+                        Child = new StackPanel
+                        {
+                            Children =
+                            {
+                                new System.Windows.Controls.TextBlock
+                                {
+                                    Text = "Требуется установить или обновить Java",
+                                    FontWeight = FontWeights.Bold,
+                                    Margin = new Thickness(0, 0, 0, 8)
+                                },
+                                new System.Windows.Controls.TextBlock
+                                {
+                                    Text = "Скачайте последнюю версию Java с официального сайта:",
+                                    Margin = new Thickness(0, 0, 0, 8)
+                                },
+                                new System.Windows.Controls.Button
+                                {
+                                    Content = "📥 Скачать Java (adoptium.net)",
+                                    HorizontalAlignment = HorizontalAlignment.Left,
+                                    Padding = new Thickness(16, 8, 16, 8),
+                                    Cursor = System.Windows.Input.Cursors.Hand
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            PrimaryButtonText = "OK",
+            PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Info24),
+            ShowTitle = true,
+            Padding = new Thickness(16)
+        };
+
+        // Обработчик нажатия на кнопку
+        var downloadButton = ((StackPanel)((Border)((StackPanel)dialog.Content).Children[1]).Child).Children[2] as System.Windows.Controls.Button;
+        if (downloadButton != null)
+        {
+            downloadButton.Click += (s, e) =>
+            {
+                // Открываем сайт Adoptium в браузере
+                System.Diagnostics.Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://adoptium.net/",
+                    UseShellExecute = true
+                });
+            };
+        }
+
+        await dialog.ShowDialogAsync();
     }
 
     private async void StartStop_Click(object sender, RoutedEventArgs e)
@@ -781,7 +893,7 @@ public partial class ServerDetailPage : Page, IDisposable
 
     private async void DeleteMod_Click(object sender, RoutedEventArgs e)
     {
-        if (_server == null || sender is not Button btn || btn.Tag is not ModItem mod)
+        if (_server == null || sender is not System.Windows.Controls.Button btn || btn.Tag is not ModItem mod)
             return;
 
         var result = await UiHelper.ShowConfirm(
@@ -807,7 +919,7 @@ public partial class ServerDetailPage : Page, IDisposable
 
     private async void DeletePlugin_Click(object sender, RoutedEventArgs e)
     {
-        if (_server == null || sender is not Button btn || btn.Tag is not PluginItem plugin)
+        if (_server == null || sender is not System.Windows.Controls.Button btn || btn.Tag is not PluginItem plugin)
             return;
 
         var result = await UiHelper.ShowConfirm(

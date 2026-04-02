@@ -19,7 +19,8 @@
         <!--  Заголовок и индикатор сохранения  -->
         <Grid
             Grid.Row="0"
-            Margin="6,12"
+            Margin="12"
+            VerticalAlignment="Center"
             ColumnDefinitions="Auto,*">
             <!--  Заголовок  -->
             <ui:TextBlock
@@ -63,7 +64,7 @@
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc Settings_Servers}" />
                     </ui:CardExpander.Header>
-                    <Border Margin="8">
+                    <Border Margin="12,8">
                         <StackPanel>
                             <!--  Папка серверов  -->
                             <Grid Margin="0,0,0,16" ColumnDefinitions="200,*,Auto">
@@ -97,7 +98,7 @@
                             </Grid>
 
                             <!--  Java по умолчанию  -->
-                            <Grid ColumnDefinitions="200,*,Auto">
+                            <Grid Margin="0,0,0,16" ColumnDefinitions="200,*,Auto">
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <ui:TextBlock
                                         FontSize="14"
@@ -114,7 +115,6 @@
                                     MinWidth="200"
                                     Margin="8,0"
                                     Padding="8,6"
-                                    HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
                                     ContextMenu="{x:Null}"
                                     SelectionChanged="JavaComboBox_SelectionChanged" />
@@ -127,89 +127,15 @@
                                     <ui:SymbolIcon FontSize="13" Symbol="Add32" />
                                 </ui:Button>
                             </Grid>
-                        </StackPanel>
-                    </Border>
-                </ui:CardExpander>
-
-                <!--  Настройки RAM и приложения  -->
-                <ui:CardExpander
-                    Margin="0,0,0,8"
-                    Padding="12"
-                    ContentPadding="8"
-                    IsExpanded="False">
-                    <ui:CardExpander.Icon>
-                        <ui:SymbolIcon
-                            Filled="True"
-                            FontSize="20"
-                            Symbol="Ram20" />
-                    </ui:CardExpander.Icon>
-                    <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc Settings_RAM_Min}" />
-                    </ui:CardExpander.Header>
-                    <Border Padding="8">
-                        <StackPanel>
-                            <!--  Настройки RAM  -->
-                            <ui:TextBlock
-                                Margin="0,0,0,16"
-                                FontSize="14"
-                                FontWeight="Bold"
-                                Text="{loc:Loc Settings_RAM_Min_Label}" />
-
-                            <Grid Margin="0,0,0,16" ColumnDefinitions="*,*">
-                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                    <ui:TextBlock
-                                        FontSize="13"
-                                        FontWeight="SemiBold"
-                                        Text="{loc:Loc Settings_RAM_Min_Label}" />
-                                    <ui:TextBlock
-                                        FontSize="11"
-                                        Foreground="Gray"
-                                        Text="{loc:Loc Settings_RAM_Min_Desc}" />
-                                    <ui:TextBox
-                                        x:Name="DefaultRamMin"
-                                        Width="120"
-                                        Margin="0,8,0,0"
-                                        HorizontalAlignment="Left"
-                                        VerticalAlignment="Center"
-                                        TextAlignment="Center"
-                                        TextChanged="DefaultRamMin_TextChanged" />
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                                    <ui:TextBlock
-                                        FontSize="13"
-                                        FontWeight="SemiBold"
-                                        Text="{loc:Loc Settings_RAM_Max_Label}" />
-                                    <ui:TextBlock
-                                        FontSize="11"
-                                        Foreground="Gray"
-                                        Text="{loc:Loc Settings_RAM_Max_Desc}" />
-                                    <ui:TextBox
-                                        x:Name="DefaultRamMax"
-                                        Width="120"
-                                        Margin="0,8,0,0"
-                                        HorizontalAlignment="Left"
-                                        VerticalAlignment="Center"
-                                        TextAlignment="Center"
-                                        TextChanged="DefaultRamMax_TextChanged" />
-                                </StackPanel>
-                            </Grid>
-
-                            <!--  Настройки приложения  -->
-                            <ui:TextBlock
-                                Margin="0,16,0,16"
-                                FontSize="14"
-                                FontWeight="Bold"
-                                Text="{loc:Loc Settings_App}" />
-
-                            <Grid Margin="0,0,0,16" ColumnDefinitions="*,Auto">
+                            <!--  Проверка обновления  -->
+                            <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <ui:TextBlock
-                                        FontSize="13"
+                                        FontSize="14"
                                         FontWeight="SemiBold"
                                         Text="{loc:Loc Settings_CheckUpdates}" />
                                     <ui:TextBlock
-                                        FontSize="11"
+                                        FontSize="12"
                                         Foreground="Gray"
                                         Text="{loc:Loc Settings_CheckUpdates_Desc}" />
                                 </StackPanel>
@@ -223,8 +149,7 @@
                         </StackPanel>
                     </Border>
                 </ui:CardExpander>
-
-                <!--  Тема и внешний вид  -->
+                <!--  Внешний вид  -->
                 <ui:CardExpander
                     Margin="0,0,0,8"
                     Padding="12"
@@ -239,7 +164,7 @@
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc Settings_Theme}" />
                     </ui:CardExpander.Header>
-                    <Border Padding="8">
+                    <Border Padding="12,8">
                         <StackPanel>
                             <!--  Выбор темы  -->
                             <Grid Margin="0,0,0,8" ColumnDefinitions="*,Auto">
@@ -256,7 +181,6 @@
                                 <ComboBox
                                     x:Name="ThemeComboBox"
                                     Grid.Column="1"
-                                    Width="150"
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Center"
                                     ContextMenu="{x:Null}"
@@ -282,7 +206,6 @@
                                 <ComboBox
                                     x:Name="LanguageComboBox"
                                     Grid.Column="1"
-                                    Width="150"
                                     VerticalAlignment="Center"
                                     ContextMenu="{x:Null}"
                                     SelectionChanged="LanguageComboBox_SelectionChanged">
@@ -328,46 +251,37 @@
                                 FontSize="13"
                                 FontWeight="Bold"
                                 Text="{loc:Loc Settings_About_ModalLoaders}" />
-                            <WrapPanel>
-                                <ui:Badge
-                                    Margin="0,0,8,8"
-                                    Appearance="Info"
-                                    Content="{loc:Loc ModLoader_Vanilla}" />
-                                <ui:Badge
-                                    Margin="0,0,8,8"
-                                    Appearance="Success"
-                                    Content="{loc:Loc ModLoader_Forge}" />
-                                <ui:Badge
-                                    Margin="0,0,8,8"
-                                    Appearance="Success"
-                                    Content="{loc:Loc ModLoader_NeoForge}" />
-                                <ui:Badge
-                                    Margin="0,0,8,8"
-                                    Appearance="Success"
-                                    Content="{loc:Loc ModLoader_Fabric}" />
-                                <ui:Badge
-                                    Margin="0,0,8,8"
-                                    Appearance="Success"
-                                    Content="{loc:Loc ModLoader_Quilt}" />
-                                <ui:Badge
-                                    Margin="0,0,8,8"
-                                    Appearance="Info"
-                                    Content="{loc:Loc ModLoader_Paper}" />
-                                <ui:Badge
-                                    Margin="0,0,8,8"
-                                    Appearance="Info"
-                                    Content="{loc:Loc ModLoader_Purpur}" />
-                                <ui:Badge Margin="0,0,8,8" Appearance="Caution">
-                                    <ui:Badge.Content>
-                                        <ui:TextBlock>
-                                            <Run Text="{loc:Loc ModLoader_Spigot}" />
-                                            <Run Text=" (" />
-                                            <Run Text="{loc:Loc Common_InDevelopment}" />
-                                            <Run Text=")" />
-                                        </ui:TextBlock>
-                                    </ui:Badge.Content>
-                                </ui:Badge>
-                            </WrapPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:InfoBadge
+                                    Margin="0,0,8,0"
+                                    Severity="Attention"
+                                    Value="Vanilla" />
+                                <ui:InfoBadge
+                                    Margin="0,0,8,0"
+                                    Severity="Caution"
+                                    Value="Forge" />
+                                <ui:InfoBadge
+                                    Margin="0,0,8,0"
+                                    Severity="Caution"
+                                    Value="NeoForge" />
+                                <ui:InfoBadge
+                                    Margin="0,0,8,0"
+                                    Severity="Caution"
+                                    Value="Fabric" />
+                                <ui:InfoBadge
+                                    Margin="0,0,8,0"
+                                    Severity="Caution"
+                                    Value="Quilt" />
+                                <ui:InfoBadge
+                                    Margin="0,0,8,0"
+                                    Severity="Attention"
+                                    Value="Paper" />
+                                <ui:InfoBadge
+                                    Margin="0,0,8,0"
+                                    Severity="Attention"
+                                    Value="Purpur" />
+                                <ui:InfoBadge Severity="Informational" Value="Spigot" />
+                            </StackPanel>
                         </StackPanel>
                     </Border>
                 </ui:CardExpander>

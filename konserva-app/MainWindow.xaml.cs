@@ -153,7 +153,7 @@ public partial class MainWindow : FluentWindow, IDisposable
         {
             return;
         }
-        
+
         ContentFrame.Navigate(new Pages.SettingsPage());
     }
 
@@ -222,7 +222,7 @@ public partial class MainWindow : FluentWindow, IDisposable
         {
             return;
         }
-        
+
         ContentFrame.Navigate(new Pages.SettingsPage());
     }
 

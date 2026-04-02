@@ -1,6 +1,6 @@
-﻿using System.Windows;
+﻿using Konserva.Localization;
+using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using Wpf.Ui.Controls;
 using MessageBox = Wpf.Ui.Controls.MessageBox;
 using TextBlock = Wpf.Ui.Controls.TextBlock;
@@ -21,7 +21,7 @@ public static class UiHelper
         {
             Title = title,
             Content = message,
-            PrimaryButtonText = "OK",
+            PrimaryButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
             PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Info24),
             ShowTitle = true
         };
@@ -37,7 +37,7 @@ public static class UiHelper
         {
             Title = title,
             Content = message,
-            PrimaryButtonText = "OK",
+            PrimaryButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
             PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Warning24),
             ShowTitle = true
         };
@@ -53,7 +53,7 @@ public static class UiHelper
         {
             Title = title,
             Content = message,
-            PrimaryButtonText = "OK",
+            PrimaryButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
             PrimaryButtonIcon = new SymbolIcon(SymbolRegular.DismissCircle24),
             ShowTitle = true
         };
@@ -72,12 +72,13 @@ public static class UiHelper
             {
                 Text = message,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 8, 0, 0),
+                Margin = new Thickness(0, 16, 0, 0),
+                Padding = new Thickness(0),
                 FontSize = 14
             },
-            PrimaryButtonText = "Да",
+            PrimaryButtonText = LocalizationManager.Get("MsgBtn_Yes") ?? "Yes",
             PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Checkmark24),
-            CloseButtonText = "Нет",
+            CloseButtonText = LocalizationManager.Get("MsgBtn_No") ?? "No",
             CloseButtonIcon = new SymbolIcon(SymbolRegular.Dismiss24),
             ShowTitle = true,
             Padding = new Thickness(16)
@@ -92,117 +93,82 @@ public static class UiHelper
     {
         var msg = new MessageBox
         {
-            Title = "Удаление сервера",
+            Title = "🗑️ " + (LocalizationManager.Get("MsgDel_Title") ?? "Delete Server"),
             Content = new StackPanel
             {
                 Margin = new Thickness(0, 8, 0, 0),
                 Children =
                 {
-                    new StackPanel
+                    new TextBlock
                     {
-                        Orientation = Orientation.Horizontal,
-                        Margin = new Thickness(0, 0, 0, 12),
-                        Children =
-                        {
-                            new SymbolIcon(SymbolRegular.Delete24)
-                            {
-                                FontSize = 20,
-                                Foreground = new SolidColorBrush(Color.FromRgb(220, 38, 38))
-                            },
-                            new TextBlock
-                            {
-                                Text = $"Вы уверены, что хотите удалить сервер \"{serverName}\"?",
-                                FontSize = 14,
-                                FontWeight = FontWeights.SemiBold,
-                                TextWrapping = TextWrapping.Wrap,
-                                Margin = new Thickness(8, 0, 0, 0),
-                                VerticalAlignment = VerticalAlignment.Center
-                            }
-                        }
+                        Text = string.Format(
+                            LocalizationManager.Get("MsgDel_Confirm") ?? "Are you sure you want to delete server \"{0}\"?",
+                            serverName),
+                        FontSize = 14,
+                        FontWeight = FontWeights.SemiBold,
+                        TextWrapping = TextWrapping.Wrap,
+                        Margin = new Thickness(0, 0, 0, 8)
                     },
                     new Border
                     {
-                        Background = new SolidColorBrush(Color.FromRgb(255, 243, 205)),
-                        BorderBrush = new SolidColorBrush(Color.FromRgb(255, 193, 7)),
-                        BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(4),
-                        Padding = new Thickness(12),
+                        Padding = new Thickness(16,0,16,0),
                         Child = new StackPanel
                         {
                             Children =
                             {
+                                new TextBlock
+                                {
+                                    Text = LocalizationManager.Get("MsgDel_WillBeDeleted") ?? "The following will be deleted:",
+                                    FontWeight = FontWeights.SemiBold,
+                                    Opacity = 0.5,
+                                    Margin = new Thickness(0, 0, 0, 4)
+                                },
+                                new TextBlock
+                                {
+                                    Text = "• " + (LocalizationManager.Get("MsgDel_ServerFiles") ?? "All server files"),
+                                    Margin = new Thickness(0, 0, 0, 2)
+                                },
+                                new TextBlock
+                                {
+                                    Text = "• " + (LocalizationManager.Get("MsgDel_ConfigFiles") ?? "Configuration files"),
+                                    Margin = new Thickness(0, 0, 0, 2)
+                                },
+                                new TextBlock
+                                {
+                                    Text = "• " + (LocalizationManager.Get("MsgDel_WorldSaves") ?? "World and saves"),
+                                    Margin = new Thickness(0, 0, 0, 2)
+                                },
+                                new TextBlock
+                                {
+                                    Text = "• " + (LocalizationManager.Get("MsgDel_LogsBackups") ?? "Logs and backups"),
+                                    Margin = new Thickness(0, 0, 0, 8)
+                                },
                                 new StackPanel
                                 {
                                     Orientation = Orientation.Horizontal,
                                     Margin = new Thickness(0, 0, 0, 8),
                                     Children =
                                     {
-                                        new TextBlock
+                                        new SymbolIcon(SymbolRegular.Warning24)
                                         {
-                                            Text = "⚠️",
-                                            FontSize = 16,
-                                            Margin = new Thickness(0, 0, 4, 0)
+                                            FontSize = 20,
+                                            Margin = new Thickness(0, 0, 8, 0)
                                         },
                                         new TextBlock
                                         {
-                                            Text = "Это действие необратимо!",
-                                            FontWeight = FontWeights.Bold,
-                                            Foreground = new SolidColorBrush(Color.FromRgb(102, 77, 5))
+                                            Text = LocalizationManager.Get("MsgDel_Irreversible") ?? "This action is irreversible!",
+                                            FontWeight = FontWeights.Bold
                                         }
                                     }
-                                },
-                                new TextBlock
-                                {
-                                    Text = "Будут удалены:",
-                                    FontWeight = FontWeights.SemiBold,
-                                    Foreground = new SolidColorBrush(Color.FromRgb(102, 77, 5)),
-                                    Margin = new Thickness(0, 0, 0, 4)
-                                },
-                                new TextBlock
-                                {
-                                    Text = "• Все файлы сервера",
-                                    Foreground = new SolidColorBrush(Color.FromRgb(102, 77, 5)),
-                                    Margin = new Thickness(0, 0, 0, 2)
-                                },
-                                new TextBlock
-                                {
-                                    Text = $"  {serverPath}",
-                                    FontStyle = FontStyles.Italic,
-                                    Foreground = new SolidColorBrush(Color.FromRgb(102, 77, 5)),
-                                    Margin = new Thickness(8, 0, 0, 4)
-                                },
-                                new TextBlock
-                                {
-                                    Text = "• Конфигурационные файлы",
-                                    Foreground = new SolidColorBrush(Color.FromRgb(102, 77, 5)),
-                                    Margin = new Thickness(0, 0, 0, 2)
-                                },
-                                new TextBlock
-                                {
-                                    Text = "• Мир и сохранения",
-                                    Foreground = new SolidColorBrush(Color.FromRgb(102, 77, 5)),
-                                    Margin = new Thickness(0, 0, 0, 2)
-                                },
-                                new TextBlock
-                                {
-                                    Text = "• Логи и бэкапы",
-                                    Foreground = new SolidColorBrush(Color.FromRgb(102, 77, 5)),
-                                    Margin = new Thickness(0, 0, 0, 8)
-                                },
-                                new TextBlock
-                                {
-                                    Text = "Продолжить удаление невозможно!",
-                                    FontWeight = FontWeights.Bold,
-                                    Foreground = new SolidColorBrush(Color.FromRgb(102, 77, 5))
                                 }
                             }
                         }
                     }
                 }
             },
-            PrimaryButtonText = "Удалить",
+            PrimaryButtonText = LocalizationManager.Get("MsgBtn_Delete") ?? "Delete",
             PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Delete24),
-            CloseButtonText = "Отмена",
+            CloseButtonText = LocalizationManager.Get("MsgBtn_Cancel") ?? "Cancel",
             CloseButtonIcon = new SymbolIcon(SymbolRegular.Dismiss24),
             ShowTitle = true,
             Padding = new Thickness(16)

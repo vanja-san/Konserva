@@ -3,8 +3,6 @@ using Konserva.Utilities;
 using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
-using System.Threading.Tasks;
-using Konserva.Localization;
 
 namespace Konserva.Pages;
 
@@ -28,7 +26,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         LoadSettings();
-        
+
         // Скрываем InfoBar при загрузке
         LanguageChangeInfoBar.IsOpen = false;
     }
@@ -36,7 +34,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     private void LoadSettings()
     {
         _isLoading = true; // Блокируем сохранение во время загрузки
-        
+
         var config = _configService.GetConfig();
 
         ServersFolderPath.Text = config.ServersDirectory;
@@ -69,28 +67,40 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         if (JavaComboBox.SelectedItem == null)
             JavaComboBox.SelectedIndex = 0;
 
-        DefaultRamMin.Text = config.DefaultRamMin.ToString();
-        DefaultRamMax.Text = config.DefaultRamMax.ToString();
         CheckUpdatesBox.IsChecked = config.CheckUpdates;
 
-        // Загрузка темы
+        // Загрузка темы - принудительно выбираем элемент
         var theme = config.Theme ?? "System";
-        ThemeComboBox.SelectedItem = ThemeComboBox.Items
-            .Cast<ComboBoxItem>()
-            .FirstOrDefault(item => (string)item.Tag == theme);
-
-        if (ThemeComboBox.SelectedItem == null)
+        ThemeComboBox.SelectedIndex = -1; // Сброс
+        for (int i = 0; i < ThemeComboBox.Items.Count; i++)
+        {
+            if (ThemeComboBox.Items[i] is ComboBoxItem item && (string)item.Tag == theme)
+            {
+                ThemeComboBox.SelectedIndex = i;
+                break;
+            }
+        }
+        if (ThemeComboBox.SelectedIndex == -1)
             ThemeComboBox.SelectedIndex = 0;
 
-        // Загрузка языка - по умолчанию "System"
+        // Загрузка языка - принудительно выбираем элемент
         var language = config.Language ?? "System";
-        var languageItem = LanguageComboBox.Items
-            .Cast<ComboBoxItem>()
-            .FirstOrDefault(item => (string)item.Tag == language);
+        LanguageComboBox.SelectedIndex = -1; // Сброс
+        for (int i = 0; i < LanguageComboBox.Items.Count; i++)
+        {
+            if (LanguageComboBox.Items[i] is ComboBoxItem item && (string)item.Tag == language)
+            {
+                LanguageComboBox.SelectedIndex = i;
+                break;
+            }
+        }
+        if (LanguageComboBox.SelectedIndex == -1)
+            LanguageComboBox.SelectedIndex = 0;
 
-        LanguageComboBox.SelectedItem = languageItem ?? LanguageComboBox.Items[0]; // "System" по умолчанию
-        
         _isLoading = false; // Разрешаем сохранение после загрузки
+
+        // Скрываем InfoBar при загрузке
+        LanguageChangeInfoBar.IsOpen = false;
     }
 
     /// <summary>
@@ -105,6 +115,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
             _isUpdating = true;
 
             var config = _configService.GetConfig();
+            var languageChanged = false;
 
             // Сохранение выбранной Java
             if (JavaComboBox.SelectedItem is ComboBoxItem selectedItem &&
@@ -117,33 +128,41 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
                 config.DefaultJavaId = null;
             }
 
-            if (int.TryParse(DefaultRamMin.Text, out var ramMin) && ramMin >= 256)
-                config.DefaultRamMin = ramMin;
-
-            if (int.TryParse(DefaultRamMax.Text, out var ramMax) && ramMax >= ramMin)
-                config.DefaultRamMax = ramMax;
-
             config.CheckUpdates = CheckUpdatesBox.IsChecked ?? false;
 
             // Сохранение темы
             if (ThemeComboBox.SelectedItem is ComboBoxItem themeItem)
             {
-                config.Theme = (string)themeItem.Tag;
+                var newTheme = (string)themeItem.Tag;
+                if (config.Theme != newTheme)
+                {
+                    config.Theme = newTheme;
+                    // Применяем тему сразу
+                    var mainWindow = Application.Current.MainWindow as MainWindow;
+                    mainWindow?.ApplyTheme(newTheme);
+                }
             }
-            
+
             // Сохранение языка
             if (LanguageComboBox.SelectedItem is ComboBoxItem languageItem)
             {
                 var selectedLanguage = (string)languageItem.Tag;
 
-                // Сохраняем выбранный язык (System, en, ru)
-                config.Language = selectedLanguage;
-
-                // Показываем InfoBar о необходимости перезапуска
-                LanguageChangeInfoBar.IsOpen = true;
+                // Проверяем, изменился ли язык
+                if (config.Language != selectedLanguage)
+                {
+                    config.Language = selectedLanguage;
+                    languageChanged = true;
+                }
             }
 
             _configService.SaveConfig(config);
+
+            // Показываем InfoBar только если язык изменился
+            if (languageChanged)
+            {
+                LanguageChangeInfoBar.IsOpen = true;
+            }
 
             // Показ уведомления об успешном сохранении
             ShowSaveNotification();
@@ -270,7 +289,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     private void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isLoading) return;
-        
+
         AutoSaveSettings();
     }
 

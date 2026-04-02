@@ -12,7 +12,7 @@
                 <!--  Поиск с watermark  -->
                 <Grid
                     Grid.Column="0"
-                    Height="32"
+                    Height="32.62"
                     Margin="0,0,8,0">
                     <ui:TextBox
                         x:Name="SearchBox"
@@ -44,15 +44,15 @@
                         Content="{loc:Loc ServersPage_Filter_All}"
                         IsSelected="True"
                         Tag="All" />
-                    <ComboBoxItem Content="{loc:Loc ModLoader_Vanilla}" Tag="Vanilla" />
-                    <ComboBoxItem Content="{loc:Loc ModLoader_Forge}" Tag="Forge" />
-                    <ComboBoxItem Content="{loc:Loc ModLoader_NeoForge}" Tag="NeoForge" />
-                    <ComboBoxItem Content="{loc:Loc ModLoader_Fabric}" Tag="Fabric" />
-                    <ComboBoxItem Content="{loc:Loc ModLoader_Paper}" Tag="Paper" />
-                    <ComboBoxItem Content="{loc:Loc ModLoader_Spigot}" Tag="Spigot" />
-                    <ComboBoxItem Content="{loc:Loc ModLoader_Purpur}" Tag="Purpur" />
+                    <ComboBoxItem Content="Vanilla" Tag="Vanilla" />
+                    <ComboBoxItem Content="Forge" Tag="Forge" />
+                    <ComboBoxItem Content="NeoForge" Tag="NeoForge" />
+                    <ComboBoxItem Content="Fabric" Tag="Fabric" />
+                    <ComboBoxItem Content="Paper" Tag="Paper" />
+                    <ComboBoxItem Content="Spigot" Tag="Spigot" />
+                    <ComboBoxItem Content="Purpur" Tag="Purpur" />
                     <ComboBoxItem
-                        Content="{loc:Loc ModLoader_Quilt}"
+                        Content="Quilt"
                         IsEnabled="False"
                         Tag="Quilt" />
                 </ComboBox>
@@ -67,16 +67,11 @@
                     ContextMenu="{x:Null}"
                     SelectionChanged="FilterStatus_SelectionChanged">
                     <ComboBoxItem
+                        Content="{loc:Loc ServersPage_Filter_AllServers}"
                         IsSelected="True"
-                        Tag="All">
-                        <ui:TextBlock Text="{loc:Loc ServersPage_Filter_AllServers}" />
-                    </ComboBoxItem>
-                    <ComboBoxItem Tag="Running">
-                        <ui:TextBlock Padding="0,0,8,0" Text="{loc:Loc ServersPage_Filter_Running}" />
-                    </ComboBoxItem>
-                    <ComboBoxItem Tag="Stopped">
-                        <ui:TextBlock Padding="0,0,8,0" Text="{loc:Loc ServersPage_Filter_Stopped}" />
-                    </ComboBoxItem>
+                        Tag="All" />
+                    <ComboBoxItem Content="{loc:Loc ServersPage_Filter_Running}" Tag="Running" />
+                    <ComboBoxItem Content="{loc:Loc ServersPage_Filter_Stopped}" Tag="Stopped" />
                 </ComboBox>
                 <!--  Кнопка создать сервер  -->
                 <ui:Button

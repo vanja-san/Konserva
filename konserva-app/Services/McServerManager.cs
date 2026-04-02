@@ -15,6 +15,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
     private readonly ReaderWriterLockSlim _serversLock = new();
 
     public event Action? OnServersChanged;
+    public event Action<Server, string>? OnServerStartError;  // Событие об ошибке запуска
 
     public IReadOnlyList<Server> GetServers()
     {
@@ -145,6 +146,8 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         server.Status = ServerStatus.Starting;
         server.LastPlayed = DateTime.Now;
 
+        Logger.Info($"[StartServerInternal] Starting server {server.Id} ({server.Name})", "McServerManager");
+
         process.OnStatusChanged += status =>
         {
             server.Status = status;
@@ -164,7 +167,9 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         {
             try
             {
+                Logger.Info($"[StartServerInternal] Calling process.Start() for {server.Name}", "McServerManager");
                 await Task.Run(() => process.Start());
+                Logger.Info($"[StartServerInternal] process.Start() completed for {server.Name}", "McServerManager");
             }
             catch (Exception ex)
             {
@@ -172,14 +177,17 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
                 server.Status = ServerStatus.Error;
                 server.InstallStatus = $"Ошибка запуска: {ex.Message}";
                 storage.UpdateServer(server);
-                
+
+                // Уведомляем об ошибке запуска
+                OnServerStartError?.Invoke(server, ex.Message);
+
                 System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
                 {
                     OnServersChanged?.Invoke();
                 });
             }
         });
-        
+
         storage.UpdateServer(server);
 
         // Обновляем UI в потоке UI
@@ -243,6 +251,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             var existing = _servers.FirstOrDefault(s => s.Id == server.Id);
             if (existing != null)
             {
+                // Обновляем существующий сервер новыми значениями
                 existing.Name = server.Name;
                 existing.Port = server.Port;
                 existing.Settings = server.Settings.Clone();  // Глубокое копирование
@@ -251,6 +260,9 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
                 existing.McVersion = server.McVersion;
                 existing.ModLoader = server.ModLoader;
                 existing.Path = server.Path;
+
+                // Обновляем хранилище внутри блокировки
+                storage.UpdateServer(existing);
             }
         }
         finally
@@ -258,7 +270,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             _serversLock.ExitWriteLock();
         }
 
-        storage.UpdateServer(server);
+        // Уведомляем UI после выхода из блокировки
         OnServersChanged?.Invoke();
     }
 

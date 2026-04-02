@@ -1,5 +1,5 @@
-﻿using System.Text.RegularExpressions;
-using Konserva.Services;
+﻿using Konserva.Services;
+using System.Text.RegularExpressions;
 
 namespace Konserva.Utilities;
 
@@ -17,7 +17,7 @@ public static partial class JavaVersionParser
     public static int ParseMajorVersion(string versionOutput)
     {
         var version = ParseVersion(versionOutput);
-        
+
         if (string.IsNullOrEmpty(version) || version == "неизвестно")
             return 8;
 

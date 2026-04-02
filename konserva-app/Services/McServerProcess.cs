@@ -81,11 +81,16 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     /// </summary>
     public async Task StartAsync()
     {
+        Logger.Info($"[StartAsync] Starting for server {Server.Name}", "McServerProcess");
+        
         lock (_startStopLock)
         {
             // Если уже запускается или запущен — выходим
             if (_isStarting || _process is { HasExited: false })
+            {
+                Logger.Warning($"[StartAsync] Already starting or running: {Server.Name}", "McServerProcess");
                 return;
+            }
 
             _isStarting = true;
             _startCts?.Cancel();
@@ -94,7 +99,13 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
         try
         {
+            Logger.Info($"[StartAsync] Calling StartInternalAsync for {Server.Name}", "McServerProcess");
             await StartInternalAsync(_startCts.Token);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"[StartAsync] Exception for {Server.Name}: {ex.Message}", ex, "McServerProcess");
+            throw;
         }
         finally
         {
@@ -110,6 +121,8 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     /// </summary>
     private async Task StartInternalAsync(CancellationToken ct)
     {
+        Logger.Info($"[StartInternalAsync] Beginning for {Server.Name}", "McServerProcess");
+        
         _stopCts = new CancellationTokenSource();
         _pendingErrorOutput = null;
         _serverReady = false;  // Сбрасываем флаг готовности
@@ -124,6 +137,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             AppendLog($"[INFO] Версия Minecraft: {Server.McVersion}");
             AppendLog("========================================");
 
+            Logger.Info($"[StartInternalAsync] Checking directory for {Server.Path}", "McServerProcess");
             ct.ThrowIfCancellationRequested();
 
             if (!Directory.Exists(Server.Path))
@@ -150,10 +164,18 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             ct.ThrowIfCancellationRequested();
 
+            Logger.Info($"[StartInternalAsync] Getting Java path for {Server.Name}", "McServerProcess");
             var javaPath = GetJavaPathForServer();
+            Logger.Info($"[StartInternalAsync] Java path: {javaPath}", "McServerProcess");
+            
+            Logger.Info($"[StartInternalAsync] Checking Java at {javaPath}", "McServerProcess");
             var javaCheckResult = CheckJava(javaPath);
             if (!javaCheckResult.Success)
+            {
+                Logger.Error($"Java check failed: {javaCheckResult.Error}", null, "McServerProcess");
+                LogJavaNotFoundError(javaPath, javaCheckResult.Error);
                 throw new FileNotFoundException($"Java не найдена или не работает: {javaPath}. {javaCheckResult.Error}");
+            }
 
             AppendLog($"[INFO] Java версия: {javaCheckResult.Version}");
             AppendLog($"[INFO] Java путь: {javaCheckResult.JavaPath}");
@@ -220,11 +242,15 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         var launchType = McServerInstaller.GetServerLaunchType(Server.Path);
         var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, launchType);
 
+        Logger.Info($"[ValidateJavaVersion] Required Java {requiredJavaVersion}+, Found Java {javaCheckResult.MajorVersion} ({javaCheckResult.Version})", "McServerProcess");
+        Logger.Info($"[ValidateJavaVersion] LaunchType={launchType}, McVersion={Server.McVersion}", "McServerProcess");
+
         if (javaCheckResult.MajorVersion < requiredJavaVersion)
         {
             LogJavaVersionError(requiredJavaVersion, javaCheckResult);
+            Logger.Error($"Java version mismatch: required {requiredJavaVersion}+, found {javaCheckResult.MajorVersion}", null, "McServerProcess");
             throw new InvalidOperationException(
-                $"Требуется Java {requiredJavaVersion}+ для Minecraft {Server.McVersion}, но найдена Java {javaCheckResult.MajorVersion}");
+                $"Требуется Java {requiredJavaVersion}+ для Minecraft {Server.McVersion}, но найдена Java {javaCheckResult.MajorVersion} ({javaCheckResult.Version})");
         }
 
         AppendLog($"[INFO] Версия Java совместима (требуется {requiredJavaVersion}+)");
@@ -238,13 +264,32 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         AppendLog($"[ERROR] ═══════════════════════════════════════");
         AppendLog($"[ERROR] НЕСОВМЕСТИМОСТЬ ВЕРСИИ JAVA!");
         AppendLog($"[ERROR] ═══════════════════════════════════════");
-        AppendLog($"[INFO] Для Minecraft {Server.McVersion} требуется Java {required} или выше");
-        AppendLog($"[INFO] Ваша версия Java: {actual.Version}");
-        AppendLog($"[INFO] ");
-        AppendLog($"[INFO] Решение:");
-        AppendLog($"[INFO] 1. Установите Java {required}: https://adoptium.net/");
-        AppendLog($"[INFO] 2. Укажите путь к новой Java в настройках приложения");
-        AppendLog($"[INFO] 3. Или выберите более старую версию Minecraft");
+        AppendLog($"[ERROR] Для Minecraft {Server.McVersion} требуется Java {required} или выше");
+        AppendLog($"[ERROR] Найдена Java: {actual.Version} (версия {actual.MajorVersion})");
+        AppendLog($"[ERROR] Путь к Java: {actual.JavaPath}");
+        AppendLog($"[ERROR] ");
+        AppendLog($"[ERROR] Решение:");
+        AppendLog($"[ERROR] 1. Установите Java {required}: https://adoptium.net/");
+        AppendLog($"[ERROR] 2. Укажите путь к Java {required} в настройках приложения");
+        AppendLog($"[ERROR] 3. Или выберите более старую версию Minecraft");
+        AppendLog($"[ERROR] ═══════════════════════════════════════");
+    }
+
+    /// <summary>
+    /// Логирование ошибки - Java не найдена
+    /// </summary>
+    private void LogJavaNotFoundError(string javaPath, string error)
+    {
+        AppendLog($"[ERROR] ═══════════════════════════════════════");
+        AppendLog($"[ERROR] JAVA НЕ НАЙДЕНА!");
+        AppendLog($"[ERROR] ═══════════════════════════════════════");
+        AppendLog($"[ERROR] Путь к Java: {javaPath}");
+        AppendLog($"[ERROR] Ошибка: {error}");
+        AppendLog($"[ERROR] ");
+        AppendLog($"[ERROR] Решение:");
+        AppendLog($"[ERROR] 1. Установите Java: https://adoptium.net/");
+        AppendLog($"[ERROR] 2. Добавьте Java в настройках приложения (кнопка 'Добавить Java')");
+        AppendLog($"[ERROR] 3. Убедитесь, что Java добавлена в PATH");
         AppendLog($"[ERROR] ═══════════════════════════════════════");
     }
 
@@ -557,9 +602,22 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             else
             {
                 AppendLog("[INFO] Сервер успешно остановлен");
-                
+
                 // Ждём немного для обработки последних строк вывода
                 await Task.Delay(1000);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            AppendLog("[INFO] Остановка отменена");
+            // Принудительное завершение при отмене
+            try
+            {
+                _process?.Kill();
+            }
+            catch (Exception killEx)
+            {
+                AppendLog($"[ERROR] Не удалось завершить процесс при отмене: {killEx.Message}");
             }
         }
         catch (Exception ex)
@@ -589,7 +647,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     public void SendCommand(string command)
     {
         Logger.Info($"[SendCommand] Отправка команды: {command}", "McServerProcess");
-        
+
         if (_process == null || _process.HasExited)
         {
             Logger.Warning($"[SendCommand] Процесс не запущен: process={_process != null}, HasExited={_process?.HasExited.ToString() ?? "N/A"}", "McServerProcess");
@@ -682,7 +740,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 AppendLog($"[ERROR] Это может означать проблему с конфигурацией");
                 AppendLog($"[ERROR] или нехватку памяти.");
                 AppendLog($"[ERROR] ═══════════════════════════════════════");
-                
+
                 // Если сервер упал с ошибкой, устанавливаем статус Error
                 if (exitCode != 0 && Status == ServerStatus.Stopped)
                 {
@@ -705,6 +763,11 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 await Task.Delay(Server.Settings.AutoRestartDelay * 1000);
                 Start();
             }
+        }
+        catch (OperationCanceledException)
+        {
+            AppendLog("[INFO] Мониторинг процесса отменён");
+            // Нормальное завершение при отмене
         }
         catch (Exception ex)
         {
@@ -872,13 +935,13 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         {
             var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, McServerInstaller.GetServerLaunchType(Server.Path));
             AppendLog($"[INFO] Автовыбор Java: требуется Java {requiredJavaVersion}+ для Minecraft {Server.McVersion}");
-            
+
             // Ищем подходящую Java среди установленных
             var suitableJava = config.JavaInstallations
                 .Where(j => j.Exists && j.MajorVersion >= requiredJavaVersion)
                 .OrderByDescending(j => j.MajorVersion)
                 .FirstOrDefault();
-            
+
             if (suitableJava != null)
             {
                 AppendLog($"[INFO] Выбрана Java: {suitableJava.DisplayName}");
@@ -936,6 +999,11 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             _logs.Clear();
             _logLines.Clear();
         }
+
+        // Сброс всех событий (отписка внешних подписчиков)
+        OnLog = null;
+        OnStatusChanged = null;
+        OnPlayersChanged = null;
 
         _disposed = true;
         GC.SuppressFinalize(this);
