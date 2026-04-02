@@ -1,4 +1,5 @@
 ﻿using Konserva.Models;
+using Konserva.Localization;
 using Konserva.Utilities;
 using System.Diagnostics;
 using System.IO;
@@ -263,16 +264,16 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     private void LogJavaVersionError(int required, JavaCheckResult actual)
     {
         AppendLog($"[ERROR] ═══════════════════════════════════════");
-        AppendLog($"[ERROR] НЕСОВМЕСТИМОСТЬ ВЕРСИИ JAVA!");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaVersionMismatch")}");
         AppendLog($"[ERROR] ═══════════════════════════════════════");
-        AppendLog($"[ERROR] Для Minecraft {Server.McVersion} требуется Java {required} или выше");
-        AppendLog($"[ERROR] Найдена Java: {actual.Version} (версия {actual.MajorVersion})");
-        AppendLog($"[ERROR] Путь к Java: {actual.JavaPath}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaVersionMismatch_Detail", Server.McVersion, required)}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaFound", actual.Version, actual.MajorVersion)}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaPath", actual.JavaPath)}");
         AppendLog($"[ERROR] ");
-        AppendLog($"[ERROR] Решение:");
-        AppendLog($"[ERROR] 1. Установите Java {required}: https://adoptium.net/");
-        AppendLog($"[ERROR] 2. Укажите путь к Java {required} в настройках приложения");
-        AppendLog($"[ERROR] 3. Или выберите более старую версию Minecraft");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution")}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution_Install_Java", required)}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution_Add_Java", required)}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution_Older_Minecraft")}");
         AppendLog($"[ERROR] ═══════════════════════════════════════");
     }
 
@@ -282,15 +283,15 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     private void LogJavaNotFoundError(string javaPath, string error)
     {
         AppendLog($"[ERROR] ═══════════════════════════════════════");
-        AppendLog($"[ERROR] JAVA НЕ НАЙДЕНА!");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaNotFound")}");
         AppendLog($"[ERROR] ═══════════════════════════════════════");
-        AppendLog($"[ERROR] Путь к Java: {javaPath}");
-        AppendLog($"[ERROR] Ошибка: {error}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaNotFound_Path", javaPath)}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaNotFound_Error", error)}");
         AppendLog($"[ERROR] ");
-        AppendLog($"[ERROR] Решение:");
-        AppendLog($"[ERROR] 1. Установите Java: https://adoptium.net/");
-        AppendLog($"[ERROR] 2. Добавьте Java в настройках приложения (кнопка 'Добавить Java')");
-        AppendLog($"[ERROR] 3. Убедитесь, что Java добавлена в PATH");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution")}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution_Install_Java_General")}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution_Add_Java_Settings")}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution_Check_PATH")}");
         AppendLog($"[ERROR] ═══════════════════════════════════════");
     }
 
@@ -358,15 +359,15 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         OnStatusChanged?.Invoke(Status);
 
         AppendLog($"[ERROR] ═══════════════════════════════════════");
-        AppendLog($"[ERROR] Критическая ошибка запуска!");
-        AppendLog($"[ERROR] Тип: {ex.GetType().Name}");
-        AppendLog($"[ERROR] Сообщение: {ex.Message}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_CriticalError")}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_ErrorType", ex.GetType().Name)}");
+        AppendLog($"[ERROR] {LocalizationManager.Get("Log_ErrorMessage", ex.Message)}");
         if (!string.IsNullOrEmpty(ex.StackTrace))
             AppendLog($"[ERROR] StackTrace: {ex.StackTrace}");
         AppendLog($"[ERROR] ═══════════════════════════════════════");
 
         if (!string.IsNullOrEmpty(_pendingErrorOutput))
-            AppendLog($"[ERROR] Вывод ошибки: {_pendingErrorOutput}");
+            AppendLog($"[ERROR] {LocalizationManager.Get("Log_ErrorOutput", _pendingErrorOutput)}");
     }
 
     private void LogHeader(string message)
@@ -595,7 +596,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             if (_process is { HasExited: false })
             {
-                AppendLog("[WARN] Таймаут остановки, принудительное завершение...");
+                AppendLog($"[WARN] {LocalizationManager.Get("Log_TimeoutForceKill")}");
                 _process.Kill();
                 AppendLog("[INFO] Процесс завершен принудительно");
             }
@@ -625,7 +626,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             AppendLog($"[ERROR] Ошибка остановки: {ex.Message}");
             try
             {
-                AppendLog("[WARN] Попытка принудительного завершения...");
+                AppendLog($"[WARN] {LocalizationManager.Get("Log_ForceKillAttempt")}");
                 _process?.Kill();
             }
             catch (Exception killEx)
@@ -651,7 +652,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         if (_process == null || _process.HasExited)
         {
             Logger.Warning($"[SendCommand] Процесс не запущен: process={_process != null}, HasExited={_process?.HasExited.ToString() ?? "N/A"}", "McServerProcess");
-            AppendLog($"[WARN] Попытка отправки команды на остановленный сервер: {command}");
+            AppendLog($"[WARN] {LocalizationManager.Get("Log_ServerNotRunning", command)}");
             return;
         }
 
@@ -736,9 +737,9 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             if (exitCode != 0)
             {
                 AppendLog($"[ERROR] ═══════════════════════════════════════");
-                AppendLog($"[ERROR] Сервер завершился с кодом ошибки: {exitCode}");
-                AppendLog($"[ERROR] Это может означать проблему с конфигурацией");
-                AppendLog($"[ERROR] или нехватку памяти.");
+                AppendLog($"[ERROR] {LocalizationManager.Get("Log_ServerStoppedWithCode", exitCode)}");
+                AppendLog($"[ERROR] {LocalizationManager.Get("Log_ServerConfigProblem")}");
+                AppendLog($"[ERROR] {LocalizationManager.Get("Log_MemoryProblem")}");
                 AppendLog($"[ERROR] ═══════════════════════════════════════");
 
                 // Если сервер упал с ошибкой, устанавливаем статус Error
@@ -926,7 +927,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                     AppendLog($"[INFO] Используем Java из настроек сервера: {java.DisplayName}");
                     return java.Path;
                 }
-                AppendLog($"[WARN] Java из настроек сервера не найдена: {java.Path}");
+                AppendLog($"[WARN] {LocalizationManager.Get("Log_JavaFromSettingsNotFound", java.Path)}");
             }
         }
 
@@ -948,7 +949,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 return suitableJava.Path;
             }
 
-            AppendLog($"[WARN] Не найдена Java {requiredJavaVersion}+, пробуем Java по умолчанию");
+            AppendLog($"[WARN] {LocalizationManager.Get("Log_JavaVersionNotFound_TryDefault", requiredJavaVersion)}");
         }
 
         // Java по умолчанию
@@ -960,7 +961,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 AppendLog($"[INFO] Используем Java: {defaultJava.DisplayName}");
                 return defaultJava.Path;
             }
-            AppendLog($"[WARN] Java по умолчанию не найдена: {defaultJava.Path}");
+            AppendLog($"[WARN] {LocalizationManager.Get("Log_JavaDefaultNotFound", defaultJava.Path)}");
         }
 
         AppendLog($"[INFO] Используем Java из PATH: java");
