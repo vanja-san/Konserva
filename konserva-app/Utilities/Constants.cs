@@ -95,6 +95,15 @@ public static class Constants
 
     #endregion
 
+    #region Задержки UI (мс)
+
+    /// <summary>
+    /// Задержка авто-закрытия InfoBar (5 сек)
+    /// </summary>
+    public const int InfoBarAutoCloseDelayMs = 5000;
+
+    #endregion
+
     #region Ограничения логов
 
     /// <summary>

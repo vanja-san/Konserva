@@ -235,10 +235,19 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
                 if (selectedItem != null)
                     JavaComboBox.SelectedItem = selectedItem;
 
-                await UiHelper.ShowInfo(
-                    $"Java успешно добавлена!\n\n" +
-                    $"Версия: {java.Version}\n" +
-                    $"Путь: {java.Path}");
+                // Показываем InfoBar об успешной установке
+                JavaSuccessInfoBar.Title = "Java добавлена";
+                JavaSuccessInfoBar.Message = $"Версия: {java.Version}\nПуть: {java.Path}";
+                JavaSuccessInfoBar.IsOpen = true;
+
+                // Автоматически закрываем через 5 секунд
+                _ = Task.Delay(Constants.InfoBarAutoCloseDelayMs).ContinueWith(_ =>
+                {
+                    this.Invoke(() =>
+                    {
+                        JavaSuccessInfoBar.IsOpen = false;
+                    });
+                });
             }
             else
             {
