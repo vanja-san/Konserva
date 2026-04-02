@@ -24,7 +24,13 @@ echo.
 echo [3/3] Publishing Portable (single file)...
 dotnet publish konserva-app/konserva-app.csproj ^
     -c Release ^
-    /p:PublishProfile=Portable ^
+    -r win-x64 ^
+    --self-contained false ^
+    -p:PublishSingleFile=true ^
+    -p:EnableCompressionInSingleFile=false ^
+    -p:IncludeNativeLibrariesForSelfExtract=false ^
+    -p:DebugType=none ^
+    -p:DebugSymbols=false ^
     -o "konserva-app\publish\Portable"
 if errorlevel 1 goto :error
 
