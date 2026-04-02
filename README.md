@@ -333,7 +333,7 @@ This application is built using the excellent **WPF UI** library by Bartosz Ciec
 **Application Version**: 1.2.1
 **Update Date**: 2026-04-02
 **Platform**: Windows x64
-**Size**: ~66 MB (Full), ~3 MB (Portable)
+**Size**: ~60 MB (Full), ~10 MB (Deps)
 
 📖 **Build Instructions**: See [BUILD.md](BUILD.md)
 

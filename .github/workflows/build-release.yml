@@ -53,28 +53,28 @@ jobs:
         
         # Add file description section
         $changelog += "## 📦 Download Files`n`n"
-        $changelog += "**Konserva-v`${{ inputs.version }}-Full.zip** (~62 MB)`n"
+        $changelog += "**Konserva-v`${{ inputs.version }}-Full.zip** (~60 MB)`n"
         $changelog += "- ✅ All-inclusive (self-contained)`n"
         $changelog += "- ✅ No .NET required`n"
         $changelog += "- ✅ Ready to run immediately`n"
         $changelog += "- 📌 **Recommended for most users**`n`n"
-        $changelog += "**Konserva-v`${{ inputs.version }}-Deps.zip** (~3 MB)`n"
+        $changelog += "**Konserva-v`${{ inputs.version }}-Deps.zip** (~10 MB)`n"
         $changelog += "- ⚠️ Requires .NET 10 Runtime`n"
         $changelog += "- ⚡ Smaller file size`n"
         $changelog += "- 💡 For experienced users`n`n"
         $changelog += "---`n`n"
         $changelog += "**Download .NET 10 Runtime:** https://dotnet.microsoft.com/download/dotnet/10.0`n"
-        
+
         # Write changelog
         $changelog | Out-File -FilePath $outputFile -Encoding utf8
-        
+
         Write-Host "Changelog generated successfully!"
         Get-Content $outputFile -Raw
 
     - name: Restore dependencies
       run: dotnet restore konserva-app/konserva-app.csproj
 
-    - name: Build Full (Self-contained, ~62 MB)
+    - name: Build Full (Self-contained, ~60 MB)
       run: |
         dotnet publish konserva-app/konserva-app.csproj `
           -c Release `

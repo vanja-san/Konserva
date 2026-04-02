@@ -1,11 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Konserva Portable Build - Framework-dependent Single File (~3 MB)
+:: Konserva Portable Build - Framework-dependent Single File (~10 MB)
 
 echo ============================================
 echo    Konserva Portable Build (Requires .NET)
-echo    Single file (~3 MB, requires .NET 10)
+echo    Single file (~10 MB, requires .NET 10)
 echo ============================================
 echo.
 

@@ -5,22 +5,19 @@
 ### Windows (PowerShell/CMD)
 
 ```bash
-# Self-contained build (~66 MB, single file, no .NET required)
-build-publish.bat publish
+# Self-contained build (~60 MB, single file, no .NET required)
+build-publish-full.bat
 
-# Portable build (~3 MB, requires .NET 10 Runtime)
-build-publish-portable.bat build
-
-# Clean build artifacts
-build-publish.bat clean
+# Portable build (~10 MB, requires .NET 10 Runtime)
+build-publish-deps.bat
 ```
 
 ## Build Types
 
 | Type | Size | .NET Required | Description |
 |------|------|---------------|-------------|
-| **Self-contained (Full)** | ~66 MB | ❌ No | Everything included, ready to run |
-| **Portable** | ~3 MB | ✅ Yes | Requires .NET 10 Runtime |
+| **Self-contained (Full)** | ~60 MB | ❌ No | Everything included, ready to run |
+| **Portable** | ~10 MB | ✅ Yes | Requires .NET 10 Runtime |
 | **Release** | - | ✅ Yes | For development, requires .NET SDK |
 
 ## Build Commands
@@ -66,8 +63,8 @@ CI/CD pipeline is configured in `.github/workflows/build-release.yml`.
    - **Create GitHub Release**: Create release (optional)
    - **Generate changelog**: Auto-generate changelog from commits (optional)
 5. After build completes, download artifacts:
-   - `Konserva-vX.X.X-Full.zip` — self-contained version (~66 MB)
-   - `Konserva-vX.X.X-Portable.zip` — portable version (~3 MB)
+   - `Konserva-vX.X.X-Full.zip` — self-contained version (~60 MB)
+   - `Konserva-vX.X.X-Deps.zip` — portable version (~10 MB)
 
 **Note**: If "Create GitHub Release" is enabled, a GitHub release will be created with changelog describing changes since the last version.
 
@@ -75,7 +72,7 @@ CI/CD pipeline is configured in `.github/workflows/build-release.yml`.
 
 | Parameter | Full | Portable |
 |-----------|------|----------|
-| Size | ~66 MB | ~3 MB |
+| Size | ~60 MB | ~10 MB |
 | Files | 1 | 1 |
 | .NET Runtime | Built-in | Required |
 | Recommended for | End users | Development/Testing |
@@ -99,10 +96,10 @@ CI/CD pipeline is configured in `.github/workflows/build-release.yml`.
 ```
 publish/
 ├── Full/                # Self-contained build
-│   ├── Konserva.exe     # ~66 MB
+│   ├── Konserva.exe     # ~60 MB
 │   └── README.md
 └── Portable/            # Portable build
-    ├── Konserva.exe     # ~3 MB
+    ├── Konserva.exe     # ~10 MB
     └── README.md
 ```
 
@@ -183,7 +180,7 @@ dotnet build --configuration Release
 ```
 
 ### Large file size
-Use portable version (~3 MB instead of ~66 MB)
+Use portable version (~10 MB instead of ~60 MB)
 
 ### Russian text encoding issues
 Ensure all .cs and .xaml files are saved with UTF-8 with BOM encoding.

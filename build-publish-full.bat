@@ -1,11 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Konserva Full Build - Self-contained (~62 MB)
+:: Konserva Full Build - Self-contained (~60 MB)
 
 echo ============================================
 echo    Konserva Full Build (Self-contained)
-echo    Single file (~62 MB, no dependencies)
+echo    Single file (~60 MB, no dependencies)
 echo ============================================
 echo.
 
