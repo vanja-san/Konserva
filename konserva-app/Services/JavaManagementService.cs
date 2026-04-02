@@ -82,7 +82,7 @@ public partial class JavaManagementService(IConfigService configService) : IJava
                 return null;
 
             var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit(5000);
+            process.WaitForExit(Constants.JavaPathCheckTimeoutMs);
 
             var paths = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             if (paths.Length > 0)
@@ -151,7 +151,7 @@ public partial class JavaManagementService(IConfigService configService) : IJava
             if (process != null)
             {
                 var output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit(5000);
+                process.WaitForExit(Constants.JavaPathCheckTimeoutMs);
 
                 foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
                 {
@@ -248,7 +248,7 @@ public partial class JavaManagementService(IConfigService configService) : IJava
             }
 
             var versionOutput = process.StandardError.ReadToEnd();
-            process.WaitForExit(10000);
+            process.WaitForExit(Constants.JavaCheckTimeoutMs);
 
             if (process.ExitCode != 0)
             {

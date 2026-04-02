@@ -1,0 +1,59 @@
+name: "CodeQL Analysis"
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+  schedule:
+    - cron: '0 2 * * 1'  # Run every Monday at 2 AM UTC
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'csharp' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        queries: security-extended,security-and-quality
+
+    - name: Restore dependencies
+      run: dotnet restore konserva-app/konserva-app.csproj
+
+    - name: Build
+      run: dotnet build konserva-app/konserva-app.csproj --configuration Release --no-restore
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
+        output: sarif-results
+        upload: true
+
+    - name: Upload SARIF results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: sarif-results/csharp.sarif
+        category: "/language:${{matrix.language}}"

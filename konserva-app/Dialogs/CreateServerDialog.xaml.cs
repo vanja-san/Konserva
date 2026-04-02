@@ -1075,6 +1075,15 @@ public partial class CreateServerDialog : FluentWindow
                 return;
             }
 
+            // Валидация пути к серверу
+            var serverPath = ServerPathBox.Text.Trim();
+            var pathValidationResult = ValidateServerPath(serverPath);
+            if (!pathValidationResult.IsValid)
+            {
+                await UiHelper.ShowWarning(pathValidationResult.ErrorMessage);
+                return;
+            }
+
             var mcVersion = McVersionBox.SelectedItem is ComboBoxItem mcItem
                 ? mcItem.Content?.ToString() ?? "1.20.4"
                 : "1.20.4";
@@ -1092,8 +1101,6 @@ public partial class CreateServerDialog : FluentWindow
             {
                 loaderVersion = loaderItem.Content?.ToString() ?? "latest";
             }
-
-            var serverPath = ServerPathBox.Text.Trim();
 
             var modLoader = new ModLoader
             {
@@ -1277,6 +1284,143 @@ public partial class CreateServerDialog : FluentWindow
         }
 
         MainWindow.ServerManager.UpdateServer(server);
+    }
+
+    /// <summary>
+    /// Результат валидации пути
+    /// </summary>
+    private sealed class PathValidationResult
+    {
+        public bool IsValid { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Валидация пути к серверу
+    /// </summary>
+    private PathValidationResult ValidateServerPath(string path)
+    {
+        try
+        {
+            // Проверка на пустой путь
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return new PathValidationResult
+                {
+                    IsValid = false,
+                    ErrorMessage = "Путь к серверу не может быть пустым"
+                };
+            }
+
+            // Проверка на недопустимые символы в пути
+            var invalidPathChars = Path.GetInvalidPathChars();
+            if (path.IndexOfAny(invalidPathChars) >= 0)
+            {
+                return new PathValidationResult
+                {
+                    IsValid = false,
+                    ErrorMessage = "Путь содержит недопустимые символы"
+                };
+            }
+
+            // Проверка на слишком длинный путь (максимум 260 символов для Windows)
+            if (path.Length > 260)
+            {
+                return new PathValidationResult
+                {
+                    IsValid = false,
+                    ErrorMessage = "Путь слишком длинный (максимум 260 символов)"
+                };
+            }
+
+            // Если папка существует - проверяем, не является ли она файлом
+            if (File.Exists(path))
+            {
+                return new PathValidationResult
+                {
+                    IsValid = false,
+                    ErrorMessage = "Указанный путь является файлом, а не папкой"
+                };
+            }
+
+            // Если папка существует - проверяем, не является ли она системной
+            if (Directory.Exists(path))
+            {
+                var normalizedPath = Path.GetFullPath(path).ToLowerInvariant();
+                
+                // Запрещаем создание серверов в системных папках
+                var systemPaths = new[]
+                {
+                    Environment.GetFolderPath(Environment.SpecialFolder.Windows).ToLowerInvariant(),
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles).ToLowerInvariant(),
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)?.ToLowerInvariant() ?? ""
+                };
+
+                if (systemPaths.Any(sysPath => !string.IsNullOrEmpty(sysPath) && normalizedPath.StartsWith(sysPath)))
+                {
+                    return new PathValidationResult
+                    {
+                        IsValid = false,
+                        ErrorMessage = "Нельзя создавать серверы в системных папках Windows"
+                    };
+                }
+
+                // Проверяем, пуста ли папка (если не пуста - предупреждаем)
+                var files = Directory.GetFiles(path);
+                if (files.Length > 0)
+                {
+                    return new PathValidationResult
+                    {
+                        IsValid = true, // Не ошибка, но предупреждение
+                        ErrorMessage = $"Папка не пуста ({files.Length} файлов). Убедитесь, что это правильное место для сервера."
+                    };
+                }
+            }
+            else
+            {
+                // Папка не существует - проверяем, можем ли её создать
+                var parentDir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
+                {
+                    return new PathValidationResult
+                    {
+                        IsValid = false,
+                        ErrorMessage = "Родительская папка не существует"
+                    };
+                }
+
+                // Проверяем, есть ли права на создание папки
+                try
+                {
+                    var tempPath = Path.Combine(path, ".konserva_test");
+                    Directory.CreateDirectory(tempPath);
+                    Directory.Delete(tempPath);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return new PathValidationResult
+                    {
+                        IsValid = false,
+                        ErrorMessage = "Недостаточно прав для создания папки"
+                    };
+                }
+            }
+
+            return new PathValidationResult
+            {
+                IsValid = true,
+                ErrorMessage = string.Empty
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Path validation error: {ex.Message}", ex, "CreateServerDialog");
+            return new PathValidationResult
+            {
+                IsValid = false,
+                ErrorMessage = $"Ошибка валидации пути: {ex.Message}"
+            };
+        }
     }
 
     [GeneratedRegex(@"<version>([^<]+)</version>")]

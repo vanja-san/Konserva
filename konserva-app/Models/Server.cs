@@ -23,6 +23,7 @@ public class Server
     private static int _idCounter;
     private string _name = string.Empty;
     private int _port = 25565;
+    private bool _errorDialogShown; // Флаг: показан ли диалог ошибки
 
     /// <summary>
     /// Уникальный идентификатор сервера
@@ -139,6 +140,20 @@ public class Server
     /// Краткое описание сервера
     /// </summary>
     public string Description => $"{McVersion} • {ModLoader.Type}";
+
+    /// <summary>
+    /// Флаг: показан ли диалог ошибки запуска
+    /// </summary>
+    public bool ErrorDialogShown
+    {
+        get => _errorDialogShown;
+        set => _errorDialogShown = value;
+    }
+
+    /// <summary>
+    /// Сбросить флаг ошибки
+    /// </summary>
+    public void ResetErrorDialog() => _errorDialogShown = false;
 
     /// <summary>
     /// Клонирование сервера

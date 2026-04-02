@@ -158,6 +158,22 @@ public partial class ServerDetailPage : Page, IDisposable
 
         UpdateStatus(_server.Status);
 
+        // Если сервер в состоянии ошибки — показываем диалог (только один раз)
+        if (_server.Status == ServerStatus.Error && !string.IsNullOrEmpty(_server.InstallStatus) && !_server.ErrorDialogShown)
+        {
+            Logger.Info($"[LoadServer] Server in Error status with message: {_server.InstallStatus}", "ServerDetailPage");
+            _server.ErrorDialogShown = true;
+            // Показываем ошибку после полной загрузки UI
+            this.Invoke(() =>
+            {
+                _ = ShowJavaErrorDialog(_server.InstallStatus);
+            });
+        }
+        else
+        {
+            Logger.Info($"[LoadServer] Server status is {_server.Status}, InstallStatus='{_server.InstallStatus}', DialogShown={_server.ErrorDialogShown}", "ServerDetailPage");
+        }
+
         // Выделяем первую кнопку (Консоль) при загрузке
         ResetNavigationButtons();
         if (ConsoleNavButton != null)
@@ -212,6 +228,12 @@ public partial class ServerDetailPage : Page, IDisposable
 
     private async void UpdateStatus(ServerStatus status)
     {
+        // Если сервер успешно запущен — сбрасываем флаг ошибки
+        if (status == ServerStatus.Running && _server != null)
+        {
+            _server.ResetErrorDialog();
+        }
+
         // Если статус изменился на запущенный или останавливается и процесс не актуален - переподключаемся
         if (status is ServerStatus.Starting or ServerStatus.Running or ServerStatus.Stopping)
         {
@@ -305,14 +327,33 @@ public partial class ServerDetailPage : Page, IDisposable
     /// <summary>
     /// Обработчик ошибки запуска сервера
     /// </summary>
-    private async void OnServerStartError(Server server, string errorMessage)
+    private void OnServerStartError(Server server, string errorMessage)
     {
         // Проверяем, что это наш сервер
         if (server.Id != _serverId)
+        {
+            Logger.Info($"[OnServerStartError] Server ID mismatch: expected {_serverId}, got {server.Id}", "ServerDetailPage");
             return;
+        }
 
-        // Показываем информационное окно с ошибкой
-        await ShowJavaErrorDialog(errorMessage);
+        // Проверяем, не показан ли уже диалог
+        if (_server != null && _server.ErrorDialogShown)
+        {
+            Logger.Info($"[OnServerStartError] Error dialog already shown for server {server.Name}", "ServerDetailPage");
+            return;
+        }
+
+        Logger.Info($"[OnServerStartError] Received error for server {server.Name}: {errorMessage}", "ServerDetailPage");
+
+        // Помечаем, что диалог показан
+        if (_server != null)
+            _server.ErrorDialogShown = true;
+
+        // Показываем диалог в UI потоке
+        this.Invoke(() =>
+        {
+            _ = ShowJavaErrorDialog(errorMessage);
+        });
     }
 
     /// <summary>
@@ -320,18 +361,25 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private async Task ShowJavaErrorDialog(string errorMessage)
     {
+        Logger.Info($"[ShowJavaErrorDialog] Showing dialog with message: {errorMessage}", "ServerDetailPage");
+
         // Проверяем, связана ли ошибка с Java
         bool isJavaError = errorMessage.Contains("Java", StringComparison.OrdinalIgnoreCase) ||
                           errorMessage.Contains("java", StringComparison.OrdinalIgnoreCase);
 
+        Logger.Info($"[ShowJavaErrorDialog] Is Java error: {isJavaError}", "ServerDetailPage");
+
         if (!isJavaError)
         {
             // Не Java ошибка - показываем обычное сообщение
+            Logger.Info($"[ShowJavaErrorDialog] Showing regular error dialog", "ServerDetailPage");
             await UiHelper.ShowError(errorMessage);
             return;
         }
 
         // Java ошибка - показываем подробное сообщение с кнопкой
+        Logger.Info($"[ShowJavaErrorDialog] Showing Java error dialog", "ServerDetailPage");
+        
         var dialog = new Wpf.Ui.Controls.MessageBox
         {
             Title = "⚠️ Ошибка Java",
@@ -634,7 +682,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
 
         // Сохраняем RAM
-        if (int.TryParse(SettingRamMin.Text, out var ramMin) && ramMin >= 256 && ramMin != _server.Settings.RamMin)
+        if (int.TryParse(SettingRamMin.Text, out var ramMin) && ramMin >= Constants.MinRamMb && ramMin != _server.Settings.RamMin)
         {
             _server.Settings.RamMin = ramMin;
         }

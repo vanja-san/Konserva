@@ -30,12 +30,107 @@ public partial class ServersPage : Page, IDisposable
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         MainWindow.ServerManager.OnServersChanged += OnServersChanged;
+        MainWindow.ServerManager.OnServerStartError += OnServerStartError;
         RefreshList();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         MainWindow.ServerManager.OnServersChanged -= OnServersChanged;
+        MainWindow.ServerManager.OnServerStartError -= OnServerStartError;
+    }
+
+    /// <summary>
+    /// Обработчик ошибки запуска сервера
+    /// </summary>
+    private void OnServerStartError(Server server, string errorMessage)
+    {
+        Logger.Info($"[ServersPage.OnServerStartError] Error for server {server.Name}: {errorMessage}", "ServersPage");
+
+        // Помечаем, что диалог показан (чтобы не показывать повторно на странице сервера)
+        server.ErrorDialogShown = true;
+
+        // Показываем ошибку пользователю в UI потоке
+        this.Invoke(async () =>
+        {
+            bool isJavaError = errorMessage.Contains("Java", StringComparison.OrdinalIgnoreCase) ||
+                              errorMessage.Contains("java", StringComparison.OrdinalIgnoreCase);
+
+            if (isJavaError)
+            {
+                // Создаём кнопку с обработчиком
+                var downloadButton = new System.Windows.Controls.Button
+                {
+                    Content = "📥 Скачать Java (adoptium.net)",
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                    Padding = new Thickness(16, 8, 16, 8),
+                    Cursor = System.Windows.Input.Cursors.Hand
+                };
+                downloadButton.Click += (s, e) =>
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "https://adoptium.net/",
+                        UseShellExecute = true
+                    });
+                };
+
+                // Для Java ошибки показываем более подробное сообщение
+                var dialog = new Wpf.Ui.Controls.MessageBox
+                {
+                    Title = "⚠️ Ошибка Java",
+                    Content = new StackPanel
+                    {
+                        Margin = new Thickness(0, 8, 0, 0),
+                        Children =
+                        {
+                            new System.Windows.Controls.TextBlock
+                            {
+                                Text = errorMessage,
+                                TextWrapping = System.Windows.TextWrapping.Wrap,
+                                Margin = new Thickness(0, 0, 0, 16)
+                            },
+                            new Border
+                            {
+                                Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 243, 205)),
+                                BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 193, 7)),
+                                BorderThickness = new Thickness(1),
+                                CornerRadius = new CornerRadius(4),
+                                Padding = new Thickness(12),
+                                Child = new StackPanel
+                                {
+                                    Children =
+                                    {
+                                        new System.Windows.Controls.TextBlock
+                                        {
+                                            Text = "Требуется установить или обновить Java",
+                                            FontWeight = System.Windows.FontWeights.Bold,
+                                            Margin = new Thickness(0, 0, 0, 8)
+                                        },
+                                        new System.Windows.Controls.TextBlock
+                                        {
+                                            Text = "Скачайте последнюю версию Java с официального сайта:",
+                                            Margin = new Thickness(0, 0, 0, 8)
+                                        },
+                                        downloadButton
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    PrimaryButtonText = "OK",
+                    PrimaryButtonIcon = new Wpf.Ui.Controls.SymbolIcon(Wpf.Ui.Controls.SymbolRegular.Info24),
+                    ShowTitle = true,
+                    Padding = new Thickness(16)
+                };
+
+                await dialog.ShowDialogAsync();
+            }
+            else
+            {
+                await UiHelper.ShowError(errorMessage);
+            }
+        });
     }
 
     /// <summary>

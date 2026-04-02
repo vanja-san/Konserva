@@ -169,13 +169,36 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             {
                 Logger.Info($"[StartServerInternal] Calling process.Start() for {server.Name}", "McServerManager");
                 await Task.Run(() => process.Start());
-                Logger.Info($"[StartServerInternal] process.Start() completed for {server.Name}", "McServerManager");
+                
+                // Ждём немного для проверки статуса (ошибка может произойти асинхронно)
+                await Task.Delay(500);
+                
+                // Проверяем, не произошла ли ошибка при запуске
+                if (process.Status == ServerStatus.Error && !string.IsNullOrEmpty(process.LastError))
+                {
+                    Logger.Error($"[StartServerInternal] Server {server.Id} ({server.Name}) failed to start: {process.LastError}", null, "McServerManager");
+                    server.Status = ServerStatus.Error;
+                    server.InstallStatus = process.LastError;
+                    storage.UpdateServer(server);
+
+                    // Уведомляем об ошибке запуска
+                    OnServerStartError?.Invoke(server, process.LastError);
+
+                    System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+                    {
+                        OnServersChanged?.Invoke();
+                    });
+                }
+                else
+                {
+                    Logger.Info($"[StartServerInternal] process.Start() completed for {server.Name}", "McServerManager");
+                }
             }
             catch (Exception ex)
             {
                 Logger.Error($"[StartServerInternal] Ошибка запуска сервера {server.Id} ({server.Name}): {ex.Message}", ex, "McServerManager");
                 server.Status = ServerStatus.Error;
-                server.InstallStatus = $"Ошибка запуска: {ex.Message}";
+                server.InstallStatus = ex.Message;
                 storage.UpdateServer(server);
 
                 // Уведомляем об ошибке запуска

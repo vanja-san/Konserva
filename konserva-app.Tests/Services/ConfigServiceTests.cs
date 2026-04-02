@@ -40,7 +40,7 @@ public class ConfigServiceTests : IDisposable
         // Assert
         config.Should().NotBeNull();
         config.Theme.Should().Be("System");
-        config.Language.Should().Be("ru");
+        config.Language.Should().Be("System");
         config.JavaInstallations.Should().BeEmpty();
         config.DefaultRamMin.Should().Be(1024);
         config.DefaultRamMax.Should().Be(4096);

@@ -15,7 +15,6 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     private Process? _process;
     private readonly StringBuilder _logs = new();
     private readonly List<string> _logLines = [];
-    private const int MaxLogLines = 1000;
     private readonly Lock _lock = new();
     private readonly Lock _startStopLock = new();
     private CancellationTokenSource? _startCts;
@@ -211,10 +210,12 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             AppendLog("[INFO] Запуск отменён");
             Status = ServerStatus.Stopped;
             OnStatusChanged?.Invoke(Status);
+            throw; // Пробрасываем отмену дальше
         }
         catch (Exception ex)
         {
             HandleStartError(ex);
+            throw; // Пробрасываем исключение дальше для обработки в McServerManager
         }
     }
 
@@ -419,7 +420,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                     return new JavaCheckResult { Success = false, Error = "Не удалось запустить процесс java" };
 
                 versionOutput = process.StandardError.ReadToEnd();
-                process.WaitForExit(10000);
+                process.WaitForExit(Constants.JavaCheckTimeoutMs);
 
                 if (process.ExitCode != 0)
                     return new JavaCheckResult { Success = false, Error = $"java вернула код ошибки {process.ExitCode}" };
@@ -439,7 +440,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                     if (pathProcess != null)
                     {
                         var pathOutput = pathProcess.StandardOutput.ReadToEnd();
-                        pathProcess.WaitForExit(5000);
+                        pathProcess.WaitForExit(Constants.JavaPathCheckTimeoutMs);
                         var paths = pathOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
                         if (paths.Length > 0)
                             actualJavaPath = paths[0].Trim();
@@ -469,7 +470,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                     return new JavaCheckResult { Success = false, Error = "Не удалось запустить процесс" };
 
                 versionOutput = process.StandardError.ReadToEnd();
-                process.WaitForExit(10000);
+                process.WaitForExit(Constants.JavaCheckTimeoutMs);
 
                 if (process.ExitCode != 0)
                     return new JavaCheckResult { Success = false, Error = $"Java вернула код ошибки {process.ExitCode}" };
@@ -586,9 +587,8 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             // Ждём завершения процесса с таймаутом 60 сек
             AppendLog("[INFO] Ожидание завершения процесса (60 сек)...");
             var startTime = Environment.TickCount64;
-            const int timeoutMs = 60000;
 
-            while (_process != null && !_process.HasExited && (Environment.TickCount64 - startTime) < timeoutMs)
+            while (_process != null && !_process.HasExited && (Environment.TickCount64 - startTime) < Constants.ServerStopTimeoutMs)
             {
                 await Task.Delay(100);
             }
@@ -604,7 +604,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 AppendLog("[INFO] Сервер успешно остановлен");
 
                 // Ждём немного для обработки последних строк вывода
-                await Task.Delay(1000);
+                await Task.Delay(Constants.ServerStatusCheckDelayMs);
             }
         }
         catch (OperationCanceledException)
@@ -760,7 +760,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             if (Server.Settings.AutoRestart)
             {
                 AppendLog($"[INFO] Авто-рестарт через {Server.Settings.AutoRestartDelay} сек...");
-                await Task.Delay(Server.Settings.AutoRestartDelay * 1000);
+                await Task.Delay(Server.Settings.AutoRestartDelay * Constants.MsPerSecond);
                 Start();
             }
         }
@@ -785,7 +785,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             _logs.AppendLine(logLine);
             _logLines.Add(logLine);
 
-            if (_logLines.Count > MaxLogLines)
+            if (_logLines.Count > Constants.MaxLogLines)
             {
                 _logLines.RemoveAt(0);
                 // Ограничиваем размер StringBuilder (примерно 100KB)

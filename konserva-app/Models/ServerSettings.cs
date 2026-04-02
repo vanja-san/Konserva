@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Konserva.Utilities;
 
 namespace Konserva.Models;
 
@@ -7,32 +8,32 @@ namespace Konserva.Models;
 /// </summary>
 public class ServerSettings
 {
-    private int _ramMin = 1024;
-    private int _ramMax = 4096;
+    private int _ramMin = Constants.DefaultRamMinMb;
+    private int _ramMax = Constants.DefaultRamMaxMb;
 
     /// <summary>
     /// Минимум RAM (MB). Минимум: 256, Максимум: RamMax
     /// </summary>
-    [Range(256, int.MaxValue)]
+    [Range(Constants.MinRamMb, int.MaxValue)]
     public int RamMin
     {
         get => _ramMin;
         set
         {
-            _ramMin = Math.Clamp(value, 256, RamMax);
+            _ramMin = Math.Clamp(value, Constants.MinRamMb, RamMax);
         }
     }
 
     /// <summary>
     /// Максимум RAM (MB). Минимум: RamMin, Максимум: 65536
     /// </summary>
-    [Range(1, 65536)]
+    [Range(1, Constants.MaxRamMb)]
     public int RamMax
     {
         get => _ramMax;
         set
         {
-            _ramMax = Math.Clamp(value, RamMin, 65536);
+            _ramMax = Math.Clamp(value, RamMin, Constants.MaxRamMb);
         }
     }
 
@@ -69,7 +70,7 @@ public class ServerSettings
     /// <summary>
     /// Задержка перед автоматическим рестартом (сек). Минимум: 0, Максимум: 3600
     /// </summary>
-    [Range(0, 3600)]
+    [Range(0, Constants.MaxAutoRestartDelaySec)]
     public int AutoRestartDelay { get; set; } = 5;
 
     /// <summary>
@@ -90,7 +91,7 @@ public class ServerSettings
     /// <summary>
     /// Валидация настроек
     /// </summary>
-    public bool Validate() => RamMin >= 256 && RamMax >= RamMin && RamMax <= 65536 &&
+    public bool Validate() => RamMin >= Constants.MinRamMb && RamMax >= RamMin && RamMax <= Constants.MaxRamMb &&
                                CpuCores >= 1 && CpuCores <= 128 &&
-                               AutoRestartDelay >= 0 && AutoRestartDelay <= 3600;
+                               AutoRestartDelay >= 0 && AutoRestartDelay <= Constants.MaxAutoRestartDelaySec;
 }

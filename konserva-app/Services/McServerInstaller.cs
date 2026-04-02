@@ -335,7 +335,7 @@ public static partial class McServerInstaller
                 {
                     Logger.Warning($"Attempt {attempt} failed: {ex.Message}");
                     if (attempt < 3)
-                        await Task.Delay(1000 * attempt, ct);
+                        await Task.Delay(Constants.MsPerSecond * attempt, ct);
                 }
             }
 
@@ -364,7 +364,7 @@ public static partial class McServerInstaller
             // 4. Создаем eula.txt и server.properties
             progress?.Report(90);
             CreateEula(destinationPath);
-            CreateServerProperties(destinationPath, 25565);
+            CreateServerProperties(destinationPath, Constants.DefaultServerPort);
 
             Logger.Info("Fabric server installation completed");
             progress?.Report(100);
@@ -807,7 +807,7 @@ public static partial class McServerInstaller
             while (!process.HasExited)
             {
                 ct.ThrowIfCancellationRequested();
-                await Task.Delay(1000, ct); // Проверка каждую секунду
+                await Task.Delay(Constants.MsPerSecond, ct); // Проверка каждую секунду
 
                 var elapsed = DateTime.Now - startTime;
                 if (elapsed < timeout)
@@ -1456,7 +1456,7 @@ public static partial class McServerInstaller
     /// <summary>
     /// Создать server.properties
     /// </summary>
-    public static void CreateServerProperties(string serverPath, int port = 25565)
+    public static void CreateServerProperties(string serverPath, int port = Constants.DefaultServerPort)
     {
         var propertiesPath = Path.Combine(serverPath, "server.properties");
         var content = $"""
@@ -1494,12 +1494,12 @@ public static partial class McServerInstaller
             pvp=true
             online-mode=true
             prevent-proxy-connections=false
-            
+
             # Performance
             view-distance=10
             simulation-distance=10
-            max-tick-time=60000
-            
+            max-tick-time={Constants.MaxTickTimeMs}
+
             # Other
             enable-command-block=false
             enable-rcon=false
@@ -1510,7 +1510,7 @@ public static partial class McServerInstaller
             sync-chunk-writes=true
             enable-jmx-monitoring=false
             player-idle-timeout=0
-            network-compression-threshold=256
+            network-compression-threshold={Constants.NetworkCompressionThreshold}
             op-permission-level=4
             function-permission-level=2
             """;
@@ -1659,7 +1659,7 @@ public static partial class McServerInstaller
         string mcVersion,
         string loaderVersion,
         string serverPath,
-        int port = 25565,
+        int port = Constants.DefaultServerPort,
         int ramMin = 1024,
         int ramMax = 4096,
         IProgress<double>? progress = null,
@@ -1815,7 +1815,7 @@ public static partial class McServerInstaller
             if (process != null)
             {
                 var output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit(5000);
+                process.WaitForExit(Constants.JavaPathCheckTimeoutMs);
                 Logger.Info($"'where java' output: {output}");
 
                 var paths = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);

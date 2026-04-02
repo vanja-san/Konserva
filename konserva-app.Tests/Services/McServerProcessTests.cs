@@ -155,14 +155,11 @@ public class McServerProcessTests : IDisposable
         {
             // Act
             // Пытаемся запустить (должно завершиться ошибкой, но не крашем)
-            await process.StartAsync();
+            await process.Awaiting(p => p.StartAsync()).Should().ThrowAsync<Exception>();
 
             // Assert
-            // Статус должен измениться на Error или остаться Stopped
-            process.Status.Should().BeOneOf(
-                ServerStatus.Stopped,
-                ServerStatus.Error,
-                ServerStatus.Starting);
+            // Статус должен измениться на Error
+            process.Status.Should().Be(ServerStatus.Error);
         }
         finally
         {
@@ -186,10 +183,10 @@ public class McServerProcessTests : IDisposable
         };
         var process = new McServerProcess(server, _configService);
 
-        // Act
-        await process.StartAsync();
-
-        // Assert
+        // Act & Assert
+        await process.Awaiting(p => p.StartAsync()).Should().ThrowAsync<DirectoryNotFoundException>();
+        
+        // Статус должен быть Error
         process.Status.Should().Be(ServerStatus.Error);
         process.LastError.Should().NotBeNullOrEmpty();
     }
@@ -548,12 +545,15 @@ public class McServerProcessTests : IDisposable
             process.Should().NotBeNull();
             process.Status.Should().Be(ServerStatus.Stopped);
 
-            // Start (должно завершиться ошибкой из-за отсутствия jar)
-            await process.StartAsync();
+            // Start (должно завершиться ошибкой из-за отсутствия jar/eula)
+            await process.Awaiting(p => p.StartAsync()).Should().ThrowAsync<Exception>();
             
-            // Stop
+            // Статус должен быть Error
+            process.Status.Should().Be(ServerStatus.Error);
+
+            // Stop (должно работать даже после ошибки)
             await process.StopAsync();
-            
+
             // Dispose
             process.Dispose();
         }
