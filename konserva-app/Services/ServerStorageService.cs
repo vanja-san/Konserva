@@ -180,13 +180,36 @@ public class ServerStorageService : IServerStorageService, IDisposable
         try
         {
             var json = JsonConvert.SerializeObject(servers, Formatting.Indented);
-            using var fileStream = new FileStream(_serversIndexPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-            using var writer = new StreamWriter(fileStream);
-            writer.Write(json);
-        }
-        catch (IOException ex)
-        {
-            Logger.Warning($"File locked, skipping save: {ex.Message}", "ServerStorageService");
+            
+            // Попытка записи с retry логикой (на случай блокировки файла антивирусом)
+            const int maxRetries = 3;
+            const int delayMs = 500;
+            
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    using var fileStream = new FileStream(
+                        _serversIndexPath, 
+                        FileMode.Create, 
+                        FileAccess.Write, 
+                        FileShare.ReadWrite,
+                        4096,
+                        FileOptions.WriteThrough);
+                    using var writer = new StreamWriter(fileStream);
+                    writer.Write(json);
+                    return; // Успешно сохранено
+                }
+                catch (IOException ex) when (attempt < maxRetries)
+                {
+                    // Файл заблокирован, пробуем снова с задержкой
+                    Logger.Warning($"Save attempt {attempt}/{maxRetries} failed (file locked): {ex.Message}", "ServerStorageService");
+                    Thread.Sleep(delayMs * attempt);
+                }
+            }
+            
+            // Если все попытки не удались
+            Logger.Error($"Failed to save servers after {maxRetries} attempts - file may be locked", "ServerStorageService");
         }
         catch (Exception ex)
         {

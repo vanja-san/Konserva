@@ -780,11 +780,38 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
     private void ParseOutput(string line)
     {
-        // Проверка: сервер полностью загрузился
-        if (!_serverReady && line.Contains("Done ("))
+        // Проверка: сервер полностью загрузился (разные триггеры для разных серверов)
+        if (!_serverReady)
         {
-            _serverReady = true;
-            AppendLog("[INFO] Сервер полностью загрузился");
+            // Vanilla/Forge/NeoForge
+            if (line.Contains("Done ("))
+            {
+                _serverReady = true;
+                AppendLog("[INFO] Сервер полностью загрузился");
+            }
+            // Fabric/Quilt
+            else if (line.Contains("Done!"))
+            {
+                _serverReady = true;
+                AppendLog("[INFO] Сервер полностью загрузился");
+            }
+            // Paper/Purpur/Spigot
+            else if (line.Contains("Done (") || line.Contains("For help, type"))
+            {
+                _serverReady = true;
+                AppendLog("[INFO] Сервер полностью загрузился");
+            }
+            // Universal fallback - "Starting minecraft server version"
+            else if (line.Contains("Starting minecraft server version") || line.Contains("Loading properties"))
+            {
+                // Это раннее сообщение, не считаем готовым
+            }
+            // Дополнительно для NeoForge
+            else if (line.Contains("NEOFORGE") && line.Contains("Loaded"))
+            {
+                _serverReady = true;
+                AppendLog("[INFO] Сервер полностью загрузился");
+            }
         }
 
         var playersMatch = PlayersRegex().Match(line);

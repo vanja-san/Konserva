@@ -159,9 +159,29 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             });
         };
 
-        _ = Task.Run(() => process.Start());
-        storage.UpdateServer(server);
+        // Запуск сервера в фоне с обработкой исключений
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Run(() => process.Start());
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[StartServerInternal] Ошибка запуска сервера {server.Id} ({server.Name}): {ex.Message}", ex, "McServerManager");
+                server.Status = ServerStatus.Error;
+                server.InstallStatus = $"Ошибка запуска: {ex.Message}";
+                storage.UpdateServer(server);
+                
+                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    OnServersChanged?.Invoke();
+                });
+            }
+        });
         
+        storage.UpdateServer(server);
+
         // Обновляем UI в потоке UI
         System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
         {
@@ -225,9 +245,12 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             {
                 existing.Name = server.Name;
                 existing.Port = server.Port;
-                existing.Settings = server.Settings;
+                existing.Settings = server.Settings.Clone();  // Глубокое копирование
                 existing.AutoStart = server.AutoStart;
                 existing.LastPlayed = server.LastPlayed;
+                existing.McVersion = server.McVersion;
+                existing.ModLoader = server.ModLoader;
+                existing.Path = server.Path;
             }
         }
         finally
