@@ -717,14 +717,35 @@ public static partial class McServerInstaller
             {
                 // Ждём пока завершатся все файловые операции после установки
                 Logger.Info("Waiting for file operations to complete...", "McServerInstaller");
+
+                // Ждём появления основных файлов Forge (не более 30 сек)
+                var waitStartTime = DateTime.Now;
+                var maxWaitTime = TimeSpan.FromSeconds(30);
                 
-                // Плавно увеличиваем прогресс с 95% до 100% за 5 секунд
-                for (int i = 0; i < 50; i++)
+                while ((DateTime.Now - waitStartTime) < maxWaitTime)
                 {
-                    await Task.Delay(100);
-                    progress?.Report(95 + (i * 0.1)); // 95% -> 100% (плавное увеличение)
+                    var hasForgeJar = Directory.GetFiles(destinationPath, "forge-*.jar").Any() ||
+                                     Directory.GetFiles(destinationPath, "neoforge-*.jar").Any();
+                    var hasServerJar = File.Exists(Path.Combine(destinationPath, "server.jar")) ||
+                                      File.Exists(Path.Combine(destinationPath, "minecraft_server.jar"));
+                    var hasLibraries = Directory.Exists(Path.Combine(destinationPath, "libraries"));
+                    
+                    if (hasForgeJar && hasLibraries)
+                    {
+                        Logger.Info("Forge files ready", "McServerInstaller");
+                        break;
+                    }
+                    
+                    await Task.Delay(500, ct);
                 }
-                
+
+                // Плавно увеличиваем прогресс с 95% до 100%
+                for (int i = 0; i < 20; i++)
+                {
+                    await Task.Delay(100, ct);
+                    progress?.Report(95 + (i * 0.25)); // 95% -> 100%
+                }
+
                 progress?.Report(100);
                 Logger.Info("File operations completed", "McServerInstaller");
             }
@@ -966,14 +987,16 @@ public static partial class McServerInstaller
 
             // Если все URL не работали, пробуем получить версию из Maven metadata
             Logger.Info("Trying to fetch NeoForge version from Maven metadata...", "McServerInstaller");
-            
+
             try
             {
                 var metadataUrl = "https://maven.neoforged.net/releases/net/neoforged/forge/maven-metadata.xml";
                 var metadata = await GetHttpClient().GetStringAsync(metadataUrl, ct);
-                
+
                 // Ищем последнюю версию
-                var versionMatch = System.Text.RegularExpressions.Regex.Match(metadata, @"<version>([^<]+)</version>");
+#pragma warning disable SYSLIB1045 // Using inline Regex instead of GeneratedRegexAttribute
+                var versionMatch = Regex.Match(metadata, @"<version>([^<]+)</version>");
+#pragma warning restore SYSLIB1045
                 if (versionMatch.Success)
                 {
                     var latestVersion = versionMatch.Groups[1].Value;
@@ -1291,9 +1314,11 @@ public static partial class McServerInstaller
     /// <summary>
     /// Скачать Paper сервер
     /// </summary>
-    public static async Task<bool> DownloadPaperServer(string version, string destinationPath,
+    public static async Task<InstallResult> DownloadPaperServer(string version, string destinationPath,
         IProgress<double>? progress = null, CancellationToken ct = default)
     {
+        var result = new InstallResult();
+
         try
         {
             var apiUrl = $"https://api.papermc.io/v2/projects/paper/versions/{version}/builds";
@@ -1321,13 +1346,16 @@ public static partial class McServerInstaller
             if (buildArray.Length == 0)
             {
                 Logger.Warning($"No Paper builds found for {version}", "McServerInstaller");
-                return false;
+                result.Success = false;
+                result.Error = "No builds found";
+                return result;
             }
 
             var latestBuild = buildArray.Last();
-            Logger.Info($"Latest Paper build: {latestBuild.GetProperty("build")}", "McServerInstaller");
-
             var buildNumber = latestBuild.GetProperty("build").GetInt32();
+            var buildTime = latestBuild.GetProperty("time").GetDateTime();
+
+            Logger.Info($"Latest Paper build for {version}: #{buildNumber} (built: {buildTime:yyyy-MM-dd HH:mm:ss})", "McServerInstaller");
             var fileName = latestBuild.GetProperty("downloads")
                 .GetProperty("application")
                 .GetProperty("name")
@@ -1341,18 +1369,24 @@ public static partial class McServerInstaller
             if (success)
             {
                 Logger.Info("Paper server downloaded successfully", "McServerInstaller");
+                result.Success = true;
+                result.BuildNumber = buildNumber;  // Сохраняем номер сборки
             }
             else
             {
                 Logger.Error($"Paper download failed: {error}", null, "McServerInstaller");
+                result.Success = false;
+                result.Error = error;
             }
 
-            return success;
+            return result;
         }
         catch (Exception ex)
         {
             Logger.Error($"Paper installation failed: {ex.Message}", ex, "McServerInstaller");
-            return false;
+            result.Success = false;
+            result.Error = ex.Message;
+            return result;
         }
     }
 
@@ -1363,9 +1397,11 @@ public static partial class McServerInstaller
     /// <summary>
     /// Скачать Purpur сервер
     /// </summary>
-    public static async Task<bool> DownloadPurpurServer(string version, string destinationPath,
+    public static async Task<InstallResult> DownloadPurpurServer(string version, string destinationPath,
         IProgress<double>? progress = null, CancellationToken ct = default)
     {
+        var result = new InstallResult();
+
         try
         {
             // Purpur API v2: https://api.purpurmc.org/v2/purpur/{version}/{build}/download
@@ -1401,7 +1437,9 @@ public static partial class McServerInstaller
             if (string.IsNullOrEmpty(buildNumber))
             {
                 Logger.Warning($"Purpur API did not return build number for {version}", "McServerInstaller");
-                return false;
+                result.Success = false;
+                result.Error = "No build number";
+                return result;
             }
 
             // Формируем URL для скачивания: /{version}/{build}/download
@@ -1413,18 +1451,25 @@ public static partial class McServerInstaller
             if (success)
             {
                 Logger.Info("Purpur server downloaded successfully", "McServerInstaller");
+                result.Success = true;
+                result.BuildNumber = int.Parse(buildNumber);  // Сохраняем номер сборки
             }
             else
             {
                 Logger.Error($"Purpur download failed: {error}", null, "McServerInstaller");
+                result.Success = false;
+                result.Error = error;
             }
 
-            return success;
+
+            return result;
         }
         catch (Exception ex)
         {
             Logger.Error($"Purpur installation failed: {ex.Message}", ex, "McServerInstaller");
-            return false;
+            result.Success = false;
+            result.Error = ex.Message;
+            return result;
         }
     }
 
@@ -1590,7 +1635,7 @@ public static partial class McServerInstaller
         // Forge (старый формат forge-*.jar или новый *-shim.jar)
         if (Directory.GetFiles(serverPath, "forge-*.jar").Length > 0)
             return ServerLaunchType.Forge;
-        
+
         if (Directory.GetFiles(serverPath, "*-shim.jar").Length > 0)
             return ServerLaunchType.Forge;
 
@@ -1664,24 +1709,42 @@ public static partial class McServerInstaller
         {
             result.Status = InstallStatus.Installing;
 
-            bool installSuccess = modLoaderType switch
+            // Для Paper/Purpur используем InstallResult, для остальных — bool
+            InstallResult installResult;
+            if (modLoaderType == ModLoaderType.Paper)
             {
-                ModLoaderType.Vanilla => await DownloadVanillaServer(mcVersion, serverPath, progress, ct),
-                ModLoaderType.Fabric => await InstallFabricServer(mcVersion, loaderVersion, serverPath, progress, ct),
-                ModLoaderType.Forge => await InstallForgeServer(mcVersion, loaderVersion, serverPath, progress, ct),
-                ModLoaderType.NeoForge => await InstallNeoForgeServer(mcVersion, loaderVersion, serverPath, progress, ct),
-                ModLoaderType.Paper => await DownloadPaperServer(mcVersion, serverPath, progress, ct),
-                ModLoaderType.Purpur => await DownloadPurpurServer(mcVersion, serverPath, progress, ct),
-                ModLoaderType.Quilt => await InstallQuiltServer(mcVersion, loaderVersion, serverPath, progress, ct),
-                _ => await DownloadVanillaServer(mcVersion, serverPath, progress, ct)
-            };
+                installResult = await DownloadPaperServer(mcVersion, serverPath, progress, ct);
+            }
+            else if (modLoaderType == ModLoaderType.Purpur)
+            {
+                installResult = await DownloadPurpurServer(mcVersion, serverPath, progress, ct);
+            }
+            else
+            {
+                var success = modLoaderType switch
+                {
+                    ModLoaderType.Vanilla => await DownloadVanillaServer(mcVersion, serverPath, progress, ct),
+                    ModLoaderType.Fabric => await InstallFabricServer(mcVersion, loaderVersion, serverPath, progress, ct),
+                    ModLoaderType.Forge => await InstallForgeServer(mcVersion, loaderVersion, serverPath, progress, ct),
+                    ModLoaderType.NeoForge => await InstallNeoForgeServer(mcVersion, loaderVersion, serverPath, progress, ct),
+                    ModLoaderType.Quilt => await InstallQuiltServer(mcVersion, loaderVersion, serverPath, progress, ct),
+                    _ => await DownloadVanillaServer(mcVersion, serverPath, progress, ct)
+                };
+                installResult = success ? new InstallResult { Success = true } : new InstallResult { Success = false, Error = "Installation failed" };
+            }
 
-            if (!installSuccess)
+            if (!installResult.Success)
             {
                 result.Success = false;
-                result.Error = $"Не удалось установить сервер для {modLoaderType}. Проверьте наличие Java и интернет-соединение.";
+                result.Error = installResult.Error ?? $"Не удалось установить сервер для {modLoaderType}";
                 result.Status = InstallStatus.Failed;
                 return result;
+            }
+
+            // Сохраняем номер сборки для Paper/Purpur
+            if (installResult.BuildNumber.HasValue)
+            {
+                result.BuildNumber = installResult.BuildNumber;
             }
 
             // Создание конфигурационных файлов
@@ -1718,6 +1781,7 @@ public static partial class McServerInstaller
         public bool Success { get; set; }
         public InstallStatus Status { get; set; }
         public string? Error { get; set; }
+        public int? BuildNumber { get; set; }  // Номер сборки для Paper/Purpur
     }
 
     public enum InstallStatus

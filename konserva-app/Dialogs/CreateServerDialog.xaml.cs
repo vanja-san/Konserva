@@ -118,11 +118,13 @@ public partial class CreateServerDialog : FluentWindow
         public POINT ptMaxTrackSize;
     }
 
+#pragma warning disable SYSLIB1054 // Using DllImport instead of LibraryImport for Win32 API
     [DllImport("user32.dll")]
     private static extern IntPtr SetCursor(IntPtr hCursor);
 
     [DllImport("user32.dll")]
     private static extern IntPtr LoadCursor(IntPtr hInstance, IntPtr lpCursorName);
+#pragma warning restore SYSLIB1054
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
@@ -302,7 +304,7 @@ public partial class CreateServerDialog : FluentWindow
             if (!string.IsNullOrEmpty(selectedMcVersion))
             {
                 Logger.Info($"Calling McVersionBox_SelectionChanged manually: {_currentModLoader} for MC {selectedMcVersion}", "CreateServerDialog");
-                McVersionBox_SelectionChanged(McVersionBox, new SelectionChangedEventArgs(System.Windows.Controls.Primitives.Selector.SelectionChangedEvent, new List<object>(), new List<object>()));
+                _ = LoadLoaderVersions(_currentModLoader, selectedMcVersion);
             }
         }
     }
@@ -1144,6 +1146,56 @@ public partial class CreateServerDialog : FluentWindow
         });
     }
 
+    /// <summary>
+    /// Плавно обновляет прогресс с интерполяцией
+    /// </summary>
+    private async Task UpdateProgressSmoothAsync(double targetValue, string statusText)
+    {
+        var currentValue = ProgressPanel.Value;
+        
+        // Если прогресс уменьшился - сбрасываем до 0 и начинаем заново
+        if (targetValue < currentValue - 5)
+        {
+            currentValue = 0;
+        }
+        
+        // Если значение очень близко - обновляем сразу
+        if (Math.Abs(targetValue - currentValue) < 0.5)
+        {
+            this.Invoke(() =>
+            {
+                ProgressPanel.Value = targetValue;
+                ProgressText.Text = statusText;
+                ProgressPercentText.Text = $"{targetValue:F0}%";
+            });
+            return;
+        }
+        
+        // Плавная интерполяция
+        var steps = 20;
+        var stepValue = (targetValue - currentValue) / steps;
+
+        for (int i = 1; i <= steps; i++)
+        {
+            var interpolatedValue = Math.Min(Math.Max(currentValue + (stepValue * i), 0), 100);
+            this.Invoke(() =>
+            {
+                ProgressPanel.Value = interpolatedValue;
+                ProgressPercentText.Text = $"{interpolatedValue:F0}%";
+            });
+
+            await Task.Delay(20);
+        }
+
+        // Финальное значение
+        this.Invoke(() =>
+        {
+            ProgressPanel.Value = targetValue;
+            ProgressText.Text = statusText;
+            ProgressPercentText.Text = $"{targetValue:F0}%";
+        });
+    }
+
     private async Task InstallServerInBackground(Server server, ModLoaderType modLoaderType,
         string mcVersion, string loaderVersion, string serverPath)
     {
@@ -1164,8 +1216,8 @@ public partial class CreateServerDialog : FluentWindow
             server.InstallStatus = $"Установка {server.Name}...";
             MainWindow.ServerManager.UpdateServer(server);
 
-            // Создаём прогресс с обновлением UI
-            var progress = new Progress<double>(percent =>
+            // Создаём прогресс с плавным обновлением UI
+            var progress = new Progress<double>(async percent =>
             {
                 // Определяем текст задачи в зависимости от процента
                 string statusText = percent switch
@@ -1176,11 +1228,13 @@ public partial class CreateServerDialog : FluentWindow
                     < 50 => "Установка модлоадера...",
                     < 70 => "Загрузка библиотек...",
                     < 85 => "Настройка сервера...",
-                    < 95 => "Финализация...",
+                    < 99 => "Финализация...",
+                    >= 99 => "Завершение...",
                     _ => "Завершение..."
                 };
 
-                UpdateProgress(percent, statusText);
+                // Плавно обновляем прогресс (без отмены, чтобы избежать исключений)
+                _ = UpdateProgressSmoothAsync(percent, statusText);
 
                 server.InstallStatus = $"{statusText} {percent:F0}%";
                 MainWindow.ServerManager.UpdateServer(server);
@@ -1246,9 +1300,16 @@ public partial class CreateServerDialog : FluentWindow
                 server.Status = ServerStatus.Stopped;
                 Logger.Info($"Server install completed: {server.Name}");
 
-                await this.InvokeAsync(() =>
+                // Сохраняем номер сборки для Paper/Purpur
+                if (installResult.BuildNumber.HasValue)
                 {
-                    UpdateProgress(100, "Готово!");
+                    server.ServerBuild = installResult.BuildNumber.Value;
+                    Logger.Info($"Server build number saved: {server.ServerBuild}", "CreateServerDialog");
+                }
+
+                // Закрываем диалог
+                this.Invoke(() =>
+                {
                     DialogResult = true;
                     Close();
                 });
@@ -1298,7 +1359,7 @@ public partial class CreateServerDialog : FluentWindow
     /// <summary>
     /// Валидация пути к серверу
     /// </summary>
-    private PathValidationResult ValidateServerPath(string path)
+    private static PathValidationResult ValidateServerPath(string path)
     {
         try
         {
@@ -1347,7 +1408,7 @@ public partial class CreateServerDialog : FluentWindow
             if (Directory.Exists(path))
             {
                 var normalizedPath = Path.GetFullPath(path).ToLowerInvariant();
-                
+
                 // Запрещаем создание серверов в системных папках
                 var systemPaths = new[]
                 {

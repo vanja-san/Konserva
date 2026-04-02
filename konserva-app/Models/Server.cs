@@ -90,6 +90,11 @@ public class Server
     /// </summary>
     public bool AutoStart { get; set; }
 
+    /// <summary>
+    /// Номер сборки сервера (для Paper/Purpur)
+    /// </summary>
+    public int? ServerBuild { get; set; }
+
     // Временные данные (не сохраняются, JsonIgnore)
     [JsonIgnore]
     public ServerStatus Status { get; set; } = ServerStatus.Stopped;
@@ -139,7 +144,7 @@ public class Server
     /// <summary>
     /// Краткое описание сервера
     /// </summary>
-    public string Description => $"{McVersion} • {ModLoader.Type}";
+    public string Description => $"{McVersion} • {ModLoader.Type}{(ServerBuild.HasValue ? $" (build {ServerBuild})" : "")}";
 
     /// <summary>
     /// Флаг: показан ли диалог ошибки запуска
@@ -167,7 +172,8 @@ public class Server
         Settings = Settings.Clone(),
         LastPlayed = LastPlayed,
         Port = Port,
-        AutoStart = AutoStart
+        AutoStart = AutoStart,
+        ServerBuild = ServerBuild
     };
 
     /// <summary>
