@@ -8,7 +8,7 @@
 # Self-contained build (~60 MB, single file, no .NET required)
 build-publish-full.bat
 
-# Portable build (~10 MB, requires .NET 10 Runtime)
+# Deps build (~10 MB, requires .NET 10 Runtime)
 build-publish-deps.bat
 ```
 
@@ -17,7 +17,7 @@ build-publish-deps.bat
 | Type | Size | .NET Required | Description |
 |------|------|---------------|-------------|
 | **Self-contained (Full)** | ~60 MB | ❌ No | Everything included, ready to run |
-| **Portable** | ~10 MB | ✅ Yes | Requires .NET 10 Runtime |
+| **Deps** | ~10 MB | ✅ Yes | Requires .NET 10 Runtime |
 | **Release** | - | ✅ Yes | For development, requires .NET SDK |
 
 ## Build Commands
@@ -39,14 +39,14 @@ dotnet publish konserva-app\konserva-app.csproj ^
   -o publish\Full
 ```
 
-### Portable Publish
+### Deps Publish
 ```bash
 dotnet publish konserva-app\konserva-app.csproj ^
   --configuration Release ^
   --runtime win-x64 ^
   --self-contained false ^
   -p:PublishSingleFile=true ^
-  -o publish\Portable
+  -o publish\Deps
 ```
 
 ## GitHub Actions
@@ -64,14 +64,14 @@ CI/CD pipeline is configured in `.github/workflows/build-release.yml`.
    - **Generate changelog**: Auto-generate changelog from commits (optional)
 5. After build completes, download artifacts:
    - `Konserva-vX.X.X-Full.zip` — self-contained version (~60 MB)
-   - `Konserva-vX.X.X-Deps.zip` — portable version (~10 MB)
+   - `Konserva-vX.X.X-Deps.zip` — Deps version (~10 MB)
 
 **Note**: If "Create GitHub Release" is enabled, a GitHub release will be created with changelog describing changes since the last version.
 
 ### Build Variants Comparison
 
-| Parameter | Full | Portable |
-|-----------|------|----------|
+| Parameter | Full | Deps |
+|-----------|------|------|
 | Size | ~60 MB | ~10 MB |
 | Files | 1 | 1 |
 | .NET Runtime | Built-in | Required |
@@ -87,7 +87,7 @@ CI/CD pipeline is configured in `.github/workflows/build-release.yml`.
 - Windows x64
 - Nothing else required
 
-### For Running (Portable)
+### For Running (Deps)
 - Windows x64
 - .NET 10 Runtime ([download](https://dotnet.microsoft.com/download/dotnet/10.0))
 
@@ -98,7 +98,7 @@ publish/
 ├── Full/                # Self-contained build
 │   ├── Konserva.exe     # ~60 MB
 │   └── README.md
-└── Portable/            # Portable build
+└── Deps/                # Deps build
     ├── Konserva.exe     # ~10 MB
     └── README.md
 ```
@@ -122,8 +122,8 @@ konserva-app/
 ├── .github/
 │   └── workflows/                   # CI/CD workflows
 ├── publish/                         # Build output
-├── build-publish.bat                # Full build script
-├── build-publish-portable.bat       # Portable build script
+├── build-publish-full.bat       # Full build script
+├── build-publish-deps.bat       # Deps build script
 ├── BUILD.md                         # This file
 ├── README.md                        # User documentation (EN)
 └── README.ru.md                     # User documentation (RU)
@@ -180,7 +180,7 @@ dotnet build --configuration Release
 ```
 
 ### Large file size
-Use portable version (~10 MB instead of ~60 MB)
+Use Deps version (~10 MB instead of ~60 MB)
 
 ### Russian text encoding issues
 Ensure all .cs and .xaml files are saved with UTF-8 with BOM encoding.

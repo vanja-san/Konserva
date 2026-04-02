@@ -1,17 +1,17 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Konserva Portable Build - Framework-dependent Single File (~10 MB)
+:: Konserva Deps Build - Framework-dependent Single File (~10 MB)
 
 echo ============================================
-echo    Konserva Portable Build (Requires .NET)
+echo    Konserva Deps Build (Requires .NET)
 echo    Single file (~10 MB, requires .NET 10)
 echo ============================================
 echo.
 
 echo [1/3] Cleaning...
 dotnet clean konserva-app/konserva-app.csproj -c Release -v q
-if exist "publish\Portable" rmdir /s /q "publish\Portable"
+if exist "publish\Deps" rmdir /s /q "publish\Deps"
 if exist "konserva-app\bin" rmdir /s /q "konserva-app\bin"
 if exist "konserva-app\obj" rmdir /s /q "konserva-app\obj"
 echo.
@@ -21,11 +21,11 @@ dotnet build konserva-app/konserva-app.csproj -c Release -v q
 if errorlevel 1 goto :error
 echo.
 
-echo [3/3] Publishing Portable (single file)...
+echo [3/3] Publishing Deps (single file)...
 dotnet publish konserva-app/konserva-app.csproj ^
     -c Release ^
-    /p:PublishProfile=Properties\PublishProfiles\Portable.pubxml ^
-    -o "konserva-app\publish\Portable"
+    /p:PublishProfile=Properties\PublishProfiles\Deps.pubxml ^
+    -o "konserva-app\publish\Deps"
 if errorlevel 1 (
     echo ERROR: Publishing failed with exit code %errorlevel%
     pause
@@ -33,14 +33,14 @@ if errorlevel 1 (
 )
 
 echo.
-if not exist "publish\Portable" mkdir "publish\Portable"
-copy /Y "konserva-app\publish\Portable\Konserva.exe" "publish\Portable\" >nul
+if not exist "publish\Deps" mkdir "publish\Deps"
+copy /Y "konserva-app\publish\Deps\Konserva.exe" "publish\Deps\" >nul
 
 echo ============================================
 echo    Build Complete!
 echo ============================================
 echo.
-for %%A in ("publish\Portable\Konserva.exe") do echo Size: %%~zA bytes
+for %%A in ("publish\Deps\Konserva.exe") do echo Size: %%~zA bytes
 echo.
 echo Requires .NET 10 Runtime!
 echo.

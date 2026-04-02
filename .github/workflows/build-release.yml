@@ -88,12 +88,12 @@ jobs:
           -o "publish/Full"
       shell: pwsh
 
-    - name: Build Portable (~3 MB, requires .NET)
+    - name: Build Deps (~10 MB, requires .NET)
       run: |
         dotnet publish konserva-app/konserva-app.csproj `
           -c Release `
-          /p:PublishProfile=Portable `
-          -o "publish/Portable"
+          /p:PublishProfile=Deps `
+          -o "publish/Deps"
       shell: pwsh
 
     - name: Create Full archive (Self-contained, no dependencies)
@@ -106,8 +106,6 @@ jobs:
 
     - name: Create Deps archive (Single file, requires .NET 10)
       run: |
-        if (!(Test-Path "publish/Deps")) { New-Item -ItemType Directory -Path "publish/Deps" | Out-Null }
-        Copy-Item "publish/Portable/Konserva.exe" "publish/Deps/"
         $archiveName = "Konserva-v${{ inputs.version }}-Deps.zip"
         Compress-Archive -Path "publish/Deps/*" -DestinationPath $archiveName -Force
         Write-Host "Created: $archiveName"

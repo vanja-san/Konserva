@@ -28,7 +28,7 @@
 	<Optimize>true</Optimize>
 	<DebugType>none</DebugType>
 	
-	<!-- Настройки для portable single-file публикации -->
+	<!-- Настройки для Deps single-file публикации -->
 	<EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
 	<IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
 	<PublishReadyToRun>false</PublishReadyToRun>
