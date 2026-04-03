@@ -53,16 +53,12 @@ jobs:
         
         # Add file description section
         $changelog += "## 📦 Download Files`n`n"
-        $changelog += "**Konserva-v`${{ inputs.version }}-Full.zip** (~60 MB)`n"
-        $changelog += "- ✅ All-inclusive (self-contained)`n"
-        $changelog += "- ✅ No .NET required`n"
-        $changelog += "- ✅ Ready to run immediately`n"
-        $changelog += "- 📌 **Recommended for most users**`n`n"
-        $changelog += "**Konserva-v`${{ inputs.version }}-Deps.zip** (~10 MB)`n"
-        $changelog += "- ⚠️ Requires .NET 10 Runtime`n"
-        $changelog += "- ⚡ Smaller file size`n"
-        $changelog += "- 💡 For experienced users`n`n"
-        $changelog += "---`n`n"
+        $changelog += "| Feature | Full (~60 MB) | Deps (~10 MB) |`n"
+        $changelog += "|---------|---------------|-------------|`n"
+        $changelog += "| .NET Runtime | ✅ Built-in | ⚠️ Required |`n"
+        $changelog += "| Size | ~60 MB | ~10 MB |`n"
+        $changelog += "| Setup | None | Install .NET 10 |`n"
+        $changelog += "| Recommended for | Most users | Developers |`n`n"
         $changelog += "**Download .NET 10 Runtime:** https://dotnet.microsoft.com/download/dotnet/10.0`n"
 
         # Write changelog

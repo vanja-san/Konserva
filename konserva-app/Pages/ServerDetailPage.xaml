@@ -202,17 +202,17 @@
                         Padding="8"
                         Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
                         BorderThickness="0"
-                        HorizontalScrollBarVisibility="Disabled"
+                        HorizontalScrollBarVisibility="Auto"
                         IsReadOnly="True"
                         IsTextSelectionEnabled="True"
                         VerticalScrollBarVisibility="Auto">
                         <ui:RichTextBox.Document>
                             <FlowDocument
+                                x:Name="LogDocument"
                                 FontFamily="Consolas"
                                 FontSize="12"
                                 LineHeight="14"
-                                LineStackingStrategy="BlockLineHeight"
-                                PageWidth="5000">
+                                LineStackingStrategy="BlockLineHeight">
                                 <Paragraph Margin="0" TextIndent="0" />
                             </FlowDocument>
                         </ui:RichTextBox.Document>

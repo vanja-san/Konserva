@@ -59,6 +59,9 @@ public partial class ServerDetailPage : Page, IDisposable
         // Подписываемся на событие ошибки запуска
         MainWindow.ServerManager.OnServerStartError += OnServerStartError;
 
+        // Обновляем PageWidth лога при изменении размера
+        LogBox.SizeChanged += LogBox_SizeChanged;
+
         StartStatusTimer();
         LoadServer();
     }
@@ -67,8 +70,67 @@ public partial class ServerDetailPage : Page, IDisposable
     {
         // Отписываемся от события ошибки запуска
         MainWindow.ServerManager.OnServerStartError -= OnServerStartError;
+        LogBox.SizeChanged -= LogBox_SizeChanged;
         StopStatusTimer();
         Dispose();
+    }
+
+    private double _maxContentWidth = 0;
+
+    private void LogBox_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        // При ресайзе: если контент уже шире новой ширины — не трогаем PageWidth
+        // Если контент уже (или пустой) — ставим PageWidth = ActualWidth
+        if (LogDocument != null && e.NewSize.Width > 0)
+        {
+            if (_maxContentWidth <= e.NewSize.Width)
+            {
+                // Контент помещается — скролл скрыт
+                LogDocument.PageWidth = e.NewSize.Width;
+            }
+            // Иначе: контент шире — оставляем как есть, скролл виден
+        }
+    }
+
+    /// <summary>
+    /// Обновляет PageWidth документа если строка длиннее видимой области
+    /// </summary>
+    private void UpdatePageWidthForText(string text)
+    {
+        if (LogDocument == null || string.IsNullOrEmpty(text)) return;
+
+        try
+        {
+            // Consolas — моноширинный шрифт. Измеряем ширину строки.
+            var formattedText = new System.Windows.Media.FormattedText(
+                text,
+                System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                new System.Windows.Media.Typeface("Consolas"),
+                12,
+                System.Windows.Media.Brushes.Black,
+                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+            // Учитываем padding RichTextBox (8px с каждой стороны)
+            var neededWidth = formattedText.Width + 16;
+
+            if (neededWidth > _maxContentWidth)
+            {
+                _maxContentWidth = neededWidth;
+            }
+
+            // Если контент шире видимой области — расширяем PageWidth
+            if (_maxContentWidth > LogBox.ActualWidth)
+            {
+                LogDocument.PageWidth = _maxContentWidth;
+            }
+            else
+            {
+                // Всё помещается — скролл скрыт
+                LogDocument.PageWidth = LogBox.ActualWidth;
+            }
+        }
+        catch { }
     }
 
     /// <summary>
@@ -194,15 +256,20 @@ public partial class ServerDetailPage : Page, IDisposable
         {
             var document = LogBox.Document;
             document.Blocks.Clear();
+            _maxContentWidth = 0;
             if (logs.Count > 0)
             {
                 var text = string.Join("\n", logs);
                 document.Blocks.Add(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(text)));
                 ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
+                var longestLine = logs.OrderByDescending(l => l.Length).FirstOrDefault();
+                if (!string.IsNullOrEmpty(longestLine))
+                    UpdatePageWidthForText(longestLine);
             }
             else
             {
                 ConsolePlaceholder.Visibility = System.Windows.Visibility.Visible;
+                LogDocument.PageWidth = LogBox.ActualWidth;
             }
             LogBox.ScrollToEnd();
         });
@@ -222,6 +289,7 @@ public partial class ServerDetailPage : Page, IDisposable
                 document.Blocks.Add(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(line + "\n")));
             }
             ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
+            UpdatePageWidthForText(line);
             LogBox.ScrollToEnd();
         });
     }

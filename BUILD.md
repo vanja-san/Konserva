@@ -77,6 +77,10 @@ CI/CD pipeline is configured in `.github/workflows/build-release.yml`.
 | .NET Runtime | Built-in | Required |
 | Recommended for | End users | Development/Testing |
 
+**Full** — полностью автономная сборка. Включает .NET Runtime, все зависимости и библиотеки. Работает на любом ПК с Windows x64 без дополнительной установки. Идеально для обычных пользователей.
+
+**Deps** — облегчённая сборка. Требует установленный .NET 10 Runtime. Занимает в 6 раз меньше места. Подходит для разработчиков и тех, у кого уже стоит .NET.
+
 ## Requirements
 
 ### For Build
