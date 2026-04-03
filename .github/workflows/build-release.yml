@@ -47,11 +47,31 @@ jobs:
 
         # Find previous tag to compare against
         $currentTag = "v${{ inputs.version }}"
-        $previousTag = git describe --tags --abbrev=0 "$currentTag^" 2>$null
-        if (-not $previousTag) {
-          # Fallback: get the most recent tag before current
-          $previousTag = git tag --sort=-version:refname | Where-Object { $_ -ne $currentTag } | Select-Object -First 1
+
+        # Get all tags sorted by version, pick the one before currentTag
+        $allTags = git tag --sort=-version:refname
+        if ($LASTEXITCODE -ne 0 -and -not $allTags) {
+          $previousTag = $null
+        } else {
+          # Find the tag just before currentTag in the sorted list
+          $foundCurrent = $false
+          $previousTag = $null
+          foreach ($tag in $allTags) {
+            if ($tag -eq $currentTag) {
+              $foundCurrent = $true
+              continue
+            }
+            if ($foundCurrent) {
+              $previousTag = $tag
+              break
+            }
+          }
+          # If currentTag not in list yet (not created), use the first tag
+          if (-not $previousTag -and $allTags.Count -gt 0) {
+            $previousTag = $allTags[0]
+          }
         }
+
         if (-not $previousTag) {
           $previousTag = $currentTag
         }
@@ -77,6 +97,8 @@ jobs:
 
         Write-Host "Changelog generated successfully!"
         Get-Content $outputFile -Raw
+
+        exit 0
 
     - name: Restore dependencies
       run: dotnet restore konserva-app/konserva-app.csproj
