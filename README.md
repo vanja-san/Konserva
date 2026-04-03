@@ -4,15 +4,11 @@
 
 > Name comes from **con**sole + **serv**er – everything is “canned” and ready to use.
 
----
-
 ## 📸 Screenshots
 
 | Main | Server Properties | Console & Logs | Mods Page |
 |----------------|----------------|----------------|----------------|
 | ![Main](.github/screenshots/Main.png) | ![Settings](.github/screenshots/Properties.png) | ![Console](.github/screenshots/Console.png) | ![Mods](.github/screenshots/Mods.png) |
-
----
 
 ## ✨ Key Features
 
@@ -26,8 +22,6 @@
 - **Java version manager** – auto‑detects and picks compatible Java
 - **Multiple servers** – different versions running side by side
 
----
-
 ## 🖥️ System Requirements
 
 | Component | Minimum |
@@ -38,8 +32,6 @@
 | Storage | 200 MB (app) |
 
 > For server RAM requirements see [Memory Allocation](#memory-allocation).
-
----
 
 ## 📦 Installation
 
@@ -61,9 +53,6 @@ Root Folder Konserva\
 └── Logs\
 ```
 
-
----
-
 ## 🚀 Quick Start
 
 ### Create your first server
@@ -80,8 +69,6 @@ Root Folder Konserva\
 
 Your server is now running on port `25565` (default).
 
----
-
 ## ⚙️ Server Configuration
 
 ### Memory Allocation
@@ -95,47 +82,6 @@ Your server is now running on port `25565` (default).
 - Vanilla → 2–4 GB
 - Modded (<50 mods) → 4–6 GB
 - Heavy modpacks → 6–8 GB
-
-### Auto‑Restart
-
-Same **Settings** tab → enable **Auto‑Restart** + delay (seconds).
-
-### server.properties Editor
-
-**Properties** tab → edit GUI fields → **Save**
-
----
-
-## 🧩 Mods & Plugins
-
-### Install Mods (Fabric/Forge/NeoForge)
-
-- Open server → **Mods** tab → click **`mods folder`**
-- Copy `.jar` files → refresh list (⟳) → restart server
-
-### Install Plugins (Paper/Purpur)
-
-- Open server → **Plugins** tab → click **`plugins folder`**
-- Copy `.jar` files → refresh → restart
-
-### Delete
-
-Find item in list → click **🗑️** → confirm → restart server.
-
----
-
-## ☕ Java Management
-
-Konserva auto‑detects installed Java and selects the right version for each Minecraft server.
-
-**Manual addition**:
-- **Settings** → **Java Management** → **Add Java**
-- Point to `java.exe` (e.g., `C:\Program Files\Java\jdk-17\bin\java.exe`)
-
-**Per‑server Java**:
-- Server page → **Settings** → **Java** section → choose version → Save
-
----
 
 ## ❓ Common Issues
 
@@ -153,21 +99,15 @@ Konserva auto‑detects installed Java and selects the right version for each Mi
 - Increase **Max RAM** in server settings
 - Close other heavy apps
 
----
-
 ## 📄 License & Disclaimer
 
 **MIT License** – see [LICENSE.txt](LICENSE.txt).
 
 > ⚠️ Konserva is an **unofficial tool** – not affiliated with Mojang or Microsoft. Use at your own risk. Always backup your worlds.
 
----
-
 ## 🙏 Credits
 
 - Built with [WPF UI](https://github.com/lepoide/wpfui)
 - Assisted by [Qwen Code](https://github.com/QwenLM/qwen-code)
-
----
 
 🇷🇺 [На русском](README.ru.md)
