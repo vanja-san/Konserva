@@ -72,11 +72,11 @@
                                     <ui:TextBlock
                                         FontSize="14"
                                         FontWeight="Bold"
-                                        Text="{loc:Loc Settings_Servers_Directory}" />
+                                        Text="{loc:Loc Settings_Servers_Dir}" />
                                     <ui:TextBlock
                                         FontSize="12"
                                         Foreground="Gray"
-                                        Text="{loc:Loc Settings_Servers_Browse}" />
+                                        Text="{loc:Loc Settings_Servers_DirDesc}" />
                                 </StackPanel>
                                 <ui:TextBlock
                                     x:Name="ServersFolderPath"
@@ -107,7 +107,7 @@
                                     <ui:TextBlock
                                         FontSize="12"
                                         Foreground="Gray"
-                                        Text="{loc:Loc Settings_Java_Add}" />
+                                        Text="{loc:Loc Settings_JavaDesc}" />
                                 </StackPanel>
                                 <ComboBox
                                     x:Name="JavaComboBox"
