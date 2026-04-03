@@ -48,11 +48,16 @@
 3. Запустите двойным щелчком – установка не требуется
 
 Все данные хранятся в:
-```
-Корневая папка Konserva
+```txt
+Корневая папка Konserva\
+├── Konserva.exe
 ├── config.json
-├── servers.json
 ├── Servers
+│   ├── Server Name\
+│   └── servers.json
+├── i18n\
+│   ├── ru.json
+│   └── en.json
 └── Logs\
 ```
 
