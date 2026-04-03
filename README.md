@@ -8,9 +8,9 @@
 
 ## 📸 Screenshots
 
-| Main Dashboard | Server Settings | Console & Logs |
-|----------------|----------------|----------------|
-| ![Main](.github/screenshots/dashboard.png) | ![Settings](.github/screenshots/settings.png) | ![Console](.github/screenshots/console.png) |
+| Main | Server Properties | Console & Logs | Mods Page |
+|----------------|----------------|----------------|----------------|
+| ![Main](.github/screenshots/main.png) | ![Settings](.github/screenshots/properties.png) | ![Console](.github/screenshots/console.png) | ![Mods](.github/screenshots/mods.png) |
 
 ---
 
@@ -43,8 +43,9 @@
 
 ## 📦 Installation
 
-1. Download `Konserva.exe` from [Releases](../../releases)
-2. Double‑click to run – no installation needed
+1. Download latest version from [Releases](../../releases)
+2. Unpack archive in any folder
+3. Double‑click to run – no installation needed
 
 All data is stored in:  
 ```
@@ -62,12 +63,12 @@ Root Folder Konserva\
 
 ### Create your first server
 
-1. Launch Konserva → **Servers** tab
+1. Launch Konserva
 2. Click **`+`** button
 3. Fill in:
    - **Name** (e.g., `My Survival`)
    - **Minecraft version** (choose from list)
-   - **Mod loader** (Vanilla / Fabric / etc.)
+   - **Modloader** (Vanilla / Fabric / etc.)
    - **Folder** (default is fine)
 4. Click **Create** – wait for download (30 sec–2 min)
 5. Press ▶ **Start** – wait for `Done (...)!` in console
@@ -96,7 +97,7 @@ Same **Settings** tab → enable **Auto‑Restart** + delay (seconds).
 
 ### server.properties Editor
 
-**Properties** tab → edit GUI fields → **Save**. Categories: main, world, network, performance, gameplay.
+**Properties** tab → edit GUI fields → **Save**
 
 ---
 
