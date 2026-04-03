@@ -396,10 +396,6 @@ public partial class ServerDetailPage : Page, IDisposable
                     },
                     new Border
                     {
-                        Background = new SolidColorBrush(Color.FromRgb(255, 243, 205)),
-                        BorderBrush = new SolidColorBrush(Color.FromRgb(255, 193, 7)),
-                        BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(4),
                         Padding = new Thickness(12),
                         Child = new StackPanel
                         {

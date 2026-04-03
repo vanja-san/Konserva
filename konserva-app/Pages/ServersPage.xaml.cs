@@ -78,7 +78,7 @@ public partial class ServersPage : Page, IDisposable
                 // Для Java ошибки показываем более подробное сообщение
                 var dialog = new Wpf.Ui.Controls.MessageBox
                 {
-                    Title = "⚠️ Ошибка Java",
+                    Title = $"⚠️ {LocalizationManager.Get("JavaError_Title")}",
                     Content = new StackPanel
                     {
                         Margin = new Thickness(0, 8, 0, 0),
@@ -92,10 +92,6 @@ public partial class ServersPage : Page, IDisposable
                             },
                             new Border
                             {
-                                Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 243, 205)),
-                                BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 193, 7)),
-                                BorderThickness = new Thickness(1),
-                                CornerRadius = new CornerRadius(4),
                                 Padding = new Thickness(12),
                                 Child = new StackPanel
                                 {
@@ -103,13 +99,13 @@ public partial class ServersPage : Page, IDisposable
                                     {
                                         new System.Windows.Controls.TextBlock
                                         {
-                                            Text = "Требуется установить или обновить Java",
+                                            Text = LocalizationManager.Get("JavaError_Required"),
                                             FontWeight = System.Windows.FontWeights.Bold,
                                             Margin = new Thickness(0, 0, 0, 8)
                                         },
                                         new System.Windows.Controls.TextBlock
                                         {
-                                            Text = "Скачайте последнюю версию Java с официального сайта:",
+                                            Text = LocalizationManager.Get("JavaError_DownloadText"),
                                             Margin = new Thickness(0, 0, 0, 8)
                                         },
                                         downloadButton
@@ -118,7 +114,7 @@ public partial class ServersPage : Page, IDisposable
                             }
                         }
                     },
-                    PrimaryButtonText = "OK",
+                    PrimaryButtonText = LocalizationManager.Get("MsgBtn_OK"),
                     PrimaryButtonIcon = new Wpf.Ui.Controls.SymbolIcon(Wpf.Ui.Controls.SymbolRegular.Info24),
                     ShowTitle = true,
                     Padding = new Thickness(16)
