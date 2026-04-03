@@ -177,7 +177,7 @@
                         Click="NavigationButton_Click"
                         CornerRadius="0,4,4,0"
                         Tag="Settings"
-                        ToolTip="{loc:Loc ServerDetail_AutoRestart}">
+                        ToolTip="{loc:Loc ServerDetail_Settings}">
                         <ui:SymbolIcon
                             x:Name="SettingsNavIcon"
                             FontSize="20"

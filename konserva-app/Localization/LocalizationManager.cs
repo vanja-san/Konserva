@@ -354,7 +354,8 @@ public static class LocalizationManager
                 // ServerDetail
                 { "ServerDetail_Title", "Детали сервера" },
                 { "ServerDetail_Console", "Консоль" },
-                { "ServerDetail_Properties", "Свойства" },
+                { "ServerDetail_Properties", "Файл server.properties" },
+                { "ServerDetail_Settings", "Настройки сервера" },
                 { "ServerDetail_Mods", "Моды" },
                 { "ServerDetail_Plugins", "Плагины" },
                 { "ServerDetail_Start", "Запустить" },
@@ -821,7 +822,8 @@ public static class LocalizationManager
                 // ServerDetail
                 { "ServerDetail_Title", "Server Details" },
                 { "ServerDetail_Console", "Console" },
-                { "ServerDetail_Properties", "Properties" },
+                { "ServerDetail_Properties", "File server.properties" },
+                { "ServerDetail_Settings", "Server Settings" },
                 { "ServerDetail_Mods", "Mods" },
                 { "ServerDetail_Plugins", "Plugins" },
                 { "ServerDetail_Start", "Start" },
