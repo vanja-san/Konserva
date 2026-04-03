@@ -1,4 +1,4 @@
-ï»¿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
@@ -8,27 +8,27 @@
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
 
-	<!-- Ð˜Ð¼Ñ Ð²Ñ‹Ñ…Ð¾Ð´Ð½Ð¾Ð³Ð¾ Ñ„Ð°Ð¹Ð»Ð° Ð±ÐµÐ· .App -->
+	<!-- Èìÿ âûõîäíîãî ôàéëà áåç .App -->
 	<AssemblyName>Konserva</AssemblyName>
-	<!-- Ð˜Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸Ñ Ð¾ Ð¿Ñ€Ð¸Ð»Ð¾Ð¶ÐµÐ½Ð¸Ð¸ (Ð´Ð»Ñ ÑÐ²Ð¾Ð¹ÑÑ‚Ð² Ñ„Ð°Ð¹Ð»Ð°) -->
+	<!-- Èíôîðìàöèÿ î ïðèëîæåíèè (äëÿ ñâîéñòâ ôàéëà) -->
 	<AssemblyTitle>Konserva - Minecraft Servers Manager</AssemblyTitle>
 	<AssemblyDescription>Minecraft Servers Manager</AssemblyDescription>
-	<AssemblyCopyright>Copyright Â© 2026 vanja-san</AssemblyCopyright>
+	<AssemblyCopyright>Copyright © 2026 vanja-san</AssemblyCopyright>
 	<AssemblyCompany>vanja-san</AssemblyCompany>
 	<AssemblyProduct>Konserva</AssemblyProduct>
-	<AssemblyVersion>1.3.7.0</AssemblyVersion>
-	<FileVersion>1.3.7.0</FileVersion>
-	<InformationalVersion>1.3.7</InformationalVersion>
-	<!-- ÐœÐµÑ‚Ð°Ð´Ð°Ð½Ð½Ñ‹Ðµ Ð´Ð»Ñ Win32 Ñ€ÐµÑÑƒÑ€ÑÐ° Ð²ÐµÑ€ÑÐ¸Ð¸ -->
-	<Version>1.3.7</Version>
+	<AssemblyVersion>1.3.8.0</AssemblyVersion>
+	<FileVersion>1.3.8.0</FileVersion>
+	<InformationalVersion>1.3.8</InformationalVersion>
+	<!-- Ìåòàäàííûå äëÿ Win32 ðåñóðñà âåðñèè -->
+	<Version>1.3.8</Version>
 	<NeutralLanguage>ru-RU</NeutralLanguage>
-	<Copyright>Copyright Â© 2026 vanja-san</Copyright>
+	<Copyright>Copyright © 2026 vanja-san</Copyright>
 
-	<!-- ÐžÐ¿Ñ‚Ð¸Ð¼Ð¸Ð·Ð°Ñ†Ð¸Ð¸ IL -->
+	<!-- Îïòèìèçàöèè IL -->
 	<Optimize>true</Optimize>
 	<DebugType>none</DebugType>
 	
-	<!-- ÐÐ°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ¸ Ð´Ð»Ñ Deps single-file Ð¿ÑƒÐ±Ð»Ð¸ÐºÐ°Ñ†Ð¸Ð¸ -->
+	<!-- Íàñòðîéêè äëÿ Deps single-file ïóáëèêàöèè -->
 	<EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
 	<IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
 	<PublishReadyToRun>false</PublishReadyToRun>
@@ -45,7 +45,7 @@
     <Folder Include="Assets\" />
   </ItemGroup>
 
-  <!-- Ð˜ÐºÐ¾Ð½ÐºÐ° Ð¿Ñ€Ð¸Ð»Ð¾Ð¶ÐµÐ½Ð¸Ñ -->
+  <!-- Èêîíêà ïðèëîæåíèÿ -->
   <ItemGroup>
     <Resource Include="Assets\app-icon.ico" />
   </ItemGroup>
@@ -55,7 +55,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
-  <!-- ÐžÑ‚ÐºÑ€Ñ‹Ð²Ð°ÐµÐ¼ internal ÐºÐ»Ð°ÑÑÑ‹ Ð´Ð»Ñ Ñ‚ÐµÑÑ‚Ð¾Ð² -->
+  <!-- Îòêðûâàåì internal êëàññû äëÿ òåñòîâ -->
   <ItemGroup>
     <InternalsVisibleTo Include="konserva-app.Tests" />
   </ItemGroup>
