@@ -379,10 +379,10 @@ public partial class ServerDetailPage : Page, IDisposable
 
         // Java ошибка - показываем подробное сообщение с кнопкой
         Logger.Info($"[ShowJavaErrorDialog] Showing Java error dialog", "ServerDetailPage");
-        
+
         var dialog = new Wpf.Ui.Controls.MessageBox
         {
-            Title = "⚠️ Ошибка Java",
+            Title = $"⚠️ {LocalizationManager.Get("JavaError_Title")}",
             Content = new StackPanel
             {
                 Margin = new Thickness(0, 8, 0, 0),
@@ -407,18 +407,18 @@ public partial class ServerDetailPage : Page, IDisposable
                             {
                                 new System.Windows.Controls.TextBlock
                                 {
-                                    Text = "Требуется установить или обновить Java",
+                                    Text = LocalizationManager.Get("JavaError_Required"),
                                     FontWeight = FontWeights.Bold,
                                     Margin = new Thickness(0, 0, 0, 8)
                                 },
                                 new System.Windows.Controls.TextBlock
                                 {
-                                    Text = "Скачайте последнюю версию Java с официального сайта:",
+                                    Text = LocalizationManager.Get("JavaError_DownloadText"),
                                     Margin = new Thickness(0, 0, 0, 8)
                                 },
                                 new System.Windows.Controls.Button
                                 {
-                                    Content = "📥 Скачать Java (adoptium.net)",
+                                    Content = $"📥 {LocalizationManager.Get("JavaError_DownloadBtn")}",
                                     HorizontalAlignment = HorizontalAlignment.Left,
                                     Padding = new Thickness(16, 8, 16, 8),
                                     Cursor = System.Windows.Input.Cursors.Hand
@@ -428,7 +428,7 @@ public partial class ServerDetailPage : Page, IDisposable
                     }
                 }
             },
-            PrimaryButtonText = "OK",
+            PrimaryButtonText = LocalizationManager.Get("MsgBtn_OK"),
             PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Info24),
             ShowTitle = true,
             Padding = new Thickness(16)
@@ -472,7 +472,7 @@ public partial class ServerDetailPage : Page, IDisposable
         catch (Exception ex)
         {
             Logger.Error($"StartStop_Click: Error managing server {_server.Name}: {ex.Message}", ex, "ServerDetailPage");
-            await UiHelper.ShowError($"Не удалось выполнить операцию: {ex.Message}");
+            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_OperationError")}: {ex.Message}");
         }
         finally
         {
@@ -496,7 +496,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch
         {
-            await UiHelper.ShowWarning("Не удалось открыть папку сервера");
+            await UiHelper.ShowWarning(LocalizationManager.Get("ServerDetail_OpenFolderError"));
         }
     }
 
@@ -619,7 +619,7 @@ public partial class ServerDetailPage : Page, IDisposable
         var defaultJava = config.GetDefaultJava();
         SettingJavaComboBox.Items.Add(new ComboBoxItem
         {
-            Content = $"По умолчанию ({(defaultJava != null ? defaultJava.DisplayName : "не выбрана")})",
+            Content = $"{LocalizationManager.Get("ServerDetail_JavaDefault")} ({(defaultJava != null ? defaultJava.DisplayName : LocalizationManager.Get("ServerDetail_JavaNotSelected"))})",
             Tag = (string?)null
         });
 
@@ -770,7 +770,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
-            _ = UiHelper.ShowError($"Ошибка загрузки свойств: {ex.Message}");
+            _ = UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_PropsLoadError")}: {ex.Message}");
         }
     }
 
@@ -821,7 +821,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
-            _ = UiHelper.ShowError($"Ошибка загрузки модов: {ex.Message}");
+            _ = UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_ModsLoadError")}: {ex.Message}");
         }
     }
 
@@ -872,7 +872,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
-            _ = UiHelper.ShowError($"Ошибка загрузки плагинов: {ex.Message}");
+            _ = UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_PluginsLoadError")}: {ex.Message}");
         }
     }
 
@@ -880,14 +880,14 @@ public partial class ServerDetailPage : Page, IDisposable
     {
         var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
         var parts = nameWithoutExt.Split('-');
-        return parts.Length > 1 ? parts[^1] : "Неизвестно";
+        return parts.Length > 1 ? parts[^1] : LocalizationManager.Get("Common_Unknown");
     }
 
     private static string ParsePluginVersion(string fileName)
     {
         var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
         var parts = nameWithoutExt.Split('-');
-        return parts.Length > 1 ? parts[^1] : "Неизвестно";
+        return parts.Length > 1 ? parts[^1] : LocalizationManager.Get("Common_Unknown");
     }
 
     private void RefreshMods_Click(object sender, RoutedEventArgs e) => LoadMods();
@@ -907,12 +907,12 @@ public partial class ServerDetailPage : Page, IDisposable
             }
             else
             {
-                _ = UiHelper.ShowWarning("Папка mods не найдена");
+                _ = UiHelper.ShowWarning(LocalizationManager.Get("ServerDetail_ModsFolderNotFound"));
             }
         }
         catch
         {
-            _ = UiHelper.ShowWarning("Не удалось открыть папку");
+            _ = UiHelper.ShowWarning(LocalizationManager.Get("ServerDetail_FolderOpenError"));
         }
     }
 
@@ -930,12 +930,12 @@ public partial class ServerDetailPage : Page, IDisposable
             }
             else
             {
-                _ = UiHelper.ShowWarning("Папка plugins не найдена");
+                _ = UiHelper.ShowWarning(LocalizationManager.Get("ServerDetail_PluginsFolderNotFound"));
             }
         }
         catch
         {
-            _ = UiHelper.ShowWarning("Не удалось открыть папку");
+            _ = UiHelper.ShowWarning(LocalizationManager.Get("ServerDetail_FolderOpenError"));
         }
     }
 
@@ -945,8 +945,8 @@ public partial class ServerDetailPage : Page, IDisposable
             return;
 
         var result = await UiHelper.ShowConfirm(
-            $"Удалить мод \"{mod.Name}\"?\n\nФайл: {mod.FileName}",
-            "Удаление мода");
+            string.Format(LocalizationManager.Get("ServerDetail_DeleteModConfirm"), mod.Name, mod.FileName),
+            LocalizationManager.Get("ServerDetail_DeleteModTitle"));
 
         if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
             return;
@@ -961,7 +961,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
-            await UiHelper.ShowError($"Ошибка удаления мода: {ex.Message}");
+            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_ModDeleteError")}: {ex.Message}");
         }
     }
 
@@ -971,8 +971,8 @@ public partial class ServerDetailPage : Page, IDisposable
             return;
 
         var result = await UiHelper.ShowConfirm(
-            $"Удалить плагин \"{plugin.Name}\"?\n\nФайл: {plugin.FileName}",
-            "Удаление плагина");
+            string.Format(LocalizationManager.Get("ServerDetail_DeletePluginConfirm"), plugin.Name, plugin.FileName),
+            LocalizationManager.Get("ServerDetail_DeletePluginTitle"));
 
         if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
             return;
@@ -987,7 +987,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
-            await UiHelper.ShowError($"Ошибка удаления плагина: {ex.Message}");
+            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_PluginDeleteError")}: {ex.Message}");
         }
     }
 
@@ -1008,7 +1008,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
-            await UiHelper.ShowError($"Ошибка при удалении сервера: {ex.Message}");
+            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_DeleteServerError")}: {ex.Message}");
         }
     }
 

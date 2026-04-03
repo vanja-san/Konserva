@@ -140,7 +140,7 @@
                                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                     Text="  •  " />
                                                 <ui:TextBlock FontSize="12" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
-                                                    <Run Text="Port:" />
+                                                    <Run Text="{loc:Loc ServersPage_Port}" />
                                                     <Run Text="{Binding Port}" />
                                                 </ui:TextBlock>
                                             </StackPanel>

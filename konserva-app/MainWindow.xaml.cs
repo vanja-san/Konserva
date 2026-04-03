@@ -1,4 +1,5 @@
-﻿using Konserva.Services;
+﻿using Konserva.Localization;
+using Konserva.Services;
 using Konserva.Utilities;
 using System.Windows;
 using Wpf.Ui.Controls;
@@ -183,12 +184,12 @@ public partial class MainWindow : FluentWindow, IDisposable
             StatusJava.Text = !string.IsNullOrEmpty(config.DefaultJavaId)
                 ? config.JavaInstallations.FirstOrDefault(j => j.Id == config.DefaultJavaId) switch
                 {
-                    null => $"{config.JavaInstallations.Count} версий Java",
+                    null => $"{config.JavaInstallations.Count} {LocalizationManager.Get("MainWindow_JavaVersions")}",
                     var java => java.DisplayName
                 }
                 : config.JavaInstallations.Count > 0
-                    ? $"{config.JavaInstallations.Count} версий Java"
-                    : "Java не настроена";
+                    ? $"{config.JavaInstallations.Count} {LocalizationManager.Get("MainWindow_JavaVersions")}"
+                    : LocalizationManager.Get("StatusBar_Java_NotConfigured");
         }
         finally
         {
@@ -276,7 +277,7 @@ public partial class MainWindow : FluentWindow, IDisposable
         }
         catch (Exception ex)
         {
-            await UiHelper.ShowError($"Ошибка: {ex.Message}");
+            await UiHelper.ShowError($"{LocalizationManager.Get("MainWindow_Error")}: {ex.Message}");
         }
     }
 

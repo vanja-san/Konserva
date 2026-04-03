@@ -188,9 +188,9 @@ public partial class App : Application
         Logger.Critical("Startup error", ex, "App");
 
         MessageBox.Show(
-            $"Ошибка инициализации приложения:\n{ex.Message}\n\n" +
-            $"Проверьте логи в %AppData%\\Konserva\\Logs",
-            "Ошибка запуска",
+            $"{LocalizationManager.Get("App_StartupError")}:\n{ex.Message}\n\n" +
+            LocalizationManager.Get("App_StartupErrorDetail"),
+            LocalizationManager.Get("MsgTitle_Error"),
             MessageBoxButton.OK,
             MessageBoxImage.Error);
 
@@ -284,9 +284,9 @@ public partial class App : Application
         Logger.Error("Unhandled exception", e.Exception, "App");
 
         MessageBox.Show(
-            $"Необработанное исключение:\n{e.Exception.Message}\n\n" +
-            $"Приложение будет закрыто.",
-            "Ошибка",
+            $"{LocalizationManager.Get("App_UnhandledError")}:\n{e.Exception.Message}\n\n" +
+            LocalizationManager.Get("App_UnhandledErrorDetail"),
+            LocalizationManager.Get("MsgTitle_Error"),
             MessageBoxButton.OK,
             MessageBoxImage.Error);
 

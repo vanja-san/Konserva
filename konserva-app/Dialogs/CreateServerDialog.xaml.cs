@@ -988,16 +988,14 @@ public partial class CreateServerDialog : FluentWindow
         {
             if (isInstalling)
             {
-                // Показываем прогресс
-                ProgressGrid.Visibility = Visibility.Visible;
-                ProgressPanel.Value = 0;
+                // Показываем статус
+                ProgressText.Visibility = Visibility.Visible;
                 ProgressText.Text = "Подготовка...";
-                ProgressPercentText.Text = "0%";
 
                 // Меняем кнопку на "Отмена"
                 ActionOrCancelButton.Content = "Отмена";
                 ActionOrCancelButton.Appearance = ControlAppearance.Danger;
-                ActionOrCancelButton.IsEnabled = true; // Кнопка должна быть активна!
+                ActionOrCancelButton.IsEnabled = true;
 
                 // Скрываем импорт
                 ImportButton.Visibility = Visibility.Collapsed;
@@ -1005,8 +1003,8 @@ public partial class CreateServerDialog : FluentWindow
             }
             else
             {
-                // Скрываем прогресс
-                ProgressGrid.Visibility = Visibility.Collapsed;
+                // Скрываем статус
+                ProgressText.Visibility = Visibility.Collapsed;
 
                 // Возвращаем кнопку "Создать"
                 ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Create") ?? "Создать";
@@ -1134,65 +1132,13 @@ public partial class CreateServerDialog : FluentWindow
     }
 
     /// <summary>
-    /// Плавно обновляет прогресс
+    /// Обновляет текстовый статус установки
     /// </summary>
-    private void UpdateProgress(double value, string statusText)
+    private void UpdateStatus(string statusText)
     {
         this.Invoke(() =>
         {
-            ProgressPanel.Value = value;
             ProgressText.Text = statusText;
-            ProgressPercentText.Text = $"{value:F0}%";
-        });
-    }
-
-    /// <summary>
-    /// Плавно обновляет прогресс с интерполяцией
-    /// </summary>
-    private async Task UpdateProgressSmoothAsync(double targetValue, string statusText)
-    {
-        var currentValue = ProgressPanel.Value;
-        
-        // Если прогресс уменьшился - сбрасываем до 0 и начинаем заново
-        if (targetValue < currentValue - 5)
-        {
-            currentValue = 0;
-        }
-        
-        // Если значение очень близко - обновляем сразу
-        if (Math.Abs(targetValue - currentValue) < 0.5)
-        {
-            this.Invoke(() =>
-            {
-                ProgressPanel.Value = targetValue;
-                ProgressText.Text = statusText;
-                ProgressPercentText.Text = $"{targetValue:F0}%";
-            });
-            return;
-        }
-        
-        // Плавная интерполяция
-        var steps = 20;
-        var stepValue = (targetValue - currentValue) / steps;
-
-        for (int i = 1; i <= steps; i++)
-        {
-            var interpolatedValue = Math.Min(Math.Max(currentValue + (stepValue * i), 0), 100);
-            this.Invoke(() =>
-            {
-                ProgressPanel.Value = interpolatedValue;
-                ProgressPercentText.Text = $"{interpolatedValue:F0}%";
-            });
-
-            await Task.Delay(20);
-        }
-
-        // Финальное значение
-        this.Invoke(() =>
-        {
-            ProgressPanel.Value = targetValue;
-            ProgressText.Text = statusText;
-            ProgressPercentText.Text = $"{targetValue:F0}%";
         });
     }
 
@@ -1204,39 +1150,21 @@ public partial class CreateServerDialog : FluentWindow
 
         try
         {
-            // Явно показываем прогресс в начале
+            // Показываем статус
             this.Invoke(() =>
             {
-                ProgressGrid.Visibility = Visibility.Visible;
-                ProgressPanel.Value = 0;
+                ProgressText.Visibility = Visibility.Visible;
                 ProgressText.Text = "Подготовка...";
-                ProgressPercentText.Text = "0%";
             });
 
             server.InstallStatus = $"Установка {server.Name}...";
             MainWindow.ServerManager.UpdateServer(server);
 
-            // Создаём прогресс с плавным обновлением UI
-            var progress = new Progress<double>(async percent =>
+            // Текстовый прогресс
+            var progress = new Progress<string>(statusText =>
             {
-                // Определяем текст задачи в зависимости от процента
-                string statusText = percent switch
-                {
-                    < 5 => "Получение данных...",
-                    < 15 => "Загрузка файлов...",
-                    < 30 => "Проверка совместимости...",
-                    < 50 => "Установка модлоадера...",
-                    < 70 => "Загрузка библиотек...",
-                    < 85 => "Настройка сервера...",
-                    < 99 => "Финализация...",
-                    >= 99 => "Завершение...",
-                    _ => "Завершение..."
-                };
-
-                // Плавно обновляем прогресс (без отмены, чтобы избежать исключений)
-                _ = UpdateProgressSmoothAsync(percent, statusText);
-
-                server.InstallStatus = $"{statusText} {percent:F0}%";
+                UpdateStatus(statusText);
+                server.InstallStatus = statusText;
                 MainWindow.ServerManager.UpdateServer(server);
             });
 

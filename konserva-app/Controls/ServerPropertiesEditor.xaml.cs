@@ -1,4 +1,5 @@
-﻿using Konserva.Models;
+﻿using Konserva.Localization;
+using Konserva.Models;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -27,7 +28,7 @@ public partial class ServerPropertiesEditor : UserControl
         _propertiesPath = path;
         _properties = ServerProperties.Load(path);
         PopulateFields();
-        ShowStatus("Свойства загружены", false);
+        ShowStatus(LocalizationManager.Get("Props_Loaded"), false);
     }
 
     /// <summary>
@@ -139,7 +140,7 @@ public partial class ServerPropertiesEditor : UserControl
     {
         if (_properties == null || string.IsNullOrEmpty(_propertiesPath))
         {
-            ShowStatus("Ошибка: файл не загружен", true);
+            ShowStatus(LocalizationManager.Get("Props_NotLoaded"), true);
             return;
         }
 
@@ -191,12 +192,12 @@ public partial class ServerPropertiesEditor : UserControl
             // Сохраняем
             _properties.Save(_propertiesPath);
 
-            ShowStatus("Свойства сохранены!", false);
+            ShowStatus(LocalizationManager.Get("Props_Saved"), false);
             PropertiesSaved?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
-            ShowStatus($"Ошибка сохранения: {ex.Message}", true);
+            ShowStatus($"{LocalizationManager.Get("Props_SaveError")}: {ex.Message}", true);
         }
     }
 
@@ -208,7 +209,7 @@ public partial class ServerPropertiesEditor : UserControl
         if (!string.IsNullOrEmpty(_propertiesPath))
         {
             Load(_propertiesPath);
-            ShowStatus("Свойства сброшены", false);
+            ShowStatus(LocalizationManager.Get("Props_Reset"), false);
         }
     }
 

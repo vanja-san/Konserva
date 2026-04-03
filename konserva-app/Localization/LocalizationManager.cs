@@ -521,7 +521,70 @@ public static class LocalizationManager
                 { "Error_JavaIncompatible", "Несовместимая версия Java" },
                 { "Error_ServerInstallFailed", "Ошибка установки сервера" },
                 { "Error_PortInUse", "Порт уже занят" },
-                { "Error_OutOfMemory", "Недостаточно памяти" }
+                { "Error_OutOfMemory", "Недостаточно памяти" },
+
+                // Java Error Dialog
+                { "JavaError_Title", "Ошибка Java" },
+                { "JavaError_Required", "Требуется установить или обновить Java" },
+                { "JavaError_DownloadText", "Скачайте последнюю версию Java с официального сайта:" },
+                { "JavaError_DownloadBtn", "Скачать Java (adoptium.net)" },
+
+                // Common UI
+                { "Common_NotSelected", "Не выбрано" },
+                { "Common_Default", "По умолчанию" },
+                { "Common_Unknown", "Неизвестно" },
+                { "Common_Preparing", "Подготовка..." },
+
+                // Settings Page
+                { "Settings_SelectServerFolder", "Выберите папку для серверов" },
+                { "Settings_SelectJava", "Выберите java.exe или javaw.exe" },
+                { "Settings_JavaFilter", "Java executable|java.exe|JavaW executable|javaw.exe" },
+                { "Settings_JavaAdded", "Java добавлена" },
+                { "Settings_JavaVersion", "Версия" },
+                { "Settings_JavaPath", "Путь" },
+                { "Settings_JavaInvalid", "Не удалось добавить Java. Проверьте путь к файлу.\n\nУбедитесь, что выбранный файл является java.exe или javaw.exe" },
+
+                // ServerPropertiesEditor
+                { "Props_Loaded", "Свойства загружены" },
+                { "Props_NotLoaded", "Ошибка: файл не загружен" },
+                { "Props_Saved", "Свойства сохранены!" },
+                { "Props_SaveError", "Ошибка сохранения" },
+                { "Props_Reset", "Свойства сброшены" },
+
+                // ServerDetail
+                { "ServerDetail_OperationError", "Не удалось выполнить операцию" },
+                { "ServerDetail_OpenFolderError", "Не удалось открыть папку сервера" },
+                { "ServerDetail_PropsLoadError", "Ошибка загрузки свойств" },
+                { "ServerDetail_ModsLoadError", "Ошибка загрузки модов" },
+                { "ServerDetail_PluginsLoadError", "Ошибка загрузки плагинов" },
+                { "ServerDetail_ModsFolderNotFound", "Папка mods не найдена" },
+                { "ServerDetail_PluginsFolderNotFound", "Папка plugins не найдена" },
+                { "ServerDetail_FolderOpenError", "Не удалось открыть папку" },
+                { "ServerDetail_DeleteModConfirm", "Удалить мод \"{0}\"?\n\nФайл: {1}" },
+                { "ServerDetail_DeleteModTitle", "Удаление мода" },
+                { "ServerDetail_DeletePluginConfirm", "Удалить плагин \"{0}\"?\n\nФайл: {1}" },
+                { "ServerDetail_DeletePluginTitle", "Удаление плагина" },
+                { "ServerDetail_ModDeleteError", "Ошибка удаления мода" },
+                { "ServerDetail_PluginDeleteError", "Ошибка удаления плагина" },
+                { "ServerDetail_DeleteServerError", "Ошибка при удалении сервера" },
+                { "ServerDetail_JavaDefault", "По умолчанию" },
+                { "ServerDetail_JavaNotSelected", "не выбрана" },
+
+                // ServersPage
+                { "ServersPage_AppNotInitialized", "Ошибка: приложение не инициализировано" },
+                { "ServersPage_OpenFolderWarning", "Не удалось открыть папку сервера" },
+                { "ServersPage_DeleteError", "Ошибка при удалении сервера" },
+                { "ServersPage_OperationError", "Не удалось выполнить операцию" },
+
+                // MainWindow
+                { "MainWindow_Error", "Ошибка" },
+                { "MainWindow_JavaVersions", "версий Java" },
+
+                // App
+                { "App_StartupError", "Ошибка инициализации приложения" },
+                { "App_StartupErrorDetail", "Проверьте логи в %AppData%\\Konserva\\Logs" },
+                { "App_UnhandledError", "Необработанное исключение" },
+                { "App_UnhandledErrorDetail", "Приложение будет закрыто." }
             },
             "en" => new Dictionary<string, string>
             {
@@ -810,7 +873,70 @@ public static class LocalizationManager
                 { "Error_JavaIncompatible", "Incompatible Java version" },
                 { "Error_ServerInstallFailed", "Server installation failed" },
                 { "Error_PortInUse", "Port is already in use" },
-                { "Error_OutOfMemory", "Out of memory" }
+                { "Error_OutOfMemory", "Out of memory" },
+
+                // Java Error Dialog
+                { "JavaError_Title", "Java Error" },
+                { "JavaError_Required", "Java installation or update is required" },
+                { "JavaError_DownloadText", "Download the latest Java version from the official website:" },
+                { "JavaError_DownloadBtn", "Download Java (adoptium.net)" },
+
+                // Common UI
+                { "Common_NotSelected", "Not selected" },
+                { "Common_Default", "Default" },
+                { "Common_Unknown", "Unknown" },
+                { "Common_Preparing", "Preparing..." },
+
+                // Settings Page
+                { "Settings_SelectServerFolder", "Select servers folder" },
+                { "Settings_SelectJava", "Select java.exe or javaw.exe" },
+                { "Settings_JavaFilter", "Java executable|java.exe|JavaW executable|javaw.exe" },
+                { "Settings_JavaAdded", "Java added" },
+                { "Settings_JavaVersion", "Version" },
+                { "Settings_JavaPath", "Path" },
+                { "Settings_JavaInvalid", "Failed to add Java. Check the file path.\n\nMake sure the selected file is java.exe or javaw.exe" },
+
+                // ServerPropertiesEditor
+                { "Props_Loaded", "Properties loaded" },
+                { "Props_NotLoaded", "Error: file not loaded" },
+                { "Props_Saved", "Properties saved!" },
+                { "Props_SaveError", "Save error" },
+                { "Props_Reset", "Properties reset" },
+
+                // ServerDetail
+                { "ServerDetail_OperationError", "Failed to perform operation" },
+                { "ServerDetail_OpenFolderError", "Failed to open server folder" },
+                { "ServerDetail_PropsLoadError", "Error loading properties" },
+                { "ServerDetail_ModsLoadError", "Error loading mods" },
+                { "ServerDetail_PluginsLoadError", "Error loading plugins" },
+                { "ServerDetail_ModsFolderNotFound", "Mods folder not found" },
+                { "ServerDetail_PluginsFolderNotFound", "Plugins folder not found" },
+                { "ServerDetail_FolderOpenError", "Failed to open folder" },
+                { "ServerDetail_DeleteModConfirm", "Delete mod \"{0}\"?\n\nFile: {1}" },
+                { "ServerDetail_DeleteModTitle", "Delete Mod" },
+                { "ServerDetail_DeletePluginConfirm", "Delete plugin \"{0}\"?\n\nFile: {1}" },
+                { "ServerDetail_DeletePluginTitle", "Delete Plugin" },
+                { "ServerDetail_ModDeleteError", "Error deleting mod" },
+                { "ServerDetail_PluginDeleteError", "Error deleting plugin" },
+                { "ServerDetail_DeleteServerError", "Error deleting server" },
+                { "ServerDetail_JavaDefault", "Default" },
+                { "ServerDetail_JavaNotSelected", "not selected" },
+
+                // ServersPage
+                { "ServersPage_AppNotInitialized", "Error: application not initialized" },
+                { "ServersPage_OpenFolderWarning", "Failed to open server folder" },
+                { "ServersPage_DeleteError", "Error deleting server" },
+                { "ServersPage_OperationError", "Failed to perform operation" },
+
+                // MainWindow
+                { "MainWindow_Error", "Error" },
+                { "MainWindow_JavaVersions", "Java versions" },
+
+                // App
+                { "App_StartupError", "Application initialization error" },
+                { "App_StartupErrorDetail", "Check logs in %AppData%\\Konserva\\Logs" },
+                { "App_UnhandledError", "Unhandled exception" },
+                { "App_UnhandledErrorDetail", "Application will be closed." }
             },
             _ => []
         };

@@ -83,7 +83,7 @@
                                     Grid.Column="1"
                                     Margin="16,0"
                                     VerticalAlignment="Center"
-                                    Text="Не выбрано"
+                                    Text="{loc:Loc Common_NotSelected}"
                                     TextTrimming="CharacterEllipsis" />
                                 <ui:Button
                                     Grid.Column="2"

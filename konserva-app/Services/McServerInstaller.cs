@@ -141,10 +141,11 @@ public static partial class McServerInstaller
     /// Скачать файл по URL с прогрессом
     /// </summary>
     private static async Task<(bool success, string? error)> DownloadFile(string url, string destinationPath, string fileName,
-        IProgress<double>? progress = null, CancellationToken ct = default)
+        IProgress<string>? progress = null, CancellationToken ct = default)
     {
         try
         {
+            progress?.Report($"Скачивание {fileName}...");
             Directory.CreateDirectory(destinationPath);
             var filePath = Path.Combine(destinationPath, fileName);
 
@@ -167,12 +168,6 @@ public static partial class McServerInstaller
                 ct.ThrowIfCancellationRequested();
                 await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct);
                 downloadedBytes += bytesRead;
-
-                if (totalBytes > 0 && progress != null)
-                {
-                    var percent = (double)downloadedBytes / totalBytes * 100;
-                    progress.Report(percent);
-                }
             }
 
             await fileStream.FlushAsync(ct);
@@ -206,7 +201,7 @@ public static partial class McServerInstaller
     /// Скачать vanilla сервер
     /// </summary>
     public static async Task<bool> DownloadVanillaServer(string version, string destinationPath,
-        IProgress<double>? progress = null, CancellationToken ct = default)
+        IProgress<string>? progress = null, CancellationToken ct = default)
     {
         Logger.Info($"Downloading Vanilla server for version {version}", "McServerInstaller");
 
@@ -292,7 +287,7 @@ public static partial class McServerInstaller
     /// Установить Fabric сервер автоматически
     /// </summary>
     public static async Task<bool> InstallFabricServer(string mcVersion, string loaderVersion,
-        string destinationPath, IProgress<double>? progress = null, CancellationToken ct = default)
+        string destinationPath, IProgress<string>? progress = null, CancellationToken ct = default)
     {
         Logger.Info($"Installing Fabric server: MC={mcVersion}, Loader={loaderVersion}, Path={destinationPath}");
 
@@ -346,11 +341,12 @@ public static partial class McServerInstaller
                 installerVersion = "0.16.10";
             }
 
-            // 3. Скачиваем сервер напрямую (0-80%)
+            // 3. Скачиваем сервер
             var serverJarPath = Path.Combine(destinationPath, "fabric-server-launch.jar");
             var serverUrl = $"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}/{selectedLoaderVersion}/{installerVersion}/server/jar";
 
             Logger.Info($"Downloading Fabric server from: {serverUrl}");
+            progress?.Report("Скачивание сервера...");
             var (success, error) = await DownloadFile(serverUrl, destinationPath, "fabric-server-launch.jar", progress, ct);
 
             if (!success)
@@ -362,12 +358,12 @@ public static partial class McServerInstaller
             Logger.Info($"Fabric server downloaded successfully");
 
             // 4. Создаем eula.txt и server.properties
-            progress?.Report(90);
+            progress?.Report("Создание конфигурации...");
             CreateEula(destinationPath);
             CreateServerProperties(destinationPath, Constants.DefaultServerPort);
 
             Logger.Info("Fabric server installation completed");
-            progress?.Report(100);
+            progress?.Report("Завершение...");
             return true;
         }
         catch (Exception ex)
@@ -511,7 +507,7 @@ public static partial class McServerInstaller
     /// Запустить Fabric installer
     /// </summary>
     private static async Task<bool> RunFabricInstaller(string installerPath, string mcVersion,
-        string loaderVersion, string destinationPath, CancellationToken ct, IProgress<double>? progress = null)
+        string loaderVersion, string destinationPath, CancellationToken ct, IProgress<string>? progress = null)
     {
         // Проверяем наличие Java
         var javaPath = FindJavaPath();
@@ -540,9 +536,9 @@ public static partial class McServerInstaller
             var outputTask = process.StandardOutput.ReadToEndAsync();
             var errorTask = process.StandardError.ReadToEndAsync();
 
-            // Обновляем прогресс во время ожидания (30% -> 90%)
+            // Обновляем прогресс во время ожидания
             var startTime = DateTime.Now;
-            var timeout = TimeSpan.FromMinutes(5); // Максимум 5 минут на установку
+            var timeout = TimeSpan.FromMinutes(5);
 
             while (!process.HasExited)
             {
@@ -552,8 +548,7 @@ public static partial class McServerInstaller
                 var elapsed = DateTime.Now - startTime;
                 if (elapsed < timeout)
                 {
-                    var installProgress = 30 + (elapsed.TotalMilliseconds / timeout.TotalMilliseconds * 60);
-                    progress?.Report(Math.Min(installProgress, 90));
+                    progress?.Report("Установка Fabric...");
                 }
             }
 
@@ -683,7 +678,7 @@ public static partial class McServerInstaller
     /// Установить Forge сервер автоматически
     /// </summary>
     public static async Task<bool> InstallForgeServer(string mcVersion, string forgeVersion,
-        string destinationPath, IProgress<double>? progress = null, CancellationToken ct = default)
+        string destinationPath, IProgress<string>? progress = null, CancellationToken ct = default)
     {
         try
         {
@@ -693,18 +688,15 @@ public static partial class McServerInstaller
             if (string.IsNullOrEmpty(installerUrl))
                 return false;
 
-            // 1. Скачиваем installer (0-30%)
+            // 1. Скачиваем installer
             var installerPath = Path.Combine(destinationPath, "forge-installer.jar");
-            // Прогресс: 0-30% (умножаем на 0.3)
-            var progressWrapper = new Progress<double>(p => progress?.Report(p * 0.3));
-            var downloadResult = await DownloadFile(installerUrl, destinationPath, "forge-installer.jar", progressWrapper, ct);
+            progress?.Report("Скачивание установщика...");
+            var downloadResult = await DownloadFile(installerUrl, destinationPath, "forge-installer.jar", progress, ct);
             if (!downloadResult.success)
                 return false;
 
-            // После скачивания показываем 30%
-            progress?.Report(30);
-
-            // 2. Запускаем installer с прогрессом (30-95%)
+            // 2. Запускаем installer
+            progress?.Report("Установка Forge...");
             var success = await RunForgeInstaller(installerPath, destinationPath, ct, progress);
 
             // 3. Удаляем installer
@@ -715,38 +707,57 @@ public static partial class McServerInstaller
 
             if (success)
             {
-                // Ждём пока завершатся все файловые операции после установки
+                // Ждём пока завершатся все файловые операции
                 Logger.Info("Waiting for file operations to complete...", "McServerInstaller");
+                progress?.Report("Финализация...");
 
-                // Ждём появления основных файлов Forge (не более 30 сек)
                 var waitStartTime = DateTime.Now;
-                var maxWaitTime = TimeSpan.FromSeconds(30);
-                
+                var maxWaitTime = TimeSpan.FromSeconds(60);
+
                 while ((DateTime.Now - waitStartTime) < maxWaitTime)
                 {
                     var hasForgeJar = Directory.GetFiles(destinationPath, "forge-*.jar").Any() ||
                                      Directory.GetFiles(destinationPath, "neoforge-*.jar").Any();
-                    var hasServerJar = File.Exists(Path.Combine(destinationPath, "server.jar")) ||
-                                      File.Exists(Path.Combine(destinationPath, "minecraft_server.jar"));
                     var hasLibraries = Directory.Exists(Path.Combine(destinationPath, "libraries"));
-                    
-                    if (hasForgeJar && hasLibraries)
+
+                    if (!hasForgeJar || !hasLibraries)
                     {
-                        Logger.Info("Forge files ready", "McServerInstaller");
+                        await Task.Delay(500, ct);
+                        continue;
+                    }
+
+                    // Проверяем что ключевые файлы не заблокированы
+                    var keyFiles = Directory.GetFiles(destinationPath, "*.jar")
+                        .Concat(Directory.GetFiles(Path.Combine(destinationPath, "libraries"), "*.jar", SearchOption.AllDirectories))
+                        .Take(50)
+                        .ToArray();
+
+                    if (keyFiles.Length == 0)
+                    {
+                        await Task.Delay(500, ct);
+                        continue;
+                    }
+
+                    var allUnlocked = true;
+                    foreach (var file in keyFiles)
+                    {
+                        if (!IsFileUnlocked(file))
+                        {
+                            allUnlocked = false;
+                            break;
+                        }
+                    }
+
+                    if (allUnlocked)
+                    {
+                        await Task.Delay(1000, ct);
+                        Logger.Info($"Forge files unlocked and stable ({keyFiles.Length} checked)", "McServerInstaller");
                         break;
                     }
-                    
+
                     await Task.Delay(500, ct);
                 }
 
-                // Плавно увеличиваем прогресс с 95% до 100%
-                for (int i = 0; i < 20; i++)
-                {
-                    await Task.Delay(100, ct);
-                    progress?.Report(95 + (i * 0.25)); // 95% -> 100%
-                }
-
-                progress?.Report(100);
                 Logger.Info("File operations completed", "McServerInstaller");
             }
 
@@ -761,11 +772,10 @@ public static partial class McServerInstaller
     /// <summary>
     /// Запустить Forge installer
     /// </summary>
-    private static async Task<bool> RunForgeInstaller(string installerPath, string destinationPath, CancellationToken ct, IProgress<double>? progress = null)
+    private static async Task<bool> RunForgeInstaller(string installerPath, string destinationPath, CancellationToken ct, IProgress<string>? progress = null)
     {
         Logger.Info($"Running Forge/NeoForge installer: {installerPath}");
 
-        // Проверяем наличие Java
         var javaPath = FindJavaPath();
         if (string.IsNullOrEmpty(javaPath))
         {
@@ -797,76 +807,69 @@ public static partial class McServerInstaller
 
             Logger.Info($"Installer process started, PID: {process.Id}");
 
-            // Читаем вывод процесса
+            // Читаем вывод ПОСТРОЧНО СИНХРОННО — это гарантирует что мы не пропустим
+            // момент завершения. WaitForExit ненадёжен на Windows.
             var outputLines = new List<string>();
             var errorLines = new List<string>();
-
-            process.OutputDataReceived += (s, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    outputLines.Add(e.Data);
-                    Logger.Info($"[Forge] {e.Data}", "McServerInstaller");
-                }
-            };
-            process.ErrorDataReceived += (s, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    errorLines.Add(e.Data);
-                    Logger.Info($"[Forge] {e.Data}", "McServerInstaller");
-                }
-            };
-
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-
-            // Обновляем прогресс во время ожидания (30% -> 95%)
             var startTime = DateTime.Now;
-            var timeout = TimeSpan.FromMinutes(15); // Увеличенный таймаут для Forge
+            var timeout = TimeSpan.FromMinutes(15);
+            bool installedSuccessfully = false;
+            int patchCount = 0;
+            int libraryCount = 0;
 
-            while (!process.HasExited)
+            // Читаем stdout построчно — блокирует пока есть вывод
+            await Task.Run(() =>
             {
-                ct.ThrowIfCancellationRequested();
-                await Task.Delay(Constants.MsPerSecond, ct); // Проверка каждую секунду
-
-                var elapsed = DateTime.Now - startTime;
-                if (elapsed < timeout)
+                string? line;
+                while ((line = process.StandardOutput.ReadLine()) != null)
                 {
-                    // Плавно увеличиваем прогресс с 30% до 95%
-                    var installProgress = 30 + (elapsed.TotalMilliseconds / timeout.TotalMilliseconds * 65);
-                    progress?.Report(Math.Min(installProgress, 95));
+                    lock (outputLines) outputLines.Add(line);
+                    Logger.Info($"[Forge] {line}", "McServerInstaller");
+
+                    // Считаем для статуса
+                    if (line.Contains("Considering library"))
+                        libraryCount++;
+                    if (line.Contains("Patching "))
+                        patchCount++;
+
+                    // Обновляем статус
+                    if (line.Contains("Downloading") || line.Contains("Extracting"))
+                        progress?.Report("Распаковка и загрузка...");
+                    else if (line.Contains("Patching "))
+                    {
+                        if (patchCount % 1000 == 0)
+                            progress?.Report($"Применение патчей ({patchCount / 1000}K)...");
+                    }
+                    else if (line.Contains("installed successfully"))
+                        installedSuccessfully = true;
                 }
-                else
-                {
-                    Logger.Warning($"Forge installer timeout after {timeout.TotalMinutes} minutes", "McServerInstaller");
-                    break;
-                }
-            }
+            }, ct);
 
-            await process.WaitForExitAsync(ct);
-
-            Logger.Info($"Installer exited with code: {process.ExitCode}", "McServerInstaller");
-
-            // Логируем последние строки вывода
-            if (outputLines.Count > 0)
+            // Читаем stderr
+            await Task.Run(() =>
             {
-                Logger.Info($"Forge installer output ({outputLines.Count} lines):", "McServerInstaller");
-                foreach (var line in outputLines.TakeLast(10))
+                string? line;
+                while ((line = process.StandardError.ReadLine()) != null)
                 {
-                    Logger.Info($"  {line}", "McServerInstaller");
+                    lock (errorLines) errorLines.Add(line);
+                    Logger.Info($"[Forge] {line}", "McServerInstaller");
                 }
-            }
+            }, ct);
 
-            // Проверяем успешность по наличию файлов
+            // Ждём завершения процесса
+            process.WaitForExit();
+
+            var elapsed = DateTime.Now - startTime;
+            Logger.Info($"Installer exited with code: {process.ExitCode} after {elapsed.TotalSeconds:F1}s", "McServerInstaller");
+            Logger.Info($"Forge stats: {libraryCount} libraries, {patchCount} patches, installedSuccessfully={installedSuccessfully}", "McServerInstaller");
+
+            // Проверяем успешность
             var hasForgeJar = Directory.GetFiles(destinationPath, "forge-*.jar").Length > 0;
             var hasNeoForgeJar = Directory.GetFiles(destinationPath, "neoforge-*.jar").Length > 0;
             var hasRunBat = File.Exists(Path.Combine(destinationPath, "run.bat"));
             var hasLibraries = Directory.Exists(Path.Combine(destinationPath, "libraries"));
 
-            Logger.Info($"Check results: forge-*.jar={hasForgeJar}, neoforge-*.jar={hasNeoForgeJar}, run.bat={hasRunBat}, libraries={hasLibraries}", "McServerInstaller");
-
-            var success = process.ExitCode == 0 || hasForgeJar || hasNeoForgeJar || hasRunBat || hasLibraries;
+            var success = installedSuccessfully || process.ExitCode == 0 || hasForgeJar || hasNeoForgeJar || hasRunBat || hasLibraries;
 
             if (!success)
             {
@@ -1024,7 +1027,7 @@ public static partial class McServerInstaller
     /// Установить NeoForge сервер автоматически
     /// </summary>
     public static async Task<bool> InstallNeoForgeServer(string mcVersion, string neoforgeVersion,
-        string destinationPath, IProgress<double>? progress = null, CancellationToken ct = default)
+        string destinationPath, IProgress<string>? progress = null, CancellationToken ct = default)
     {
         Logger.Info($"Installing NeoForge server: MC={mcVersion}, Version={neoforgeVersion}, Path={destinationPath}");
 
@@ -1039,12 +1042,12 @@ public static partial class McServerInstaller
                 return false;
             }
 
-            // 1. Скачиваем installer (0-30%)
+            // 1. Скачиваем installer
             var installerPath = Path.Combine(destinationPath, "neoforge-installer.jar");
-            var progressWrapper = new Progress<double>(p => progress?.Report(p * 0.3));
+            progress?.Report("Скачивание установщика...");
 
             Logger.Info($"Downloading NeoForge installer from: {installerUrl}");
-            var downloadResult = await DownloadFile(installerUrl, destinationPath, "neoforge-installer.jar", progressWrapper, ct);
+            var downloadResult = await DownloadFile(installerUrl, destinationPath, "neoforge-installer.jar", progress, ct);
 
             if (!downloadResult.success)
             {
@@ -1054,7 +1057,8 @@ public static partial class McServerInstaller
 
             Logger.Info("NeoForge installer downloaded, running installer...");
 
-            // 2. Запускаем installer (30-90%)
+            // 2. Запускаем installer
+            progress?.Report("Установка NeoForge...");
             var success = await RunForgeInstaller(installerPath, destinationPath, ct, progress);
 
             if (success && File.Exists(installerPath))
@@ -1064,8 +1068,59 @@ public static partial class McServerInstaller
 
             if (success)
             {
+                // Ждём стабилизации файлов
+                Logger.Info("Waiting for NeoForge file operations to complete...", "McServerInstaller");
+                progress?.Report("Финализация...");
+
+                var waitStartTime = DateTime.Now;
+                var maxWaitTime = TimeSpan.FromSeconds(60);
+                var librariesPath = Path.Combine(destinationPath, "libraries");
+
+                while ((DateTime.Now - waitStartTime) < maxWaitTime)
+                {
+                    var hasForgeJar = Directory.GetFiles(destinationPath, "forge-*.jar").Any() ||
+                                     Directory.GetFiles(destinationPath, "neoforge-*.jar").Any();
+                    var hasLibraries = Directory.Exists(librariesPath);
+
+                    if (!hasForgeJar || !hasLibraries)
+                    {
+                        await Task.Delay(500, ct);
+                        continue;
+                    }
+
+                    var keyFiles = Directory.GetFiles(destinationPath, "*.jar")
+                        .Concat(Directory.GetFiles(librariesPath, "*.jar", SearchOption.AllDirectories))
+                        .Take(50)
+                        .ToArray();
+
+                    if (keyFiles.Length == 0)
+                    {
+                        await Task.Delay(500, ct);
+                        continue;
+                    }
+
+                    var allUnlocked = true;
+                    foreach (var file in keyFiles)
+                    {
+                        if (!IsFileUnlocked(file))
+                        {
+                            allUnlocked = false;
+                            break;
+                        }
+                    }
+
+                    if (allUnlocked)
+                    {
+                        await Task.Delay(1000, ct);
+                        Logger.Info($"NeoForge files unlocked and stable ({keyFiles.Length} checked)", "McServerInstaller");
+                        break;
+                    }
+
+                    await Task.Delay(500, ct);
+                }
+
                 Logger.Info("NeoForge server installed successfully");
-                progress?.Report(100);
+                progress?.Report("Завершение...");
             }
             else
             {
@@ -1120,14 +1175,14 @@ public static partial class McServerInstaller
     /// Установить Quilt сервер автоматически
     /// </summary>
     public static async Task<bool> InstallQuiltServer(string mcVersion, string loaderVersion,
-        string destinationPath, IProgress<double>? progress = null, CancellationToken ct = default)
+        string destinationPath, IProgress<string>? progress = null, CancellationToken ct = default)
     {
         try
         {
             Logger.Info($"Installing Quilt server MC {mcVersion} loader {loaderVersion}", "McServerInstaller");
             Directory.CreateDirectory(destinationPath);
 
-            // 1. Скачиваем Quilt installer (0-30%)
+            // 1. Скачиваем Quilt installer
             var installerInfo = await GetQuiltInstallerInfo(ct);
             if (installerInfo == null)
             {
@@ -1138,8 +1193,8 @@ public static partial class McServerInstaller
             Logger.Info($"Got Quilt installer: {installerInfo.Value.version}", "McServerInstaller");
 
             var installerPath = Path.Combine(destinationPath, "quilt-installer.jar");
-            var progressWrapper = new Progress<double>(p => progress?.Report(p * 0.3));
-            var downloadResult = await DownloadFile(installerInfo.Value.url, destinationPath, "quilt-installer.jar", progressWrapper, ct);
+            progress?.Report("Скачивание установщика...");
+            var downloadResult = await DownloadFile(installerInfo.Value.url, destinationPath, "quilt-installer.jar", progress, ct);
             if (!downloadResult.success)
             {
                 Logger.Error($"Failed to download Quilt installer: {downloadResult.error}", null, "McServerInstaller");
@@ -1200,7 +1255,57 @@ public static partial class McServerInstaller
             }
 
             if (success)
-                progress?.Report(100);
+            {
+                // Ждём стабилизации файлов (аналогично Forge)
+                Logger.Info("Waiting for Quilt file operations to complete...", "McServerInstaller");
+
+                var waitStartTime = DateTime.Now;
+                var maxWaitTime = TimeSpan.FromSeconds(30);
+                var librariesPath = Path.Combine(destinationPath, "libraries");
+
+                while ((DateTime.Now - waitStartTime) < maxWaitTime)
+                {
+                    var hasServerJar = Directory.GetFiles(destinationPath, "quilt-server-*.jar").Length > 0;
+                    if (!hasServerJar)
+                    {
+                        await Task.Delay(500, ct);
+                        continue;
+                    }
+
+                    var keyFiles = Directory.GetFiles(destinationPath, "*.jar")
+                        .Concat(Directory.GetFiles(librariesPath, "*.jar", SearchOption.AllDirectories))
+                        .Take(50)
+                        .ToArray();
+
+                    if (keyFiles.Length == 0)
+                    {
+                        await Task.Delay(500, ct);
+                        continue;
+                    }
+
+                    var allUnlocked = true;
+                    foreach (var file in keyFiles)
+                    {
+                        if (!IsFileUnlocked(file))
+                        {
+                            allUnlocked = false;
+                            break;
+                        }
+                    }
+
+                    if (allUnlocked)
+                    {
+                        await Task.Delay(1000, ct);
+                        Logger.Info($"Quilt files unlocked and stable ({keyFiles.Length} checked)", "McServerInstaller");
+                        break;
+                    }
+
+                    await Task.Delay(500, ct);
+                }
+
+                progress?.Report("Завершение...");
+                Logger.Info("Quilt file operations completed", "McServerInstaller");
+            }
 
             return success;
         }
@@ -1215,7 +1320,7 @@ public static partial class McServerInstaller
     /// Официальная команда: java -jar quilt-installer.jar install server MINECRAFT_VERSION --download-server
     /// </summary>
     private static async Task<bool> RunQuiltInstaller(string installerPath, string mcVersion,
-        string destinationPath, CancellationToken ct, IProgress<double>? progress = null)
+        string destinationPath, CancellationToken ct, IProgress<string>? progress = null)
     {
         // Определяем Java версию на основе версии Minecraft
         // Quilt требует Java 21 для MC 1.20.5+, Java 17 для MC 1.18-1.20.4, Java 8 для старых версий
@@ -1260,21 +1365,13 @@ public static partial class McServerInstaller
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            // Обновляем прогресс во время ожидания (30% -> 90%)
-            var startTime = DateTime.Now;
+            // Ждём завершения процесса
             var timeout = TimeSpan.FromMinutes(5);
-
-            while (!process.HasExited)
+            var processExited = process.WaitForExit((int)timeout.TotalMilliseconds);
+            if (!processExited)
             {
-                ct.ThrowIfCancellationRequested();
-                await Task.Delay(500, ct);
-
-                var elapsed = DateTime.Now - startTime;
-                if (elapsed < timeout)
-                {
-                    var installProgress = 30 + (elapsed.TotalMilliseconds / timeout.TotalMilliseconds * 60);
-                    progress?.Report(Math.Min(installProgress, 90));
-                }
+                Logger.Warning($"Quilt installer timeout after {timeout.TotalMinutes} minutes", "McServerInstaller");
+                try { process.Kill(); } catch { }
             }
 
             await process.WaitForExitAsync(ct);
@@ -1315,7 +1412,7 @@ public static partial class McServerInstaller
     /// Скачать Paper сервер
     /// </summary>
     public static async Task<InstallResult> DownloadPaperServer(string version, string destinationPath,
-        IProgress<double>? progress = null, CancellationToken ct = default)
+        IProgress<string>? progress = null, CancellationToken ct = default)
     {
         var result = new InstallResult();
 
@@ -1398,7 +1495,7 @@ public static partial class McServerInstaller
     /// Скачать Purpur сервер
     /// </summary>
     public static async Task<InstallResult> DownloadPurpurServer(string version, string destinationPath,
-        IProgress<double>? progress = null, CancellationToken ct = default)
+        IProgress<string>? progress = null, CancellationToken ct = default)
     {
         var result = new InstallResult();
 
@@ -1476,6 +1573,28 @@ public static partial class McServerInstaller
     #endregion
 
     #region Общие методы
+
+    /// <summary>
+    /// Проверить что файл не заблокирован другим процессом
+    /// </summary>
+    private static bool IsFileUnlocked(string filePath)
+    {
+        try
+        {
+            using (FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                return true; // Файл доступен — не заблокирован
+            }
+        }
+        catch (IOException)
+        {
+            return false; // Файл заблокирован
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false; // Нет доступа
+        }
+    }
 
     /// <summary>
     /// Создать eula.txt
@@ -1690,6 +1809,7 @@ public static partial class McServerInstaller
     }
 
     /// <summary>
+    /// <summary>
     /// Полная установка сервера
     /// </summary>
     public static async Task<InstallResult> InstallServer(
@@ -1700,13 +1820,14 @@ public static partial class McServerInstaller
         int port = Constants.DefaultServerPort,
         int ramMin = 1024,
         int ramMax = 4096,
-        IProgress<double>? progress = null,
+        IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
         var result = new InstallResult();
 
         try
         {
+            progress?.Report("Подготовка...");
             result.Status = InstallStatus.Installing;
 
             // Для Paper/Purpur используем InstallResult, для остальных — bool
@@ -1748,11 +1869,13 @@ public static partial class McServerInstaller
             }
 
             // Создание конфигурационных файлов
+            progress?.Report("Настройка сервера...");
             result.Status = InstallStatus.Configuring;
             CreateEula(serverPath);
             CreateServerProperties(serverPath, port);
             CreateStartScript(serverPath, ramMin, ramMax);
 
+            progress?.Report("Завершение...");
             result.Success = true;
             result.Status = InstallStatus.Completed;
             return result;

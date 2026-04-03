@@ -1,4 +1,5 @@
-﻿using Konserva.Models;
+﻿using Konserva.Localization;
+using Konserva.Models;
 using Konserva.Utilities;
 using Microsoft.Win32;
 using System.Windows;
@@ -41,7 +42,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
         // Загрузка Java в ComboBox
         JavaComboBox.Items.Clear();
-        JavaComboBox.Items.Add(new ComboBoxItem { Content = "Не выбрано", Tag = (JavaInstallation?)null });
+        JavaComboBox.Items.Add(new ComboBoxItem { Content = LocalizationManager.Get("Common_NotSelected"), Tag = (JavaInstallation?)null });
 
         foreach (var java in config.JavaInstallations)
         {
@@ -194,7 +195,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     {
         var dialog = new OpenFolderDialog
         {
-            Title = "Выберите папку для серверов",
+            Title = LocalizationManager.Get("Settings_SelectServerFolder"),
             InitialDirectory = _configService.GetConfig().ServersDirectory
         };
 
@@ -212,8 +213,8 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Выберите java.exe или javaw.exe",
-            Filter = "Java executable|java.exe|JavaW executable|javaw.exe",
+            Title = LocalizationManager.Get("Settings_SelectJava"),
+            Filter = LocalizationManager.Get("Settings_JavaFilter"),
             InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
         };
 
@@ -236,8 +237,8 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
                     JavaComboBox.SelectedItem = selectedItem;
 
                 // Показываем InfoBar об успешной установке
-                JavaSuccessInfoBar.Title = "Java добавлена";
-                JavaSuccessInfoBar.Message = $"Версия: {java.Version}\nПуть: {java.Path}";
+                JavaSuccessInfoBar.Title = LocalizationManager.Get("Settings_JavaAdded");
+                JavaSuccessInfoBar.Message = $"{LocalizationManager.Get("Settings_JavaVersion")}: {java.Version}\n{LocalizationManager.Get("Settings_JavaPath")}: {java.Path}";
                 JavaSuccessInfoBar.IsOpen = true;
 
                 // Автоматически закрываем через 5 секунд
@@ -251,9 +252,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
             }
             else
             {
-                await UiHelper.ShowWarning(
-                    $"Не удалось добавить Java. Проверьте путь к файлу.\n\n" +
-                    $"Убедитесь, что выбранный файл является java.exe или javaw.exe");
+                await UiHelper.ShowWarning(LocalizationManager.Get("Settings_JavaInvalid"));
             }
         }
     }

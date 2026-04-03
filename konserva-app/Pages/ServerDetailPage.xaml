@@ -662,7 +662,7 @@
                                     <ui:TextBlock
                                         FontSize="14"
                                         FontWeight="SemiBold"
-                                        Text="Java" />
+                                        Text="{loc:Loc ServerDetail_Java}" />
                                 </ui:CardExpander.Header>
                                 <Grid Margin="8,0" RowDefinitions="Auto,Auto">
                                     <Grid
