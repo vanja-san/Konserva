@@ -10,7 +10,7 @@
 
 | Главное окно | Настройки сервера | Консоль и логи | Страница модов |
 |--------------|-------------------|----------------|----------------|
-| ![Главное](.github/screenshots/main.png) | ![Настройки](.github/screenshots/properties.png) | ![Консоль](.github/screenshots/console.png) | ![Моды](.github/screenshots/mods.png) |
+| ![Главное](.github/screenshots/MainRu.png) | ![Настройки](.github/screenshots/PropertiesRu.png) | ![Консоль](.github/screenshots/ConsoleRu.png) | ![Моды](.github/screenshots/ModsRu.png) |
 
 ---
 
