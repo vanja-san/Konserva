@@ -48,11 +48,16 @@
 3. Double‑click to run – no installation needed
 
 All data is stored in:  
-```
+```txt
 Root Folder Konserva\
+├── Konserva.exe
 ├── config.json
-├── servers.json
-├── Servers\
+├── Servers
+│   ├── Server Name\
+│   └── servers.json
+├── i18n\
+│   ├── ru.json
+│   └── en.json
 └── Logs\
 ```
 
