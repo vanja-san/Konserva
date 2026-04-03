@@ -180,7 +180,7 @@
                     FontSize="12"
                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                     LineHeight="16"
-                    Text="v1.3.6" />
+                    Text="v1.3.7" />
             </Grid>
         </Border>
     </Grid>

@@ -131,7 +131,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
         try
         {
-            LogHeader($"Запуск сервера: {Server.Name}");
+            LogHeader(string.Format(LocalizationManager.Get("Log_ServerStarting"), Server.Name));
             AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_ServerId")}", Server.Id));
             AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_ModLoader")}", Server.ModLoader.Type));
             AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_MinecraftVersion")}", Server.McVersion));
@@ -630,7 +630,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             }
             catch (Exception killEx)
             {
-                AppendLog($"[ERROR] Не удалось завершить процесс: {killEx.Message}");
+                AppendLog($"[ERROR] {string.Format(LocalizationManager.Get("Log_KillFailed"), killEx.Message)}");
             }
         }
         finally
@@ -750,7 +750,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             }
             else
             {
-                AppendLog("[INFO] Сервер остановлен (код выхода: 0)");
+                AppendLog($"[INFO] {LocalizationManager.Get("Log_ServerStoppedCode0")}");
             }
 
             _process?.Dispose();
@@ -766,12 +766,12 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         }
         catch (OperationCanceledException)
         {
-            AppendLog("[INFO] Мониторинг процесса отменён");
-            // Нормальное завершение при отмене
+            AppendLog($"[INFO] {LocalizationManager.Get("Log_MonitorCancelled")}");
+            // Нормальное заверание при отмене
         }
         catch (Exception ex)
         {
-            AppendLog($"[ERROR] Ошибка мониторинга процесса: {ex.Message}");
+            AppendLog($"[ERROR] {string.Format(LocalizationManager.Get("Log_MonitorError"), ex.Message)}");
         }
     }
 
@@ -911,7 +911,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
         if (config == null)
         {
-            AppendLog($"[WARN] Конфигурация недоступна, используем Java из PATH");
+            AppendLog($"[WARN] {LocalizationManager.Get("Log_ConfigUnavailable")}");
             return "java";
         }
 
@@ -923,7 +923,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             {
                 if (java.Exists)
                 {
-                    AppendLog($"[INFO] Используем Java из настроек сервера: {java.DisplayName}");
+                    AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_UsingServerJava"), java.DisplayName)}");
                     return java.Path;
                 }
                 AppendLog($"[WARN] {LocalizationManager.Get("Log_JavaFromSettingsNotFound", java.Path)}");
@@ -934,7 +934,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         if (Server.Settings.JavaAutoSelect)
         {
             var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, McServerInstaller.GetServerLaunchType(Server.Path));
-            AppendLog($"[INFO] Автовыбор Java: требуется Java {requiredJavaVersion}+ для Minecraft {Server.McVersion}");
+            AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_AutoSelectJava"), requiredJavaVersion, Server.McVersion)}");
 
             // Ищем подходящую Java среди установленных
             var suitableJava = config.JavaInstallations
@@ -944,7 +944,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             if (suitableJava != null)
             {
-                AppendLog($"[INFO] Выбрана Java: {suitableJava.DisplayName}");
+                AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_JavaSelected"), suitableJava.DisplayName)}");
                 return suitableJava.Path;
             }
 
@@ -957,13 +957,13 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         {
             if (defaultJava.Exists)
             {
-                AppendLog($"[INFO] Используем Java: {defaultJava.DisplayName}");
+                AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_UsingJava"), defaultJava.DisplayName)}");
                 return defaultJava.Path;
             }
             AppendLog($"[WARN] {LocalizationManager.Get("Log_JavaDefaultNotFound", defaultJava.Path)}");
         }
 
-        AppendLog($"[INFO] Используем Java из PATH: java");
+        AppendLog($"[INFO] {LocalizationManager.Get("Log_UsingJavaFromPATH")}");
         return "java";
     }
 

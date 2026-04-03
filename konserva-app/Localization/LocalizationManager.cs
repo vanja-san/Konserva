@@ -551,6 +551,11 @@ public static class LocalizationManager
                 { "Log_AutoRestart", "Авто-рестарт через" },
                 { "Log_Seconds", "сек" },
                 { "Log_ServerFullyLoaded", "Сервер полностью загрузился" },
+                { "Log_ServerStarting", "Запуск сервера: {0}" },
+                { "Log_KillFailed", "Не удалось завершить процесс: {0}" },
+                { "Log_ServerStoppedCode0", "Сервер остановлен (код выхода: 0)" },
+                { "Log_MonitorCancelled", "Мониторинг процесса отменён" },
+                { "Log_MonitorError", "Ошибка мониторинга процесса: {0}" },
 
                 // Messages
                 { "Message_ConfirmDelete", "Вы уверены, что хотите удалить сервер?" },
@@ -782,6 +787,11 @@ public static class LocalizationManager
                 { "Log_AutoRestart", "Auto-restart in" },
                 { "Log_Seconds", "sec" },
                 { "Log_ServerFullyLoaded", "Server fully loaded" },
+                { "Log_ServerStarting", "Starting server: {0}" },
+                { "Log_KillFailed", "Failed to kill process: {0}" },
+                { "Log_ServerStoppedCode0", "Server stopped (exit code: 0)" },
+                { "Log_MonitorCancelled", "Process monitoring cancelled" },
+                { "Log_MonitorError", "Process monitoring error: {0}" },
 
                 // MessageBox Buttons
                 { "MsgBtn_OK", "OK" },

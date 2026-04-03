@@ -16,11 +16,11 @@
 	<AssemblyCopyright>Copyright © 2026 vanja-san</AssemblyCopyright>
 	<AssemblyCompany>vanja-san</AssemblyCompany>
 	<AssemblyProduct>Konserva</AssemblyProduct>
-	<AssemblyVersion>1.3.6.0</AssemblyVersion>
-	<FileVersion>1.3.6.0</FileVersion>
-	<InformationalVersion>1.3.6</InformationalVersion>
+	<AssemblyVersion>1.3.7.0</AssemblyVersion>
+	<FileVersion>1.3.7.0</FileVersion>
+	<InformationalVersion>1.3.7</InformationalVersion>
 	<!-- Метаданные для Win32 ресурса версии -->
-	<Version>1.3.6</Version>
+	<Version>1.3.7</Version>
 	<NeutralLanguage>ru-RU</NeutralLanguage>
 	<Copyright>Copyright © 2026 vanja-san</Copyright>
 
