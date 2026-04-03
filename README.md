@@ -10,7 +10,7 @@
 
 | Main | Server Properties | Console & Logs | Mods Page |
 |----------------|----------------|----------------|----------------|
-| ![Main](.github/screenshots/main.png) | ![Settings](.github/screenshots/properties.png) | ![Console](.github/screenshots/console.png) | ![Mods](.github/screenshots/mods.png) |
+| ![Main](.github/screenshots/Main.png) | ![Settings](.github/screenshots/Properties.png) | ![Console](.github/screenshots/Console.png) | ![Mods](.github/screenshots/Mods.png) |
 
 ---
 
