@@ -44,12 +44,23 @@ jobs:
       shell: pwsh
       run: |
         $outputFile = "CHANGELOG_RELEASE.md"
-        
+
+        # Find previous tag to compare against
+        $currentTag = "v${{ inputs.version }}"
+        $previousTag = git describe --tags --abbrev=0 "$currentTag^" 2>$null
+        if (-not $previousTag) {
+          # Fallback: get the most recent tag before current
+          $previousTag = git tag --sort=-version:refname | Where-Object { $_ -ne $currentTag } | Select-Object -First 1
+        }
+        if (-not $previousTag) {
+          $previousTag = $currentTag
+        }
+
         # Start changelog file
         $changelog = ""
-        
-        # Add full changelog link
-        $changelog += "**📋 [FULL CHANGELOG](https://github.com/${{ github.repository }}/compare/v${{ inputs.version }})**`n`n"
+
+        # Add full changelog link - compare previous tag to current
+        $changelog += "**📋 [FULL CHANGELOG](https://github.com/${{ github.repository }}/compare/${previousTag}...${currentTag})**`n`n"
         
         # Add file description section
         $changelog += "## 📦 Download Files`n`n"

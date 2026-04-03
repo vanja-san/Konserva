@@ -1,5 +1,5 @@
-﻿using Konserva.Models;
-using Konserva.Localization;
+﻿using Konserva.Localization;
+using Konserva.Models;
 using Konserva.Utilities;
 using System.Diagnostics;
 using System.IO;
@@ -82,7 +82,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     public async Task StartAsync()
     {
         Logger.Info($"[StartAsync] Starting for server {Server.Name}", "McServerProcess");
-        
+
         lock (_startStopLock)
         {
             // Если уже запускается или запущен — выходим
@@ -122,7 +122,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     private async Task StartInternalAsync(CancellationToken ct)
     {
         Logger.Info($"[StartInternalAsync] Beginning for {Server.Name}", "McServerProcess");
-        
+
         _stopCts = new CancellationTokenSource();
         _pendingErrorOutput = null;
         _serverReady = false;  // Сбрасываем флаг готовности
@@ -132,9 +132,9 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         try
         {
             LogHeader($"Запуск сервера: {Server.Name}");
-            AppendLog($"[INFO] ID сервера: {Server.Id}");
-            AppendLog($"[INFO] Модлоадер: {Server.ModLoader.Type}");
-            AppendLog($"[INFO] Версия Minecraft: {Server.McVersion}");
+            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_ServerId")}", Server.Id));
+            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_ModLoader")}", Server.ModLoader.Type));
+            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_MinecraftVersion")}", Server.McVersion));
             AppendLog("========================================");
 
             Logger.Info($"[StartInternalAsync] Checking directory for {Server.Path}", "McServerProcess");
@@ -142,7 +142,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             if (!Directory.Exists(Server.Path))
                 throw new DirectoryNotFoundException($"Папка сервера не найдена: {Server.Path}");
-            AppendLog($"[INFO] Папка сервера: {Server.Path}");
+            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_ServerFolder")}", Server.Path));
 
             ClearOldServerLogs();
             ValidateEula();
@@ -150,7 +150,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             ct.ThrowIfCancellationRequested();
 
             var launchType = McServerInstaller.GetServerLaunchType(Server.Path);
-            AppendLog($"[INFO] Тип запуска: {launchType}");
+            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_LaunchType")}", launchType));
 
             var jarFile = FindServerJar(Server.Path);
             if (string.IsNullOrEmpty(jarFile))
@@ -160,14 +160,14 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                     : "папка пуста";
                 throw new FileNotFoundException($"Не найден jar файл сервера. Файлы в папке: {fileList}");
             }
-            AppendLog($"[INFO] JAR файл: {Path.GetFileName(jarFile)} ({new FileInfo(jarFile).Length / 1024 / 1024} MB)");
+            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_JarFile")}", Path.GetFileName(jarFile), new FileInfo(jarFile).Length / 1024 / 1024));
 
             ct.ThrowIfCancellationRequested();
 
             Logger.Info($"[StartInternalAsync] Getting Java path for {Server.Name}", "McServerProcess");
             var javaPath = GetJavaPathForServer();
             Logger.Info($"[StartInternalAsync] Java path: {javaPath}", "McServerProcess");
-            
+
             Logger.Info($"[StartInternalAsync] Checking Java at {javaPath}", "McServerProcess");
             var javaCheckResult = CheckJava(javaPath);
             if (!javaCheckResult.Success)
@@ -177,17 +177,17 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 throw new FileNotFoundException($"Java не найдена или не работает: {javaPath}. {javaCheckResult.Error}");
             }
 
-            AppendLog($"[INFO] Java версия: {javaCheckResult.Version}");
-            AppendLog($"[INFO] Java путь: {javaCheckResult.JavaPath}");
+            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_JavaVersion")}", javaCheckResult.Version));
+            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_JavaPath_Info")}", javaCheckResult.JavaPath));
 
             ct.ThrowIfCancellationRequested();
 
             ValidateJavaVersion(javaCheckResult);
 
             var javaArgs = BuildJavaArgs(jarFile, launchType);
-            AppendLog($"[INFO] Аргументы Java: {javaArgs}");
-            AppendLog($"[INFO] Рабочая директория: {Server.Path}");
-            AppendLog("[INFO] Запуск процесса...");
+            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_JavaArgs")}", javaArgs));
+            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_WorkingDirectory")}", Server.Path));
+            AppendLog($"[INFO] {LocalizationManager.Get("Log_LaunchingProcess")}");
 
             ct.ThrowIfCancellationRequested();
 
@@ -203,12 +203,12 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             _ = MonitorProcessExitAsync();
 
             // Статус устанавливается в StartProcess после успешного запуска
-            AppendLog("[INFO] Ожидание запуска сервера...");
+            AppendLog($"[INFO] {LocalizationManager.Get("Log_WaitingForStartup")}");
             AppendLog("========================================");
         }
         catch (OperationCanceledException)
         {
-            AppendLog("[INFO] Запуск отменён");
+            AppendLog($"[INFO] {LocalizationManager.Get("Log_LaunchCancelled")}");
             Status = ServerStatus.Stopped;
             OnStatusChanged?.Invoke(Status);
             throw; // Пробрасываем отмену дальше
@@ -233,7 +233,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         if (!eulaContent.Contains("eula=true", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("EULA не принята! Измените eula.txt и установите eula=true");
 
-        AppendLog($"[INFO] EULA принята");
+        AppendLog($"[INFO] {LocalizationManager.Get("Log_EulaAccepted")}");
     }
 
     /// <summary>
@@ -255,7 +255,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 $"Требуется Java {requiredJavaVersion}+ для Minecraft {Server.McVersion}, но найдена Java {javaCheckResult.MajorVersion} ({javaCheckResult.Version})");
         }
 
-        AppendLog($"[INFO] Версия Java совместима (требуется {requiredJavaVersion}+)");
+        AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_JavaVersionCompatible")}", requiredJavaVersion));
     }
 
     /// <summary>
@@ -338,7 +338,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         _process.BeginOutputReadLine();
         _process.BeginErrorReadLine();
 
-        AppendLog($"[INFO] Процесс запущен, PID: {_process.Id}");
+        AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_ProcessStarted")}", _process.Id));
 
         // Устанавливаем статус Running после успешного запуска
         Status = ServerStatus.Running;
@@ -522,7 +522,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 _process = null;
                 Status = ServerStatus.Stopped;
                 OnStatusChanged?.Invoke(Status);
-                AppendLog("[INFO] Запуск отменён принудительно");
+                AppendLog($"[INFO] {LocalizationManager.Get("Log_LaunchForceCancelled")}");
                 return;
             }
         }
@@ -556,11 +556,11 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             _process?.Kill();
             await Task.Run(() => _process?.Dispose());
             AppendLog("");
-            AppendLog("[INFO] Процесс завершён принудительно (сервер ещё не загрузился)");
+            AppendLog($"[INFO] {LocalizationManager.Get("Log_ProcessForceKilled")}");
         }
         catch (Exception ex)
         {
-            AppendLog($"[ERROR] Ошибка завершения: {ex.Message}");
+            AppendLog($"[ERROR] {LocalizationManager.Get("Log_ExitError")} {ex.Message}");
         }
         finally
         {
@@ -577,16 +577,15 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     {
         Status = ServerStatus.Stopping;
         OnStatusChanged?.Invoke(Status);
-        AppendLog("[INFO] ═══════════════════════════════════════");
-        AppendLog("[INFO] Остановка сервера...");
+        AppendLog($"[INFO] {LocalizationManager.Get("Log_StoppingServer")}");
 
         try
         {
-            AppendLog("[INFO] Отправка команды 'stop'...");
+            AppendLog($"[INFO] {LocalizationManager.Get("Log_SendingStopCommand")}");
             SendCommand("stop");
 
             // Ждём завершения процесса с таймаутом 60 сек
-            AppendLog("[INFO] Ожидание завершения процесса (60 сек)...");
+            AppendLog($"[INFO] {LocalizationManager.Get("Log_WaitingForProcessExit")}");
             var startTime = Environment.TickCount64;
 
             while (_process != null && !_process.HasExited && (Environment.TickCount64 - startTime) < Constants.ServerStopTimeoutMs)
@@ -598,11 +597,11 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             {
                 AppendLog($"[WARN] {LocalizationManager.Get("Log_TimeoutForceKill")}");
                 _process.Kill();
-                AppendLog("[INFO] Процесс завершен принудительно");
+                AppendLog($"[INFO] {LocalizationManager.Get("Log_ProcessForceKilledAfterTimeout")}");
             }
             else
             {
-                AppendLog("[INFO] Сервер успешно остановлен");
+                AppendLog($"[INFO] {LocalizationManager.Get("Log_ServerStoppedSuccessfully")}");
 
                 // Ждём немного для обработки последних строк вывода
                 await Task.Delay(Constants.ServerStatusCheckDelayMs);
@@ -610,7 +609,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         }
         catch (OperationCanceledException)
         {
-            AppendLog("[INFO] Остановка отменена");
+            AppendLog($"[INFO] {LocalizationManager.Get("Log_StopCancelled")}");
             // Принудительное завершение при отмене
             try
             {
@@ -618,12 +617,12 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             }
             catch (Exception killEx)
             {
-                AppendLog($"[ERROR] Не удалось завершить процесс при отмене: {killEx.Message}");
+                AppendLog($"[ERROR] {string.Format(LocalizationManager.Get("Log_KillFailedOnCancel"), killEx.Message)}");
             }
         }
         catch (Exception ex)
         {
-            AppendLog($"[ERROR] Ошибка остановки: {ex.Message}");
+            AppendLog($"[ERROR] {LocalizationManager.Get("Log_StopError")} {ex.Message}");
             try
             {
                 AppendLog($"[WARN] {LocalizationManager.Get("Log_ForceKillAttempt")}");
@@ -658,7 +657,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
         try
         {
-            AppendLog($"[CMD] > {command}");
+            AppendLog($"[CMD] {string.Format(LocalizationManager.Get("Log_CommandSent"), command)}");
             Logger.Info($"[SendCommand] Запись в StandardInput: {command}", "McServerProcess");
             _process.StandardInput.WriteLine(command);
             _process.StandardInput.Flush();
@@ -668,7 +667,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         catch (Exception ex)
         {
             Logger.Error($"[SendCommand] Ошибка отправки команды: {ex.Message}", ex, "McServerProcess");
-            AppendLog($"[ERROR] Ошибка отправки команды '{command}': {ex.Message}");
+            AppendLog($"[ERROR] {string.Format(LocalizationManager.Get("Log_CommandSendError"), command, ex.Message)}");
         }
     }
 
@@ -760,7 +759,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             // Авто-рестарт
             if (Server.Settings.AutoRestart)
             {
-                AppendLog($"[INFO] Авто-рестарт через {Server.Settings.AutoRestartDelay} сек...");
+                AppendLog($"[INFO] {LocalizationManager.Get("Log_AutoRestart")} {Server.Settings.AutoRestartDelay} {LocalizationManager.Get("Log_Seconds")}...");
                 await Task.Delay(Server.Settings.AutoRestartDelay * Constants.MsPerSecond);
                 Start();
             }
@@ -820,13 +819,13 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 try
                 {
                     File.Delete(latestLog);
-                    AppendLog($"[INFO] Удалён старый лог: latest.log");
+                    AppendLog($"[INFO] {LocalizationManager.Get("Log_OldLogDeleted")}");
                 }
                 catch (IOException)
                 {
                     var backupName = Path.Combine(logsDir, $"latest.log.old-{DateTime.Now:yyyyMMdd-HHmmss}");
                     File.Move(latestLog, backupName);
-                    AppendLog($"[INFO] Перемещён заблокированный лог: latest.log -> {Path.GetFileName(backupName)}");
+                    AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_LogMoved")}", Path.GetFileName(backupName)));
                 }
             }
 
@@ -848,7 +847,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         }
         catch (Exception ex)
         {
-            AppendLog($"[WARN] Не удалось очистить старые логи: {ex.Message}");
+            AppendLog(string.Format($"[WARN] {LocalizationManager.Get("Log_CleanupFailed")}", ex.Message));
         }
     }
 
@@ -861,19 +860,19 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             if (line.Contains("Done ("))
             {
                 _serverReady = true;
-                AppendLog("[INFO] Сервер полностью загрузился");
+                AppendLog($"[INFO] {LocalizationManager.Get("Log_ServerStarted")}");
             }
             // Fabric/Quilt
             else if (line.Contains("Done!"))
             {
                 _serverReady = true;
-                AppendLog("[INFO] Сервер полностью загрузился");
+                AppendLog($"[INFO] {LocalizationManager.Get("Log_ServerStarted")}");
             }
             // Paper/Purpur
             else if (line.Contains("Done (") || line.Contains("For help, type"))
             {
                 _serverReady = true;
-                AppendLog("[INFO] Сервер полностью загрузился");
+                AppendLog($"[INFO] {LocalizationManager.Get("Log_ServerStarted")}");
             }
             // Universal fallback - "Starting minecraft server version"
             else if (line.Contains("Starting minecraft server version") || line.Contains("Loading properties"))
@@ -884,7 +883,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             else if (line.Contains("NEOFORGE") && line.Contains("Loaded"))
             {
                 _serverReady = true;
-                AppendLog("[INFO] Сервер полностью загрузился");
+                AppendLog($"[INFO] {LocalizationManager.Get("Log_ServerStarted")}");
             }
         }
 
