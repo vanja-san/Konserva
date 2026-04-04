@@ -1,113 +1,79 @@
-# 🥫 Konserva — Minecraft Server Manager
+# Konserva
 
-**Konserva** is a modern GUI tool to create, run, and manage local Minecraft servers on Windows. No command line, no manual config editing — just a clean dashboard.
+Minecraft Server Manager for Windows
 
-> Name comes from **con**sole + **serv**er – everything is “canned” and ready to use.
+Create, run, and manage local Minecraft servers with a clean GUI. No command line, no manual config editing.
 
-## 📸 Screenshots
+> Name comes from **con**sole + **serv**er — everything is "canned" and ready to use.
 
-| Main | Server Properties | Console & Logs | Mods Page |
-|----------------|----------------|----------------|----------------|
-| ![Main](.github/screenshots/Main.png) | ![Settings](.github/screenshots/Properties.png) | ![Console](.github/screenshots/Console.png) | ![Mods](.github/screenshots/Mods.png) |
+[**Download Latest**](../../releases) · [Build Instructions](BUILD.md)
 
-## ✨ Key Features
+## Features
 
-- **One-click** server creation (Vanilla, Fabric, Forge, NeoForge, Paper, Purpur)
-- **Auto‑install** of any Minecraft version
-- **Start / Stop / Restart** with real‑time console
-- **GUI editor** for `server.properties`
-- **Memory allocation** (min/max RAM) per server
-- **Auto‑restart** after crash
-- **Mod & plugin viewer** + delete from UI
-- **Java version manager** – auto‑detects and picks compatible Java
-- **Multiple servers** – different versions running side by side
+- One-click server creation — Vanilla, Fabric, Forge, NeoForge, Paper, Purpur
+- Auto-install of any Minecraft version
+- Start / Stop / Restart with real-time console
+- GUI editor for `server.properties`
+- Memory allocation (min/max RAM) per server
+- Auto-restart after crash
+- Mod & plugin viewer with delete support
+- **Java version manager**
+  - Auto-detects installed Java versions
+  - Add Java manually through app Settings
+  - Auto-selects compatible version per server
+  - Uncheck auto-select to pick a specific version manually
+- Multiple servers — different versions running side by side
 
-## 🖥️ System Requirements
+## Quick Start
 
-| Component | Minimum |
-|-----------|---------|
-| OS | Windows 10 (1903+) / Windows 11 |
-| CPU | 1.5 GHz |
-| RAM | 2 GB (app) + server RAM |
-| Storage | 200 MB (app) |
+1. **Download** from [Releases](../../releases)
+2. **Unpack** archive and run `Konserva.exe`
+3. **Click +** to create your first server
 
-> For server RAM requirements see [Memory Allocation](#memory-allocation).
+Your server runs on port `25565` by default.
 
-## 📦 Installation
+## Screenshots
 
-1. Download latest version from [Releases](../../releases)
-2. Unpack archive in any folder
-3. Double‑click to run – no installation needed
+![Main Window](.github/screenshots/Main.png)
 
-All data is stored in:  
-```txt
-Root Folder Konserva\
-├── Konserva.exe
-├── config.json
-├── Servers
-│   ├── Server Name\
-│   └── servers.json
-├── i18n\
-│   ├── ru.json
-│   └── en.json
-└── Logs\
-```
+More screenshots: [Properties](.github/screenshots/Properties.png) · [Console](.github/screenshots/Console.png) · [Mods](.github/screenshots/Mods.png)
 
-## 🚀 Quick Start
+## System Requirements
 
-### Create your first server
+- **OS:** Windows 10 (1903+) / Windows 11
+- **RAM:** 2 GB (app) + server RAM
+- **Storage:** 200 MB (app)
 
-1. Launch Konserva
-2. Click **`+`** button
-3. Fill in:
-   - **Name** (e.g., `My Survival`)
-   - **Minecraft version** (choose from list)
-   - **Modloader** (Vanilla / Fabric / etc.)
-   - **Folder** (default is fine)
-4. Click **Create** – wait for download (30 sec–2 min)
-5. Press ▶ **Start** – wait for `Done (...)!` in console
+For server RAM recommendations, see [Server Requirements](https://minecraft.wiki/w/Server/Requirements) and [Dedicated Servers](https://minecraft.wiki/w/Server/Requirements/Dedicated).
 
-Your server is now running on port `25565` (default).
+## Troubleshooting
 
-## ⚙️ Server Configuration
-
-### Memory Allocation
-
-1. Open server page (⚙️ button)
-2. Go to **Settings** tab
-3. Set **Min RAM** and **Max RAM**
-4. Save → restart server
-
-**Typical values**:
-- Vanilla → 2–4 GB
-- Modded (<50 mods) → 4–6 GB
-- Heavy modpacks → 6–8 GB
-
-## ❓ Common Issues
-
-### Server won't start
+**Server won't start**
 - Check console logs
-- Verify Java is installed and compatible (Java 21 for 1.20.5+, Java 17 for 1.18–1.20.4)
-- Make sure port `25565` is open
+- Verify Java is installed and compatible (Java 25+ for 26.1.x, Java 21 for 1.20.5+, Java 17 for 1.18–1.20.4)
+- Ensure port `25565` is free
 
-### EULA not accepted
-- Open `.\Servers\<server_name>\eula.txt`
+**EULA not accepted**
+- Open `.\Servers\<name>\eula.txt`
 - Change `eula=false` → `eula=true`
 - Restart server
 
-### Out of memory
+**Out of memory**
 - Increase **Max RAM** in server settings
-- Close other heavy apps
+- Close other heavy applications
 
-## 📄 License & Disclaimer
+## Data Storage
 
-**MIT License** – see [LICENSE.txt](LICENSE.txt).
+All data (configs, servers, logs, translations) is stored alongside the executable in the same directory.
 
-> ⚠️ Konserva is an **unofficial tool** – not affiliated with Mojang or Microsoft. Use at your own risk. Always backup your worlds.
+## License
 
-## 🙏 Credits
+**MIT License** — see [LICENSE.txt](LICENSE.txt).
 
-- Built with [WPF UI](https://github.com/lepoide/wpfui)
-- Assisted by [Qwen Code](https://github.com/QwenLM/qwen-code)
+> Konserva is an unofficial, community-built tool. It is not affiliated with, endorsed by, or connected to Mojang Studios or Microsoft. Use at your own risk. Always backup your worlds.
 
-🇷🇺 [На русском](README.ru.md)
+## Credits
+
+Built with [WPF UI](https://github.com/lepoide/wpfui) · Assisted by [Qwen Code](https://github.com/QwenLM/qwen-code)
+
+[На русском](README.ru.md)
