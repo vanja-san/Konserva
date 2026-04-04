@@ -181,7 +181,7 @@
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         LineHeight="16"
-                        Text="v1.3.8" />
+                        Text="v1.4.0" />
                     <controls:UpdateNotification x:Name="UpdateNotificationControl" />
                 </StackPanel>
             </Grid>

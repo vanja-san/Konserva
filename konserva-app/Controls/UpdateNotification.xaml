@@ -5,13 +5,14 @@
     VerticalAlignment="Center"
     Visibility="Collapsed">
 
-    <StackPanel Orientation="Horizontal">
+    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
         <!-- Версия с иконкой -->
-        <StackPanel Orientation="Horizontal" Margin="0,0,4,0">
+        <StackPanel Orientation="Horizontal" Margin="0,0,4,0" VerticalAlignment="Center">
             <ui:SymbolIcon Symbol="ArrowUpload24"
                 FontSize="12"
                 Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
-                Margin="0,0,4,0"/>
+                Margin="0,0,4,0"
+                VerticalAlignment="Center"/>
             <TextBlock x:Name="VersionText"
                 FontSize="12"
                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
@@ -30,7 +31,8 @@
             ToolTip="{Binding UpdateTooltip, RelativeSource={RelativeSource AncestorType=UserControl}}">
             <TextBlock x:Name="UpdateButtonText"
                 FontSize="11"
-                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"/>
+                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                VerticalAlignment="Center"/>
         </Button>
     </StackPanel>
 </UserControl>

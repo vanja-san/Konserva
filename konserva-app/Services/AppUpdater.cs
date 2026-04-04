@@ -17,6 +17,7 @@ namespace Konserva.Services
     public static class AppUpdater
     {
         private static readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+        private static readonly string UpdateLogPath = Path.Combine(AppContext.BaseDirectory, "Logs", "Update.log");
 
         /// <summary>
         /// Выполняет обновление: скачивает ZIP, распаковывает, запускает батник, закрывает приложение.
@@ -25,7 +26,7 @@ namespace Konserva.Services
         {
             if (!await _lock.WaitAsync(0))
             {
-                Logger.Warning("Update already in progress", "AppUpdater");
+                UpdateLog("Update already in progress", "WARNING");
                 return false;
             }
 
@@ -36,7 +37,7 @@ namespace Konserva.Services
 
                 // Шаг 1: Подготовка
                 progress?.Report(10);
-                Logger.Info($"Starting update to {updateInfo.NewVersion}", "AppUpdater");
+                UpdateLog($"Starting update to {updateInfo.NewVersion}");
 
                 if (Directory.Exists(tempDir))
                     Directory.Delete(tempDir, true);
@@ -44,52 +45,26 @@ namespace Konserva.Services
 
                 // Шаг 2: Скачивание
                 progress?.Report(20);
-                Logger.Info($"Downloading {updateInfo.AssetName} ({FormatSize(updateInfo.SizeBytes)})", "AppUpdater");
+                UpdateLog($"Downloading {updateInfo.AssetName} ({FormatSize(updateInfo.SizeBytes)})");
 
-                using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-                client.DefaultRequestHeaders.UserAgent.ParseAdd($"Konserva/{updateInfo.CurrentVersion}");
-
-                using var response = await client.GetAsync(updateInfo.DownloadUrl, HttpCompletionOption.ResponseHeadersRead);
-                response.EnsureSuccessStatusCode();
-
-                var totalBytes = response.Content.Headers.ContentLength ?? -1;
-                var canReportProgress = totalBytes != -1;
-
-                using var contentStream = await response.Content.ReadAsStreamAsync();
-                using var fileStream = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true);
-
-                var buffer = new byte[81920];
-                long totalRead = 0;
-                int bytesRead;
-
-                while ((bytesRead = await contentStream.ReadAsync(buffer)) > 0)
-                {
-                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                    totalRead += bytesRead;
-
-                    if (canReportProgress)
-                    {
-                        var downloadProgress = 20 + (totalRead * 70 / totalBytes);
-                        progress?.Report((int)downloadProgress);
-                    }
-                }
+                await DownloadFileAsync(updateInfo.DownloadUrl, zipPath, updateInfo.CurrentVersion, progress);
 
                 // Шаг 3: Распаковка
                 progress?.Report(90);
-                Logger.Info("Extracting archive...", "AppUpdater");
+                UpdateLog("Extracting archive...");
 
                 var extractDir = Path.Combine(tempDir, "extracted");
                 ZipFile.ExtractToDirectory(zipPath, extractDir);
 
                 // Шаг 4: Создание батника
-                Logger.Info("Creating update script...", "AppUpdater");
+                UpdateLog("Creating update script...");
 
                 var appDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
                 var batchPath = CreateUpdateScript(tempDir, appDir);
 
                 // Шаг 5: Запуск батника и закрытие
                 progress?.Report(100);
-                Logger.Info("Launching update script and restarting...", "AppUpdater");
+                UpdateLog("Launching update script and restarting...");
 
                 Process.Start(new ProcessStartInfo
                 {
@@ -104,7 +79,8 @@ namespace Konserva.Services
             }
             catch (Exception ex)
             {
-                Logger.Error($"Update failed: {ex.Message}", ex, "AppUpdater");
+                UpdateLog($"Update failed: {ex.Message}", "ERROR");
+                UpdateLog($"Stack trace: {ex.StackTrace}", "ERROR");
                 return false;
             }
             finally
@@ -161,6 +137,64 @@ exit
 
             File.WriteAllText(batchPath, batchContent, new System.Text.UTF8Encoding(true));
             return batchPath;
+        }
+
+        /// <summary>
+        /// Скачивает файл по указанному URL. Все ресурсы освобождаются до возврата.
+        /// </summary>
+        private static async Task DownloadFileAsync(string url, string destPath, string currentVersion, IProgress<double>? progress)
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+            client.DefaultRequestHeaders.UserAgent.ParseAdd($"Konserva/{currentVersion}");
+
+            using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            var totalBytes = response.Content.Headers.ContentLength ?? -1;
+            var canReportProgress = totalBytes != -1;
+
+            // Копируем в отдельный scope — stream закроется до выхода из метода
+            using (var contentStream = await response.Content.ReadAsStreamAsync())
+            using (var fileStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
+            {
+                var buffer = new byte[81920];
+                long totalRead = 0;
+                int bytesRead;
+
+                while ((bytesRead = await contentStream.ReadAsync(buffer)) > 0)
+                {
+                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                    totalRead += bytesRead;
+
+                    if (canReportProgress)
+                    {
+                        var downloadProgress = 20 + (totalRead * 70 / totalBytes);
+                        progress?.Report((int)downloadProgress);
+                    }
+                }
+
+                await fileStream.FlushAsync();
+            }
+        }
+
+        /// <summary>
+        /// Логирует сообщение в Update.log.
+        /// </summary>
+        private static void UpdateLog(string message, string level = "INFO")
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(UpdateLogPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}][{level}] {message}";
+                File.AppendAllText(UpdateLogPath, line + Environment.NewLine, new System.Text.UTF8Encoding(true));
+            }
+            catch
+            {
+                // Не критично — основной лог всё равно запишет
+            }
         }
 
         private static string FormatSize(long bytes)
