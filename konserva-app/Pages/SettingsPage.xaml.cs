@@ -70,7 +70,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
         CheckUpdatesBox.IsChecked = config.CheckUpdates;
 
-        // Загрузка темы - принудительно выбираем элемент
+        // Загрузка темы
         var theme = config.Theme ?? "System";
         ThemeComboBox.SelectedIndex = -1; // Сброс
         for (int i = 0; i < ThemeComboBox.Items.Count; i++)
@@ -280,6 +280,37 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     private void CheckUpdatesBox_Unchecked(object sender, RoutedEventArgs e)
     {
         AutoSaveSettings();
+    }
+
+    private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            CheckUpdatesButton.IsEnabled = false;
+            CheckUpdatesButton.Content = "...";
+
+            var mainWindow = Application.Current.MainWindow as MainWindow;
+            if (mainWindow == null)
+                return;
+
+            var updateInfo = await mainWindow.ForceCheckForUpdatesAsync();
+
+            if (!updateInfo.IsAvailable)
+            {
+                var msg = LocalizationManager.Get("Settings_UpToDate");
+                await UiHelper.ShowInfo(msg);
+            }
+        }
+        catch (Exception ex)
+        {
+            var msg = LocalizationManager.Get("Settings_UpdateCheckError");
+            await UiHelper.ShowError($"{msg}: {ex.Message}");
+        }
+        finally
+        {
+            CheckUpdatesButton.IsEnabled = true;
+            CheckUpdatesButton.Content = LocalizationManager.Get("Settings_CheckForUpdates");
+        }
     }
 
     private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

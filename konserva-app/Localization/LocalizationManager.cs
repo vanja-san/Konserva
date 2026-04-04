@@ -249,6 +249,20 @@ public static class LocalizationManager
                 { "StatusBar_Java_NotConfigured", "Java не настроена" },
                 { "StatusBar_Version", "Версия" },
 
+                // Update
+                { "Update_Available", "Доступна v{0}" },
+                { "Update_Button", "Обновить" },
+                { "Update_Downloading", "Загрузка..." },
+                { "Update_Installing", "Установка..." },
+                { "Update_Success", "Перезапуск..." },
+                { "Update_Failed", "Ошибка обновления" },
+                { "Update_Retry", "Повторить" },
+                { "Update_Available_Tooltip", "Нажмите для обновления" },
+                { "Update_Failed_Tooltip", "Ошибка обновления. Нажмите для повтора." },
+                { "Settings_CheckForUpdates", "Проверить обновления" },
+                { "Settings_UpToDate", "Установлена актуальная версия" },
+                { "Settings_UpdateCheckError", "Ошибка проверки обновлений" },
+
                 // Settings
                 { "Settings_Title", "Настройки" },
                 { "Settings_Servers", "Серверы" },
@@ -674,6 +688,20 @@ public static class LocalizationManager
                 { "StatusBar_Java_Configured", "Java configured" },
                 { "StatusBar_Java_NotConfigured", "Java not configured" },
                 { "StatusBar_Version", "Version" },
+
+                // Update
+                { "Update_Available", "v{0} available" },
+                { "Update_Button", "Update" },
+                { "Update_Downloading", "Downloading..." },
+                { "Update_Installing", "Installing..." },
+                { "Update_Success", "Restarting..." },
+                { "Update_Failed", "Update failed" },
+                { "Update_Retry", "Retry" },
+                { "Update_Available_Tooltip", "Click to update" },
+                { "Update_Failed_Tooltip", "Update failed. Click to retry." },
+                { "Settings_CheckForUpdates", "Check for Updates" },
+                { "Settings_UpToDate", "Up to date" },
+                { "Settings_UpdateCheckError", "Update check failed" },
 
                 // Settings
                 { "Settings_Title", "Settings" },

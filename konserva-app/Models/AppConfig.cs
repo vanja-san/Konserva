@@ -38,6 +38,12 @@ public class AppConfig
     public int DefaultRamMin { get; set; } = 1024;
     public int DefaultRamMax { get; set; } = 4096;
     public bool CheckUpdates { get; set; } = true;
+
+    /// <summary>
+    /// Последняя проверка обновлений (UTC).
+    /// </summary>
+    public DateTime? LastUpdateCheck { get; set; }
+
     public List<string> RecentServers { get; set; } = [];
 
     /// <summary>

@@ -1,6 +1,9 @@
-﻿using Konserva.Localization;
+﻿using Konserva.Controls;
+using Konserva.Localization;
+using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
+using System.Reflection;
 using System.Windows;
 using Wpf.Ui.Controls;
 
@@ -49,6 +52,9 @@ public partial class MainWindow : FluentWindow, IDisposable
 
         // Navigate to Servers page by default
         ContentFrame.Navigate(new Pages.ServersPage());
+
+        // Проверяем обновления
+        CheckForUpdatesAsync().FireAndForget();
     }
 
     /// <summary>
@@ -296,5 +302,76 @@ public partial class MainWindow : FluentWindow, IDisposable
 
         _disposed = true;
         GC.SuppressFinalize(this);
+    }
+
+    // ===== Update checking =====
+
+    private static readonly TimeSpan UpdateCheckInterval = TimeSpan.FromHours(24);
+
+    /// <summary>
+    /// Проверяет наличие обновлений (с учётом интервала 24ч).
+    /// </summary>
+    private async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var config = _config.GetConfig();
+            if (!config.CheckUpdates)
+                return;
+
+            // Проверяем интервал
+            if (config.LastUpdateCheck.HasValue)
+            {
+                var elapsed = DateTime.UtcNow - config.LastUpdateCheck.Value;
+                if (elapsed < UpdateCheckInterval)
+                    return;
+            }
+
+            var updateInfo = await UpdateChecker.CheckAsync();
+
+            // Обновляем время проверки
+            _config.UpdateConfig(c => c.LastUpdateCheck = DateTime.UtcNow);
+
+            if (updateInfo.IsAvailable)
+            {
+                Dispatcher.Invoke(() => UpdateNotificationControl.Show(updateInfo));
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Update check failed: {ex.Message}", ex, "MainWindow");
+        }
+    }
+
+    /// <summary>
+    /// Принудительная проверка обновлений (вызывается из SettingsPage).
+    /// </summary>
+    public async Task<UpdateInfo> ForceCheckForUpdatesAsync()
+    {
+        var updateInfo = await UpdateChecker.CheckAsync();
+
+        if (updateInfo.IsAvailable)
+        {
+            Dispatcher.Invoke(() => UpdateNotificationControl.Show(updateInfo));
+        }
+
+        return updateInfo;
+    }
+}
+
+/// <summary>
+/// Extension для fire-and-forget задач.
+/// </summary>
+internal static class TaskExtensions
+{
+    public static void FireAndForget(this Task task)
+    {
+        _ = task.ContinueWith(t =>
+        {
+            if (t.IsFaulted && t.Exception != null)
+            {
+                Logger.Error($"FireAndForget error: {t.Exception.InnerException?.Message}", t.Exception.InnerException, "TaskExtensions");
+            }
+        }, TaskScheduler.Default);
     }
 }
