@@ -148,6 +148,8 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
 
         Logger.Info($"[StartServerInternal] Starting server {server.Id} ({server.Name})", "McServerManager");
 
+        bool errorNotified = false;
+
         process.OnStatusChanged += status =>
         {
             server.Status = status;
@@ -155,6 +157,16 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             {
                 storage.UpdateServer(server);
             }
+
+            // Если статус стал Error и мы ещё не уведовляли об ошибке — уведомляем
+            if (status == ServerStatus.Error && !errorNotified && !string.IsNullOrEmpty(process.LastError))
+            {
+                errorNotified = true;
+                server.InstallStatus = process.LastError;
+                storage.UpdateServer(server);
+                OnServerStartError?.Invoke(server, process.LastError);
+            }
+
             // Обновляем UI при любом изменении статуса (в потоке UI)
             System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
             {
@@ -172,10 +184,11 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
                 
                 // Ждём немного для проверки статуса (ошибка может произойти асинхронно)
                 await Task.Delay(500);
-                
+
                 // Проверяем, не произошла ли ошибка при запуске
-                if (process.Status == ServerStatus.Error && !string.IsNullOrEmpty(process.LastError))
+                if (!errorNotified && process.Status == ServerStatus.Error && !string.IsNullOrEmpty(process.LastError))
                 {
+                    errorNotified = true;
                     Logger.Error($"[StartServerInternal] Server {server.Id} ({server.Name}) failed to start: {process.LastError}", null, "McServerManager");
                     server.Status = ServerStatus.Error;
                     server.InstallStatus = process.LastError;
@@ -196,18 +209,22 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             }
             catch (Exception ex)
             {
-                Logger.Error($"[StartServerInternal] Ошибка запуска сервера {server.Id} ({server.Name}): {ex.Message}", ex, "McServerManager");
-                server.Status = ServerStatus.Error;
-                server.InstallStatus = ex.Message;
-                storage.UpdateServer(server);
-
-                // Уведомляем об ошибке запуска
-                OnServerStartError?.Invoke(server, ex.Message);
-
-                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+                if (!errorNotified)
                 {
-                    OnServersChanged?.Invoke();
-                });
+                    errorNotified = true;
+                    Logger.Error($"[StartServerInternal] Ошибка запуска сервера {server.Id} ({server.Name}): {ex.Message}", ex, "McServerManager");
+                    server.Status = ServerStatus.Error;
+                    server.InstallStatus = ex.Message;
+                    storage.UpdateServer(server);
+
+                    // Уведомляем об ошибке запуска
+                    OnServerStartError?.Invoke(server, ex.Message);
+
+                    System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+                    {
+                        OnServersChanged?.Invoke();
+                    });
+                }
             }
         });
 

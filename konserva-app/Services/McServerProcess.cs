@@ -735,6 +735,27 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             if (exitCode != 0)
             {
+                // Формируем сообщение об ошибке из stderr вывода
+                string errorDetails = "";
+                if (!string.IsNullOrEmpty(_pendingErrorOutput))
+                {
+                    // Берём первые 2 строки из stderr для сообщения об ошибке
+                    var lines = _pendingErrorOutput.Trim().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    var takeCount = Math.Min(2, lines.Length);
+                    if (takeCount > 0)
+                    {
+                        var sb = new StringBuilder();
+                        for (int i = 0; i < takeCount; i++)
+                        {
+                            if (i > 0) sb.Append("\n");
+                            sb.Append(lines[i].Trim());
+                        }
+                        errorDetails = sb.ToString().Trim();
+                    }
+                }
+
+                LastError = errorDetails;
+
                 AppendLog($"[ERROR] ═══════════════════════════════════════");
                 AppendLog($"[ERROR] {LocalizationManager.Get("Log_ServerStoppedWithCode", exitCode)}");
                 AppendLog($"[ERROR] {LocalizationManager.Get("Log_ServerConfigProblem")}");

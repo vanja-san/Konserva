@@ -157,6 +157,9 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
         }
     }
 
+    private readonly Dictionary<string, string[]> _neoForgeCache = new();
+    private readonly SemaphoreSlim _neoForgeCacheLock = new(1, 1);
+
     /// <summary>
     /// Получение версий NeoForge
     /// </summary>
@@ -164,68 +167,132 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
     {
         Logger.Info($"Getting NeoForge versions for MC {mcVersion}...", "McVersionsApi");
 
-        // NeoForge использует Maven API (как и Forge)
-        // Репозитории: https://maven.neoforged.net
-        // Альтернативный: https://maven.creeperhost.net
-        var mavenUrls = new[]
+        // Проверяем кэш
+        await _neoForgeCacheLock.WaitAsync(ct);
+        try
         {
-            "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml",
-            "https://maven.creeperhost.net/neoforged/neoforge/maven-metadata.xml"
-        };
-
-        foreach (var url in mavenUrls)
-        {
-            try
+            if (_neoForgeCache.TryGetValue(mcVersion, out var cached))
             {
-                Logger.Info($"Fetching NeoForge from: {url}", "McVersionsApi");
-
-                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-                var response = await httpClient.GetStringAsync(url, ct);
-
-                Logger.Info($"Got NeoForge response: {response.Length} bytes", "McVersionsApi");
-
-                var versions = new List<string>();
-
-                // Ищем версии в Maven metadata.xml
-                var matches = System.Text.RegularExpressions.Regex.Matches(response, @"<version>([^<]+)</version>");
-                Logger.Info($"Found {matches.Count} total NeoForge versions in XML", "McVersionsApi");
-
-                // Преобразуем MC версию в формат NeoForge: 1.21.11 -> 21.11
-                var neoForgeMcVersion = ExtractNeoForgeMcVersion(mcVersion);
-                Logger.Info($"Looking for NeoForge versions for MC {mcVersion} (NeoForge format: {neoForgeMcVersion})", "McVersionsApi");
-
-                foreach (System.Text.RegularExpressions.Match match in matches)
-                {
-                    var fullVersion = match.Groups[1].Value;
-
-                    // NeoForge версия имеет формат: MAJOR.MINOR.PATCH[-суффикс]
-                    // Пример: 21.1.0-beta (для MC 1.21.1) или 21.11.9 (для MC 1.21.11)
-                    if (fullVersion.StartsWith(neoForgeMcVersion + ".") || fullVersion.StartsWith(neoForgeMcVersion + "-"))
-                    {
-                        // Сохраняем полную версию (например, "21.11.9" или "21.11.0-beta")
-                        versions.Add(fullVersion);
-                        Logger.Info($"Added NeoForge version: {fullVersion}", "McVersionsApi");
-                    }
-                }
-
-                if (versions.Count > 0)
-                {
-                    var result = versions.OrderByDescending(v => v).Take(50).ToArray();
-                    Logger.Info($"Found {result.Length} NeoForge versions for MC {mcVersion} (from {url})", "McVersionsApi");
-                    return result;
-                }
-
-                Logger.Warning($"No NeoForge versions found for MC {mcVersion} from {url}", "McVersionsApi");
+                Logger.Info($"Returning cached NeoForge versions for MC {mcVersion}: {cached.Length}", "McVersionsApi");
+                return cached;
             }
-            catch (Exception ex)
+        }
+        finally
+        {
+            try { _neoForgeCacheLock.Release(); } catch { }
+        }
+
+        // Основной источник: maven.neoforged.net
+        var mavenUrl = "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml";
+
+        try
+        {
+            Logger.Info($"Fetching NeoForge from: {mavenUrl}", "McVersionsApi");
+
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            var response = await httpClient.GetStringAsync(mavenUrl, ct);
+
+            Logger.Info($"Got NeoForge response: {response.Length} bytes", "McVersionsApi");
+
+            var versions = ParseNeoForgeVersions(response, mcVersion);
+
+            if (versions.Count > 0)
             {
-                Logger.Warning($"Failed to get NeoForge versions from {url}: {ex.Message}", "McVersionsApi");
-                // Пробуем следующий репозиторий
+                var result = versions.OrderByDescending(v => v).Take(50).ToArray();
+                Logger.Info($"Found {result.Length} NeoForge versions for MC {mcVersion}", "McVersionsApi");
+
+                // Кэшируем результат
+                await _neoForgeCacheLock.WaitAsync(ct);
+                try { _neoForgeCache[mcVersion] = result; }
+                finally { try { _neoForgeCacheLock.Release(); } catch { } }
+
+                return result;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Failed to get NeoForge versions from maven.neoforged.net: {ex.Message}", "McVersionsApi");
+        }
+
+        // Fallback: используем список из launchermeta.mojang.com + маппинг версий
+        Logger.Info($"Trying fallback: launchermeta for NeoForge MC {mcVersion}", "McVersionsApi");
+        try
+        {
+            var fallbackVersions = await GetNeoForgeFromLauncherMeta(ct);
+            if (fallbackVersions.Count > 0)
+            {
+                var result = fallbackVersions.OrderByDescending(v => v).Take(50).ToArray();
+                Logger.Info($"Found {result.Length} NeoForge versions from fallback for MC {mcVersion}", "McVersionsApi");
+
+                await _neoForgeCacheLock.WaitAsync(ct);
+                try { _neoForgeCache[mcVersion] = result; }
+                finally { try { _neoForgeCacheLock.Release(); } catch { } }
+
+                return result;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Fallback also failed for NeoForge MC {mcVersion}: {ex.Message}", "McVersionsApi");
+        }
+
+        Logger.Warning($"All NeoForge sources failed for MC {mcVersion}", "McVersionsApi");
+        return ["latest"];
+    }
+
+    private static List<string> ParseNeoForgeVersions(string xml, string mcVersion)
+    {
+        var versions = new List<string>();
+        var matches = System.Text.RegularExpressions.Regex.Matches(xml, @"<version>([^<]+)</version>");
+        Logger.Info($"Found {matches.Count} total NeoForge versions in XML", "McVersionsApi");
+
+        var neoForgeMcVersion = ExtractNeoForgeMcVersion(mcVersion);
+        Logger.Info($"Looking for NeoForge versions for MC {mcVersion} (NeoForge format: {neoForgeMcVersion})", "McVersionsApi");
+
+        foreach (System.Text.RegularExpressions.Match match in matches)
+        {
+            var fullVersion = match.Groups[1].Value;
+
+            if (fullVersion.StartsWith(neoForgeMcVersion + ".") || fullVersion.StartsWith(neoForgeMcVersion + "-"))
+            {
+                versions.Add(fullVersion);
+                Logger.Info($"Added NeoForge version: {fullVersion}", "McVersionsApi");
             }
         }
 
-        Logger.Warning($"All NeoForge mirrors failed for MC {mcVersion}", "McVersionsApi");
-        return ["latest"];
+        return versions;
+    }
+
+    /// <summary>
+    /// Fallback: получает список версий NeoForge через launchermeta.mojang.com.
+    /// NeoForge версии содержатся в version_manifest.json как отдельные записи.
+    /// </summary>
+    private async Task<List<string>> GetNeoForgeFromLauncherMeta(CancellationToken ct)
+    {
+        var versions = new List<string>();
+
+        var response = await GetStringWithDecompressionAsync(
+            "https://launchermeta.mojang.com/mc/game/version_manifest.json", ct);
+
+        using var doc = JsonDocument.Parse(response);
+        var allVersions = doc.RootElement.GetProperty("versions")
+            .EnumerateArray()
+            .Select(v => v.GetProperty("id").GetString()!)
+            .ToArray();
+
+        // NeoForge версии имеют формат "neoforge-MC_VERSION-NEOFORGE_VERSION"
+        // или содержат "neoforge" в type
+        foreach (var v in allVersions)
+        {
+            if (v.Contains("neoforge", StringComparison.OrdinalIgnoreCase))
+            {
+                // Извлекаем версию NeoForge из ID
+                // Формат: neoforge-1.21.1-21.1.0 или similar
+                versions.Add(v);
+            }
+        }
+
+        return versions;
     }
 
     /// <summary>

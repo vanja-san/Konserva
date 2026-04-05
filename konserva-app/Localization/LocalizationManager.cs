@@ -629,6 +629,10 @@ public static class LocalizationManager
                 { "Error_PortInUse", "Порт уже занят" },
                 { "Error_OutOfMemory", "Недостаточно памяти" },
 
+                // Snackbar
+                { "Snackbar_JavaIncompatible_Title", "Несовместимая Java" },
+                { "Snackbar_JavaIncompatible_Message", "Для Minecraft {0} требуется Java {1}+, найдена Java {2}.\nСервер не запустится с текущей версией Java." },
+
                 // Java Error Dialog
                 { "JavaError_Title", "Ошибка Java" },
                 { "JavaError_Required", "Требуется установить или обновить Java" },
@@ -1082,6 +1086,10 @@ public static class LocalizationManager
                 { "Error_ServerInstallFailed", "Server installation failed" },
                 { "Error_PortInUse", "Port is already in use" },
                 { "Error_OutOfMemory", "Out of memory" },
+
+                // Snackbar
+                { "Snackbar_JavaIncompatible_Title", "Incompatible Java" },
+                { "Snackbar_JavaIncompatible_Message", "Minecraft {0} requires Java {1}+, found Java {2}.\nThe server will not start with the current Java version." },
 
                 // Java Error Dialog
                 { "JavaError_Title", "Java Error" },

@@ -220,22 +220,6 @@ public partial class ServerDetailPage : Page, IDisposable
 
         UpdateStatus(_server.Status);
 
-        // Если сервер в состоянии ошибки — показываем диалог (только один раз)
-        if (_server.Status == ServerStatus.Error && !string.IsNullOrEmpty(_server.InstallStatus) && !_server.ErrorDialogShown)
-        {
-            Logger.Info($"[LoadServer] Server in Error status with message: {_server.InstallStatus}", "ServerDetailPage");
-            _server.ErrorDialogShown = true;
-            // Показываем ошибку после полной загрузки UI
-            this.Invoke(() =>
-            {
-                _ = ShowJavaErrorDialog(_server.InstallStatus);
-            });
-        }
-        else
-        {
-            Logger.Info($"[LoadServer] Server status is {_server.Status}, InstallStatus='{_server.InstallStatus}', DialogShown={_server.ErrorDialogShown}", "ServerDetailPage");
-        }
-
         // Выделяем первую кнопку (Консоль) при загрузке
         ResetNavigationButtons();
         if (ConsoleNavButton != null)
@@ -404,116 +388,119 @@ public partial class ServerDetailPage : Page, IDisposable
             return;
         }
 
-        // Проверяем, не показан ли уже диалог
-        if (_server != null && _server.ErrorDialogShown)
-        {
-            Logger.Info($"[OnServerStartError] Error dialog already shown for server {server.Name}", "ServerDetailPage");
-            return;
-        }
-
         Logger.Info($"[OnServerStartError] Received error for server {server.Name}: {errorMessage}", "ServerDetailPage");
 
-        // Помечаем, что диалог показан
+        // Помечаем, что Snackbar показан
         if (_server != null)
             _server.ErrorDialogShown = true;
 
-        // Показываем диалог в UI потоке
-        this.Invoke(() =>
+        // Показываем Snackbar на UI потоке MainWindow
+        MainWindow.Instance?.Dispatcher.Invoke(() =>
         {
-            _ = ShowJavaErrorDialog(errorMessage);
+            ShowJavaErrorSnackbar(errorMessage);
         });
     }
 
     /// <summary>
-    /// Показывает диалог с ошибкой Java
+    /// Показывает Snackbar с ошибкой несовместимости Java.
     /// </summary>
-    private async Task ShowJavaErrorDialog(string errorMessage)
+    private void ShowJavaErrorSnackbar(string errorMessage)
     {
-        Logger.Info($"[ShowJavaErrorDialog] Showing dialog with message: {errorMessage}", "ServerDetailPage");
+        if (_server == null)
+            return;
 
-        // Проверяем, связана ли ошибка с Java
         bool isJavaError = errorMessage.Contains("Java", StringComparison.OrdinalIgnoreCase) ||
-                          errorMessage.Contains("java", StringComparison.OrdinalIgnoreCase);
-
-        Logger.Info($"[ShowJavaErrorDialog] Is Java error: {isJavaError}", "ServerDetailPage");
+                          errorMessage.Contains("java", StringComparison.OrdinalIgnoreCase) ||
+                          errorMessage.Contains("Требуется Java", StringComparison.OrdinalIgnoreCase);
 
         if (!isJavaError)
         {
-            // Не Java ошибка - показываем обычное сообщение
-            Logger.Info($"[ShowJavaErrorDialog] Showing regular error dialog", "ServerDetailPage");
-            await UiHelper.ShowError(errorMessage);
+            MainWindow.Instance?.Dispatcher.Invoke(async () => await UiHelper.ShowError(errorMessage));
             return;
         }
 
-        // Java ошибка - показываем подробное сообщение с кнопкой
-        Logger.Info($"[ShowJavaErrorDialog] Showing Java error dialog", "ServerDetailPage");
+        var requiredVersion = ParseRequiredJavaVersion(errorMessage);
+        var foundVersion = ParseFoundJavaVersion(errorMessage);
+        var javaPath = ParseJavaPath(errorMessage);
 
-        var dialog = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = $"⚠️ {LocalizationManager.Get("JavaError_Title")}",
-            Content = new StackPanel
-            {
-                Margin = new Thickness(0, 8, 0, 0),
-                Children =
-                {
-                    new System.Windows.Controls.TextBlock
-                    {
-                        Text = errorMessage,
-                        TextWrapping = TextWrapping.Wrap,
-                        Margin = new Thickness(0, 0, 0, 16)
-                    },
-                    new Border
-                    {
-                        Padding = new Thickness(12),
-                        Child = new StackPanel
-                        {
-                            Children =
-                            {
-                                new System.Windows.Controls.TextBlock
-                                {
-                                    Text = LocalizationManager.Get("JavaError_Required"),
-                                    FontWeight = FontWeights.Bold,
-                                    Margin = new Thickness(0, 0, 0, 8)
-                                },
-                                new System.Windows.Controls.TextBlock
-                                {
-                                    Text = LocalizationManager.Get("JavaError_DownloadText"),
-                                    Margin = new Thickness(0, 0, 0, 8)
-                                },
-                                new System.Windows.Controls.Button
-                                {
-                                    Content = $"📥 {LocalizationManager.Get("JavaError_DownloadBtn")}",
-                                    HorizontalAlignment = HorizontalAlignment.Left,
-                                    Padding = new Thickness(16, 8, 16, 8),
-                                    Cursor = System.Windows.Input.Cursors.Hand
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            PrimaryButtonText = LocalizationManager.Get("MsgBtn_OK"),
-            PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Info24),
-            ShowTitle = true,
-            Padding = new Thickness(16)
-        };
+        MainWindow.Instance?.ShowJavaErrorSnackbar(_server, errorMessage, requiredVersion, foundVersion);
+    }
 
-        // Обработчик нажатия на кнопку
-        var downloadButton = ((StackPanel)((Border)((StackPanel)dialog.Content).Children[1]).Child).Children[2] as System.Windows.Controls.Button;
-        if (downloadButton != null)
+    private static int ParseRequiredJavaVersion(string msg)
+    {
+        // Формат 1: "Требуется Java X+" (наш формат)
+        var match = System.Text.RegularExpressions.Regex.Match(msg, @"Java (\d+)\+");
+        if (match.Success)
+            return int.Parse(match.Groups[1].Value);
+
+        // Формат 2: "class file version XX.0" → переводим в версию Java
+        var classVersionMatch = System.Text.RegularExpressions.Regex.Match(msg, @"compiled by a more recent version.*?class file version (\d+)");
+        if (classVersionMatch.Success)
         {
-            downloadButton.Click += (s, e) =>
-            {
-                // Открываем сайт Adoptium в браузере
-                System.Diagnostics.Process.Start(new ProcessStartInfo
-                {
-                    FileName = "https://adoptium.net/",
-                    UseShellExecute = true
-                });
-            };
+            var classVersion = int.Parse(classVersionMatch.Groups[1].Value);
+            return ClassFileVersionToJavaVersion(classVersion);
         }
 
-        await dialog.ShowDialogAsync();
+        // Формат 3: "Java X" (общий fallback)
+        var fallbackMatch = System.Text.RegularExpressions.Regex.Match(msg, @"Java (\d+)");
+        return fallbackMatch.Success ? int.Parse(fallbackMatch.Groups[1].Value) : 0;
+    }
+
+    private static int ParseFoundJavaVersion(string msg)
+    {
+        // Формат: "recognizes class file versions up to XX.0"
+        var classVersionMatch = System.Text.RegularExpressions.Regex.Match(msg, @"versions up to (\d+)");
+        if (classVersionMatch.Success)
+        {
+            var classVersion = int.Parse(classVersionMatch.Groups[1].Value);
+            return ClassFileVersionToJavaVersion(classVersion);
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(msg, @"Java (\d+) .*найдена|found Java (\d+)");
+        if (match.Success)
+        {
+            for (int i = 1; i <= 2; i++)
+            {
+                if (match.Groups[i].Success && int.TryParse(match.Groups[i].Value, out var v))
+                    return v;
+            }
+        }
+        return 0;
+    }
+
+    /// <summary>
+    /// Переводит class file version в версию Java
+    /// </summary>
+    private static int ClassFileVersionToJavaVersion(int classVersion) => classVersion switch
+    {
+        49 => 5,
+        50 => 6,
+        51 => 7,
+        52 => 8,
+        53 => 9,
+        54 => 10,
+        55 => 11,
+        56 => 12,
+        57 => 13,
+        58 => 14,
+        59 => 15,
+        60 => 16,
+        61 => 17,
+        62 => 18,
+        63 => 19,
+        64 => 20,
+        65 => 21,
+        66 => 22,
+        67 => 23,
+        68 => 24,
+        69 => 25,
+        _ => 0
+    };
+
+    private static string ParseJavaPath(string msg)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(msg, @"(?:Путь|Path)[:\s]+(.+?)(?:\n|$)");
+        return match.Success ? match.Groups[1].Value.Trim() : "";
     }
 
     private async void StartStop_Click(object sender, RoutedEventArgs e)
@@ -530,6 +517,8 @@ public partial class ServerDetailPage : Page, IDisposable
             }
             else
             {
+                // Сбрасываем флаг ошибки перед новым запуском
+                _server.ErrorDialogShown = false;
                 MainWindow.ServerManager.StartServer(_serverId!);
             }
         }

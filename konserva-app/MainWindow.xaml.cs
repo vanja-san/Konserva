@@ -1,10 +1,9 @@
-﻿using Konserva.Controls;
-using Konserva.Localization;
+﻿using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
-using System.Reflection;
 using System.Windows;
+using Wpf.Ui;
 using Wpf.Ui.Controls;
 
 namespace Konserva;
@@ -52,6 +51,9 @@ public partial class MainWindow : FluentWindow, IDisposable
 
         // Navigate to Servers page by default
         ContentFrame.Navigate(new Pages.ServersPage());
+
+        // Инициализируем SnackbarService (визуальное дерево уже загружено)
+        _ = SnackbarService;
 
         // Проверяем обновления
         CheckForUpdatesAsync().FireAndForget();
@@ -356,6 +358,92 @@ public partial class MainWindow : FluentWindow, IDisposable
         }
 
         return updateInfo;
+    }
+
+    // ===== Java Error Snackbar =====
+
+    private SnackbarService? _snackbarService;
+
+    private SnackbarService SnackbarService
+    {
+        get
+        {
+            if (_snackbarService == null)
+            {
+                _snackbarService = new SnackbarService();
+                _snackbarService.SetSnackbarPresenter(SnackbarPresenter);
+            }
+            return _snackbarService;
+        }
+    }
+
+    /// <summary>
+    /// Показывает Snackbar с ошибкой несовместимости Java.
+    /// </summary>
+    public void ShowJavaErrorSnackbar(Server server, string errorMessage, int requiredVersion, int foundVersion)
+    {
+        var isServersPage = ContentFrame.Content is Pages.ServersPage;
+        var isDetailPage = ContentFrame.Content is Pages.ServerDetailPage;
+
+        Logger.Info($"[ShowJavaErrorSnackbar] server={server.Name}, required={requiredVersion}, found={foundVersion}, isServersPage={isServersPage}, isDetailPage={isDetailPage}", "MainWindow");
+
+        string title, message;
+
+        if (isServersPage)
+        {
+            // Страница серверов: в заголовке имя сервера
+            title = server.Name;
+            message = LocalizationManager.Get("Snackbar_JavaIncompatible_Message", server.McVersion, requiredVersion, foundVersion);
+        }
+        else if (isDetailPage)
+        {
+            // Страница управления: в заголовке "Несовместимая Java"
+            title = LocalizationManager.Get("Snackbar_JavaIncompatible_Title");
+            message = LocalizationManager.Get("Snackbar_JavaIncompatible_Message", server.McVersion, requiredVersion, foundVersion);
+        }
+        else
+        {
+            title = LocalizationManager.Get("Snackbar_JavaIncompatible_Title");
+            message = errorMessage;
+        }
+
+        Dispatcher.Invoke(() =>
+        {
+            if (SnackbarPresenter == null)
+            {
+                Logger.Error("[ShowJavaErrorSnackbar] SnackbarPresenter is null!", null, "MainWindow");
+                return;
+            }
+
+            Logger.Info($"[ShowJavaErrorSnackbar] Showing snackbar: title='{title}'", "MainWindow");
+
+            var snackbar = new Snackbar(SnackbarPresenter)
+            {
+                Title = title,
+                Content = message,
+                Icon = new SymbolIcon(SymbolRegular.ErrorCircle24) { FontSize = 28 },
+                Timeout = TimeSpan.FromSeconds(10),
+                Appearance = ControlAppearance.Secondary,
+                Padding = new Thickness(12, 8, 12, 8),
+                Height = 32
+            };
+
+            SnackbarPresenter.AddToQue(snackbar);
+        });
+    }
+
+    /// <summary>
+    /// Скрывает Snackbar с ошибкой Java.
+    /// </summary>
+    public void HideJavaErrorSnackbar()
+    {
+        Dispatcher.Invoke(async () =>
+        {
+            if (SnackbarPresenter != null)
+            {
+                await SnackbarPresenter.HideCurrent();
+            }
+        });
     }
 }
 

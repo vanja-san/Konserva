@@ -40,6 +40,7 @@ public partial class CreateServerDialog : FluentWindow
     private string? _lastLoadedMcVersion;
     private bool _isLoadingInProgress;
     private string? _currentModLoader; // Текущий выбранный модлоадер
+    private CancellationTokenSource? _loaderLoadingCts; // Для отмены загрузки версий при смене модлоадера
 
     public CreateServerDialog(IConfigService? configService = null, IMcVersionsApi? versionsApi = null)
     {
@@ -200,12 +201,25 @@ public partial class CreateServerDialog : FluentWindow
             if (selectedModLoader == "NeoForge" && !showSnapshots)
             {
                 // Для NeoForge при скрытии снимков — только стабильные версии
-                var stableMcVersions = _neoForgeStableMcVersions ?? await GetNeoForgeStableMcVersionsAsync();
-                _neoForgeStableMcVersions = stableMcVersions;
-
-                supportedVersions = stableMcVersions.Count > 0
-                    ? stableMcVersions
-                    : [.. _allMcVersions.Where(v => TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
+                // Если кэш ещё не загружен, используем fallback (MC 1.16+)
+                if (_neoForgeStableMcVersions != null)
+                {
+                    supportedVersions = _neoForgeStableMcVersions.Count > 0
+                        ? _neoForgeStableMcVersions
+                        : [.. _allMcVersions.Where(v => TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
+                }
+                else
+                {
+                    // Загружаем в фоне, не блокируя UI
+                    supportedVersions = [.. _allMcVersions.Where(v => TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
+                    _ = LoadNeoForgeStableVersionsAsync();
+                }
+            }
+            else if (selectedModLoader == "NeoForge")
+            {
+                // NeoForge со снапшотами — MC 1.16+
+                supportedVersions = [.. _allMcVersions.Where(v =>
+                    TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
             }
             else if (selectedModLoader == "Quilt")
             {
@@ -219,28 +233,23 @@ public partial class CreateServerDialog : FluentWindow
 
                 supportedVersions = _quiltSupportedVersions;
             }
+            else if (selectedModLoader == "Paper")
+            {
+                if (_paperVersions.Count == 0)
+                    await LoadPaperVersionsAsync();
+                supportedVersions = _paperVersions.Count > 0 ? _paperVersions : [.. _allMcVersions];
+            }
+            else if (selectedModLoader == "Purpur")
+            {
+                if (_purpurVersions.Count == 0)
+                    await LoadPurpurVersionsAsync();
+                supportedVersions = _purpurVersions.Count > 0 ? _purpurVersions : [.. _allMcVersions];
+            }
             else
             {
-                supportedVersions = selectedModLoader switch
-                {
-                    "Paper" => _paperVersions.Count > 0 ? _paperVersions : [.. _allMcVersions],
-                    "Purpur" => _purpurVersions.Count > 0 ? _purpurVersions : [.. _allMcVersions],
-                    "NeoForge" => [.. _allMcVersions.Where(v =>
-                        TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))],
-                    // Forge, Fabric, Vanilla — версии Minecraft (не NeoForge)
-                    // NeoForge версии имеют 3+ части (26.1.0, 21.10.64), Minecraft — 2 части (1.21.11, 26.1)
-                    _ => [.. _allMcVersions.Where(v =>
-                    {
-                        var parts = v.Split('.');
-                        // Minecraft: 2 части (1.21.11, 26.1) или 3 части с префиксом 1.x.x
-                        // NeoForge: 3+ части без префикса 1. (26.1.0, 21.10.64)
-                        if (parts.Length < 2) return false;
-                        if (parts.Length == 2) return true; // 26.1, 1.21 и т.д.
-                        if (parts[0] == "1") return true; // 1.21.11, 1.20.4 и т.д.
-                        // 3+ части, не начинающиеся с 1 — это NeoForge (26.1.0, 21.10.64)
-                        return false;
-                    })]
-                };
+                // Vanilla, Forge, Fabric — все версии Minecraft из манифеста Mojang.
+                // Список _allMcVersions приходит ТОЛЬКО от Mojang и содержит только MC версии.
+                supportedVersions = [.. _allMcVersions];
             }
 
             var versions = _allMcVersions
@@ -550,6 +559,28 @@ public partial class CreateServerDialog : FluentWindow
         return stableVersions;
     }
 
+    /// <summary>
+    /// Загружает стабильные версии NeoForge в фоне (не блокируя UI).
+    /// </summary>
+    private async Task LoadNeoForgeStableVersionsAsync()
+    {
+        try
+        {
+            var versions = await GetNeoForgeStableMcVersionsAsync();
+            _neoForgeStableMcVersions = versions;
+
+            // Если сейчас выбран NeoForge без снапшотов — перефильтруем
+            if (GetSelectedModLoader() == "NeoForge" && !(ShowSnapshotsBox?.IsChecked ?? false))
+            {
+                _ = FilterMcVersionsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Failed to load NeoForge stable versions: {ex.Message}", "CreateServerDialog");
+        }
+    }
+
     private void ShowSnapshotsBox_Changed(object? sender, RoutedEventArgs e)
     {
         // Защита от вызова во время инициализации и повторных входов
@@ -614,16 +645,23 @@ public partial class CreateServerDialog : FluentWindow
         var tag = item.Tag?.ToString();
         Logger.Info($"ModLoaderBox_SelectionChanged: {tag}", "CreateServerDialog");
 
+        // Отменяем любую текущую загрузку версий загрузчика
+        _loaderLoadingCts?.Cancel();
+        _loaderLoadingCts?.Dispose();
+        _loaderLoadingCts = null;
+        _isLoadingInProgress = false;
+        _lastLoadedModLoader = null;
+        _lastLoadedMcVersion = null;
+        _isFindingCompatibleVersion = false;
+
         // Сохраняем текущий модлоадер
         _currentModLoader = tag;
 
         var isEnabled = tag is "Forge" or "NeoForge" or "Fabric" or "Quilt";
         LoaderVersionBox.IsEnabled = isEnabled;
 
-        // Очищаем список версий загрузчика и сбрасываем кэш
+        // Очищаем список версий загрузчика
         LoaderVersionBox.Items.Clear();
-        _lastLoadedModLoader = null;
-        _lastLoadedMcVersion = null;
 
         // Перефильтруем версии Minecraft для нового загрузчика
         await FilterMcVersionsAsync(tag);
@@ -635,6 +673,12 @@ public partial class CreateServerDialog : FluentWindow
     private async Task LoadLoaderVersions(string modLoaderType, string mcVersion)
     {
         Logger.Info($"LoadLoaderVersions: {modLoaderType} for MC {mcVersion}", "CreateServerDialog");
+
+        // Создаём новый CTS для этой загрузки (предыдущий уже отменён при смене модлоадера)
+        _loaderLoadingCts?.Cancel();
+        _loaderLoadingCts?.Dispose();
+        _loaderLoadingCts = new CancellationTokenSource();
+        var cts = _loaderLoadingCts;
 
         // Защита от повторной загрузки для тех же параметров
         if (_isLoadingInProgress ||
@@ -666,6 +710,13 @@ public partial class CreateServerDialog : FluentWindow
                 "Quilt" => await _versionsApi.GetQuiltVersions(mcVersion),
                 _ => []
             };
+
+            // Проверяем, не была ли операция отменена
+            if (cts.IsCancellationRequested)
+            {
+                Logger.Info($"LoadLoaderVersions cancelled after API call: {modLoaderType}", "CreateServerDialog");
+                return;
+            }
 
             Logger.Info($"Loaded {versions.Length} {modLoaderType} versions", "CreateServerDialog");
 
@@ -748,6 +799,13 @@ public partial class CreateServerDialog : FluentWindow
         }
         catch (Exception ex)
         {
+            // Если модлоадер сменился — просто выходим, не показывая ошибку
+            if (_currentModLoader != modLoaderType)
+            {
+                Logger.Info($"LoadLoaderVersions error ignored (modloader changed): {modLoaderType} — {ex.Message}", "CreateServerDialog");
+                return;
+            }
+
             Logger.Error($"Failed to load {modLoaderType} versions: {ex.Message}", ex, "CreateServerDialog");
 
             LoaderVersionBox.Items.Add(new ComboBoxItem
@@ -758,8 +816,11 @@ public partial class CreateServerDialog : FluentWindow
         }
         finally
         {
-            // Снимаем флаг загрузки
-            _isLoadingInProgress = false;
+            // Снимаем флаг загрузки только если модлоадер не сменился
+            if (_currentModLoader == modLoaderType)
+            {
+                _isLoadingInProgress = false;
+            }
         }
     }
 
