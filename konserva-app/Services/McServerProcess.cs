@@ -739,18 +739,39 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 string errorDetails = "";
                 if (!string.IsNullOrEmpty(_pendingErrorOutput))
                 {
-                    // Берём первые 2 строки из stderr для сообщения об ошибке
                     var lines = _pendingErrorOutput.Trim().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                    var takeCount = Math.Min(2, lines.Length);
-                    if (takeCount > 0)
+
+                    // Ищем строку с "class file version" — она критична для определения версии Java
+                    string? classVersionLine = null;
+                    foreach (var line in lines)
                     {
-                        var sb = new StringBuilder();
-                        for (int i = 0; i < takeCount; i++)
+                        var trimmed = line.Trim();
+                        if (trimmed.Contains("class file version", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (i > 0) sb.Append("\n");
-                            sb.Append(lines[i].Trim());
+                            classVersionLine = trimmed;
+                            break;
                         }
-                        errorDetails = sb.ToString().Trim();
+                    }
+
+                    if (classVersionLine != null)
+                    {
+                        // Берём строку с class file version + первую строку ошибки для контекста
+                        errorDetails = classVersionLine;
+                    }
+                    else
+                    {
+                        // Берём первые 2 строки как fallback
+                        var takeCount = Math.Min(2, lines.Length);
+                        if (takeCount > 0)
+                        {
+                            var sb = new StringBuilder();
+                            for (int i = 0; i < takeCount; i++)
+                            {
+                                if (i > 0) sb.Append("\n");
+                                sb.Append(lines[i].Trim());
+                            }
+                            errorDetails = sb.ToString().Trim();
+                        }
                     }
                 }
 

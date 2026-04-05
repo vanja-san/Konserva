@@ -423,7 +423,7 @@ public partial class MainWindow : FluentWindow, IDisposable
                 Content = message,
                 Icon = new SymbolIcon(SymbolRegular.ErrorCircle24) { FontSize = 28 },
                 Timeout = TimeSpan.FromSeconds(10),
-                Appearance = ControlAppearance.Secondary,
+                Appearance = ControlAppearance.Danger,
                 Padding = new Thickness(12, 8, 12, 8),
                 Height = 32
             };

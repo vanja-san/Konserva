@@ -519,7 +519,7 @@ public static partial class McServerInstaller
         var startInfo = new ProcessStartInfo
         {
             FileName = javaPath,
-            Arguments = $"-jar \"{installerPath}\" server -mcversion {mcVersion} -loader {loaderVersion} -downloadMinecraft",
+            Arguments = $"-jar \"{installerPath}\" server -mcversion {mcVersion} -loader {loaderVersion} -downloadMinecraft -nogui",
             WorkingDirectory = destinationPath,
             UseShellExecute = false,
             RedirectStandardOutput = true,
