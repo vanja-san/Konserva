@@ -221,7 +221,7 @@ public partial class ServersPage : Page, IDisposable
             if (MainWindow.Instance == null)
             {
                 Logger.Error("MainWindow.Instance is null", null, "ServersPage");
-                await UiHelper.ShowError("Ошибка: приложение не инициализировано");
+                await UiHelper.ShowError(LocalizationManager.Get("ServersPage_Error_AppNotInitialized"));
                 return;
             }
 

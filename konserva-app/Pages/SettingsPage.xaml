@@ -146,15 +146,6 @@
                                     Checked="CheckUpdatesBox_Checked"
                                     Unchecked="CheckUpdatesBox_Unchecked" />
                             </Grid>
-
-                            <!--  Check for Updates Button  -->
-                            <Button
-                                x:Name="CheckUpdatesButton"
-                                Margin="0,8,0,0"
-                                Padding="12,6"
-                                HorizontalAlignment="Left"
-                                Click="CheckUpdatesButton_Click"
-                                Content="{loc:Loc Settings_CheckForUpdates}" />
                         </StackPanel>
                     </Border>
                 </ui:CardExpander>
@@ -255,6 +246,16 @@
                                 FontSize="13"
                                 Foreground="Gray"
                                 Text="{loc:Loc Settings_About_Description}" />
+
+                            <!--  Check for Updates Button  -->
+                            <Button
+                                x:Name="CheckUpdatesButton"
+                                Margin="0,16,0,0"
+                                Padding="12,8"
+                                HorizontalAlignment="Left"
+                                Click="CheckUpdatesButton_Click"
+                                Content="{loc:Loc Settings_CheckForUpdates}" />
+
                             <ui:TextBlock
                                 Margin="0,21,0,8"
                                 FontSize="13"

@@ -297,19 +297,29 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
             if (!updateInfo.IsAvailable)
             {
-                var msg = LocalizationManager.Get("Settings_UpToDate");
-                await UiHelper.ShowInfo(msg);
+                CheckUpdatesButton.Content = LocalizationManager.Get("Settings_UpToDate_Button");
+            }
+            else
+            {
+                CheckUpdatesButton.Content = LocalizationManager.Get("Settings_UpdateAvailable_Button", $"v{updateInfo.NewVersion}");
             }
         }
         catch (Exception ex)
         {
-            var msg = LocalizationManager.Get("Settings_UpdateCheckError");
-            await UiHelper.ShowError($"{msg}: {ex.Message}");
+            CheckUpdatesButton.Content = $"{LocalizationManager.Get("Settings_CheckForUpdates")} — {LocalizationManager.Get("Settings_UpdateCheckError")}";
+            Logger.Error($"Update check error in button: {ex.Message}", ex, "SettingsPage");
         }
         finally
         {
-            CheckUpdatesButton.IsEnabled = true;
-            CheckUpdatesButton.Content = LocalizationManager.Get("Settings_CheckForUpdates");
+            // Возвращаем кнопку в активное состояние через 3 секунды
+            _ = Task.Delay(3000).ContinueWith(_ =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    CheckUpdatesButton.IsEnabled = true;
+                    CheckUpdatesButton.Content = LocalizationManager.Get("Settings_CheckForUpdates");
+                });
+            });
         }
     }
 

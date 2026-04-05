@@ -248,6 +248,8 @@ public static class LocalizationManager
                 { "StatusBar_Java_Configured", "Java настроена" },
                 { "StatusBar_Java_NotConfigured", "Java не настроена" },
                 { "StatusBar_Version", "Версия" },
+                { "MainWindow_JavaVersions", "версии Java" },
+                { "MainWindow_Error", "Ошибка" },
 
                 // Update
                 { "Update_Available", "Доступна v{0}" },
@@ -261,6 +263,8 @@ public static class LocalizationManager
                 { "Update_Failed_Tooltip", "Ошибка обновления. Нажмите для повтора." },
                 { "Settings_CheckForUpdates", "Проверить обновления" },
                 { "Settings_UpToDate", "Установлена актуальная версия" },
+                { "Settings_UpToDate_Button", "Актуальная версия" },
+                { "Settings_UpdateAvailable_Button", "Доступно обновление {0}" },
                 { "Settings_UpdateCheckError", "Ошибка проверки обновлений" },
 
                 // Settings
@@ -308,6 +312,18 @@ public static class LocalizationManager
                 { "CreateServer_Cancel", "Отмена" },
                 { "CreateServer_Filter_Stable", "Показывать тестовые версии" },
                 { "CreateServer_Import", "Импортировать" },
+                { "CreateServer_Error_DialogLoad", "Ошибка загрузки диалога" },
+                { "CreateServer_Import_Duplicate", "Сервер из этой папки уже импортирован:\n{0}" },
+                { "CreateServer_Import_NoJar", "В выбранной папке не найден JAR файл сервера." },
+                { "CreateServer_Import_Success", "Сервер \"{0}\" успешно импортирован!" },
+                { "CreateServer_Import_Error", "Ошибка импорта сервера" },
+                { "CreateServer_Error_NoName", "Введите имя сервера" },
+                { "CreateServer_Error_NoFolder", "Выберите папку для сервера" },
+                { "CreateServer_Error_NoServerManager", "ServerManager не инициализирован!" },
+                { "CreateServer_Error_DuplicateName", "Сервер с именем \"{0}\" уже существует. Пожалуйста, выберите другое имя." },
+                { "CreateServer_Error_CreateFailed", "Ошибка при создании сервера" },
+                { "CreateServer_Error_InstallFailed", "Не удалось установить сервер" },
+                { "CreateServer_Error_InstallFailed_Exception", "Ошибка при установке сервера" },
 
                 // ServersPage
                 { "ServersPage_Search", "Поиск..." },
@@ -321,6 +337,7 @@ public static class LocalizationManager
                 { "ServersPage_Delete", "Удалить сервер" },
                 { "ServersPage_NoServers", "Нет серверов" },
                 { "ServersPage_NoServers_Description", "Создайте первый сервер для управления" },
+                { "ServersPage_Error_AppNotInitialized", "Ошибка: приложение не инициализировано" },
 
                 // Common
                 { "Common_Cancel", "Отмена" },
@@ -665,10 +682,6 @@ public static class LocalizationManager
                 { "ServersPage_DeleteError", "Ошибка при удалении сервера" },
                 { "ServersPage_OperationError", "Не удалось выполнить операцию" },
 
-                // MainWindow
-                { "MainWindow_Error", "Ошибка" },
-                { "MainWindow_JavaVersions", "версий Java" },
-
                 // App
                 { "App_StartupError", "Ошибка инициализации приложения" },
                 { "App_StartupErrorDetail", "Проверьте логи в %AppData%\\Konserva\\Logs" },
@@ -688,6 +701,8 @@ public static class LocalizationManager
                 { "StatusBar_Java_Configured", "Java configured" },
                 { "StatusBar_Java_NotConfigured", "Java not configured" },
                 { "StatusBar_Version", "Version" },
+                { "MainWindow_JavaVersions", "Java versions" },
+                { "MainWindow_Error", "Error" },
 
                 // Update
                 { "Update_Available", "v{0} available" },
@@ -701,6 +716,8 @@ public static class LocalizationManager
                 { "Update_Failed_Tooltip", "Update failed. Click to retry." },
                 { "Settings_CheckForUpdates", "Check for Updates" },
                 { "Settings_UpToDate", "Up to date" },
+                { "Settings_UpToDate_Button", "Up to Date" },
+                { "Settings_UpdateAvailable_Button", "Update Available {0}" },
                 { "Settings_UpdateCheckError", "Update check failed" },
 
                 // Settings
@@ -749,6 +766,18 @@ public static class LocalizationManager
                 { "CreateServer_Cancel", "Cancel" },
                 { "CreateServer_Filter_Stable", "Show pre-releases" },
                 { "CreateServer_Import", "Import" },
+                { "CreateServer_Error_DialogLoad", "Error loading dialog" },
+                { "CreateServer_Import_Duplicate", "A server from this folder is already imported:\n{0}" },
+                { "CreateServer_Import_NoJar", "No server JAR file found in the selected folder." },
+                { "CreateServer_Import_Success", "Server \"{0}\" imported successfully!" },
+                { "CreateServer_Import_Error", "Server import error" },
+                { "CreateServer_Error_NoName", "Enter a server name" },
+                { "CreateServer_Error_NoFolder", "Select a folder for the server" },
+                { "CreateServer_Error_NoServerManager", "ServerManager is not initialized!" },
+                { "CreateServer_Error_DuplicateName", "A server named \"{0}\" already exists. Please choose a different name." },
+                { "CreateServer_Error_CreateFailed", "Error creating server" },
+                { "CreateServer_Error_InstallFailed", "Failed to install server" },
+                { "CreateServer_Error_InstallFailed_Exception", "Error installing server" },
 
                 // ServersPage
                 { "ServersPage_Search", "Search..." },
@@ -762,6 +791,7 @@ public static class LocalizationManager
                 { "ServersPage_Delete", "Delete Server" },
                 { "ServersPage_NoServers", "No Servers" },
                 { "ServersPage_NoServers_Description", "Create your first server to get started" },
+                { "ServersPage_Error_AppNotInitialized", "Error: Application not initialized" },
 
                 // Common
                 { "Common_Cancel", "Cancel" },
@@ -1105,10 +1135,6 @@ public static class LocalizationManager
                 { "ServersPage_OpenFolderWarning", "Failed to open server folder" },
                 { "ServersPage_DeleteError", "Error deleting server" },
                 { "ServersPage_OperationError", "Failed to perform operation" },
-
-                // MainWindow
-                { "MainWindow_Error", "Error" },
-                { "MainWindow_JavaVersions", "Java versions" },
 
                 // App
                 { "App_StartupError", "Application initialization error" },

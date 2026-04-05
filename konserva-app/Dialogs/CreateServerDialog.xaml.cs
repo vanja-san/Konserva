@@ -157,7 +157,7 @@ public partial class CreateServerDialog : FluentWindow
         catch (Exception ex)
         {
             Logger.Error($"Dialog load error: {ex}", ex, "CreateServerDialog");
-            await UiHelper.ShowError($"Ошибка загрузки диалога: {ex.Message}");
+            await UiHelper.ShowError($"{LocalizationManager.Get("CreateServer_Error_DialogLoad")}: {ex.Message}");
         }
 
         _isInitializing = false;
@@ -914,14 +914,14 @@ public partial class CreateServerDialog : FluentWindow
 
                 if (existingServer != null)
                 {
-                    await UiHelper.ShowWarning($"Сервер из этой папки уже импортирован:\n{existingServer.Name}");
+                    await UiHelper.ShowWarning(string.Format(LocalizationManager.Get("CreateServer_Import_Duplicate"), existingServer.Name));
                     return;
                 }
 
                 var jarFile = Directory.GetFiles(serverPath, "*.jar").FirstOrDefault();
                 if (jarFile == null)
                 {
-                    await UiHelper.ShowWarning("В выбранной папке не найден JAR файл сервера.");
+                    await UiHelper.ShowWarning(LocalizationManager.Get("CreateServer_Import_NoJar"));
                     return;
                 }
 
@@ -955,7 +955,7 @@ public partial class CreateServerDialog : FluentWindow
                 var serverName = Path.GetFileName(serverPath);
                 _ = MainWindow.ServerManager.CreateServer(serverName, mcVersion, modLoader, serverPath);
 
-                await UiHelper.ShowInfo($"Сервер \"{serverName}\" успешно импортирован!");
+                await UiHelper.ShowInfo(string.Format(LocalizationManager.Get("CreateServer_Import_Success"), serverName));
 
                 DialogResult = true;
                 Close();
@@ -963,7 +963,7 @@ public partial class CreateServerDialog : FluentWindow
         }
         catch (Exception ex)
         {
-            await UiHelper.ShowError($"Ошибка импорта сервера: {ex.Message}");
+            await UiHelper.ShowError($"{LocalizationManager.Get("CreateServer_Import_Error")}: {ex.Message}");
         }
     }
 
@@ -1047,20 +1047,20 @@ public partial class CreateServerDialog : FluentWindow
         {
             if (string.IsNullOrWhiteSpace(ServerNameBox.Text))
             {
-                await UiHelper.ShowWarning("Введите имя сервера");
+                await UiHelper.ShowWarning(LocalizationManager.Get("CreateServer_Error_NoName"));
                 ServerNameBox.Focus();
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(ServerPathBox.Text))
             {
-                await UiHelper.ShowWarning("Выберите папку для сервера");
+                await UiHelper.ShowWarning(LocalizationManager.Get("CreateServer_Error_NoFolder"));
                 return;
             }
 
             if (MainWindow.ServerManager == null)
             {
-                await UiHelper.ShowError("ServerManager не инициализирован!");
+                await UiHelper.ShowError(LocalizationManager.Get("CreateServer_Error_NoServerManager"));
                 return;
             }
 
@@ -1070,7 +1070,7 @@ public partial class CreateServerDialog : FluentWindow
             var existingServers = MainWindow.ServerManager.GetServers();
             if (existingServers.Any(s => s.Name.Equals(serverName, StringComparison.OrdinalIgnoreCase)))
             {
-                await UiHelper.ShowWarning($"Сервер с именем \"{serverName}\" уже существует. Пожалуйста, выберите другое имя.");
+                await UiHelper.ShowWarning(string.Format(LocalizationManager.Get("CreateServer_Error_DuplicateName"), serverName));
                 ServerNameBox.Focus();
                 return;
             }
@@ -1118,7 +1118,7 @@ public partial class CreateServerDialog : FluentWindow
         catch (Exception ex)
         {
             SetInstallingState(false);
-            await UiHelper.ShowError($"Ошибка при создании сервера: {ex.Message}");
+            await UiHelper.ShowError($"{LocalizationManager.Get("CreateServer_Error_CreateFailed")}: {ex.Message}");
         }
     }
 
@@ -1191,7 +1191,7 @@ public partial class CreateServerDialog : FluentWindow
                     await this.InvokeAsync(async () =>
                     {
                         SetInstallingState(false);
-                        await UiHelper.ShowError($"Не удалось установить сервер:\n{installResult.Error}");
+                        await UiHelper.ShowError($"{LocalizationManager.Get("CreateServer_Error_InstallFailed")}\n{installResult.Error}");
                     });
                 }
                 else
@@ -1263,7 +1263,7 @@ public partial class CreateServerDialog : FluentWindow
             await this.InvokeAsync(async () =>
             {
                 SetInstallingState(false);
-                await UiHelper.ShowError($"Ошибка при установке сервера:\n{ex.Message}");
+                await UiHelper.ShowError($"{LocalizationManager.Get("CreateServer_Error_InstallFailed_Exception")}\n{ex.Message}");
             });
         }
         finally

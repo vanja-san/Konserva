@@ -176,11 +176,12 @@
                 </StackPanel>
 
                 <!--  Version / Update Notification  -->
-                <StackPanel Grid.Column="4" Orientation="Horizontal">
+                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
                     <ui:TextBlock x:Name="VersionText"
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         LineHeight="16"
+                        VerticalAlignment="Center"
                         Text="v1.4.0" />
                     <controls:UpdateNotification x:Name="UpdateNotificationControl" />
                 </StackPanel>
