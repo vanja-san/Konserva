@@ -16,6 +16,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     private static MainWindow? _instance;
     private readonly IConfigService _config;
     private readonly IServerManager _serverManager;
+    private IContentDialogService? _contentDialogService;
     private bool _disposed;
     private bool _isUpdatingStatusBar;
     private CancellationTokenSource? _statusBarCts;
@@ -32,6 +33,22 @@ public partial class MainWindow : FluentWindow, IDisposable
 
         Loaded += MainWindow_Loaded;
         Closed += MainWindow_Closed;
+    }
+
+    /// <summary>
+    /// Сервис для отображения ContentDialog
+    /// </summary>
+    public IContentDialogService ContentDialogService
+    {
+        get
+        {
+            if (_contentDialogService == null)
+            {
+                _contentDialogService = new ContentDialogService();
+                _contentDialogService.SetDialogHost(ContentDialogPresenter);
+            }
+            return _contentDialogService;
+        }
     }
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e) => InitializeMainWindow();
@@ -74,6 +91,11 @@ public partial class MainWindow : FluentWindow, IDisposable
     /// Текущий экземпляр окна
     /// </summary>
     public static MainWindow? Instance => _instance;
+
+    /// <summary>
+    /// Сервис ContentDialog для использования из UiHelper
+    /// </summary>
+    public static IContentDialogService? GetContentDialogService() => _instance?.ContentDialogService;
 
     /// <summary>
     /// Сервис конфигурации
@@ -380,7 +402,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     /// <summary>
     /// Показывает Snackbar с ошибкой несовместимости Java.
     /// </summary>
-    public void ShowJavaErrorSnackbar(Server server, string errorMessage, int requiredVersion, int foundVersion)
+    public void ShowJavaErrorSnackbar(Server server, string errorMessage, int requiredVersion, int foundVersion, List<JavaInstallation>? allJava = null)
     {
         var isServersPage = ContentFrame.Content is Pages.ServersPage;
         var isDetailPage = ContentFrame.Content is Pages.ServerDetailPage;
@@ -389,17 +411,32 @@ public partial class MainWindow : FluentWindow, IDisposable
 
         string title, message;
 
+        // Формируем строку с найденными Java версиями
+        string javaVersionsText;
+        if (allJava != null && allJava.Count > 0)
+        {
+            // Собираем уникальные версии Java через запятую
+            var versions = allJava
+                .Where(j => j.Exists)
+                .Select(j => j.MajorVersion > 0 ? j.MajorVersion.ToString() : j.Version)
+                .Distinct()
+                .OrderBy(v => int.TryParse(v, out var n) ? n : 999);
+            javaVersionsText = string.Join(", ", versions);
+        }
+        else
+        {
+            javaVersionsText = foundVersion > 0 ? foundVersion.ToString() : "—";
+        }
+
         if (isServersPage)
         {
-            // Страница серверов: в заголовке имя сервера
             title = server.Name;
-            message = LocalizationManager.Get("Snackbar_JavaIncompatible_Message", server.McVersion, requiredVersion, foundVersion);
+            message = LocalizationManager.Get("Snackbar_JavaIncompatible_Message_Plural", server.McVersion, requiredVersion, javaVersionsText);
         }
         else if (isDetailPage)
         {
-            // Страница управления: в заголовке "Несовместимая Java"
             title = LocalizationManager.Get("Snackbar_JavaIncompatible_Title");
-            message = LocalizationManager.Get("Snackbar_JavaIncompatible_Message", server.McVersion, requiredVersion, foundVersion);
+            message = LocalizationManager.Get("Snackbar_JavaIncompatible_Message_Plural", server.McVersion, requiredVersion, javaVersionsText);
         }
         else
         {
@@ -443,6 +480,42 @@ public partial class MainWindow : FluentWindow, IDisposable
             {
                 await SnackbarPresenter.HideCurrent();
             }
+        });
+    }
+
+    /// <summary>
+    /// Универсальный метод показа Snackbar (Success, Info, Warning, Danger)
+    /// </summary>
+    public void ShowSnackbar(string title, string message, ControlAppearance appearance = ControlAppearance.Info, int timeoutSeconds = 3)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (SnackbarPresenter == null)
+            {
+                Logger.Warning("[ShowSnackbar] SnackbarPresenter is null!", "MainWindow");
+                return;
+            }
+
+            var symbol = appearance switch
+            {
+                ControlAppearance.Success => SymbolRegular.CheckmarkCircle20,
+                ControlAppearance.Caution => SymbolRegular.Warning20,
+                ControlAppearance.Danger => SymbolRegular.ErrorCircle20,
+                _ => SymbolRegular.Info20
+            };
+
+            var snackbar = new Snackbar(SnackbarPresenter)
+            {
+                Title = title,
+                Content = message,
+                Icon = new SymbolIcon(symbol) { FontSize = 20 },
+                Timeout = TimeSpan.FromSeconds(timeoutSeconds),
+                Appearance = appearance,
+                Padding = new Thickness(12, 8, 12, 8),
+                Height = 32
+            };
+
+            SnackbarPresenter.AddToQue(snackbar);
         });
     }
 }

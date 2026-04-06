@@ -34,13 +34,17 @@ public class ServerStorageService : IServerStorageService, IDisposable
 
     public async Task<List<Server>> LoadServersAsync(CancellationToken ct = default)
     {
-        await Task.CompletedTask;
         lock (_lock)
         {
             if (_cachedServers != null)
                 return [.. _cachedServers];
+        }
 
-            _cachedServers = LoadServersFromFile();
+        var servers = await LoadServersFromFileAsync(ct);
+
+        lock (_lock)
+        {
+            _cachedServers = servers;
             return [.. _cachedServers];
         }
     }
@@ -56,12 +60,12 @@ public class ServerStorageService : IServerStorageService, IDisposable
 
     public async Task SaveServersAsync(List<Server> servers, CancellationToken ct = default)
     {
-        await Task.CompletedTask;
         lock (_lock)
         {
             _cachedServers = servers;
-            SaveServersToFile(servers);
         }
+
+        await SaveServersToFileAsyncWithRetry(servers, ct);
     }
 
     public void AddServer(Server server)
@@ -232,38 +236,78 @@ public class ServerStorageService : IServerStorageService, IDisposable
         }
     }
 
-    private static void TryDeleteServerFolder(Server? server)
+    private async Task SaveServersToFileAsyncWithRetry(List<Server> servers, CancellationToken ct)
     {
-        if (server == null) return;
-
         try
         {
-            if (!Directory.Exists(server.Path))
-            {
-                Logger.Info($"Server folder does not exist: {server.Path}", "ServerStorageService");
-                return;
-            }
+            var json = JsonConvert.SerializeObject(servers, Formatting.Indented);
 
-            for (int i = 0; i < 3; i++)
+            const int maxRetries = 3;
+            const int delayMs = 500;
+
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
                 try
                 {
-                    Directory.Delete(server.Path, true);
-                    Logger.Info($"Deleted server folder: {server.Path}", "ServerStorageService");
+                    await using var fileStream = new FileStream(
+                        _serversIndexPath,
+                        FileMode.Create,
+                        FileAccess.Write,
+                        FileShare.ReadWrite,
+                        4096,
+                        FileOptions.WriteThrough);
+                    using var writer = new StreamWriter(fileStream);
+                    await writer.WriteAsync(json.AsMemory(), ct);
                     return;
                 }
-                catch (IOException) when (i < 2)
+                catch (IOException ex) when (attempt < maxRetries && !ct.IsCancellationRequested)
                 {
-                    Thread.Sleep(500);
+                    Logger.Warning($"Save attempt {attempt}/{maxRetries} failed (file locked): {ex.Message}", "ServerStorageService");
+                    await Task.Delay(delayMs * attempt, ct);
                 }
             }
 
-            Logger.Warning($"Could not delete server folder (may be in use): {server.Path}", "ServerStorageService");
+            Logger.Error($"Failed to save servers after {maxRetries} attempts - file may be locked", null, "ServerStorageService");
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled - expected
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Failed to delete server folder: {ex.Message}", "ServerStorageService");
+            Logger.Error($"Failed to save servers: {ex.Message}", ex, "ServerStorageService");
         }
+    }
+
+    private static void TryDeleteServerFolder(Server? server)
+    {
+        if (server == null) return;
+        _ = TryDeleteServerFolderAsync(server);
+    }
+
+    private static async Task TryDeleteServerFolderAsync(Server server)
+    {
+        if (!Directory.Exists(server.Path))
+        {
+            Logger.Info($"Server folder does not exist: {server.Path}", "ServerStorageService");
+            return;
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            try
+            {
+                Directory.Delete(server.Path, true);
+                Logger.Info($"Deleted server folder: {server.Path}", "ServerStorageService");
+                return;
+            }
+            catch (IOException) when (i < 2)
+            {
+                await Task.Delay(500);
+            }
+        }
+
+        Logger.Warning($"Could not delete server folder (may be in use): {server.Path}", "ServerStorageService");
     }
 
     public void Dispose()

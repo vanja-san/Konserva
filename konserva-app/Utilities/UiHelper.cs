@@ -1,73 +1,116 @@
 ﻿using Konserva.Localization;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using Wpf.Ui;
 using Wpf.Ui.Controls;
-using MessageBox = Wpf.Ui.Controls.MessageBox;
 using TextBlock = Wpf.Ui.Controls.TextBlock;
 
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Утилита для отображения MessageBox
+/// Утилита для отображения ContentDialog и UI-операций
 /// </summary>
 public static class UiHelper
 {
     /// <summary>
+    /// Открыть папку в проводнике
+    /// </summary>
+    public static void OpenFolder(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+            {
+                System.Diagnostics.Process.Start("explorer.exe", path);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Failed to open folder: {ex.Message}", "UiHelper");
+            _ = ShowWarning(LocalizationManager.Get("UiHelper_OpenFolderError") ?? "Не удалось открыть папку");
+        }
+    }
+
+    /// <summary>
+    /// Получает ContentDialogService из MainWindow
+    /// </summary>
+    private static IContentDialogService? GetDialogService()
+    {
+        return MainWindow.GetContentDialogService();
+    }
+
+    /// <summary>
     /// Показ информационного сообщения
     /// </summary>
-    public static async Task<Wpf.Ui.Controls.MessageBoxResult> ShowInfo(string message, string title = "Информация")
+    public static async Task<ContentDialogResult> ShowInfo(string message, string title = "")
     {
-        var msg = new MessageBox
+        var service = GetDialogService();
+        if (service == null) return ContentDialogResult.None;
+
+        var dialog = new ContentDialog
         {
-            Title = title,
+            Title = string.IsNullOrEmpty(title) ? LocalizationManager.Get("MsgTitle_Info") : title,
             Content = message,
-            PrimaryButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
-            PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Info24),
-            ShowTitle = true
+            CloseButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
+            CloseButtonIcon = new SymbolIcon(SymbolRegular.Info24),
+            DefaultButton = ContentDialogButton.Close
         };
-        return await msg.ShowDialogAsync();
+
+        return await service.ShowAsync(dialog, CancellationToken.None);
     }
 
     /// <summary>
     /// Показ предупреждения
     /// </summary>
-    public static async Task<Wpf.Ui.Controls.MessageBoxResult> ShowWarning(string message, string title = "Предупреждение")
+    public static async Task<ContentDialogResult> ShowWarning(string message, string title = "")
     {
-        var msg = new MessageBox
+        var service = GetDialogService();
+        if (service == null) return ContentDialogResult.None;
+
+        var dialog = new ContentDialog
         {
-            Title = title,
+            Title = string.IsNullOrEmpty(title) ? LocalizationManager.Get("MsgTitle_Warning") : title,
             Content = message,
-            PrimaryButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
-            PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Warning24),
-            ShowTitle = true
+            CloseButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
+            CloseButtonIcon = new SymbolIcon(SymbolRegular.Warning24),
+            DefaultButton = ContentDialogButton.Close
         };
-        return await msg.ShowDialogAsync();
+
+        return await service.ShowAsync(dialog, CancellationToken.None);
     }
 
     /// <summary>
     /// Показ ошибки
     /// </summary>
-    public static async Task<Wpf.Ui.Controls.MessageBoxResult> ShowError(string message, string title = "Ошибка")
+    public static async Task<ContentDialogResult> ShowError(string message, string title = "")
     {
-        var msg = new MessageBox
+        var service = GetDialogService();
+        if (service == null) return ContentDialogResult.None;
+
+        var dialog = new ContentDialog
         {
-            Title = title,
+            Title = string.IsNullOrEmpty(title) ? LocalizationManager.Get("MsgTitle_Error") : title,
             Content = message,
-            PrimaryButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
-            PrimaryButtonIcon = new SymbolIcon(SymbolRegular.DismissCircle24),
-            ShowTitle = true
+            CloseButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
+            CloseButtonIcon = new SymbolIcon(SymbolRegular.DismissCircle24),
+            DefaultButton = ContentDialogButton.Close
         };
-        return await msg.ShowDialogAsync();
+
+        return await service.ShowAsync(dialog, CancellationToken.None);
     }
 
     /// <summary>
     /// Показ подтверждения
     /// </summary>
-    public static async Task<Wpf.Ui.Controls.MessageBoxResult> ShowConfirm(string message, string title = "Подтверждение")
+    public static async Task<ContentDialogResult> ShowConfirm(string message, string title = "")
     {
-        var msg = new MessageBox
+        var service = GetDialogService();
+        if (service == null) return ContentDialogResult.None;
+
+        var dialog = new ContentDialog
         {
-            Title = title,
+            Title = string.IsNullOrEmpty(title) ? LocalizationManager.Get("MsgTitle_Confirm") : title,
             Content = new TextBlock
             {
                 Text = message,
@@ -80,20 +123,23 @@ public static class UiHelper
             PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Checkmark24),
             CloseButtonText = LocalizationManager.Get("MsgBtn_No") ?? "No",
             CloseButtonIcon = new SymbolIcon(SymbolRegular.Dismiss24),
-            ShowTitle = true,
-            Padding = new Thickness(16)
+            DefaultButton = ContentDialogButton.Primary
         };
-        return await msg.ShowDialogAsync();
+
+        return await service.ShowAsync(dialog, CancellationToken.None);
     }
 
     /// <summary>
     /// Показ подтверждения удаления сервера
     /// </summary>
-    public static async Task<Wpf.Ui.Controls.MessageBoxResult> ShowDeleteServerConfirm(string serverName, string serverPath)
+    public static async Task<ContentDialogResult> ShowDeleteServerConfirm(string serverName, string _)
     {
-        var msg = new MessageBox
+        var service = GetDialogService();
+        if (service == null) return ContentDialogResult.None;
+
+        var dialog = new ContentDialog
         {
-            Title = "🗑️ " + (LocalizationManager.Get("MsgDel_Title") ?? "Delete Server"),
+            Title = LocalizationManager.Get("MsgDel_Title") ?? "Delete Server",
             Content = new StackPanel
             {
                 Margin = new Thickness(0, 8, 0, 0),
@@ -111,7 +157,7 @@ public static class UiHelper
                     },
                     new Border
                     {
-                        Padding = new Thickness(16,0,16,0),
+                        Padding = new Thickness(16, 0, 16, 0),
                         Child = new StackPanel
                         {
                             Children =
@@ -170,9 +216,9 @@ public static class UiHelper
             PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Delete24),
             CloseButtonText = LocalizationManager.Get("MsgBtn_Cancel") ?? "Cancel",
             CloseButtonIcon = new SymbolIcon(SymbolRegular.Dismiss24),
-            ShowTitle = true,
-            Padding = new Thickness(16)
+            DefaultButton = ContentDialogButton.Close
         };
-        return await msg.ShowDialogAsync();
+
+        return await service.ShowAsync(dialog, CancellationToken.None);
     }
 }

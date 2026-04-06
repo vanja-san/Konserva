@@ -1016,7 +1016,7 @@ public partial class CreateServerDialog : FluentWindow
                 var serverName = Path.GetFileName(serverPath);
                 _ = MainWindow.ServerManager.CreateServer(serverName, mcVersion, modLoader, serverPath);
 
-                await UiHelper.ShowInfo(string.Format(LocalizationManager.Get("CreateServer_Import_Success"), serverName));
+                MainWindow.Instance?.ShowSnackbar(LocalizationManager.Get("CreateServer_Import_Success_Title") ?? "Импорт завершён", string.Format(LocalizationManager.Get("CreateServer_Import_Success"), serverName), Wpf.Ui.Controls.ControlAppearance.Success);
 
                 DialogResult = true;
                 Close();

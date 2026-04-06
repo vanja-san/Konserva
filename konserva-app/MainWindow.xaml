@@ -196,5 +196,12 @@
             Panel.ZIndex="100"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Bottom" />
+
+        <!--  ContentDialog Host — для модальных диалогов  -->
+        <ui:ContentDialogHost
+            x:Name="ContentDialogPresenter"
+            Grid.Row="0"
+            Grid.RowSpan="3"
+            Panel.ZIndex="200" />
     </Grid>
 </ui:FluentWindow>

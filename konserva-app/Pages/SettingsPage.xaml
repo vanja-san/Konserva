@@ -26,6 +26,7 @@
             <ui:TextBlock
                 Grid.Column="0"
                 FontSize="24"
+                FontTypography="Title"
                 FontWeight="SemiBold"
                 Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
                 Text="{loc:Loc Settings_Title}" />

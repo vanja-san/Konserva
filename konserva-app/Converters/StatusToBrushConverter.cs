@@ -9,10 +9,17 @@ namespace Konserva.Converters;
 /// </summary>
 public class StatusToBrushConverter : IValueConverter
 {
-    private static readonly Brush SuccessBrush = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
-    private static readonly Brush WarningBrush = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
-    private static readonly Brush ErrorBrush = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
-    private static readonly Brush DefaultBrush = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33));
+    private static readonly Brush SuccessBrush = CreateBrush(0x22, 0xC5, 0x5E);
+    private static readonly Brush WarningBrush = CreateBrush(0xF5, 0x9E, 0x0B);
+    private static readonly Brush ErrorBrush = CreateBrush(0xEF, 0x44, 0x44);
+    private static readonly Brush DefaultBrush = CreateBrush(0x33, 0x33, 0x33);
+
+    private static SolidColorBrush CreateBrush(byte r, byte g, byte b)
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+        brush.Freeze();
+        return brush;
+    }
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {

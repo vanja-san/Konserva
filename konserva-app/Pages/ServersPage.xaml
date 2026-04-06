@@ -24,6 +24,7 @@
                         Margin="12,0,0,0"
                         VerticalAlignment="Center"
                         FontSize="14"
+                        FontTypography="Caption"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         IsHitTestVisible="False"
                         Text="{loc:Loc ServersPage_Search}"
@@ -87,7 +88,7 @@
         <!--  Список серверов  -->
         <Border Grid.Row="1">
             <Grid>
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ScrollViewer CanContentScroll="True" VerticalScrollBarVisibility="Auto">
                     <ItemsControl
                         x:Name="ServersList"
                         VirtualizingStackPanel.IsVirtualizing="True"
@@ -102,8 +103,10 @@
                                 <ui:CardAction
                                     Margin="0,0,0,8"
                                     Padding="12,6"
+                                    AutomationProperties.Name="{Binding Name}"
                                     Click="ServerCard_Click"
                                     IsChevronVisible="True"
+                                    KeyDown="ServerCard_KeyDown"
                                     Tag="{Binding}">
                                     <ui:CardAction.Icon>
                                         <ui:SymbolIcon
@@ -156,6 +159,7 @@
                                                 x:Name="PlayButton"
                                                 Margin="0,0,8,0"
                                                 Padding="4"
+                                                AutomationProperties.Name="Play or Stop"
                                                 Click="Play_Click"
                                                 Tag="{Binding}">
                                                 <ui:SymbolIcon FontSize="20">
@@ -174,6 +178,7 @@
                                             <ui:Button
                                                 Margin="0,0,8,0"
                                                 Padding="4"
+                                                AutomationProperties.Name="Open folder"
                                                 Click="OpenFolder_Click"
                                                 Tag="{Binding}"
                                                 ToolTip="{loc:Loc ServersPage_OpenFolder}">
@@ -182,6 +187,7 @@
                                             <ui:Button
                                                 Margin="0,0,12,0"
                                                 Padding="4"
+                                                AutomationProperties.Name="Delete server"
                                                 Click="Delete_Click"
                                                 Tag="{Binding}"
                                                 ToolTip="{loc:Loc ServersPage_Delete}">
@@ -203,12 +209,14 @@
                     <ui:TextBlock
                         HorizontalAlignment="Center"
                         FontSize="16"
+                        FontTypography="BodyStrong"
                         Foreground="Gray"
                         Text="{loc:Loc ServersPage_NoServers}" />
                     <ui:TextBlock
                         Margin="0,4,0,0"
                         HorizontalAlignment="Center"
                         FontSize="13"
+                        FontTypography="Body"
                         Foreground="Gray"
                         Text="{loc:Loc ServersPage_NoServers_Description}" />
                 </StackPanel>

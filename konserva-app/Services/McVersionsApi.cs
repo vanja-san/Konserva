@@ -59,8 +59,9 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
             _mcVersions = versions;
             return versions;
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.Warning($"Failed to get Minecraft versions: {ex.Message}", "McVersionsApi");
             _mcVersions = [];
             return _mcVersions;
         }
@@ -77,27 +78,24 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
     {
         Logger.Info($"Getting Forge versions for MC {mcVersion}...", "McVersionsApi");
 
-        // Forge использует Maven API
         try
         {
             var url = $"https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml";
             Logger.Info($"Fetching Forge from Maven: {url}", "McVersionsApi");
 
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-            var response = await httpClient.GetStringAsync(url, ct);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(15));
+
+            var response = await _http.GetStringAsync(url, timeoutCts.Token);
 
             var versions = new HashSet<string>();
 
-            // Ищем версии в Maven metadata.xml
             var matches = System.Text.RegularExpressions.Regex.Matches(response, @"<version>([^<]+)</version>");
             foreach (System.Text.RegularExpressions.Match match in matches)
             {
                 var fullVersion = match.Groups[1].Value;
-                // Forge версия имеет формат: MC_VERSION-FORGE_VERSION
-                // Пример: 1.20.1-47.2.0
                 if (fullVersion.StartsWith(mcVersion + "-"))
                 {
-                    // Извлекаем номер Forge отдельно
                     var forgeVersion = fullVersion[(mcVersion.Length + 1)..];
                     versions.Add(forgeVersion);
                 }
@@ -111,6 +109,10 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
             }
 
             Logger.Warning($"No Forge versions found for MC {mcVersion} in Maven", "McVersionsApi");
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.Warning($"Timeout getting Forge versions for MC {mcVersion}", "McVersionsApi");
         }
         catch (Exception ex)
         {
@@ -151,8 +153,9 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
             var result = versions.Take(50).ToArray();
             return result.Length > 0 ? result : ["latest"];
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.Warning($"Failed to get Fabric versions for MC {mcVersion}: {ex.Message}", "McVersionsApi");
             return ["latest"];
         }
     }
@@ -189,8 +192,10 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
         {
             Logger.Info($"Fetching NeoForge from: {mavenUrl}", "McVersionsApi");
 
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            var response = await httpClient.GetStringAsync(mavenUrl, ct);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
+
+            var response = await _http.GetStringAsync(mavenUrl, timeoutCts.Token);
 
             Logger.Info($"Got NeoForge response: {response.Length} bytes", "McVersionsApi");
 
@@ -208,6 +213,10 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
 
                 return result;
             }
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.Warning($"Timeout getting NeoForge versions for MC {mcVersion}", "McVersionsApi");
         }
         catch (Exception ex)
         {
@@ -322,13 +331,13 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
     {
         try
         {
-            // Quilt API v3
             var url = $"https://meta.quiltmc.org/v3/versions/loader/{mcVersion}";
-
             Logger.Info($"Fetching Quilt from: {url}", "McVersionsApi");
 
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            var response = await httpClient.GetStringAsync(url, ct);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
+
+            var response = await _http.GetStringAsync(url, timeoutCts.Token);
 
             using var doc = JsonDocument.Parse(response);
             var array = doc.RootElement.EnumerateArray();
@@ -336,27 +345,23 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
             var versions = new List<string>();
             foreach (var item in array)
             {
-                // Quilt API v3: версия находится внутри объекта "loader"
                 if (item.TryGetProperty("loader", out var loaderObj))
                 {
                     if (loaderObj.TryGetProperty("version", out var versionProp))
                     {
                         versions.Add(versionProp.GetString()!);
                     }
-                    // Иногда используется "maven" для версии
                     else if (loaderObj.TryGetProperty("maven", out var mavenProp))
                     {
                         versions.Add(mavenProp.GetString()!);
                     }
                 }
-                // Fallback на прямое поле version
                 else if (item.TryGetProperty("version", out var vp))
                 {
                     versions.Add(vp.GetString()!);
                 }
             }
 
-            // Сортируем: сначала стабильные (без -beta), потом бета
             var stableVersions = versions
                 .Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(v => v);
@@ -372,13 +377,17 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
         }
         catch (HttpRequestException httpEx) when (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            // 404 означает, что эта версия Minecraft не поддерживается Quilt
             Logger.Warning($"Quilt does not support MC {mcVersion} (404 Not Found)", "McVersionsApi");
             return [];
         }
+        catch (OperationCanceledException)
+        {
+            Logger.Warning($"Timeout getting Quilt versions for MC {mcVersion}", "McVersionsApi");
+            return ["latest"];
+        }
         catch (Exception ex)
         {
-            Logger.Warning($"Failed to get Quilt versions: {ex.Message}", "McVersionsApi");
+            Logger.Warning($"Failed to get Quilt versions for MC {mcVersion}: {ex.Message}", "McVersionsApi");
             return ["latest"];
         }
     }

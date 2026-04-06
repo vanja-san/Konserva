@@ -9,8 +9,15 @@ namespace Konserva.Converters;
 /// </summary>
 public class BoolToGreenBrushConverter : IValueConverter
 {
-    private static readonly Brush GreenBrush = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
+    private static readonly Brush GreenBrush = CreateBrush(0x22, 0xC5, 0x5E);
     private static readonly Brush TransparentBrush = Brushes.Transparent;
+
+    private static SolidColorBrush CreateBrush(byte r, byte g, byte b)
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+        brush.Freeze();
+        return brush;
+    }
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {

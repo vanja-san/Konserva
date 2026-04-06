@@ -58,100 +58,25 @@ public partial class ServersPage : Page, IDisposable
         if (isJavaError)
         {
             // Парсим информацию о версии Java из сообщения об ошибке
-            var requiredVersion = ParseRequiredJavaVersion(errorMessage);
-            var foundVersion = ParseFoundJavaVersion(errorMessage);
-            var javaPath = ParseJavaPath(errorMessage);
+            var requiredVersion = JavaVersionParser.ParseRequiredJavaVersion(errorMessage);
+            var foundVersion = JavaVersionParser.ParseFoundJavaVersion(errorMessage);
+            var javaPath = JavaVersionParser.ParseJavaPath(errorMessage);
+
+            // Получаем все установленные Java
+            var allJava = App.ConfigService?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
 
             Logger.Info($"[ServersPage.OnServerStartError] Calling ShowJavaErrorSnackbar: required={requiredVersion}, found={foundVersion}", "ServersPage");
 
             // Вызываем на UI потоке MainWindow
             MainWindow.Instance?.Dispatcher.Invoke(() =>
             {
-                MainWindow.Instance?.ShowJavaErrorSnackbar(server, errorMessage, requiredVersion, foundVersion);
+                MainWindow.Instance?.ShowJavaErrorSnackbar(server, errorMessage, requiredVersion, foundVersion, allJava);
             });
         }
         else
         {
             MainWindow.Instance?.Dispatcher.Invoke(async () => await UiHelper.ShowError(errorMessage));
         }
-    }
-
-    private static int ParseRequiredJavaVersion(string msg)
-    {
-        // Формат 1: "Требуется Java X+" (наш формат)
-        var match = System.Text.RegularExpressions.Regex.Match(msg, @"Java (\d+)\+");
-        if (match.Success)
-            return int.Parse(match.Groups[1].Value);
-
-        // Формат 2: "class file version XX.0" → переводим в версию Java
-        // class file version 69.0 = Java 25, 65.0 = Java 21, 61.0 = Java 17, 55.0 = Java 11, 52.0 = Java 8
-        var classVersionMatch = System.Text.RegularExpressions.Regex.Match(msg, @"compiled by a more recent version.*?class file version (\d+)");
-        if (classVersionMatch.Success)
-        {
-            var classVersion = int.Parse(classVersionMatch.Groups[1].Value);
-            return ClassFileVersionToJavaVersion(classVersion);
-        }
-
-        // Формат 3: "Java X" (общий fallback)
-        var fallbackMatch = System.Text.RegularExpressions.Regex.Match(msg, @"Java (\d+)");
-        return fallbackMatch.Success ? int.Parse(fallbackMatch.Groups[1].Value) : 0;
-    }
-
-    private static int ParseFoundJavaVersion(string msg)
-    {
-        // Формат: "recognizes class file versions up to XX.0"
-        var classVersionMatch = System.Text.RegularExpressions.Regex.Match(msg, @"versions up to (\d+)");
-        if (classVersionMatch.Success)
-        {
-            var classVersion = int.Parse(classVersionMatch.Groups[1].Value);
-            return ClassFileVersionToJavaVersion(classVersion);
-        }
-
-        var match = System.Text.RegularExpressions.Regex.Match(msg, @"Java (\d+) .*найдена|found Java (\d+)");
-        if (match.Success)
-        {
-            for (int i = 1; i <= 2; i++)
-            {
-                if (match.Groups[i].Success && int.TryParse(match.Groups[i].Value, out var v))
-                    return v;
-            }
-        }
-        return 0;
-    }
-
-    /// <summary>
-    /// Переводит class file version в версию Java
-    /// </summary>
-    private static int ClassFileVersionToJavaVersion(int classVersion) => classVersion switch
-    {
-        49 => 5,
-        50 => 6,
-        51 => 7,
-        52 => 8,
-        53 => 9,
-        54 => 10,
-        55 => 11,
-        56 => 12,
-        57 => 13,
-        58 => 14,
-        59 => 15,
-        60 => 16,
-        61 => 17,
-        62 => 18,
-        63 => 19,
-        64 => 20,
-        65 => 21,
-        66 => 22,
-        67 => 23,
-        68 => 24,
-        69 => 25,
-        _ => 0
-    };
-
-    private static string ParseJavaPath(string msg)
-    {
-        var match = System.Text.RegularExpressions.Regex.Match(msg, @"(?:Путь|Path)[:\s]+(.+?)(?:\n|$)");
-        return match.Success ? match.Groups[1].Value.Trim() : "";
     }
 
     /// <summary>
@@ -220,9 +145,9 @@ public partial class ServersPage : Page, IDisposable
 
     private void FilterType_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (FilterType.SelectedItem is ComboBoxItem item && item.Content is string content)
+        if (FilterType.SelectedItem is ComboBoxItem item && item.Tag is string tag)
         {
-            _filterType = content == "Все типы" ? "All" : content;
+            _filterType = tag;
             ApplyFilters();
         }
     }
@@ -347,23 +272,21 @@ public partial class ServersPage : Page, IDisposable
         }
     }
 
-    private async void OpenFolder_Click(object sender, RoutedEventArgs e)
+    private void ServerCard_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        // Кнопки в DataTemplate используют стандартный WPF Button, не WPF UI
+        if (e.Key is System.Windows.Input.Key.Enter or System.Windows.Input.Key.Space)
+        {
+            e.Handled = true;
+            ServerCard_Click(sender, new RoutedEventArgs());
+        }
+    }
+
+    private void OpenFolder_Click(object sender, RoutedEventArgs e)
+    {
         if (sender is not System.Windows.Controls.Button btn || btn.Tag is not Server server)
             return;
 
-        try
-        {
-            if (Directory.Exists(server.Path))
-            {
-                Process.Start("explorer.exe", server.Path);
-            }
-        }
-        catch
-        {
-            await UiHelper.ShowWarning("Не удалось открыть папку сервера");
-        }
+        UiHelper.OpenFolder(server.Path);
     }
 
     private async void Delete_Click(object sender, RoutedEventArgs e)
@@ -374,7 +297,7 @@ public partial class ServersPage : Page, IDisposable
 
         var result = await UiHelper.ShowDeleteServerConfirm(server.Name, server.Path);
 
-        if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
+        if (result != ContentDialogResult.Primary)
             return;
 
         try

@@ -1,263 +1,187 @@
 using Konserva.Utilities;
 using Xunit;
 
-namespace Konserva.Tests.Utilities;
+namespace Konserva.Tests;
 
-/// <summary>
-/// Тесты для JavaVersionParser
-/// </summary>
 public class JavaVersionParserTests
 {
-    #region ParseMajorVersion Tests
+    // Реальный stderr Forge когда Java слишком старая (class file version)
+    private const string ForgeUnsupportedClassError = """
+        Error: A JNI error has occurred, please check your installation and try again
+        Exception in thread "main" java.lang.UnsupportedClassVersionError: net/minecraft/server/Main has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0
+        	at java.lang.ClassLoader.defineClass1(Native Method)
+        	at java.lang.ClassLoader.defineClass(ClassLoader.java:1017)
+        """;
 
-    [Theory]
-    [InlineData("java version \"1.8.0_301\"", 8)]
-    [InlineData("java version \"1.7.0_80\"", 7)]
-    [InlineData("java version \"1.6.0_45\"", 6)]
-    public void ParseMajorVersion_LegacyFormat_ReturnsCorrectVersion(
-        string versionOutput,
-        int expectedVersion)
+    // Fabric error — class file version появляется глубже в stack trace
+    private const string FabricUnsupportedClassError = """
+        Error: A JNI error has occurred, please check your installation and try again
+        Exception in thread "main" java.lang.UnsupportedClassVersionError: net/fabricmc/loader/impl/launch/knot/KnotServer has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0
+        	at java.lang.ClassLoader.defineClass1(Native Method)
+        """;
+
+    // Наше кастомное сообщение об ошибке (из LogJavaVersionError)
+    private const string CustomJavaErrorMessage = """
+        Требуется Java 21+ для Minecraft 1.21.1, но найдена Java 17 (17.0.8)
+        Путь: C:\Program Files\Java\jdk-17\bin\java.exe
+        """;
+
+    // NeoForge error
+    private const string NeoForgeUnsupportedClassError = """
+        Error: A JNI error has occurred, please check your installation and try again
+        Exception in thread "main" java.lang.UnsupportedClassVersionError: net/neoforged/neoforge/server/Main has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0
+        """;
+
+    // Forge bootstrap error — реальный лог из приложения
+    private const string ForgeBootstrapError = """
+        Exception in thread "main" java.lang.IllegalStateException: Current Java is 21 but we require at least 25
+        at net.minecraftforge.bootstrap.shim.Main.main(Main.java:32)
+        """;
+
+    // Forge bootstrap error с Java 17
+    private const string ForgeBootstrapError17 = """
+        Exception in thread "main" java.lang.IllegalStateException: Current Java is 17 but we require at least 21
+        at net.minecraftforge.bootstrap.shim.Main.main(Main.java:32)
+        """;
+
+    // ========== ParseRequiredJavaVersion ==========
+
+    [Fact]
+    public void ParseRequiredJavaVersion_FromClassFileVersion_ReturnsCorrectVersion()
     {
-        // Act
-        var result = JavaVersionParser.ParseMajorVersion(versionOutput);
-
-        // Assert
-        result.Should().Be(expectedVersion);
-    }
-
-    [Theory]
-    [InlineData("java version \"11.0.11\" 2021-04-20 LTS", 11)]
-    [InlineData("java version \"17.0.1\" 2021-10-19 LTS", 17)]
-    [InlineData("java version \"21.0.1\" 2023-10-17 LTS", 21)]
-    [InlineData("java version \"25.0.1\" 2025-10-17 LTS", 25)]
-    public void ParseMajorVersion_NewFormat_ReturnsCorrectVersion(
-        string versionOutput,
-        int expectedVersion)
-    {
-        // Act
-        var result = JavaVersionParser.ParseMajorVersion(versionOutput);
-
-        // Assert
-        result.Should().Be(expectedVersion);
-    }
-
-    [Theory]
-    [InlineData("openjdk version \"1.8.0_302\"", 8)]
-    [InlineData("openjdk version \"11.0.12\" 2021-07-20", 11)]
-    [InlineData("openjdk version \"17.0.2\" 2022-01-18", 17)]
-    public void ParseMajorVersion_OpenJdkFormat_ReturnsCorrectVersion(
-        string versionOutput,
-        int expectedVersion)
-    {
-        // Act
-        var result = JavaVersionParser.ParseMajorVersion(versionOutput);
-
-        // Assert
-        result.Should().Be(expectedVersion);
+        // Forge: class file 65 = Java 21
+        var result = JavaVersionParser.ParseRequiredJavaVersion(ForgeUnsupportedClassError);
+        Assert.Equal(21, result);
     }
 
     [Fact]
-    public void ParseMajorVersion_EmptyInput_Returns8()
+    public void ParseRequiredJavaVersion_FromFabricError_ReturnsCorrectVersion()
     {
-        // Act
-        var result = JavaVersionParser.ParseMajorVersion("");
-
-        // Assert
-        result.Should().Be(8);
+        var result = JavaVersionParser.ParseRequiredJavaVersion(FabricUnsupportedClassError);
+        Assert.Equal(21, result);
     }
 
     [Fact]
-    public void ParseMajorVersion_NullInput_ThrowsArgumentNullException()
+    public void ParseRequiredJavaVersion_FromNeoForgeError_ReturnsCorrectVersion()
     {
-        // Act
-        var action = () => JavaVersionParser.ParseMajorVersion(null!);
-
-        // Assert
-        action.Should().Throw<ArgumentNullException>();
+        var result = JavaVersionParser.ParseRequiredJavaVersion(NeoForgeUnsupportedClassError);
+        Assert.Equal(21, result);
     }
 
     [Fact]
-    public void ParseMajorVersion_InvalidInput_Returns8()
+    public void ParseRequiredJavaVersion_FromCustomMessage_ReturnsCorrectVersion()
     {
-        // Act
-        var result = JavaVersionParser.ParseMajorVersion("invalid version string");
-
-        // Assert
-        result.Should().Be(8);
-    }
-
-    #endregion
-
-    #region ParseVersion Tests
-
-    [Theory]
-    [InlineData("java version \"1.8.0_301\"", "1.8.0_301")]
-    [InlineData("java version \"11.0.11\" 2021-04-20 LTS", "11.0.11")]
-    [InlineData("java version \"17.0.1\" 2021-10-19 LTS", "17.0.1")]
-    [InlineData("java version \"21.0.1\" 2023-10-17 LTS", "21.0.1")]
-    public void ParseVersion_ExtractsVersionString(
-        string versionOutput,
-        string expectedVersion)
-    {
-        // Act
-        var result = JavaVersionParser.ParseVersion(versionOutput);
-
-        // Assert
-        result.Should().Be(expectedVersion);
-    }
-
-    [Theory]
-    [InlineData("openjdk version \"1.8.0_302\"", "1.8.0_302")]
-    [InlineData("openjdk version \"11.0.12\" 2021-07-20", "11.0.12")]
-    public void ParseVersion_OpenJdkFormat_ExtractsVersionString(
-        string versionOutput,
-        string expectedVersion)
-    {
-        // Act
-        var result = JavaVersionParser.ParseVersion(versionOutput);
-
-        // Assert
-        result.Should().Be(expectedVersion);
+        var result = JavaVersionParser.ParseRequiredJavaVersion(CustomJavaErrorMessage);
+        Assert.Equal(21, result);
     }
 
     [Fact]
-    public void ParseVersion_EmptyInput_ReturnsUnknown()
+    public void ParseRequiredJavaVersion_FromForgeBootstrap_ReturnsRequiredVersion()
     {
-        // Act
-        var result = JavaVersionParser.ParseVersion("");
-
-        // Assert
-        result.Should().Be("неизвестно");
+        // Реальная ошибка Forge: "Current Java is 21 but we require at least 25"
+        var result = JavaVersionParser.ParseRequiredJavaVersion(ForgeBootstrapError);
+        Assert.Equal(25, result);
     }
 
     [Fact]
-    public void ParseVersion_NullInput_ThrowsArgumentNullException()
+    public void ParseRequiredJavaVersion_FromForgeBootstrap17_ReturnsRequiredVersion()
     {
-        // Act
-        var action = () => JavaVersionParser.ParseVersion(null!);
+        var result = JavaVersionParser.ParseRequiredJavaVersion(ForgeBootstrapError17);
+        Assert.Equal(21, result);
+    }
 
-        // Assert
-        action.Should().Throw<ArgumentNullException>();
+    // ========== ParseFoundJavaVersion ==========
+
+    [Fact]
+    public void ParseFoundJavaVersion_FromForgeError_ReturnsCorrectVersion()
+    {
+        // "up to 61.0" = Java 17
+        var result = JavaVersionParser.ParseFoundJavaVersion(ForgeUnsupportedClassError);
+        Assert.Equal(17, result);
     }
 
     [Fact]
-    public void ParseVersion_InvalidInput_ReturnsInput()
+    public void ParseFoundJavaVersion_FromFabricError_ReturnsCorrectVersion()
     {
-        // Act
-        var result = JavaVersionParser.ParseVersion("no version here");
-
-        // Assert - Regex возвращает первую найденную группу или исходную строку
-        result.Should().NotBeNullOrEmpty();
+        var result = JavaVersionParser.ParseFoundJavaVersion(FabricUnsupportedClassError);
+        Assert.Equal(17, result);
     }
 
-    #endregion
+    [Fact]
+    public void ParseFoundJavaVersion_FromCustomMessage_ReturnsCorrectVersion()
+    {
+        // Наше кастомное сообщение: "найдена Java 17"
+        var result = JavaVersionParser.ParseFoundJavaVersion(CustomJavaErrorMessage);
+        Assert.Equal(17, result);
+    }
 
-    #region GetRequiredJavaVersion Tests
+    [Fact]
+    public void ParseFoundJavaVersion_FromCustomMessage21_ReturnsCorrectVersion()
+    {
+        // Реальное сообщение из лога: "Требуется Java 25+ для Minecraft 26.1.1, но найдена Java 21 (21.0.10)"
+        var msg = "Требуется Java 25+ для Minecraft 26.1.1, но найдена Java 21 (21.0.10)";
+        var result = JavaVersionParser.ParseFoundJavaVersion(msg);
+        Assert.Equal(21, result);
+    }
+
+    [Fact]
+    public void ParseFoundJavaVersion_FromForgeBootstrap_ReturnsFoundVersion()
+    {
+        // "Current Java is 21 but we require at least 25"
+        var result = JavaVersionParser.ParseFoundJavaVersion(ForgeBootstrapError);
+        Assert.Equal(21, result);
+    }
+
+    [Fact]
+    public void ParseFoundJavaVersion_FromForgeBootstrap17_ReturnsFoundVersion()
+    {
+        var result = JavaVersionParser.ParseFoundJavaVersion(ForgeBootstrapError17);
+        Assert.Equal(17, result);
+    }
+
+    // ========== ClassFileVersionToJavaVersion ==========
+
+    [Fact]
+    public void ClassFileVersionToJavaVersion_AllKnownVersions()
+    {
+        Assert.Equal(8, JavaVersionParser.ClassFileVersionToJavaVersion(52));
+        Assert.Equal(11, JavaVersionParser.ClassFileVersionToJavaVersion(55));
+        Assert.Equal(17, JavaVersionParser.ClassFileVersionToJavaVersion(61));
+        Assert.Equal(21, JavaVersionParser.ClassFileVersionToJavaVersion(65));
+        Assert.Equal(25, JavaVersionParser.ClassFileVersionToJavaVersion(69));
+        Assert.Equal(0, JavaVersionParser.ClassFileVersionToJavaVersion(40));
+    }
+
+    // ========== GetRequiredJavaVersion ==========
 
     [Theory]
-    [InlineData("1.21.1", McServerInstaller.ServerLaunchType.Forge, 17)]
-    [InlineData("1.20.4", McServerInstaller.ServerLaunchType.NeoForge, 17)]
-    [InlineData("1.19.2", McServerInstaller.ServerLaunchType.Forge, 17)]
-    [InlineData("1.18.2", McServerInstaller.ServerLaunchType.Forge, 17)]
-    [InlineData("1.17.1", McServerInstaller.ServerLaunchType.Forge, 17)]
-    public void GetRequiredJavaVersion_Forge_ReturnsJava17(
-        string minecraftVersion,
-        McServerInstaller.ServerLaunchType launchType,
-        int expectedJavaVersion)
+    // Forge — старые MC версии (1.x)
+    [InlineData("1.20.4", McServerInstaller.ServerLaunchType.Forge, 17)]       // Forge MC 1.20.4 требует Java 17
+    [InlineData("1.20.5", McServerInstaller.ServerLaunchType.Forge, 21)]       // Forge MC 1.20.5 требует Java 21
+    [InlineData("1.21.1", McServerInstaller.ServerLaunchType.Forge, 21)]       // Forge MC 1.21+ требует Java 21
+    // NeoForge — старые MC версии (1.x)
+    [InlineData("1.20.4", McServerInstaller.ServerLaunchType.NeoForge, 17)]    // NeoForge MC 1.20.4 требует Java 17
+    [InlineData("1.21.1", McServerInstaller.ServerLaunchType.NeoForge, 21)]    // NeoForge MC 1.21+ требует Java 21
+    // Fabric — следует требованиям MC версии
+    [InlineData("1.21.1", McServerInstaller.ServerLaunchType.Fabric, 21)]      // Fabric MC 1.21+ требует Java 21
+    [InlineData("1.20.4", McServerInstaller.ServerLaunchType.Fabric, 17)]      // Fabric MC 1.20.4 требует Java 17
+    // Standard (Vanilla, Paper, Purpur)
+    [InlineData("1.20.6", McServerInstaller.ServerLaunchType.Standard, 21)]    // Vanilla 1.20.5+ требует Java 21
+    [InlineData("1.18.2", McServerInstaller.ServerLaunchType.Standard, 17)]    // Vanilla 1.18+ требует Java 17
+    [InlineData("1.16.5", McServerInstaller.ServerLaunchType.Standard, 8)]     // Vanilla 1.16 требует Java 8
+    [InlineData("1.17.0", McServerInstaller.ServerLaunchType.Standard, 16)]    // Vanilla 1.17 требует Java 16
+    // MC 26.x (новый формат без префикса 1.)
+    [InlineData("26.1.0", McServerInstaller.ServerLaunchType.Forge, 25)]       // MC 26.1+ требует Java 25
+    [InlineData("26.1.1", McServerInstaller.ServerLaunchType.Forge, 25)]       // MC 26.1.1 требует Java 25
+    [InlineData("26.2.0", McServerInstaller.ServerLaunchType.Forge, 25)]       // MC 26.2+ требует Java 25
+    [InlineData("27.0.0", McServerInstaller.ServerLaunchType.Forge, 25)]       // MC 27+ требует Java 25
+    [InlineData("26.1.1", McServerInstaller.ServerLaunchType.Standard, 25)]    // MC 26.1.1 Vanilla требует Java 25
+    // Старые версии
+    [InlineData("1.12.2", McServerInstaller.ServerLaunchType.Forge, 17)]       // Forge старая версия требует Java 17
+    [InlineData("1.12.2", McServerInstaller.ServerLaunchType.Standard, 8)]     // Vanilla 1.12 требует Java 8
+    public void GetRequiredJavaVersion_AllCombinations_ReturnsCorrectVersion(string mcVersion, McServerInstaller.ServerLaunchType launchType, int expected)
     {
-        // Act
-        var result = JavaVersionParser.GetRequiredJavaVersion(minecraftVersion, launchType);
-
-        // Assert
-        result.Should().Be(expectedJavaVersion);
+        var result = JavaVersionParser.GetRequiredJavaVersion(mcVersion, launchType);
+        Assert.Equal(expected, result);
     }
-
-    [Theory]
-    [InlineData("1.21.1", McServerInstaller.ServerLaunchType.Fabric, 21)]
-    [InlineData("1.20.5", McServerInstaller.ServerLaunchType.Fabric, 21)]
-    [InlineData("1.20.6", McServerInstaller.ServerLaunchType.Fabric, 21)]
-    [InlineData("1.21", McServerInstaller.ServerLaunchType.Fabric, 21)]
-    public void GetRequiredJavaVersion_Fabric_NewVersions_ReturnsJava21(
-        string minecraftVersion,
-        McServerInstaller.ServerLaunchType launchType,
-        int expectedJavaVersion)
-    {
-        // Act
-        var result = JavaVersionParser.GetRequiredJavaVersion(minecraftVersion, launchType);
-
-        // Assert
-        result.Should().Be(expectedJavaVersion);
-    }
-
-    [Theory]
-    [InlineData("1.20.4", McServerInstaller.ServerLaunchType.Fabric, 17)]
-    [InlineData("1.20.1", McServerInstaller.ServerLaunchType.Fabric, 17)]
-    [InlineData("1.19.2", McServerInstaller.ServerLaunchType.Fabric, 17)]
-    [InlineData("1.18.2", McServerInstaller.ServerLaunchType.Fabric, 17)]
-    public void GetRequiredJavaVersion_Fabric_OldVersions_ReturnsJava17(
-        string minecraftVersion,
-        McServerInstaller.ServerLaunchType launchType,
-        int expectedJavaVersion)
-    {
-        // Act
-        var result = JavaVersionParser.GetRequiredJavaVersion(minecraftVersion, launchType);
-
-        // Assert
-        result.Should().Be(expectedJavaVersion);
-    }
-
-    [Theory]
-    [InlineData("1.21.1", McServerInstaller.ServerLaunchType.Standard, 21)]
-    [InlineData("1.20.5", McServerInstaller.ServerLaunchType.Standard, 21)]
-    [InlineData("1.20.6", McServerInstaller.ServerLaunchType.Standard, 21)]
-    public void GetRequiredJavaVersion_Standard_NewVersions_ReturnsJava21(
-        string minecraftVersion,
-        McServerInstaller.ServerLaunchType launchType,
-        int expectedJavaVersion)
-    {
-        // Act
-        var result = JavaVersionParser.GetRequiredJavaVersion(minecraftVersion, launchType);
-
-        // Assert
-        result.Should().Be(expectedJavaVersion);
-    }
-
-    [Theory]
-    [InlineData("1.20.1", McServerInstaller.ServerLaunchType.Standard, 17)]
-    [InlineData("1.19.2", McServerInstaller.ServerLaunchType.Standard, 17)]
-    [InlineData("1.18.2", McServerInstaller.ServerLaunchType.Standard, 17)]
-    [InlineData("1.17.1", McServerInstaller.ServerLaunchType.Standard, 16)]
-    [InlineData("1.16.5", McServerInstaller.ServerLaunchType.Standard, 8)]
-    [InlineData("1.12.2", McServerInstaller.ServerLaunchType.Standard, 8)]
-    [InlineData("1.8.9", McServerInstaller.ServerLaunchType.Standard, 8)]
-    public void GetRequiredJavaVersion_Standard_OlderVersions_ReturnsCorrectJava(
-        string minecraftVersion,
-        McServerInstaller.ServerLaunchType launchType,
-        int expectedJavaVersion)
-    {
-        // Act
-        var result = JavaVersionParser.GetRequiredJavaVersion(minecraftVersion, launchType);
-
-        // Assert
-        result.Should().Be(expectedJavaVersion);
-    }
-
-    [Theory]
-    [InlineData("1.20.5", McServerInstaller.ServerLaunchType.Standard, 21)]
-    [InlineData("1.20.6", McServerInstaller.ServerLaunchType.Standard, 21)]
-    [InlineData("1.21.0", McServerInstaller.ServerLaunchType.Standard, 21)]
-    [InlineData("1.21.5", McServerInstaller.ServerLaunchType.Standard, 21)]
-    public void GetRequiredJavaVersion_Minecraft20_5Plus_ReturnsJava21(
-        string minecraftVersion,
-        McServerInstaller.ServerLaunchType launchType,
-        int expectedJavaVersion)
-    {
-        // Act
-        var result = JavaVersionParser.GetRequiredJavaVersion(minecraftVersion, launchType);
-
-        // Assert
-        result.Should().Be(expectedJavaVersion);
-    }
-
-    #endregion
 }

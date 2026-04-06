@@ -419,88 +419,14 @@ public partial class ServerDetailPage : Page, IDisposable
             return;
         }
 
-        var requiredVersion = ParseRequiredJavaVersion(errorMessage);
-        var foundVersion = ParseFoundJavaVersion(errorMessage);
-        var javaPath = ParseJavaPath(errorMessage);
+        var requiredVersion = JavaVersionParser.ParseRequiredJavaVersion(errorMessage);
+        var foundVersion = JavaVersionParser.ParseFoundJavaVersion(errorMessage);
+        var javaPath = JavaVersionParser.ParseJavaPath(errorMessage);
 
-        MainWindow.Instance?.ShowJavaErrorSnackbar(_server, errorMessage, requiredVersion, foundVersion);
-    }
+        // Получаем все установленные Java
+        var allJava = App.ConfigService?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
 
-    private static int ParseRequiredJavaVersion(string msg)
-    {
-        // Формат 1: "Требуется Java X+" (наш формат)
-        var match = System.Text.RegularExpressions.Regex.Match(msg, @"Java (\d+)\+");
-        if (match.Success)
-            return int.Parse(match.Groups[1].Value);
-
-        // Формат 2: "class file version XX.0" → переводим в версию Java
-        var classVersionMatch = System.Text.RegularExpressions.Regex.Match(msg, @"compiled by a more recent version.*?class file version (\d+)");
-        if (classVersionMatch.Success)
-        {
-            var classVersion = int.Parse(classVersionMatch.Groups[1].Value);
-            return ClassFileVersionToJavaVersion(classVersion);
-        }
-
-        // Формат 3: "Java X" (общий fallback)
-        var fallbackMatch = System.Text.RegularExpressions.Regex.Match(msg, @"Java (\d+)");
-        return fallbackMatch.Success ? int.Parse(fallbackMatch.Groups[1].Value) : 0;
-    }
-
-    private static int ParseFoundJavaVersion(string msg)
-    {
-        // Формат: "recognizes class file versions up to XX.0"
-        var classVersionMatch = System.Text.RegularExpressions.Regex.Match(msg, @"versions up to (\d+)");
-        if (classVersionMatch.Success)
-        {
-            var classVersion = int.Parse(classVersionMatch.Groups[1].Value);
-            return ClassFileVersionToJavaVersion(classVersion);
-        }
-
-        var match = System.Text.RegularExpressions.Regex.Match(msg, @"Java (\d+) .*найдена|found Java (\d+)");
-        if (match.Success)
-        {
-            for (int i = 1; i <= 2; i++)
-            {
-                if (match.Groups[i].Success && int.TryParse(match.Groups[i].Value, out var v))
-                    return v;
-            }
-        }
-        return 0;
-    }
-
-    /// <summary>
-    /// Переводит class file version в версию Java
-    /// </summary>
-    private static int ClassFileVersionToJavaVersion(int classVersion) => classVersion switch
-    {
-        49 => 5,
-        50 => 6,
-        51 => 7,
-        52 => 8,
-        53 => 9,
-        54 => 10,
-        55 => 11,
-        56 => 12,
-        57 => 13,
-        58 => 14,
-        59 => 15,
-        60 => 16,
-        61 => 17,
-        62 => 18,
-        63 => 19,
-        64 => 20,
-        65 => 21,
-        66 => 22,
-        67 => 23,
-        68 => 24,
-        69 => 25,
-        _ => 0
-    };
-
-    private static string ParseJavaPath(string msg)
-    {
-        var match = System.Text.RegularExpressions.Regex.Match(msg, @"(?:Путь|Path)[:\s]+(.+?)(?:\n|$)");
-        return match.Success ? match.Groups[1].Value.Trim() : "";
+        MainWindow.Instance?.ShowJavaErrorSnackbar(_server, errorMessage, requiredVersion, foundVersion, allJava);
     }
 
     private async void StartStop_Click(object sender, RoutedEventArgs e)
@@ -535,22 +461,12 @@ public partial class ServerDetailPage : Page, IDisposable
         // Статус обновится через событие OnStatusChanged в McServerManager
     }
 
-    private async void OpenFolder_Click(object sender, RoutedEventArgs e)
+    private void OpenFolder_Click(object sender, RoutedEventArgs e)
     {
         if (_server == null)
             return;
 
-        try
-        {
-            if (Directory.Exists(_server.Path))
-            {
-                Process.Start("explorer.exe", _server.Path);
-            }
-        }
-        catch
-        {
-            await UiHelper.ShowWarning(LocalizationManager.Get("ServerDetail_OpenFolderError"));
-        }
+        UiHelper.OpenFolder(_server.Path);
     }
 
     /// <summary>
@@ -823,7 +739,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
-            _ = UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_PropsLoadError")}: {ex.Message}");
+            ShowErrorSafe($"{LocalizationManager.Get("ServerDetail_PropsLoadError")}: {ex.Message}");
         }
     }
 
@@ -874,7 +790,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
-            _ = UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_ModsLoadError")}: {ex.Message}");
+            ShowErrorSafe($"{LocalizationManager.Get("ServerDetail_ModsLoadError")}: {ex.Message}");
         }
     }
 
@@ -925,7 +841,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
-            _ = UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_PluginsLoadError")}: {ex.Message}");
+            ShowErrorSafe($"{LocalizationManager.Get("ServerDetail_PluginsLoadError")}: {ex.Message}");
         }
     }
 
@@ -951,44 +867,30 @@ public partial class ServerDetailPage : Page, IDisposable
         if (_server == null)
             return;
 
-        try
+        var modsDir = Path.Combine(_server.Path, "mods");
+        if (Directory.Exists(modsDir))
         {
-            var modsDir = Path.Combine(_server.Path, "mods");
-            if (Directory.Exists(modsDir))
-            {
-                Process.Start("explorer.exe", modsDir);
-            }
-            else
-            {
-                _ = UiHelper.ShowWarning(LocalizationManager.Get("ServerDetail_ModsFolderNotFound"));
-            }
+            UiHelper.OpenFolder(modsDir);
         }
-        catch
+        else
         {
-            _ = UiHelper.ShowWarning(LocalizationManager.Get("ServerDetail_FolderOpenError"));
+            ShowWarningSafe(LocalizationManager.Get("ServerDetail_ModsFolderNotFound"));
         }
     }
 
-    private async void OpenPluginsFolder_Click(object sender, RoutedEventArgs e)
+    private void OpenPluginsFolder_Click(object sender, RoutedEventArgs e)
     {
         if (_server == null)
             return;
 
-        try
+        var pluginsDir = Path.Combine(_server.Path, "plugins");
+        if (Directory.Exists(pluginsDir))
         {
-            var pluginsDir = Path.Combine(_server.Path, "plugins");
-            if (Directory.Exists(pluginsDir))
-            {
-                Process.Start("explorer.exe", pluginsDir);
-            }
-            else
-            {
-                _ = UiHelper.ShowWarning(LocalizationManager.Get("ServerDetail_PluginsFolderNotFound"));
-            }
+            UiHelper.OpenFolder(pluginsDir);
         }
-        catch
+        else
         {
-            _ = UiHelper.ShowWarning(LocalizationManager.Get("ServerDetail_FolderOpenError"));
+            ShowWarningSafe(LocalizationManager.Get("ServerDetail_PluginsFolderNotFound"));
         }
     }
 
@@ -1001,7 +903,7 @@ public partial class ServerDetailPage : Page, IDisposable
             string.Format(LocalizationManager.Get("ServerDetail_DeleteModConfirm"), mod.Name, mod.FileName),
             LocalizationManager.Get("ServerDetail_DeleteModTitle"));
 
-        if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
+        if (result != ContentDialogResult.Primary)
             return;
 
         try
@@ -1027,7 +929,7 @@ public partial class ServerDetailPage : Page, IDisposable
             string.Format(LocalizationManager.Get("ServerDetail_DeletePluginConfirm"), plugin.Name, plugin.FileName),
             LocalizationManager.Get("ServerDetail_DeletePluginTitle"));
 
-        if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
+        if (result != ContentDialogResult.Primary)
             return;
 
         try
@@ -1051,7 +953,7 @@ public partial class ServerDetailPage : Page, IDisposable
 
         var result = await UiHelper.ShowDeleteServerConfirm(_server.Name, _server.Path);
 
-        if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
+        if (result != ContentDialogResult.Primary)
             return;
 
         try
@@ -1063,6 +965,24 @@ public partial class ServerDetailPage : Page, IDisposable
         {
             await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_DeleteServerError")}: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Безопасный вызов ShowError из sync-контекста (fire-and-forget с try/catch)
+    /// </summary>
+    private async void ShowErrorSafe(string message)
+    {
+        try { await UiHelper.ShowError(message); }
+        catch { /* Игнорируем — диалог уже не критичен */ }
+    }
+
+    /// <summary>
+    /// Безопасный вызов ShowWarning из sync-контекста (fire-and-forget с try/catch)
+    /// </summary>
+    private async void ShowWarningSafe(string message)
+    {
+        try { await UiHelper.ShowWarning(message); }
+        catch { /* Игнорируем */ }
     }
 
     public void Dispose()

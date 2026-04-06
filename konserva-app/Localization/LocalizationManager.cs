@@ -316,6 +316,7 @@ public static class LocalizationManager
                 { "CreateServer_Import_Duplicate", "Сервер из этой папки уже импортирован:\n{0}" },
                 { "CreateServer_Import_NoJar", "В выбранной папке не найден JAR файл сервера." },
                 { "CreateServer_Import_Success", "Сервер \"{0}\" успешно импортирован!" },
+                { "CreateServer_Import_Success_Title", "Импорт завершён" },
                 { "CreateServer_Import_Error", "Ошибка импорта сервера" },
                 { "CreateServer_Error_NoName", "Введите имя сервера" },
                 { "CreateServer_Error_NoFolder", "Выберите папку для сервера" },
@@ -354,6 +355,9 @@ public static class LocalizationManager
                 { "MsgBtn_No", "Нет" },
                 { "MsgBtn_Cancel", "Отмена" },
                 { "MsgBtn_Delete", "Удалить" },
+
+                // UiHelper
+                { "UiHelper_OpenFolderError", "Не удалось открыть папку" },
 
                 // MessageBox Titles
                 { "MsgTitle_Info", "Информация" },
@@ -632,6 +636,7 @@ public static class LocalizationManager
                 // Snackbar
                 { "Snackbar_JavaIncompatible_Title", "Несовместимая Java" },
                 { "Snackbar_JavaIncompatible_Message", "Для Minecraft {0} требуется Java {1}+, найдена Java {2}.\nСервер не запустится с текущей версией Java." },
+                { "Snackbar_JavaIncompatible_Message_Plural", "Для Minecraft {0} требуется Java {1}+, найдены Java: {2}.\nСервер не запустится с текущими версиями Java." },
 
                 // Java Error Dialog
                 { "JavaError_Title", "Ошибка Java" },
@@ -774,6 +779,7 @@ public static class LocalizationManager
                 { "CreateServer_Import_Duplicate", "A server from this folder is already imported:\n{0}" },
                 { "CreateServer_Import_NoJar", "No server JAR file found in the selected folder." },
                 { "CreateServer_Import_Success", "Server \"{0}\" imported successfully!" },
+                { "CreateServer_Import_Success_Title", "Import Complete" },
                 { "CreateServer_Import_Error", "Server import error" },
                 { "CreateServer_Error_NoName", "Enter a server name" },
                 { "CreateServer_Error_NoFolder", "Select a folder for the server" },
@@ -890,6 +896,9 @@ public static class LocalizationManager
                 { "MsgBtn_No", "No" },
                 { "MsgBtn_Cancel", "Cancel" },
                 { "MsgBtn_Delete", "Delete" },
+
+                // UiHelper
+                { "UiHelper_OpenFolderError", "Failed to open folder" },
 
                 // MessageBox Titles
                 { "MsgTitle_Info", "Information" },
@@ -1090,6 +1099,7 @@ public static class LocalizationManager
                 // Snackbar
                 { "Snackbar_JavaIncompatible_Title", "Incompatible Java" },
                 { "Snackbar_JavaIncompatible_Message", "Minecraft {0} requires Java {1}+, found Java {2}.\nThe server will not start with the current Java version." },
+                { "Snackbar_JavaIncompatible_Message_Plural", "Minecraft {0} requires Java {1}+, found Java: {2}.\nThe server will not start with the current Java versions." },
 
                 // Java Error Dialog
                 { "JavaError_Title", "Java Error" },
