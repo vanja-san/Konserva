@@ -167,8 +167,8 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
                 OnServerStartError?.Invoke(server, process.LastError);
             }
 
-            // Обновляем UI при любом изменении статуса (в потоке UI)
-            System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+            // Обновляем UI при любом изменении статуса (неблокирующе)
+            System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
             {
                 OnServersChanged?.Invoke();
             });

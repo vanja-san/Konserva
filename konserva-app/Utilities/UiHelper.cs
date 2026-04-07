@@ -20,9 +20,10 @@ public static class UiHelper
     {
         try
         {
-            if (Directory.Exists(path))
+            var fullPath = Path.GetFullPath(path);
+            if (Directory.Exists(fullPath))
             {
-                System.Diagnostics.Process.Start("explorer.exe", path);
+                System.Diagnostics.Process.Start("explorer.exe", fullPath);
             }
         }
         catch (Exception ex)
@@ -73,7 +74,6 @@ public static class UiHelper
             Title = string.IsNullOrEmpty(title) ? LocalizationManager.Get("MsgTitle_Warning") : title,
             Content = message,
             CloseButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
-            CloseButtonIcon = new SymbolIcon(SymbolRegular.Warning24),
             DefaultButton = ContentDialogButton.Close
         };
 
@@ -132,7 +132,7 @@ public static class UiHelper
     /// <summary>
     /// Показ подтверждения удаления сервера
     /// </summary>
-    public static async Task<ContentDialogResult> ShowDeleteServerConfirm(string serverName, string _)
+    public static async Task<ContentDialogResult> ShowDeleteServerConfirm(string serverName)
     {
         var service = GetDialogService();
         if (service == null) return ContentDialogResult.None;
@@ -215,7 +215,6 @@ public static class UiHelper
             PrimaryButtonText = LocalizationManager.Get("MsgBtn_Delete") ?? "Delete",
             PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Delete24),
             CloseButtonText = LocalizationManager.Get("MsgBtn_Cancel") ?? "Cancel",
-            CloseButtonIcon = new SymbolIcon(SymbolRegular.Dismiss24),
             DefaultButton = ContentDialogButton.Close
         };
 

@@ -142,7 +142,7 @@
                         Content="{loc:Loc CreateServer_Import}" />
 
                     <!--  Статус установки  -->
-                    <TextBlock
+                    <ui:TextBlock
                         x:Name="ProgressText"
                         Grid.Column="1"
                         Margin="8,0"

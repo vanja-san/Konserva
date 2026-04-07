@@ -12,6 +12,8 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
 {
     private readonly HttpClient _http = httpClient ?? CreateDefaultHttpClient();
     private string[]? _mcVersions;
+    private DateTime _mcVersionsCacheTime;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(1);
     private readonly SemaphoreSlim _cacheLock = new(1, 1);
     private bool _disposed;
 
@@ -34,8 +36,9 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
     /// </summary>
     public async Task<string[]> GetMcVersions(CancellationToken ct = default)
     {
-        if (_mcVersions != null)
-            return _mcVersions;
+        string[]? cached = _mcVersions;
+        if (cached != null && (DateTime.UtcNow - _mcVersionsCacheTime) < CacheTtl)
+            return cached;
 
         // Ограничиваем время ожидания в 30 секунд
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -44,8 +47,9 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
         await _cacheLock.WaitAsync(linkedCts.Token);
         try
         {
-            if (_mcVersions != null)
-                return _mcVersions;
+            string[]? local = _mcVersions;
+            if (local != null)
+                return local;
 
             var response = await GetStringWithDecompressionAsync(
                 "https://launchermeta.mojang.com/mc/game/version_manifest.json", linkedCts.Token);
@@ -57,6 +61,7 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
                 .ToArray();
 
             _mcVersions = versions;
+            _mcVersionsCacheTime = DateTime.UtcNow;
             return versions;
         }
         catch (Exception ex)
@@ -160,8 +165,15 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
         }
     }
 
-    private readonly Dictionary<string, string[]> _neoForgeCache = new();
+    private readonly Dictionary<string, CachedEntry<string[]>> _neoForgeCache = new();
     private readonly SemaphoreSlim _neoForgeCacheLock = new(1, 1);
+
+    private readonly struct CachedEntry<T>(T value, DateTime time)
+    {
+        public readonly T Value = value;
+        public readonly DateTime Time = time;
+        public bool IsFresh => (DateTime.UtcNow - Time) < CacheTtl;
+    }
 
     /// <summary>
     /// Получение версий NeoForge
@@ -174,10 +186,10 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
         await _neoForgeCacheLock.WaitAsync(ct);
         try
         {
-            if (_neoForgeCache.TryGetValue(mcVersion, out var cached))
+            if (_neoForgeCache.TryGetValue(mcVersion, out var cached) && cached.IsFresh)
             {
-                Logger.Info($"Returning cached NeoForge versions for MC {mcVersion}: {cached.Length}", "McVersionsApi");
-                return cached;
+                Logger.Info($"Returning cached NeoForge versions for MC {mcVersion}: {cached.Value.Length}", "McVersionsApi");
+                return cached.Value;
             }
         }
         finally
@@ -208,7 +220,7 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
 
                 // Кэшируем результат
                 await _neoForgeCacheLock.WaitAsync(ct);
-                try { _neoForgeCache[mcVersion] = result; }
+                try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(result, DateTime.UtcNow); }
                 finally { try { _neoForgeCacheLock.Release(); } catch { } }
 
                 return result;
@@ -234,7 +246,7 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
                 Logger.Info($"Found {result.Length} NeoForge versions from fallback for MC {mcVersion}", "McVersionsApi");
 
                 await _neoForgeCacheLock.WaitAsync(ct);
-                try { _neoForgeCache[mcVersion] = result; }
+                try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(result, DateTime.UtcNow); }
                 finally { try { _neoForgeCacheLock.Release(); } catch { } }
 
                 return result;

@@ -59,11 +59,22 @@ public class ConfigService : IConfigService, IDisposable
 
     public async Task SaveConfigAsync(AppConfig config, CancellationToken ct = default)
     {
-        await Task.CompletedTask;
+        string json;
         lock (_lock)
         {
             _config = config;
-            SaveConfigToFile(config);
+            json = JsonConvert.SerializeObject(config, Formatting.Indented);
+        }
+
+        try
+        {
+            await using var fileStream = new FileStream(_configPath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, useAsync: true);
+            using var writer = new StreamWriter(fileStream);
+            await writer.WriteAsync(json.AsMemory(), ct);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Failed to save config: {ex.Message}", ex, "ConfigService");
         }
     }
 
@@ -158,6 +169,5 @@ public class ConfigService : IConfigService, IDisposable
             return;
 
         _disposed = true;
-        GC.SuppressFinalize(this);
     }
 }

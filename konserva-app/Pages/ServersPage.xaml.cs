@@ -7,6 +7,8 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui.Controls;
+using TextBlock = Wpf.Ui.Controls.TextBlock;
+using WpfButton = Wpf.Ui.Controls.Button;
 
 namespace Konserva.Pages;
 
@@ -75,7 +77,7 @@ public partial class ServersPage : Page, IDisposable
         }
         else
         {
-            MainWindow.Instance?.Dispatcher.Invoke(async () => await UiHelper.ShowError(errorMessage));
+            MainWindow.Instance?.Dispatcher.InvokeAsync(async () => await UiHelper.ShowError(errorMessage));
         }
     }
 
@@ -204,42 +206,22 @@ public partial class ServersPage : Page, IDisposable
 
     private async void Play_Click(object sender, RoutedEventArgs e)
     {
-        Logger.Info($"Play_Click triggered, sender={sender?.GetType().Name}", "ServersPage");
-
-        // Кнопки в DataTemplate используют стандартный WPF Button, не WPF UI
-        if (sender is not System.Windows.Controls.Button btn)
-        {
-            Logger.Error($"Play_Click: sender is not Button, type={sender?.GetType().FullName}", null, "ServersPage");
+        if (sender is not WpfButton btn || btn.Tag is not Server server)
             return;
-        }
-
-        Logger.Info($"Play_Click: btn.Tag={btn.Tag?.GetType().FullName}", "ServersPage");
-
-        if (btn.Tag is not Server server)
-        {
-            Logger.Error($"Play_Click: Tag is not Server", null, "ServersPage");
-            return;
-        }
-
-        Logger.Info($"Play_Click: Server={server.Name}, IsRunning={server.IsRunning}", "ServersPage");
 
         if (_busyServers.Contains(server.Id))
-        {
-            Logger.Info($"Play_Click: Server {server.Name} is busy", "ServersPage");
             return;
-        }
 
         _busyServers.Add(server.Id);
         try
         {
             if (server.IsRunning)
             {
-                Logger.Info($"Play_Click: Stopping server {server.Name}", "ServersPage");
                 MainWindow.ServerManager.StopServer(server.Id);
             }
             else
             {
-                Logger.Info($"Play_Click: Starting server {server.Name}", "ServersPage");
+                Logger.Info($"Starting server: {server.Name}", "ServersPage");
                 server.ErrorDialogShown = false;
                 MainWindow.ServerManager.StartServer(server.Id);
             }
@@ -260,7 +242,7 @@ public partial class ServersPage : Page, IDisposable
     private void ServerCard_Click(object sender, RoutedEventArgs e)
     {
         // Игнорируем клик, если нажата кнопка (чтобы не было двойного срабатывания)
-        if (e.OriginalSource is System.Windows.Controls.Button)
+        if (e.OriginalSource is WpfButton)
             return;
 
         if (sender is CardAction cardAction)
@@ -283,7 +265,7 @@ public partial class ServersPage : Page, IDisposable
 
     private void OpenFolder_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not System.Windows.Controls.Button btn || btn.Tag is not Server server)
+        if (sender is not WpfButton btn || btn.Tag is not Server server)
             return;
 
         UiHelper.OpenFolder(server.Path);
@@ -291,11 +273,10 @@ public partial class ServersPage : Page, IDisposable
 
     private async void Delete_Click(object sender, RoutedEventArgs e)
     {
-        // Кнопки в DataTemplate используют стандартный WPF Button, не WPF UI
-        if (sender is not System.Windows.Controls.Button btn || btn.Tag is not Server server)
+        if (sender is not WpfButton btn || btn.Tag is not Server server)
             return;
 
-        var result = await UiHelper.ShowDeleteServerConfirm(server.Name, server.Path);
+        var result = await UiHelper.ShowDeleteServerConfirm(server.Name);
 
         if (result != ContentDialogResult.Primary)
             return;
@@ -317,7 +298,7 @@ public partial class ServersPage : Page, IDisposable
             return;
 
         MainWindow.ServerManager.OnServersChanged -= OnServersChanged;
+        MainWindow.ServerManager.OnServerStartError -= OnServerStartError;
         _disposed = true;
-        GC.SuppressFinalize(this);
     }
 }

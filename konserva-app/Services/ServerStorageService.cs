@@ -316,6 +316,5 @@ public class ServerStorageService : IServerStorageService, IDisposable
             return;
 
         _disposed = true;
-        GC.SuppressFinalize(this);
     }
 }

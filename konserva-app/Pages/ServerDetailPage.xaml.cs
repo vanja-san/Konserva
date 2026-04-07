@@ -10,6 +10,8 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using Wpf.Ui.Controls;
+using TextBlock = Wpf.Ui.Controls.TextBlock;
+using WpfButton = Wpf.Ui.Controls.Button;
 
 namespace Konserva.Pages;
 
@@ -224,7 +226,7 @@ public partial class ServerDetailPage : Page, IDisposable
         ResetNavigationButtons();
         if (ConsoleNavButton != null)
         {
-            ConsoleNavButton.Background = TryFindResource("ControlFillColorSecondaryBrush") as System.Windows.Media.Brush;
+            ConsoleNavButton.Background = TryFindResource("ControlFillColorSecondaryBrush") as Brush;
             ConsoleNavIcon.Filled = true;
         }
     }
@@ -415,7 +417,7 @@ public partial class ServerDetailPage : Page, IDisposable
 
         if (!isJavaError)
         {
-            MainWindow.Instance?.Dispatcher.Invoke(async () => await UiHelper.ShowError(errorMessage));
+            MainWindow.Instance?.Dispatcher.InvokeAsync(async () => await UiHelper.ShowError(errorMessage));
             return;
         }
 
@@ -485,7 +487,7 @@ public partial class ServerDetailPage : Page, IDisposable
         ResetNavigationButtons();
 
         // Выделяем активную кнопку
-        navButton.Background = TryFindResource("ControlFillColorSecondaryBrush") as System.Windows.Media.Brush;
+        navButton.Background = TryFindResource("ControlFillColorSecondaryBrush") as Brush;
 
         // Устанавливаем Filled=True для активной иконки
         SetIconFilled(tag, true);
@@ -517,11 +519,13 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private void ResetNavigationButtons()
     {
-        ConsoleNavButton.Background = System.Windows.Media.Brushes.Transparent;
-        ModsNavButton.Background = System.Windows.Media.Brushes.Transparent;
-        PluginsNavButton.Background = System.Windows.Media.Brushes.Transparent;
-        PropertiesNavButton.Background = System.Windows.Media.Brushes.Transparent;
-        SettingsNavButton.Background = System.Windows.Media.Brushes.Transparent;
+        var transparentBrush = TryFindResource("ControlFillColorTransparentBrush") as Brush ?? Brushes.Transparent;
+
+        ConsoleNavButton.Background = transparentBrush;
+        ModsNavButton.Background = transparentBrush;
+        PluginsNavButton.Background = transparentBrush;
+        PropertiesNavButton.Background = transparentBrush;
+        SettingsNavButton.Background = transparentBrush;
 
         // Сбрасываем Filled у всех иконок
         SetIconFilled("Console", false);
@@ -896,7 +900,7 @@ public partial class ServerDetailPage : Page, IDisposable
 
     private async void DeleteMod_Click(object sender, RoutedEventArgs e)
     {
-        if (_server == null || sender is not System.Windows.Controls.Button btn || btn.Tag is not ModItem mod)
+        if (_server == null || sender is not WpfButton btn || btn.Tag is not ModItem mod)
             return;
 
         var result = await UiHelper.ShowConfirm(
@@ -922,7 +926,7 @@ public partial class ServerDetailPage : Page, IDisposable
 
     private async void DeletePlugin_Click(object sender, RoutedEventArgs e)
     {
-        if (_server == null || sender is not System.Windows.Controls.Button btn || btn.Tag is not PluginItem plugin)
+        if (_server == null || sender is not WpfButton btn || btn.Tag is not PluginItem plugin)
             return;
 
         var result = await UiHelper.ShowConfirm(
@@ -951,7 +955,7 @@ public partial class ServerDetailPage : Page, IDisposable
         if (_server == null)
             return;
 
-        var result = await UiHelper.ShowDeleteServerConfirm(_server.Name, _server.Path);
+        var result = await UiHelper.ShowDeleteServerConfirm(_server.Name);
 
         if (result != ContentDialogResult.Primary)
             return;
@@ -995,6 +999,5 @@ public partial class ServerDetailPage : Page, IDisposable
 
         StopStatusTimer();
         _disposed = true;
-        GC.SuppressFinalize(this);
     }
 }

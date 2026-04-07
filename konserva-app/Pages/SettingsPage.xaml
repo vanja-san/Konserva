@@ -42,7 +42,7 @@
                     Margin="8,0,0,0"
                     VerticalAlignment="Center"
                     FontSize="13"
-                    Foreground="#2ecc71"
+                    Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
                     Text="{loc:Loc Message_SettingsSaved}" />
             </StackPanel>
         </Grid>
@@ -125,7 +125,11 @@
                                     VerticalAlignment="Center"
                                     Click="AddJava_Click"
                                     ToolTip="{loc:Loc Settings_Java_Add}">
-                                    <ui:SymbolIcon FontSize="13" Symbol="Add32" />
+                                    <ui:SymbolIcon
+                                        Width="15"
+                                        Height="15"
+                                        FontSize="13"
+                                        Symbol="Add32" />
                                 </ui:Button>
                             </Grid>
                             <!--  Проверка обновления  -->

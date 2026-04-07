@@ -229,7 +229,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         if (!File.Exists(eulaPath))
             throw new FileNotFoundException("Файл eula.txt не найден. Сервер не был установлен корректно.");
 
-        var eulaContent = File.ReadAllText(eulaPath);
+        var eulaContent = File.ReadAllText(eulaPath, Encoding.UTF8);
         if (!eulaContent.Contains("eula=true", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("EULA не принята! Измените eula.txt и установите eula=true");
 
@@ -1048,6 +1048,5 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         OnPlayersChanged = null;
 
         _disposed = true;
-        GC.SuppressFinalize(this);
     }
 }

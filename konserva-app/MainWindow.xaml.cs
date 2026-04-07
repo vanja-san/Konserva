@@ -204,11 +204,11 @@ public partial class MainWindow : FluentWindow, IDisposable
             StatusTotalServers.Text = $"{total}";
             StatusRunningServers.Text = $"{running}";
 
-            var servers = _serverManager.GetServers();
-            var totalRam = servers.Where(s => s.IsRunning).Sum(s => s.Settings.RamMax);
-            StatusMemoryUsage.Text = totalRam >= 1024
-                ? $"{totalRam / 1024.0:0.#} GB"
-                : $"{totalRam} MB";
+            var totalRamBytes = _serverManager.GetTotalMemoryUsage();
+            var totalRamMB = totalRamBytes / (1024 * 1024);
+            StatusMemoryUsage.Text = totalRamMB >= 1024
+                ? $"{totalRamMB / 1024.0:0.#} GB"
+                : $"{totalRamMB} MB";
 
             var config = _config.GetConfig();
             StatusJava.Text = !string.IsNullOrEmpty(config.DefaultJavaId)
@@ -325,7 +325,6 @@ public partial class MainWindow : FluentWindow, IDisposable
         _statusBarCts = null;
 
         _disposed = true;
-        GC.SuppressFinalize(this);
     }
 
     // ===== Update checking =====
@@ -474,7 +473,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     /// </summary>
     public void HideJavaErrorSnackbar()
     {
-        Dispatcher.Invoke(async () =>
+        Dispatcher.InvokeAsync(async () =>
         {
             if (SnackbarPresenter != null)
             {

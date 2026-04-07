@@ -267,12 +267,6 @@ public partial class App : Application
         }
     }
 
-    private async Task ShutdownAsync(int exitCode)
-    {
-        await CleanupAsync();
-        Shutdown(exitCode);
-    }
-
     private static async Task ShutdownStaticAsync(int exitCode)
     {
         await CleanupAsync();

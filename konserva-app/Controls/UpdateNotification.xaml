@@ -13,26 +13,25 @@
                 Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
                 Margin="0,0,4,0"
                 VerticalAlignment="Center"/>
-            <TextBlock x:Name="VersionText"
+            <ui:TextBlock x:Name="VersionText"
                 FontSize="12"
                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                 VerticalAlignment="Center"/>
         </StackPanel>
 
         <!-- Кнопка обновления / статус -->
-        <Button x:Name="UpdateButton"
+        <ui:Button x:Name="UpdateButton"
             Padding="6,2"
             Margin="0,0,0,0"
-            FontSize="11"
-            Background="Transparent"
+            Appearance="Transparent"
             BorderThickness="0"
             Click="UpdateButton_Click"
             VerticalAlignment="Center"
             ToolTip="{Binding UpdateTooltip, RelativeSource={RelativeSource AncestorType=UserControl}}">
-            <TextBlock x:Name="UpdateButtonText"
+            <ui:TextBlock x:Name="UpdateButtonText"
                 FontSize="11"
                 Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                 VerticalAlignment="Center"/>
-        </Button>
+        </ui:Button>
     </StackPanel>
 </UserControl>

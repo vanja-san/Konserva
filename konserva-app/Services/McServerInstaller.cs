@@ -1768,7 +1768,10 @@ public static partial class McServerInstaller
     /// <summary>
     /// Построить аргументы Java для запуска
     /// </summary>
-    public static string BuildLaunchArgs(string jarPath, ServerSettings settings, ServerLaunchType _ = ServerLaunchType.Standard)
+    /// <param name="jarPath">Путь к jar файлу сервера</param>
+    /// <param name="settings">Настройки сервера</param>
+    /// <param name="launchType">Тип модлоадера (зарезервировано для future специфичных аргументов)</param>
+    public static string BuildLaunchArgs(string jarPath, ServerSettings settings, ServerLaunchType launchType = ServerLaunchType.Standard)
     {
         var args = new StringBuilder();
 
