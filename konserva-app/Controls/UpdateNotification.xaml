@@ -1,37 +1,45 @@
-<UserControl x:Class="Konserva.Controls.UpdateNotification"
+﻿<UserControl
+    x:Class="Konserva.Controls.UpdateNotification"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     VerticalAlignment="Center"
     Visibility="Collapsed">
 
-    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-        <!-- Версия с иконкой -->
-        <StackPanel Orientation="Horizontal" Margin="0,0,4,0" VerticalAlignment="Center">
-            <ui:SymbolIcon Symbol="ArrowUpload24"
+    <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+        <!--  Версия с иконкой  -->
+        <StackPanel
+            Margin="0,0,4,0"
+            VerticalAlignment="Center"
+            Orientation="Horizontal">
+            <ui:SymbolIcon
+                Margin="0,0,4,0"
+                VerticalAlignment="Center"
                 FontSize="12"
                 Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
-                Margin="0,0,4,0"
-                VerticalAlignment="Center"/>
-            <ui:TextBlock x:Name="VersionText"
+                Symbol="ArrowUpload24" />
+            <ui:TextBlock
+                x:Name="VersionText"
+                VerticalAlignment="Center"
                 FontSize="12"
-                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                VerticalAlignment="Center"/>
+                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
         </StackPanel>
 
-        <!-- Кнопка обновления / статус -->
-        <ui:Button x:Name="UpdateButton"
-            Padding="6,2"
+        <!--  Кнопка обновления / статус  -->
+        <ui:Button
+            x:Name="UpdateButton"
             Margin="0,0,0,0"
+            Padding="6,2"
+            VerticalAlignment="Center"
             Appearance="Transparent"
             BorderThickness="0"
             Click="UpdateButton_Click"
-            VerticalAlignment="Center"
             ToolTip="{Binding UpdateTooltip, RelativeSource={RelativeSource AncestorType=UserControl}}">
-            <ui:TextBlock x:Name="UpdateButtonText"
+            <ui:TextBlock
+                x:Name="UpdateButtonText"
+                VerticalAlignment="Center"
                 FontSize="11"
-                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                VerticalAlignment="Center"/>
+                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
         </ui:Button>
     </StackPanel>
 </UserControl>

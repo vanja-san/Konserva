@@ -2,15 +2,12 @@
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
-using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using Wpf.Ui.Controls;
-using TextBlock = Wpf.Ui.Controls.TextBlock;
 using WpfButton = Wpf.Ui.Controls.Button;
 
 namespace Konserva.Pages;
