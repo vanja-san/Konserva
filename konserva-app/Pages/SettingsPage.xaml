@@ -245,7 +245,7 @@
                                 Text="Konserva" />
                             <ui:TextBlock FontSize="14" Foreground="Gray">
                                 <Run Text="{loc:Loc Settings_About_Version}" />
-                                <Run Text="1.4.0" />
+                                <Run Text="1.5.1" />
                             </ui:TextBlock>
                             <ui:TextBlock
                                 FontSize="13"
