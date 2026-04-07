@@ -266,5 +266,5 @@ Used by application for version resolution:
 
 ---
 
-**Last Updated**: 2026-04-01  
-**Application Version**: 1.2.0
+**Last Updated**: 2026-04-07
+**Application Version**: 1.5.0
