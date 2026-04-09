@@ -336,7 +336,7 @@ public class ServerLifecycleE2ETests : IDisposable
     /// E2E: Подсчёт статистики работает корректно
     /// </summary>
     [Fact]
-    public void E2E_ServerStats_ReflectsActualState()
+    public async Task E2E_ServerStats_ReflectsActualState()
     {
         // Arrange
         var server1 = _serverManager.CreateServer(
@@ -367,7 +367,7 @@ public class ServerLifecycleE2ETests : IDisposable
             _serverManager.StartServer(server1.Id);
             
             // Ждём изменения статуса
-            Thread.Sleep(1000);
+            await Task.Delay(1000);
             
             // Получаем обновлённую статистику
             var (total2, running2, stopped2) = _serverManager.GetStats();

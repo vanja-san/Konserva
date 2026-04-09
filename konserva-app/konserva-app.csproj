@@ -19,7 +19,7 @@
     <InformationalVersion>1.5.1</InformationalVersion>
     <Version>1.5.1</Version>
     <NeutralLanguage>ru-RU</NeutralLanguage>
-    <Copyright>Copyright (С) 2026 vanja-san</Copyright>
+    <Copyright>Copyright (c) 2026 vanja-san</Copyright>
 	  
     <Optimize>true</Optimize>
     <DebugType>none</DebugType>
