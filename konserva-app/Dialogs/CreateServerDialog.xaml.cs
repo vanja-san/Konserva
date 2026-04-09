@@ -69,22 +69,12 @@ public partial class CreateServerDialog : FluentWindow
         const int WM_NCHITTEST = 0x0084;
         const int HTCLIENT = 1;
         const int WM_GETMINMAXINFO = 0x0024;
-        const int WM_SETCURSOR = 0x0020;
-        const int IDC_ARROW = 32512;
 
         if (msg == WM_NCHITTEST)
         {
             // Всегда возвращаем HTCLIENT - отключаем все зоны изменения размера
             handled = true;
             return new IntPtr(HTCLIENT);
-        }
-
-        if (msg == WM_SETCURSOR)
-        {
-            // Принудительно устанавливаем обычный курсор
-            handled = true;
-            SetCursor(LoadCursor(IntPtr.Zero, new IntPtr(IDC_ARROW)));
-            return new IntPtr(1);
         }
 
         if (msg == WM_GETMINMAXINFO)
@@ -118,16 +108,6 @@ public partial class CreateServerDialog : FluentWindow
         public POINT ptMinTrackSize;
         public POINT ptMaxTrackSize;
     }
-
-#pragma warning disable SYSLIB1054 // Using DllImport instead of LibraryImport for Win32 API
-#pragma warning disable CA1416 // Validate platform compatibility (Win32 API)
-    [DllImport("user32.dll")]
-    private static extern IntPtr SetCursor(IntPtr hCursor);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr LoadCursor(IntPtr hInstance, IntPtr lpCursorName);
-#pragma warning restore CA1416
-#pragma warning restore SYSLIB1054
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
@@ -611,6 +591,8 @@ public partial class CreateServerDialog : FluentWindow
 
     private void ServerNameBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        ServerNameError.Visibility = Visibility.Collapsed;
+
         if (_isInitializing || string.IsNullOrWhiteSpace(ServerNameBox.Text))
             return;
 
@@ -1121,9 +1103,13 @@ public partial class CreateServerDialog : FluentWindow
         {
             if (string.IsNullOrWhiteSpace(ServerNameBox.Text))
             {
-                await UiHelper.ShowWarning(LocalizationManager.Get("CreateServer_Error_NoName"));
+                ServerNameError.Visibility = Visibility.Visible;
                 ServerNameBox.Focus();
                 return;
+            }
+            else
+            {
+                ServerNameError.Visibility = Visibility.Collapsed;
             }
 
             if (string.IsNullOrWhiteSpace(ServerPathBox.Text))

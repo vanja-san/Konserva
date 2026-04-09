@@ -38,6 +38,26 @@
             <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                 <!--  1. Название сервера  -->
                 <StackPanel Grid.Row="0">
+                    <Border
+                        x:Name="ServerNameError"
+                        Margin="0,0,0,8"
+                        Padding="8,6"
+                        Background="{ui:ThemeResource SystemFillColorCriticalBrush}"
+                        CornerRadius="4"
+                        Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon
+                                Margin="0,0,8,0"
+                                Foreground="{ui:ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                Symbol="Warning24" />
+                            <ui:TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="13"
+                                FontWeight="SemiBold"
+                                Foreground="{ui:ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                Text="{loc:Loc CreateServer_Error_NoName}" />
+                        </StackPanel>
+                    </Border>
                     <ui:TextBlock
                         Margin="0,0,0,8"
                         FontSize="13"
