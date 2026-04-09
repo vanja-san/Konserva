@@ -1,3 +1,6 @@
+// Тесты конвертеров намеренно передают null для проверки граничных случаев
+#pragma warning disable CS8625
+
 using System.Globalization;
 using System.Windows;
 using System.Windows.Media;

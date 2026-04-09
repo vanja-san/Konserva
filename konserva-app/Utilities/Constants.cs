@@ -5,6 +5,15 @@ namespace Konserva.Utilities;
 /// </summary>
 public static class Constants
 {
+    #region Общие
+
+    /// <summary>
+    /// Символы новой строки для Split
+    /// </summary>
+    public static readonly char[] NewLineChars = { '\r', '\n' };
+
+    #endregion
+
     #region Базовые константы
 
     /// <summary>

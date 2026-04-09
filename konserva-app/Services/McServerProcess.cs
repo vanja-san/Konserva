@@ -745,7 +745,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 string errorDetails = "";
                 if (!string.IsNullOrEmpty(_pendingErrorOutput))
                 {
-                    var lines = _pendingErrorOutput.Trim().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    var lines = _pendingErrorOutput.Trim().Split(Constants.NewLineChars, StringSplitOptions.RemoveEmptyEntries);
 
                     // Ищем строку с "class file version" — она критична для определения версии Java
                     string? classVersionLine = null;
@@ -773,7 +773,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                             var sb = new StringBuilder();
                             for (int i = 0; i < takeCount; i++)
                             {
-                                if (i > 0) sb.Append("\n");
+                                if (i > 0) sb.Append('\n');
                                 sb.Append(lines[i].Trim());
                             }
                             errorDetails = sb.ToString().Trim();
@@ -843,7 +843,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                     var fullText = _logs.ToString();
                     var startIndex = Math.Max(0, fullText.Length - 80_000);
                     _logs.Clear();
-                    _logs.Append(fullText.Substring(startIndex));
+                    _logs.Append(fullText[startIndex..]);
                 }
             }
 
@@ -1056,5 +1056,6 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         OnPlayersChanged = null;
 
         _disposed = true;
+        GC.SuppressFinalize(this);
     }
 }

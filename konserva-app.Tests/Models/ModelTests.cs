@@ -149,7 +149,7 @@ public class ServerSettingsTests
 /// <summary>
 /// Тесты для ServerProperties
 /// </summary>
-public class ServerPropertiesTests
+public class ServerPropertiesTests : IDisposable
 {
     private readonly string _testFilePath;
 

@@ -146,7 +146,7 @@ public class ServerLifecycleE2ETests : IDisposable
     /// E2E: Создание нескольких серверов одновременно
     /// </summary>
     [Fact]
-    public void E2E_CreateMultipleServers_AllCreatedSuccessfully()
+    public async Task E2E_CreateMultipleServers_AllCreatedSuccessfully()
     {
         // Arrange
         var serverConfigs = new[]
@@ -206,7 +206,7 @@ public class ServerLifecycleE2ETests : IDisposable
             
             foreach (var server in createdServers)
             {
-                _serverManager.DeleteServerAsync(server.Id).Wait();
+                await _serverManager.DeleteServerAsync(server.Id);
             }
         }
     }
@@ -219,7 +219,7 @@ public class ServerLifecycleE2ETests : IDisposable
     /// E2E: Создание серверов с разными типами модлоадеров
     /// </summary>
     [Fact]
-    public void E2E_CreateServersWithDifferentModLoaders_AllCreated()
+    public async Task E2E_CreateServersWithDifferentModLoaders_AllCreated()
     {
         // Arrange
         var modLoaderTypes = new[]
@@ -270,7 +270,7 @@ public class ServerLifecycleE2ETests : IDisposable
             
             foreach (var server in createdServers)
             {
-                _serverManager.DeleteServerAsync(server.Id).Wait();
+                await _serverManager.DeleteServerAsync(server.Id);
             }
         }
     }
@@ -283,7 +283,7 @@ public class ServerLifecycleE2ETests : IDisposable
     /// E2E: Клонирование сервера создаёт независимую копию
     /// </summary>
     [Fact]
-    public void E2E_ServerClone_CreatesIndependentCopy()
+    public async Task E2E_ServerClone_CreatesIndependentCopy()
     {
         // Arrange
         var original = _serverManager.CreateServer(
@@ -324,7 +324,7 @@ public class ServerLifecycleE2ETests : IDisposable
         finally
         {
             // Cleanup
-            _serverManager.DeleteServerAsync(original.Id).Wait();
+            await _serverManager.DeleteServerAsync(original.Id);
         }
     }
 
@@ -381,8 +381,8 @@ public class ServerLifecycleE2ETests : IDisposable
         {
             // Cleanup
             _serverManager.StopServer(server1.Id);
-            _serverManager.DeleteServerAsync(server1.Id).Wait();
-            _serverManager.DeleteServerAsync(server2.Id).Wait();
+            await _serverManager.DeleteServerAsync(server1.Id);
+            await _serverManager.DeleteServerAsync(server2.Id);
         }
     }
 
@@ -403,7 +403,7 @@ public class ServerLifecycleE2ETests : IDisposable
                 {
                     try
                     {
-                        _serverManager.DeleteServerAsync(server.Id).Wait();
+                        _serverManager.DeleteServerAsync(server.Id).Wait(TimeSpan.FromSeconds(5));
                     }
                     catch { }
                 }

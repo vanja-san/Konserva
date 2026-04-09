@@ -53,33 +53,73 @@ public partial class CreateServerDialog : FluentWindow
 
         // Подписываемся после InitializeComponent, чтобы избежать ошибок
         Loaded += OnLoaded;
-        SourceInitialized += CreateServerDialog_SourceInitialized;
     }
 
-    private void CreateServerDialog_SourceInitialized(object? sender, EventArgs e)
+    private const int WM_GETMINMAXINFO = 0x0024;
+    private const int GWL_STYLE = -16;
+    private const int WS_SIZEBOX = 0x00040000;
+    private const int WS_MAXIMIZEBOX = 0x00010000;
+    private const int SC_SIZE = 0xF000;
+    private const int SC_MAXIMIZE = 0xF030;
+    private const int MF_BYCOMMAND = 0x00000000;
+
+    [LibraryImport("user32.dll")]
+    private static partial int GetWindowLongW(IntPtr hWnd, int nIndex);
+
+    [LibraryImport("user32.dll")]
+    private static partial int SetWindowLongW(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    [LibraryImport("user32.dll")]
+    private static partial IntPtr GetSystemMenu(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool bRevert);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool RemoveMenu(IntPtr hMenu, uint uPosition, uint uFlags);
+
+    /// <summary>
+    /// Переопределяем SourceInitialized чтобы установить свой WindowChrome
+    /// ПОСЛЕ FluentWindow (WPF-UI), тем самым блокируя все resize-зоны.
+    /// </summary>
+    protected override void OnSourceInitialized(EventArgs e)
     {
-        // Добавляем хук для обработки сообщений окна
+        base.OnSourceInitialized(e);
+
+        // FluentWindow (WPF-UI) уже установила свой WindowChrome.
+        // Переопределяем его — полностью отключаем resize.
+        var chrome = new System.Windows.Shell.WindowChrome
+        {
+            ResizeBorderThickness = new Thickness(0),
+            GlassFrameThickness = new Thickness(0),
+            CaptionHeight = 32,
+            CornerRadius = new CornerRadius(0),
+            UseAeroCaptionButtons = false
+        };
+        System.Windows.Shell.WindowChrome.SetWindowChrome(this, chrome);
+
         var hwnd = new WindowInteropHelper(this).Handle;
+
+        // Убираем WS_SIZEBOX и WS_MAXIMIZEBOX из стилей Win32
+        var style = GetWindowLongW(hwnd, GWL_STYLE);
+        style &= ~(WS_SIZEBOX | WS_MAXIMIZEBOX);
+        SetWindowLongW(hwnd, GWL_STYLE, style);
+
+        // Убираем Size и Maximize из системного меню (Alt+Space)
+        var hMenu = GetSystemMenu(hwnd, false);
+        if (hMenu != IntPtr.Zero)
+        {
+            RemoveMenu(hMenu, SC_SIZE, MF_BYCOMMAND);
+            RemoveMenu(hMenu, SC_MAXIMIZE, MF_BYCOMMAND);
+        }
+
+        // WM_GETMINMAXINFO — страховка: фиксируем размер
         var source = HwndSource.FromHwnd(hwnd);
         source?.AddHook(WndProc);
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        const int WM_NCHITTEST = 0x0084;
-        const int HTCLIENT = 1;
-        const int WM_GETMINMAXINFO = 0x0024;
-
-        if (msg == WM_NCHITTEST)
+        if (msg == WM_GETMINMAXINFO && lParam != IntPtr.Zero)
         {
-            // Всегда возвращаем HTCLIENT - отключаем все зоны изменения размера
-            handled = true;
-            return new IntPtr(HTCLIENT);
-        }
-
-        if (msg == WM_GETMINMAXINFO)
-        {
-            // Устанавливаем минимальный размер
             var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
             mmi.ptMinTrackSize.x = 480;
             mmi.ptMinTrackSize.y = 500;

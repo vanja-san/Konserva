@@ -384,7 +384,7 @@ public class McServerManagerTests : IDisposable
     #region Thread Safety Tests
 
     [Fact]
-    public void GetServers_ThreadConcurrentAccess_DoesNotThrow()
+    public async Task GetServers_ThreadConcurrentAccess_DoesNotThrow()
     {
         for (int i = 0; i < 10; i++)
         {
@@ -396,7 +396,7 @@ public class McServerManagerTests : IDisposable
 
         for (int t = 0; t < 10; t++)
         {
-            tasks.Add(Task.Run(() =>
+            tasks.Add(Task.Run(async () =>
             {
                 try
                 {
@@ -404,6 +404,7 @@ public class McServerManagerTests : IDisposable
                     {
                         var servers = _manager.GetServers();
                         _ = servers.Count;
+                        await Task.Yield(); // Ensure we're actually yielding
                     }
                 }
                 catch (Exception ex)
@@ -413,7 +414,7 @@ public class McServerManagerTests : IDisposable
             }));
         }
 
-        Task.WhenAll(tasks).Wait();
+        await Task.WhenAll(tasks);
         exceptions.Should().BeEmpty();
     }
 
