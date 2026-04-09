@@ -244,17 +244,16 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             // останавливаем процесс в фоне, чтобы не блокировать UI
             _ = Task.Run(async () =>
             {
-                try
+                using (process)
                 {
-                    await process.StopAsync();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error($"[StopServer] Ошибка остановки: {ex.Message}", ex, "McServerManager");
-                }
-                finally
-                {
-                    process.Dispose();
+                    try
+                    {
+                        await process.StopAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"[StopServer] Ошибка остановки: {ex.Message}", ex, "McServerManager");
+                    }
                 }
             });
         }
@@ -264,13 +263,9 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
     {
         if (_processes.TryRemove(id, out var process))
         {
-            try
+            using (process)
             {
                 await process.StopAsync();
-            }
-            finally
-            {
-                process.Dispose();
             }
         }
     }

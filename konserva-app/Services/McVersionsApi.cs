@@ -290,8 +290,6 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
     /// </summary>
     private async Task<List<string>> GetNeoForgeFromLauncherMeta(CancellationToken ct)
     {
-        var versions = new List<string>();
-
         var response = await GetStringWithDecompressionAsync(
             "https://launchermeta.mojang.com/mc/game/version_manifest.json", ct);
 
@@ -303,15 +301,9 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
 
         // NeoForge версии имеют формат "neoforge-MC_VERSION-NEOFORGE_VERSION"
         // или содержат "neoforge" в type
-        foreach (var v in allVersions)
-        {
-            if (v.Contains("neoforge", StringComparison.OrdinalIgnoreCase))
-            {
-                // Извлекаем версию NeoForge из ID
-                // Формат: neoforge-1.21.1-21.1.0 или similar
-                versions.Add(v);
-            }
-        }
+        var versions = allVersions
+            .Where(v => v.Contains("neoforge", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
         return versions;
     }

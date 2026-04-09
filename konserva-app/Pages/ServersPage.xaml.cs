@@ -241,12 +241,9 @@ public partial class ServersPage : Page, IDisposable
         if (e.OriginalSource is WpfButton)
             return;
 
-        if (sender is CardAction cardAction)
+        if (sender is CardAction { Tag: Server server } cardAction)
         {
-            if (cardAction.Tag is Server server)
-            {
-                MainWindow.Instance?.NavigateToServer(server.Id);
-            }
+            MainWindow.Instance?.NavigateToServer(server.Id);
         }
     }
 

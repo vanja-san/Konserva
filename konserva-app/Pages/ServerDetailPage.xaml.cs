@@ -80,15 +80,12 @@ public partial class ServerDetailPage : Page, IDisposable
     {
         // При ресайзе: если контент уже шире новой ширины — не трогаем PageWidth
         // Если контент уже (или пустой) — ставим PageWidth = ActualWidth
-        if (LogDocument != null && e.NewSize.Width > 0)
+        if (LogDocument != null && e.NewSize.Width > 0 && _maxContentWidth <= e.NewSize.Width)
         {
-            if (_maxContentWidth <= e.NewSize.Width)
-            {
-                // Контент помещается — скролл скрыт
-                LogDocument.PageWidth = e.NewSize.Width;
-            }
-            // Иначе: контент шире — оставляем как есть, скролл виден
+            // Контент помещается — скролл скрыт
+            LogDocument.PageWidth = e.NewSize.Width;
         }
+        // Иначе: контент шире — оставляем как есть, скролл виден
     }
 
     /// <summary>
@@ -119,15 +116,9 @@ public partial class ServerDetailPage : Page, IDisposable
             }
 
             // Если контент шире видимой области — расширяем PageWidth
-            if (_maxContentWidth > LogBox.ActualWidth)
-            {
-                LogDocument.PageWidth = _maxContentWidth;
-            }
-            else
-            {
-                // Всё помещается — скролл скрыт
-                LogDocument.PageWidth = LogBox.ActualWidth;
-            }
+            LogDocument.PageWidth = _maxContentWidth > LogBox.ActualWidth
+                ? _maxContentWidth
+                : LogBox.ActualWidth;
         }
         catch
         {
@@ -301,16 +292,15 @@ public partial class ServerDetailPage : Page, IDisposable
                 // Получаем свежий процесс
                 _process = MainWindow.ServerManager.GetProcess(_serverId!);
 
-                if (_process != null)
-                {
-                    // Загружаем существующие логи
-                    LoadExistingLogs();
+                // Загружаем существующие логи и подписываемся на события
+                if (_process == null) return;
 
-                    // Подписываемся на события
-                    _process.OnLog += UpdateLog;
-                    _process.OnStatusChanged += UpdateStatus;
-                    _process.OnPlayersChanged += UpdatePlayers;
-                }
+                LoadExistingLogs();
+
+                // Подписываемся на события
+                _process.OnLog += UpdateLog;
+                _process.OnStatusChanged += UpdateStatus;
+                _process.OnPlayersChanged += UpdatePlayers;
             }
         }
 
@@ -592,7 +582,7 @@ public partial class ServerDetailPage : Page, IDisposable
         SettingJavaComboBox.Items.Add(new ComboBoxItem
         {
             Content = $"{LocalizationManager.Get("ServerDetail_JavaDefault")} ({(defaultJava != null ? defaultJava.DisplayName : LocalizationManager.Get("ServerDetail_JavaNotSelected"))})",
-            Tag = (string?)null
+            Tag = null
         });
 
         // Добавляем все установленные Java

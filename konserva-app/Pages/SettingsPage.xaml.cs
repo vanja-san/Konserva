@@ -42,7 +42,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
         // Загрузка Java в ComboBox
         JavaComboBox.Items.Clear();
-        JavaComboBox.Items.Add(new ComboBoxItem { Content = LocalizationManager.Get("Common_NotSelected"), Tag = (JavaInstallation?)null });
+        JavaComboBox.Items.Add(new ComboBoxItem { Content = LocalizationManager.Get("Common_NotSelected"), Tag = null });
 
         foreach (var java in config.JavaInstallations)
         {
@@ -119,15 +119,10 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
             var languageChanged = false;
 
             // Сохранение выбранной Java
-            if (JavaComboBox.SelectedItem is ComboBoxItem selectedItem &&
-                selectedItem.Tag is JavaInstallation selectedJava)
-            {
-                config.DefaultJavaId = selectedJava.Id;
-            }
-            else
-            {
-                config.DefaultJavaId = null;
-            }
+            config.DefaultJavaId = (JavaComboBox.SelectedItem is ComboBoxItem selectedItem &&
+                                    selectedItem.Tag is JavaInstallation selectedJava)
+                ? selectedJava.Id
+                : null;
 
             config.CheckUpdates = CheckUpdatesBox.IsChecked ?? false;
 
@@ -295,14 +290,9 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
             var updateInfo = await mainWindow.ForceCheckForUpdatesAsync();
 
-            if (!updateInfo.IsAvailable)
-            {
-                CheckUpdatesButton.Content = LocalizationManager.Get("Settings_UpToDate_Button");
-            }
-            else
-            {
-                CheckUpdatesButton.Content = LocalizationManager.Get("Settings_UpdateAvailable_Button", $"v{updateInfo.NewVersion}");
-            }
+            CheckUpdatesButton.Content = !updateInfo.IsAvailable
+                ? LocalizationManager.Get("Settings_UpToDate_Button")
+                : LocalizationManager.Get("Settings_UpdateAvailable_Button", $"v{updateInfo.NewVersion}");
         }
         catch (Exception ex)
         {

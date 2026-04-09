@@ -739,15 +739,7 @@ public static partial class McServerInstaller
                         continue;
                     }
 
-                    var allUnlocked = true;
-                    foreach (var file in keyFiles)
-                    {
-                        if (!IsFileUnlocked(file))
-                        {
-                            allUnlocked = false;
-                            break;
-                        }
-                    }
+                    var allUnlocked = keyFiles.All(IsFileUnlocked);
 
                     if (allUnlocked)
                     {
@@ -1099,15 +1091,7 @@ public static partial class McServerInstaller
                         continue;
                     }
 
-                    var allUnlocked = true;
-                    foreach (var file in keyFiles)
-                    {
-                        if (!IsFileUnlocked(file))
-                        {
-                            allUnlocked = false;
-                            break;
-                        }
-                    }
+                    var allUnlocked = keyFiles.All(IsFileUnlocked);
 
                     if (allUnlocked)
                     {
@@ -1283,15 +1267,7 @@ public static partial class McServerInstaller
                         continue;
                     }
 
-                    var allUnlocked = true;
-                    foreach (var file in keyFiles)
-                    {
-                        if (!IsFileUnlocked(file))
-                        {
-                            allUnlocked = false;
-                            break;
-                        }
-                    }
+                    var allUnlocked = keyFiles.All(IsFileUnlocked);
 
                     if (allUnlocked)
                     {
