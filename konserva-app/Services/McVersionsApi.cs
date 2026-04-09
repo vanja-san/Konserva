@@ -72,7 +72,7 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
         }
         finally
         {
-            try { _cacheLock.Release(); } catch { }
+            try { _cacheLock.Release(); } catch { /* Suppress lock release errors */ }
         }
     }
 
@@ -194,7 +194,7 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
         }
         finally
         {
-            try { _neoForgeCacheLock.Release(); } catch { }
+            try { _neoForgeCacheLock.Release(); } catch { /* Suppress lock release errors */ }
         }
 
         // Основной источник: maven.neoforged.net
@@ -221,7 +221,7 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
                 // Кэшируем результат
                 await _neoForgeCacheLock.WaitAsync(ct);
                 try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(result, DateTime.UtcNow); }
-                finally { try { _neoForgeCacheLock.Release(); } catch { } }
+                finally { try { _neoForgeCacheLock.Release(); } catch { /* Suppress lock release errors */ } }
 
                 return result;
             }
@@ -247,7 +247,7 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
 
                 await _neoForgeCacheLock.WaitAsync(ct);
                 try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(result, DateTime.UtcNow); }
-                finally { try { _neoForgeCacheLock.Release(); } catch { } }
+                finally { try { _neoForgeCacheLock.Release(); } catch { /* Suppress lock release errors */ } }
 
                 return result;
             }

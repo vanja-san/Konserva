@@ -129,7 +129,10 @@ public partial class ServerDetailPage : Page, IDisposable
                 LogDocument.PageWidth = LogBox.ActualWidth;
             }
         }
-        catch { }
+        catch
+        {
+            // Suppress UI layout adjustment errors
+        }
     }
 
     /// <summary>
@@ -420,7 +423,6 @@ public partial class ServerDetailPage : Page, IDisposable
 
         var requiredVersion = JavaVersionParser.ParseRequiredJavaVersion(errorMessage);
         var foundVersion = JavaVersionParser.ParseFoundJavaVersion(errorMessage);
-        var javaPath = JavaVersionParser.ParseJavaPath(errorMessage);
 
         // Получаем все установленные Java
         var allJava = App.ConfigService?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
@@ -740,6 +742,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
+            Logger.Warning($"Failed to load properties: {ex.Message}", "ServerDetailPage");
             ShowErrorSafe($"{LocalizationManager.Get("ServerDetail_PropsLoadError")}: {ex.Message}");
         }
     }
@@ -791,6 +794,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
+            Logger.Warning($"Failed to load mods: {ex.Message}", "ServerDetailPage");
             ShowErrorSafe($"{LocalizationManager.Get("ServerDetail_ModsLoadError")}: {ex.Message}");
         }
     }
@@ -842,6 +846,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
+            Logger.Warning($"Failed to load plugins: {ex.Message}", "ServerDetailPage");
             ShowErrorSafe($"{LocalizationManager.Get("ServerDetail_PluginsLoadError")}: {ex.Message}");
         }
     }
@@ -917,6 +922,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
+            Logger.Error($"Delete mod error: {ex.Message}", ex, "ServerDetailPage");
             await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_ModDeleteError")}: {ex.Message}");
         }
     }
@@ -943,6 +949,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
+            Logger.Error($"Delete plugin error: {ex.Message}", ex, "ServerDetailPage");
             await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_PluginDeleteError")}: {ex.Message}");
         }
     }
@@ -964,6 +971,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         catch (Exception ex)
         {
+            Logger.Error($"Delete server error from detail page: {ex.Message}", ex, "ServerDetailPage");
             await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_DeleteServerError")}: {ex.Message}");
         }
     }

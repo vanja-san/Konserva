@@ -132,9 +132,9 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         try
         {
             LogHeader(string.Format(LocalizationManager.Get("Log_ServerStarting"), Server.Name));
-            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_ServerId")}", Server.Id));
-            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_ModLoader")}", Server.ModLoader.Type));
-            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_MinecraftVersion")}", Server.McVersion));
+            AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_ServerId"), Server.Id)}");
+            AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_ModLoader"), Server.ModLoader.Type)}");
+            AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_MinecraftVersion"), Server.McVersion)}");
             AppendLog("========================================");
 
             Logger.Info($"[StartInternalAsync] Checking directory for {Server.Path}", "McServerProcess");
@@ -142,7 +142,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             if (!Directory.Exists(Server.Path))
                 throw new DirectoryNotFoundException($"Папка сервера не найдена: {Server.Path}");
-            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_ServerFolder")}", Server.Path));
+            AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_ServerFolder"), Server.Path)}");
 
             ClearOldServerLogs();
             ValidateEula();
@@ -150,7 +150,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             ct.ThrowIfCancellationRequested();
 
             var launchType = McServerInstaller.GetServerLaunchType(Server.Path);
-            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_LaunchType")}", launchType));
+            AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_LaunchType"), launchType)}");
 
             var jarFile = FindServerJar(Server.Path);
             if (string.IsNullOrEmpty(jarFile))
@@ -160,7 +160,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                     : "папка пуста";
                 throw new FileNotFoundException($"Не найден jar файл сервера. Файлы в папке: {fileList}");
             }
-            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_JarFile")}", Path.GetFileName(jarFile), new FileInfo(jarFile).Length / 1024 / 1024));
+            AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_JarFile"), Path.GetFileName(jarFile), new FileInfo(jarFile).Length / 1024 / 1024)}");
 
             ct.ThrowIfCancellationRequested();
 
@@ -177,16 +177,16 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 throw new FileNotFoundException($"Java не найдена или не работает: {javaPath}. {javaCheckResult.Error}");
             }
 
-            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_JavaVersion")}", javaCheckResult.Version));
-            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_JavaPath_Info")}", javaCheckResult.JavaPath));
+            AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_JavaVersion"), javaCheckResult.Version)}");
+            AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_JavaPath_Info"), javaCheckResult.JavaPath)}");
 
             ct.ThrowIfCancellationRequested();
 
             ValidateJavaVersion(javaCheckResult);
 
             var javaArgs = BuildJavaArgs(jarFile, launchType);
-            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_JavaArgs")}", javaArgs));
-            AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_WorkingDirectory")}", Server.Path));
+            AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_JavaArgs"), javaArgs)}");
+            AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_WorkingDirectory"), Server.Path)}");
             AppendLog($"[INFO] {LocalizationManager.Get("Log_LaunchingProcess")}");
 
             ct.ThrowIfCancellationRequested();
@@ -215,8 +215,9 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         }
         catch (Exception ex)
         {
+            Logger.Error($"Start failed for {Server.Name}: {ex.Message}", ex, "McServerProcess");
             HandleStartError(ex);
-            throw; // Пробрасываем исключение дальше для обработки в McServerManager
+            throw;
         }
     }
 
@@ -255,7 +256,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 $"Требуется Java {requiredJavaVersion}+ для Minecraft {Server.McVersion}, но найдена Java {javaCheckResult.MajorVersion} ({javaCheckResult.Version})");
         }
 
-        AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_JavaVersionCompatible")}", requiredJavaVersion));
+        AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_JavaVersionCompatible"), requiredJavaVersion)}");
     }
 
     /// <summary>
@@ -338,7 +339,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         _process.BeginOutputReadLine();
         _process.BeginErrorReadLine();
 
-        AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_ProcessStarted")}", _process.Id));
+        AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_ProcessStarted"), _process.Id)}");
 
         // Устанавливаем статус Running после успешного запуска
         Status = ServerStatus.Running;
@@ -447,7 +448,10 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                             actualJavaPath = paths[0].Trim();
                     }
                 }
-                catch { }
+                catch
+                {
+                    // Suppress PATH search errors
+                }
             }
             else
             {
@@ -490,6 +494,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         }
         catch (Exception ex)
         {
+            Logger.Warning($"Java check failed: {ex.Message}", "McServerProcess");
             return new JavaCheckResult { Success = false, Error = ex.Message };
         }
     }
@@ -560,6 +565,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         }
         catch (Exception ex)
         {
+            Logger.Warning($"Failed to kill process: {ex.Message}", "McServerProcess");
             AppendLog($"[ERROR] {LocalizationManager.Get("Log_ExitError")} {ex.Message}");
         }
         finally
@@ -617,11 +623,13 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             }
             catch (Exception killEx)
             {
+                Logger.Warning($"Failed to kill process on cancel: {killEx.Message}", "McServerProcess");
                 AppendLog($"[ERROR] {string.Format(LocalizationManager.Get("Log_KillFailedOnCancel"), killEx.Message)}");
             }
         }
         catch (Exception ex)
         {
+            Logger.Error($"Stop error for {Server.Name}: {ex.Message}", ex, "McServerProcess");
             AppendLog($"[ERROR] {LocalizationManager.Get("Log_StopError")} {ex.Message}");
             try
             {
@@ -630,6 +638,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             }
             catch (Exception killEx)
             {
+                Logger.Warning($"Failed to kill process during stop: {killEx.Message}", "McServerProcess");
                 AppendLog($"[ERROR] {string.Format(LocalizationManager.Get("Log_KillFailed"), killEx.Message)}");
             }
         }
@@ -721,9 +730,6 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             // Дочитываем оставшийся вывод после завершения процесса (неблокирующее чтение)
             await Task.Delay(200);
 
-            // Проверка: процесс ещё существует
-            if (_process == null) return;
-
             var exitCode = _process.ExitCode;
 
             // Статус уже установлен в GracefulStopAsync, обновляем только если процесс завершился сам
@@ -813,6 +819,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         }
         catch (Exception ex)
         {
+            Logger.Error($"Monitor exit error for {Server.Name}: {ex.Message}", ex, "McServerProcess");
             AppendLog($"[ERROR] {string.Format(LocalizationManager.Get("Log_MonitorError"), ex.Message)}");
         }
     }
@@ -867,7 +874,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 {
                     var backupName = Path.Combine(logsDir, $"latest.log.old-{DateTime.Now:yyyyMMdd-HHmmss}");
                     File.Move(latestLog, backupName);
-                    AppendLog(string.Format($"[INFO] {LocalizationManager.Get("Log_LogMoved")}", Path.GetFileName(backupName)));
+                    AppendLog($"[INFO] {string.Format(LocalizationManager.Get("Log_LogMoved"), Path.GetFileName(backupName))}");
                 }
             }
 
@@ -889,7 +896,8 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         }
         catch (Exception ex)
         {
-            AppendLog(string.Format($"[WARN] {LocalizationManager.Get("Log_CleanupFailed")}", ex.Message));
+            Logger.Warning($"Log cleanup failed: {ex.Message}", "McServerProcess");
+            AppendLog($"[WARN] {string.Format(LocalizationManager.Get("Log_CleanupFailed"), ex.Message)}");
         }
     }
 

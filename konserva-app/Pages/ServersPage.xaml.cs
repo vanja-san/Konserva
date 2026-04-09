@@ -59,7 +59,6 @@ public partial class ServersPage : Page, IDisposable
             // Парсим информацию о версии Java из сообщения об ошибке
             var requiredVersion = JavaVersionParser.ParseRequiredJavaVersion(errorMessage);
             var foundVersion = JavaVersionParser.ParseFoundJavaVersion(errorMessage);
-            var javaPath = JavaVersionParser.ParseJavaPath(errorMessage);
 
             // Получаем все установленные Java
             var allJava = App.ConfigService?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
@@ -285,6 +284,7 @@ public partial class ServersPage : Page, IDisposable
         }
         catch (Exception ex)
         {
+            Logger.Error($"Delete server error: {ex.Message}", ex, "ServersPage");
             await UiHelper.ShowError($"Ошибка при удалении сервера: {ex.Message}");
         }
     }

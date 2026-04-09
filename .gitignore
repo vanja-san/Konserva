@@ -46,3 +46,7 @@ Desktop.ini
 # VS Code
 .vscode/
 /.qwen
+
+# CodeQL artifacts
+*.sarif
+*-extracted.csv

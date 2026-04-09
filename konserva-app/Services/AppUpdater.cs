@@ -79,6 +79,7 @@ namespace Konserva.Services
             }
             catch (Exception ex)
             {
+                Logger.Error($"App update failed: {ex.Message}", ex, "AppUpdater");
                 UpdateLog($"Update failed: {ex.Message}", "ERROR");
                 UpdateLog($"Stack trace: {ex.StackTrace}", "ERROR");
                 return false;

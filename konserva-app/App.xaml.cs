@@ -14,7 +14,6 @@ namespace Konserva;
 public partial class App : Application
 {
     private static IServiceProvider? _serviceProvider;
-    private static Logger? _logger;
 
     /// <summary>
     /// Сервис конфигурации
@@ -39,7 +38,6 @@ public partial class App : Application
     {
         // 1. Сначала инициализируем логгер
         Logger.Initialize();
-        _logger = new Logger();
 
         base.OnStartup(e);
 
@@ -57,7 +55,6 @@ public partial class App : Application
         }
 
         // 3. Создаём файлы локализации если не существуют (уже сделано в Initialize)
-        var i18nPath = System.IO.Path.Combine(AppContext.BaseDirectory, "i18n");
 
         // 4. Регистрируем провайдер кодировок для поддержки OEM кодировок (866 и др.)
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -163,9 +160,6 @@ public partial class App : Application
     {
         try
         {
-            // Инициализация API версий
-            var versionsApi = _serviceProvider?.GetService<IMcVersionsApi>();
-
             // Инициализация McServerInstaller (требуется для установки серверов)
             var httpClient = _serviceProvider?.GetService<HttpClient>()
                 ?? new HttpClient();
@@ -222,7 +216,7 @@ public partial class App : Application
                     Logger.Info($"Stopping {runningServers.Count} server(s) on shutdown", "App");
 
                     // Пытаемся остановить все серверы с таймаутом
-                    var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                     var stopTasks = runningServers.Select(s =>
                         serverManager.StopServerAsync(s.Id, cts.Token));
 
@@ -243,12 +237,6 @@ public partial class App : Application
                 }
             }
 
-            // Очистка пула HttpClient
-            if (_logger != null)
-            {
-                await _logger.DisposeAsync();
-            }
-
             // Очистка DI контейнера
             if (_serviceProvider is IAsyncDisposable asyncDisposable)
             {
@@ -263,7 +251,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Cleanup error: {ex.Message}");
+            Logger.Error($"Cleanup error: {ex.Message}", ex, "App");
         }
     }
 

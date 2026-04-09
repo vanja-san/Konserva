@@ -120,11 +120,13 @@ public partial class CreateServerDialog : FluentWindow
     }
 
 #pragma warning disable SYSLIB1054 // Using DllImport instead of LibraryImport for Win32 API
+#pragma warning disable CA1416 // Validate platform compatibility (Win32 API)
     [DllImport("user32.dll")]
     private static extern IntPtr SetCursor(IntPtr hCursor);
 
     [DllImport("user32.dll")]
     private static extern IntPtr LoadCursor(IntPtr hInstance, IntPtr lpCursorName);
+#pragma warning restore CA1416
 #pragma warning restore SYSLIB1054
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -353,9 +355,9 @@ public partial class CreateServerDialog : FluentWindow
             {
                 // 404 — версия не поддерживается, пропускаем
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Игнорируем другие ошибки
+                Logger.Warning($"Failed to check Quilt support for version {version}: {ex.Message}", "CreateServerDialog");
             }
         }
 
@@ -373,8 +375,9 @@ public partial class CreateServerDialog : FluentWindow
                 .EnumerateArray()
                 .Select(v => v.GetString()!)];
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.Warning($"Failed to load Paper versions, using fallback: {ex.Message}", "CreateServerDialog");
             _paperVersions = [.. _allMcVersions];
         }
     }
@@ -390,8 +393,9 @@ public partial class CreateServerDialog : FluentWindow
                 .EnumerateArray()
                 .Select(v => v.GetString()!)];
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.Warning($"Failed to load Purpur versions, using fallback: {ex.Message}", "CreateServerDialog");
             _purpurVersions = [.. _allMcVersions];
         }
     }
@@ -411,7 +415,10 @@ public partial class CreateServerDialog : FluentWindow
                 return true;
             }
         }
-        catch { }
+        catch
+        {
+            // Ignore parse errors — version string is not standard format
+        }
 
         return false;
     }
@@ -948,7 +955,10 @@ public partial class CreateServerDialog : FluentWindow
                 return config.ServersDirectory;
             }
         }
-        catch { }
+        catch
+        {
+            // Suppress config load errors, fallback to default
+        }
 
         var exeDir = AppContext.BaseDirectory;
         var serversDir = Path.Combine(exeDir, "Servers");
@@ -1010,7 +1020,10 @@ public partial class CreateServerDialog : FluentWindow
                             mcVersion = idElement.GetString() ?? "Unknown";
                         }
                     }
-                    catch { }
+                    catch
+                    {
+                        // Suppress version.json parse errors
+                    }
                 }
 
                 var serverName = Path.GetFileName(serverPath);
@@ -1178,6 +1191,7 @@ public partial class CreateServerDialog : FluentWindow
         }
         catch (Exception ex)
         {
+            Logger.Error($"Create server failed: {ex.Message}", ex, "CreateServerDialog");
             SetInstallingState(false);
             await UiHelper.ShowError($"{LocalizationManager.Get("CreateServer_Error_CreateFailed")}: {ex.Message}");
         }

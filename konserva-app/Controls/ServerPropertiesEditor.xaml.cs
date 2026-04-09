@@ -1,5 +1,7 @@
-﻿using Konserva.Localization;
+﻿using Konserva.Controls;
+using Konserva.Localization;
 using Konserva.Models;
+using Konserva.Utilities;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -197,6 +199,7 @@ public partial class ServerPropertiesEditor : UserControl
         }
         catch (Exception ex)
         {
+            Logger.Warning($"Failed to save server properties: {ex.Message}", "ServerPropertiesEditor");
             ShowStatus($"{LocalizationManager.Get("Props_SaveError")}: {ex.Message}", true);
         }
     }

@@ -35,7 +35,10 @@ public static class LocalizationManager
     /// </summary>
     public static CultureInfo CurrentCulture
     {
-        get => _currentCulture;
+        get
+        {
+            lock (_lock) return _currentCulture;
+        }
         set
         {
             lock (_lock)

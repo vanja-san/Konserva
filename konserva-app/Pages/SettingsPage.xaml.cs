@@ -327,7 +327,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     {
         if (_isLoading) return;
 
-        if (ThemeComboBox.SelectedItem is ComboBoxItem selectedItem)
+        if (ThemeComboBox.SelectedItem is ComboBoxItem)
         {
             AutoSaveSettings(); // AutoSaveSettings сам применит тему
         }

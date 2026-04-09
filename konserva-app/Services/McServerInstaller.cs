@@ -179,6 +179,7 @@ public static partial class McServerInstaller
         }
         catch (Exception ex)
         {
+            Logger.Error($"Download failed ({fileName}): {ex.Message}", ex, "McServerInstaller");
             return (false, $"{ex.GetType().Name}: {ex.Message}");
         }
     }
@@ -342,7 +343,6 @@ public static partial class McServerInstaller
             }
 
             // 3. Скачиваем сервер
-            var serverJarPath = Path.Combine(destinationPath, "fabric-server-launch.jar");
             var serverUrl = $"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}/{selectedLoaderVersion}/{installerVersion}/server/jar";
 
             Logger.Info($"Downloading Fabric server from: {serverUrl}");
@@ -533,8 +533,9 @@ public static partial class McServerInstaller
             if (process == null)
                 return false;
 
-            var outputTask = process.StandardOutput.ReadToEndAsync();
-            var errorTask = process.StandardError.ReadToEndAsync();
+            // Читаем вывод чтобы буфер не заполнялся
+            _ = process.StandardOutput.ReadToEndAsync();
+            _ = process.StandardError.ReadToEndAsync();
 
             // Обновляем прогресс во время ожидания
             var startTime = DateTime.Now;
@@ -702,7 +703,7 @@ public static partial class McServerInstaller
             // 3. Удаляем installer
             if (success && File.Exists(installerPath))
             {
-                try { File.Delete(installerPath); } catch { }
+                try { File.Delete(installerPath); } catch { /* Suppress cleanup errors */ }
             }
 
             if (success)
@@ -812,7 +813,6 @@ public static partial class McServerInstaller
             var outputLines = new List<string>();
             var errorLines = new List<string>();
             var startTime = DateTime.Now;
-            var timeout = TimeSpan.FromMinutes(15);
             bool installedSuccessfully = false;
             int patchCount = 0;
             int libraryCount = 0;
@@ -1063,7 +1063,7 @@ public static partial class McServerInstaller
 
             if (success && File.Exists(installerPath))
             {
-                try { File.Delete(installerPath); } catch { }
+                try { File.Delete(installerPath); } catch { /* Suppress cleanup errors */ }
             }
 
             if (success)
@@ -1238,7 +1238,7 @@ public static partial class McServerInstaller
                         }
 
                         // Удаляем пустую папку server
-                        try { Directory.Delete(serverSubfolder, true); } catch { }
+                        try { Directory.Delete(serverSubfolder, true); } catch { /* Suppress cleanup errors */ }
 
                         Logger.Info("Moved Quilt server files from subfolder to root", "McServerInstaller");
                     }
@@ -1251,7 +1251,7 @@ public static partial class McServerInstaller
 
             if (success && File.Exists(installerPath))
             {
-                try { File.Delete(installerPath); } catch { }
+                try { File.Delete(installerPath); } catch { /* Suppress cleanup errors */ }
             }
 
             if (success)
@@ -1371,7 +1371,7 @@ public static partial class McServerInstaller
             if (!processExited)
             {
                 Logger.Warning($"Quilt installer timeout after {timeout.TotalMinutes} minutes", "McServerInstaller");
-                try { process.Kill(); } catch { }
+                try { process.Kill(); } catch { /* Suppress cleanup errors */ }
             }
 
             await process.WaitForExitAsync(ct);
@@ -1892,6 +1892,7 @@ public static partial class McServerInstaller
         }
         catch (Exception ex)
         {
+            Logger.Error($"InstallServer failed: {ex.Message}", ex, "McServerInstaller");
             result.Success = false;
             result.Error = $"{ex.GetType().Name}: {ex.Message}";
             result.Status = InstallStatus.Failed;

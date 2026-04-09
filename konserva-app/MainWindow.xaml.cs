@@ -199,7 +199,7 @@ public partial class MainWindow : FluentWindow, IDisposable
         _isUpdatingStatusBar = true;
         try
         {
-            var (total, running, stopped) = _serverManager.GetStats();
+            var (total, running, _) = _serverManager.GetStats();
 
             StatusTotalServers.Text = $"{total}";
             StatusRunningServers.Text = $"{running}";
@@ -307,6 +307,7 @@ public partial class MainWindow : FluentWindow, IDisposable
         }
         catch (Exception ex)
         {
+            Logger.Error($"Create server dialog error: {ex.Message}", ex, "MainWindow");
             await UiHelper.ShowError($"{LocalizationManager.Get("MainWindow_Error")}: {ex.Message}");
         }
     }
