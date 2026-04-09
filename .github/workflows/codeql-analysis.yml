@@ -10,7 +10,7 @@ on:
 permissions:
   contents: read
   security-events: write
-  actions: read
+  actions: write
 
 jobs:
   analyze:
@@ -58,3 +58,11 @@ jobs:
       with:
         sarif_file: sarif-results/csharp.sarif
         category: "/language:${{matrix.language}}"
+
+    - name: Upload SARIF artifact
+      if: always()
+      uses: actions/upload-artifact@v6
+      with:
+        name: codeql-sarif-csharp
+        path: sarif-results/csharp.sarif
+        retention-days: 30
