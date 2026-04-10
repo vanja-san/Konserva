@@ -182,7 +182,7 @@
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         LineHeight="16"
                         VerticalAlignment="Center"
-                        Text="v1.5.1" />
+                        Text="v1.5.2" />
                     <controls:UpdateNotification x:Name="UpdateNotificationControl" />
                 </StackPanel>
             </Grid>
