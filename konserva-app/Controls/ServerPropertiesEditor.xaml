@@ -35,7 +35,7 @@
                     <Grid
                         Margin="8,0"
                         ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
                             Grid.Row="0"
                             Grid.Column="0"
@@ -136,6 +136,22 @@
                             Grid.Row="5"
                             Grid.Column="1"
                             Margin="12,4,0,4" />
+
+                        <StackPanel
+                            Grid.Row="6"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_EnableStatus}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_EnableStatus_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="EnableStatusBox"
+                            Grid.Row="6"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
                     </Grid>
                 </ui:CardExpander>
 
@@ -157,7 +173,7 @@
                     <Grid
                         Margin="8,0"
                         ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
                             Grid.Row="0"
                             Grid.Column="0"
@@ -184,6 +200,22 @@
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ForceGamemode}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_ForceGamemode_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="ForceGamemodeBox"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="2"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
                             <ui:TextBlock Text="{loc:Loc ServerProperties_Difficulty}" />
                             <ui:TextBlock
                                 FontSize="12"
@@ -192,7 +224,7 @@
                         </StackPanel>
                         <ComboBox
                             x:Name="DifficultyBox"
-                            Grid.Row="1"
+                            Grid.Row="2"
                             Grid.Column="1"
                             Margin="12,4,0,4"
                             ContextMenu="{x:Null}">
@@ -203,7 +235,7 @@
                         </ComboBox>
 
                         <StackPanel
-                            Grid.Row="2"
+                            Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center">
                             <ui:TextBlock Text="{loc:Loc ServerProperties_Hardcore}" />
@@ -214,12 +246,12 @@
                         </StackPanel>
                         <CheckBox
                             x:Name="HardcoreBox"
-                            Grid.Row="2"
+                            Grid.Row="3"
                             Grid.Column="1"
-                            HorizontalAlignment="Center" />
+                            HorizontalAlignment="Right" />
 
                         <StackPanel
-                            Grid.Row="3"
+                            Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center">
                             <ui:TextBlock Text="{loc:Loc ServerProperties_PvP}" />
@@ -230,12 +262,28 @@
                         </StackPanel>
                         <CheckBox
                             x:Name="PvpBox"
-                            Grid.Row="3"
+                            Grid.Row="4"
                             Grid.Column="1"
-                            HorizontalAlignment="Center" />
+                            HorizontalAlignment="Right" />
 
                         <StackPanel
-                            Grid.Row="4"
+                            Grid.Row="5"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_AllowFlight}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_AllowFlight_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="AllowFlightBox"
+                            Grid.Row="5"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="6"
                             Grid.Column="0"
                             VerticalAlignment="Center">
                             <ui:TextBlock Text="{loc:Loc ServerProperties_CommandBlocks}" />
@@ -246,9 +294,9 @@
                         </StackPanel>
                         <CheckBox
                             x:Name="CommandBlocksBox"
-                            Grid.Row="4"
+                            Grid.Row="6"
                             Grid.Column="1"
-                            HorizontalAlignment="Center" />
+                            HorizontalAlignment="Right" />
                     </Grid>
                 </ui:CardExpander>
 
@@ -270,7 +318,7 @@
                     <Grid
                         Margin="8,0"
                         ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
                             Grid.Row="0"
                             Grid.Column="0"
@@ -330,6 +378,23 @@
                             Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_GeneratorSettings}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_GeneratorSettings_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="GeneratorSettingsBox"
+                            Grid.Row="3"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="{}" />
+
+                        <StackPanel
+                            Grid.Row="4"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
                             <ui:TextBlock Text="{loc:Loc ServerProperties_MaxWorldSize}" />
                             <ui:TextBlock
                                 FontSize="12"
@@ -338,13 +403,13 @@
                         </StackPanel>
                         <ui:TextBox
                             x:Name="MaxWorldSizeBox"
-                            Grid.Row="3"
+                            Grid.Row="4"
                             Grid.Column="1"
                             Margin="12,4,0,4"
                             Text="29999984" />
 
                         <StackPanel
-                            Grid.Row="4"
+                            Grid.Row="5"
                             Grid.Column="0"
                             VerticalAlignment="Center">
                             <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnStructures}" />
@@ -355,12 +420,12 @@
                         </StackPanel>
                         <CheckBox
                             x:Name="GenerateStructuresBox"
-                            Grid.Row="4"
+                            Grid.Row="5"
                             Grid.Column="1"
-                            HorizontalAlignment="Center" />
+                            HorizontalAlignment="Right" />
 
                         <StackPanel
-                            Grid.Row="5"
+                            Grid.Row="6"
                             Grid.Column="0"
                             VerticalAlignment="Center">
                             <ui:TextBlock Text="{loc:Loc ServerProperties_AllowNether}" />
@@ -371,18 +436,36 @@
                         </StackPanel>
                         <CheckBox
                             x:Name="AllowNetherBox"
-                            Grid.Row="5"
+                            Grid.Row="6"
                             Grid.Column="1"
-                            HorizontalAlignment="Center" />
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="7"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnRadius}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_SpawnRadius_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="SpawnRadiusBox"
+                            Grid.Row="7"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="10" />
                     </Grid>
                 </ui:CardExpander>
 
                 <!--  Безопасность и ограничения  -->
+                <!--  Сеть и безопасность  -->
                 <ui:CardExpander
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
-                    IsExpanded="True">
+                    IsExpanded="False">
                     <ui:CardExpander.Icon>
                         <ui:SymbolIcon
                             Filled="True"
@@ -395,7 +478,7 @@
                     <Grid
                         Margin="8,0"
                         ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
                             Grid.Row="0"
                             Grid.Column="0"
@@ -410,42 +493,10 @@
                             x:Name="OnlineModeBox"
                             Grid.Row="0"
                             Grid.Column="1"
-                            HorizontalAlignment="Center" />
+                            HorizontalAlignment="Right" />
 
                         <StackPanel
                             Grid.Row="1"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_Whitelist}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="Gray"
-                                Text="{loc:Loc ServerProperties_Whitelist_Desc}" />
-                        </StackPanel>
-                        <CheckBox
-                            x:Name="WhiteListBox"
-                            Grid.Row="1"
-                            Grid.Column="1"
-                            HorizontalAlignment="Center" />
-
-                        <StackPanel
-                            Grid.Row="2"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_EnforceWhitelist}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="Gray"
-                                Text="{loc:Loc ServerProperties_EnforceWhitelist_Desc}" />
-                        </StackPanel>
-                        <CheckBox
-                            x:Name="EnforceWhitelistBox"
-                            Grid.Row="2"
-                            Grid.Column="1"
-                            HorizontalAlignment="Center" />
-
-                        <StackPanel
-                            Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center">
                             <ui:TextBlock Text="{loc:Loc ServerProperties_EnforceSecureProfile}" />
@@ -456,25 +507,195 @@
                         </StackPanel>
                         <CheckBox
                             x:Name="EnforceSecureProfileBox"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="2"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_PreventProxyConnections}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_PreventProxyConnections_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="PreventProxyConnectionsBox"
+                            Grid.Row="2"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="3"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_RateLimit}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_RateLimit_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="RateLimitBox"
                             Grid.Row="3"
                             Grid.Column="1"
-                            HorizontalAlignment="Center" />
+                            Margin="12,4,0,4"
+                            Text="0" />
 
                         <StackPanel
                             Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_AllowFlight}" />
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_NetworkCompression}" />
                             <ui:TextBlock
                                 FontSize="12"
                                 Foreground="Gray"
-                                Text="{loc:Loc ServerProperties_AllowFlight_Desc}" />
+                                Text="{loc:Loc ServerProperties_NetworkCompression_Desc}" />
                         </StackPanel>
-                        <CheckBox
-                            x:Name="AllowFlightBox"
+                        <ui:TextBox
+                            x:Name="NetworkCompressionBox"
                             Grid.Row="4"
                             Grid.Column="1"
-                            HorizontalAlignment="Center" />
+                            Margin="12,4,0,4"
+                            Text="256" />
+
+                        <StackPanel
+                            Grid.Row="5"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_MaxTickTime}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_MaxTickTime_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="MaxTickTimeBox"
+                            Grid.Row="5"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="60000" />
+
+                        <StackPanel
+                            Grid.Row="6"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_PlayerIdleTimeout}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_PlayerIdleTimeout_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="PlayerIdleTimeoutBox"
+                            Grid.Row="6"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="0" />
+
+                        <StackPanel
+                            Grid.Row="7"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_AcceptsTransfers}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_AcceptsTransfers_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="AcceptsTransfersBox"
+                            Grid.Row="7"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="8"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_StatusHeartbeatInterval}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_StatusHeartbeatInterval_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="StatusHeartbeatIntervalBox"
+                            Grid.Row="8"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="0" />
+                    </Grid>
+                </ui:CardExpander>
+
+                <!--  Whitelist  -->
+                <ui:CardExpander
+                    Margin="0,0,0,8"
+                    Padding="12"
+                    ContentPadding="8"
+                    IsExpanded="False">
+                    <ui:CardExpander.Icon>
+                        <ui:SymbolIcon
+                            Filled="True"
+                            FontSize="20"
+                            Symbol="PeopleList20" />
+                    </ui:CardExpander.Icon>
+                    <ui:CardExpander.Header>
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_WhitelistSection}" />
+                    </ui:CardExpander.Header>
+                    <Grid
+                        Margin="8,0"
+                        ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto">
+                        <StackPanel
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_Whitelist}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_Whitelist_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="WhiteListBox"
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_EnforceWhitelist}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_EnforceWhitelist_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="EnforceWhitelistBox"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="2"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_HideOnlinePlayers}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_HideOnlinePlayers_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="HideOnlinePlayersBox"
+                            Grid.Row="2"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
                     </Grid>
                 </ui:CardExpander>
 
@@ -496,7 +717,7 @@
                     <Grid
                         Margin="8,0"
                         ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto,Auto">
                         <StackPanel
                             Grid.Row="0"
                             Grid.Column="0"
@@ -511,7 +732,7 @@
                             x:Name="EnableRconBox"
                             Grid.Row="0"
                             Grid.Column="1"
-                            HorizontalAlignment="Center" />
+                            HorizontalAlignment="Right" />
 
                         <StackPanel
                             Grid.Row="1"
@@ -545,26 +766,12 @@
                             Grid.Column="1"
                             Margin="12,4,0,4"
                             Text="25575" />
-
-                        <StackPanel
-                            Grid.Row="3"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_RconIp}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="Gray"
-                                Text="{loc:Loc ServerProperties_RconIp_Desc}" />
-                        </StackPanel>
-                        <ui:TextBox
-                            x:Name="RconIpBox"
-                            Grid.Row="3"
-                            Grid.Column="1"
-                            Margin="12,4,0,4" />
                     </Grid>
                 </ui:CardExpander>
-                <!--  Дополнительные настройки  -->
+
+                <!--  Query  -->
                 <ui:CardExpander
+                    Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
                     IsExpanded="False">
@@ -572,15 +779,69 @@
                         <ui:SymbolIcon
                             Filled="True"
                             FontSize="20"
-                            Symbol="TextboxMore20" />
+                            Symbol="GlobeSearch20" />
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_Advanced}" />
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_Query}" />
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
                         ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto">
+                        <StackPanel
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_EnableQuery}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_EnableQuery_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="EnableQueryBox"
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_QueryPort}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_QueryPort_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="QueryPortBox"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="25565" />
+                    </Grid>
+                </ui:CardExpander>
+
+                <!--  Permissions  -->
+                <ui:CardExpander
+                    Margin="0,0,0,8"
+                    Padding="12"
+                    ContentPadding="8"
+                    IsExpanded="False">
+                    <ui:CardExpander.Icon>
+                        <ui:SymbolIcon
+                            Filled="True"
+                            FontSize="20"
+                            Symbol="ShieldTask20" />
+                    </ui:CardExpander.Icon>
+                    <ui:CardExpander.Header>
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_Permissions}" />
+                    </ui:CardExpander.Header>
+                    <Grid
+                        Margin="8,0"
+                        ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
                             Grid.Row="0"
                             Grid.Column="0"
@@ -601,22 +862,6 @@
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnRadius}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="Gray"
-                                Text="{loc:Loc ServerProperties_SpawnRadius_Desc}" />
-                        </StackPanel>
-                        <ui:TextBox
-                            x:Name="SpawnRadiusBox"
-                            Grid.Row="1"
-                            Grid.Column="1"
-                            Margin="12,4,0,4"
-                            Text="10" />
-                        <StackPanel
-                            Grid.Row="2"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
                             <ui:TextBlock Text="{loc:Loc ServerProperties_OpPermissionLevel}" />
                             <ui:TextBlock
                                 FontSize="12"
@@ -625,89 +870,28 @@
                         </StackPanel>
                         <ui:TextBox
                             x:Name="OpPermissionLevelBox"
-                            Grid.Row="2"
+                            Grid.Row="1"
                             Grid.Column="1"
                             Margin="12,4,0,4"
                             Text="4" />
                         <StackPanel
-                            Grid.Row="3"
+                            Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_MaxTickTime}" />
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_FunctionPermissionLevel}" />
                             <ui:TextBlock
                                 FontSize="12"
                                 Foreground="Gray"
-                                Text="{loc:Loc ServerProperties_MaxTickTime_Desc}" />
+                                Text="{loc:Loc ServerProperties_FunctionPermissionLevel_Desc}" />
                         </StackPanel>
                         <ui:TextBox
-                            x:Name="MaxTickTimeBox"
+                            x:Name="FunctionPermissionLevelBox"
+                            Grid.Row="2"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="2" />
+                        <StackPanel
                             Grid.Row="3"
-                            Grid.Column="1"
-                            Margin="12,4,0,4"
-                            Text="60000" />
-                        <StackPanel
-                            Grid.Row="4"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_NetworkCompression}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="Gray"
-                                Text="{loc:Loc ServerProperties_NetworkCompression_Desc}" />
-                        </StackPanel>
-                        <ui:TextBox
-                            x:Name="NetworkCompressionBox"
-                            Grid.Row="4"
-                            Grid.Column="1"
-                            Margin="12,4,0,4"
-                            Text="256" />
-                        <StackPanel
-                            Grid.Row="5"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnNPCs}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="Gray"
-                                Text="{loc:Loc ServerProperties_SpawnNPCs_Desc}" />
-                        </StackPanel>
-                        <CheckBox
-                            x:Name="SpawnNpcsBox"
-                            Grid.Row="5"
-                            Grid.Column="1"
-                            HorizontalAlignment="Center" />
-                        <StackPanel
-                            Grid.Row="6"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnAnimals}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="Gray"
-                                Text="{loc:Loc ServerProperties_SpawnAnimals_Desc}" />
-                        </StackPanel>
-                        <CheckBox
-                            x:Name="SpawnAnimalsBox"
-                            Grid.Row="6"
-                            Grid.Column="1"
-                            HorizontalAlignment="Center" />
-                        <StackPanel
-                            Grid.Row="7"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnMonsters}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="Gray"
-                                Text="{loc:Loc ServerProperties_SpawnMonsters_Desc}" />
-                        </StackPanel>
-                        <CheckBox
-                            x:Name="SpawnMonstersBox"
-                            Grid.Row="7"
-                            Grid.Column="1"
-                            HorizontalAlignment="Center" />
-                        <StackPanel
-                            Grid.Row="8"
                             Grid.Column="0"
                             VerticalAlignment="Center">
                             <ui:TextBlock Text="{loc:Loc ServerProperties_EnabledPacks}" />
@@ -718,12 +902,12 @@
                         </StackPanel>
                         <ui:TextBox
                             x:Name="InitialEnabledPacksBox"
-                            Grid.Row="8"
+                            Grid.Row="3"
                             Grid.Column="1"
                             Margin="12,4,0,4"
                             Text="vanilla" />
                         <StackPanel
-                            Grid.Row="9"
+                            Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center">
                             <ui:TextBlock Text="{loc:Loc ServerProperties_DisabledPacks}" />
@@ -734,9 +918,518 @@
                         </StackPanel>
                         <ui:TextBox
                             x:Name="InitialDisabledPacksBox"
-                            Grid.Row="9"
+                            Grid.Row="4"
                             Grid.Column="1"
                             Margin="12,4,0,4" />
+                    </Grid>
+                </ui:CardExpander>
+
+                <!--  Management Server  -->
+                <ui:CardExpander
+                    Margin="0,0,0,8"
+                    Padding="12"
+                    ContentPadding="8"
+                    IsExpanded="False">
+                    <ui:CardExpander.Icon>
+                        <ui:SymbolIcon
+                            Filled="True"
+                            FontSize="20"
+                            Symbol="BuildingDesktop20" />
+                    </ui:CardExpander.Icon>
+                    <ui:CardExpander.Header>
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_ManagementServer}" />
+                    </ui:CardExpander.Header>
+                    <Grid
+                        Margin="8,0"
+                        ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                        <StackPanel
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerEnabled}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_ManagementServerEnabled_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="ManagementServerEnabledBox"
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerHost}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_ManagementServerHost_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="ManagementServerHostBox"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="localhost" />
+
+                        <StackPanel
+                            Grid.Row="2"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerPort}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_ManagementServerPort_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="ManagementServerPortBox"
+                            Grid.Row="2"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="0" />
+
+                        <StackPanel
+                            Grid.Row="3"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerSecret}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_ManagementServerSecret_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="ManagementServerSecretBox"
+                            Grid.Row="3"
+                            Grid.Column="1"
+                            Margin="12,4,0,4" />
+
+                        <StackPanel
+                            Grid.Row="4"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerTlsEnabled}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_ManagementServerTlsEnabled_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="ManagementServerTlsEnabledBox"
+                            Grid.Row="4"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="5"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerTlsKeystore}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_ManagementServerTlsKeystore_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="ManagementServerTlsKeystoreBox"
+                            Grid.Row="5"
+                            Grid.Column="1"
+                            Margin="12,4,0,4" />
+
+                        <StackPanel
+                            Grid.Row="6"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerAllowedOrigins}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_ManagementServerAllowedOrigins_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="ManagementServerAllowedOriginsBox"
+                            Grid.Row="6"
+                            Grid.Column="1"
+                            Margin="12,4,0,4" />
+                    </Grid>
+                </ui:CardExpander>
+
+                <!--  Resource Pack  -->
+                <ui:CardExpander
+                    Margin="0,0,0,8"
+                    Padding="12"
+                    ContentPadding="8"
+                    IsExpanded="False">
+                    <ui:CardExpander.Icon>
+                        <ui:SymbolIcon
+                            Filled="True"
+                            FontSize="20"
+                            Symbol="Box20" />
+                    </ui:CardExpander.Icon>
+                    <ui:CardExpander.Header>
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_ResourcePack}" />
+                    </ui:CardExpander.Header>
+                    <Grid
+                        Margin="8,0"
+                        ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                        <StackPanel
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ResourcePackUrl}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_ResourcePackUrl_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="ResourcePackBox"
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            Margin="12,4,0,4" />
+
+                        <StackPanel
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ResourcePackSha1}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_ResourcePackSha1_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="ResourcePackSha1Box"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            Margin="12,4,0,4" />
+
+                        <StackPanel
+                            Grid.Row="2"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ResourcePackId}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_ResourcePackId_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="ResourcePackIdBox"
+                            Grid.Row="2"
+                            Grid.Column="1"
+                            Margin="12,4,0,4" />
+
+                        <StackPanel
+                            Grid.Row="3"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ResourcePackPrompt}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_ResourcePackPrompt_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="ResourcePackPromptBox"
+                            Grid.Row="3"
+                            Grid.Column="1"
+                            Margin="12,4,0,4" />
+
+                        <StackPanel
+                            Grid.Row="4"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_RequireResourcePack}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_RequireResourcePack_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="RequireResourcePackBox"
+                            Grid.Row="4"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+                    </Grid>
+                </ui:CardExpander>
+
+                <!--  Performance  -->
+                <ui:CardExpander
+                    Margin="0,0,0,8"
+                    Padding="12"
+                    ContentPadding="8"
+                    IsExpanded="False">
+                    <ui:CardExpander.Icon>
+                        <ui:SymbolIcon
+                            Filled="True"
+                            FontSize="20"
+                            Symbol="TopSpeed20" />
+                    </ui:CardExpander.Icon>
+                    <ui:CardExpander.Header>
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_Performance}" />
+                    </ui:CardExpander.Header>
+                    <Grid
+                        Margin="8,0"
+                        ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto,Auto">
+                        <StackPanel
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_MaxChainedNeighborUpdates}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_MaxChainedNeighborUpdates_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="MaxChainedNeighborUpdatesBox"
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="1000000" />
+
+                        <StackPanel
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_EntityBroadcastRangePercentage}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_EntityBroadcastRangePercentage_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="EntityBroadcastRangePercentageBox"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="100" />
+
+                        <StackPanel
+                            Grid.Row="2"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_SyncChunkWrites}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_SyncChunkWrites_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="SyncChunkWritesBox"
+                            Grid.Row="2"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="3"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_UseNativeTransport}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_UseNativeTransport_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="UseNativeTransportBox"
+                            Grid.Row="3"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+                    </Grid>
+                </ui:CardExpander>
+
+                <!--  Logging & Monitoring  -->
+                <ui:CardExpander
+                    Margin="0,0,0,8"
+                    Padding="12"
+                    ContentPadding="8"
+                    IsExpanded="False">
+                    <ui:CardExpander.Icon>
+                        <ui:SymbolIcon
+                            Filled="True"
+                            FontSize="20"
+                            Symbol="DocumentHeader20" />
+                    </ui:CardExpander.Icon>
+                    <ui:CardExpander.Header>
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_Logging}" />
+                    </ui:CardExpander.Header>
+                    <Grid
+                        Margin="8,0"
+                        ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                        <StackPanel
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_LogIps}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_LogIps_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="LogIpsBox"
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_BroadcastConsoleToOps}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_BroadcastConsoleToOps_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="BroadcastConsoleToOpsBox"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="2"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_BroadcastRconToOps}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_BroadcastRconToOps_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="BroadcastRconToOpsBox"
+                            Grid.Row="2"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="3"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_EnableJmxMonitoring}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_EnableJmxMonitoring_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="EnableJmxMonitoringBox"
+                            Grid.Row="3"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="4"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_EnableCodeOfConduct}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_EnableCodeOfConduct_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="EnableCodeOfConductBox"
+                            Grid.Row="4"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="5"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_BugReportLink}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_BugReportLink_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="BugReportLinkBox"
+                            Grid.Row="5"
+                            Grid.Column="1"
+                            Margin="12,4,0,4" />
+                    </Grid>
+                </ui:CardExpander>
+
+                <!--  Spawn Settings (Legacy/Deprecated)  -->
+                <ui:CardExpander
+                    Margin="0,0,0,8"
+                    Padding="12"
+                    ContentPadding="8"
+                    IsExpanded="False">
+                    <ui:CardExpander.Icon>
+                        <ui:SymbolIcon
+                            Filled="True"
+                            FontSize="20"
+                            Symbol="AnimalCat20" />
+                    </ui:CardExpander.Icon>
+                    <ui:CardExpander.Header>
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_SpawnSettings}" />
+                    </ui:CardExpander.Header>
+                    <Grid
+                        Margin="8,0"
+                        ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto,Auto">
+                        <StackPanel
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnNPCs}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_SpawnNPCs_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="SpawnNpcsBox"
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnAnimals}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_SpawnAnimals_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="SpawnAnimalsBox"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="2"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnMonsters}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="Gray"
+                                Text="{loc:Loc ServerProperties_SpawnMonsters_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="SpawnMonstersBox"
+                            Grid.Row="2"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
                     </Grid>
                 </ui:CardExpander>
             </StackPanel>
