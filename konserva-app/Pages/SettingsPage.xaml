@@ -12,7 +12,6 @@
         <Style x:Key="ExpanderHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
     </Page.Resources>
 
@@ -54,7 +53,6 @@
                 <!--  Общие настройки и Java  -->
                 <ui:CardExpander
                     Margin="0,0,0,8"
-                    Padding="12"
                     ContentPadding="8"
                     IsExpanded="True">
                     <ui:CardExpander.Icon>
@@ -126,7 +124,6 @@
                 <ui:CardExpander
                     x:Name="JavaCardExpander"
                     Margin="0,0,0,8"
-                    Padding="12"
                     ContentPadding="8"
                     IsExpanded="True">
                     <ui:CardExpander.Icon>
@@ -136,9 +133,7 @@
                             Symbol="SquareHintApps20" />
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
-                        <Grid
-                            ColumnDefinitions="*,Auto"
-                            VerticalAlignment="Center">
+                        <Grid ColumnDefinitions="*,Auto">
                             <ui:TextBlock
                                 VerticalAlignment="Center"
                                 FontSize="14"
@@ -146,9 +141,8 @@
                                 Text="{loc:Loc Settings_Java}" />
                             <ui:Button
                                 Grid.Column="1"
-                                Height="32"
                                 Margin="0,0,12,0"
-                                Padding="6"
+                                Padding="5"
                                 VerticalAlignment="Center"
                                 Click="AddJava_Click"
                                 ToolTip="{loc:Loc Settings_Java_Add}">
@@ -162,10 +156,6 @@
                     </ui:CardExpander.Header>
                     <Border Margin="12,8">
                         <StackPanel>
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                Text="{loc:Loc Settings_JavaDesc}" />
                             <ItemsControl x:Name="JavaItemsControl">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -214,7 +204,6 @@
                 <!--  Внешний вид  -->
                 <ui:CardExpander
                     Margin="0,0,0,8"
-                    Padding="12"
                     ContentPadding="8"
                     IsExpanded="False">
                     <ui:CardExpander.Icon>
@@ -281,10 +270,7 @@
                 </ui:CardExpander>
 
                 <!--  О программе  -->
-                <ui:CardExpander
-                    Padding="12"
-                    ContentPadding="8"
-                    IsExpanded="False">
+                <ui:CardExpander ContentPadding="8" IsExpanded="False">
                     <ui:CardExpander.Icon>
                         <ui:SymbolIcon
                             Filled="True"
