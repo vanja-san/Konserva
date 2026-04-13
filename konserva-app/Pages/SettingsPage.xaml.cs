@@ -45,6 +45,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
         // Загрузка Java в ItemsControl
         JavaItemsControl.ItemsSource = config.JavaInstallations;
+        UpdateJavaEmptyVisibility();
 
         CheckUpdatesBox.IsChecked = config.CheckUpdates;
 
@@ -62,6 +63,16 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
         // Скрываем InfoBar при загрузке
         LanguageChangeInfoBar.IsOpen = false;
+    }
+
+    /// <summary>
+    /// Обновляет видимость placeholder текста, когда нет Java
+    /// </summary>
+    private void UpdateJavaEmptyVisibility()
+    {
+        JavaEmptyText.Visibility = JavaItemsControl.Items.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     /// <summary>

@@ -197,6 +197,14 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <ui:TextBlock
+                                x:Name="JavaEmptyText"
+                                Margin="0,16"
+                                HorizontalAlignment="Center"
+                                FontSize="13"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc Settings_Java_Empty}"
+                                Visibility="Collapsed" />
                         </StackPanel>
                     </Border>
                 </ui:CardExpander>
