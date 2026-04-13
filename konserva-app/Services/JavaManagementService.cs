@@ -8,8 +8,36 @@ namespace Konserva.Services;
 /// <summary>
 /// Сервис управления Java установками
 /// </summary>
-public partial class JavaManagementService(IConfigService configService) : IJavaManagementService
+public class JavaManagementService(IConfigService configService) : IJavaManagementService
 {
+    /// <summary>
+    /// Проверяет является ли ошибка ошибкой Java-совместимости и показывает snackbar.
+    /// Общий метод для ServersPage, ServerDetailPage и MainWindow.
+    /// </summary>
+    public static void HandleServerStartError(Server server, string errorMessage)
+    {
+        bool isJavaError = errorMessage.Contains("Java", StringComparison.OrdinalIgnoreCase) ||
+                          errorMessage.Contains("java", StringComparison.OrdinalIgnoreCase) ||
+                          errorMessage.Contains("Требуется Java", StringComparison.OrdinalIgnoreCase);
+
+        if (!isJavaError)
+        {
+            // Не Java-ошибка — делегируем стандартному обработчику
+            _ = UiHelper.ShowError(errorMessage);
+            return;
+        }
+
+        var requiredVersion = JavaVersionParser.ParseRequiredJavaVersion(errorMessage);
+        var foundVersion = JavaVersionParser.ParseFoundJavaVersion(errorMessage);
+
+        // Получаем все установленные Java
+        var allJava = App.ConfigService?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
+
+        MainWindow.Instance?.Dispatcher.Invoke(() =>
+        {
+            MainWindow.Instance?.ShowJavaErrorSnackbar(server, errorMessage, requiredVersion, foundVersion, allJava);
+        });
+    }
 
     /// <summary>
     /// Поиск установленных Java на компьютере

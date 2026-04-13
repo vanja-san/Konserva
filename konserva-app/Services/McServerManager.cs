@@ -148,7 +148,8 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
 
         Logger.Info($"[StartServerInternal] Starting server {server.Id} ({server.Name})", "McServerManager");
 
-        bool errorNotified = false;
+        // Используем Interlocked для thread-safe флага — race condition между OnStatusChanged и Task.Run
+        int errorNotified = 0;
 
         process.OnStatusChanged += status =>
         {
@@ -159,9 +160,8 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             }
 
             // Если статус стал Error и мы ещё не уведовляли об ошибке — уведомляем
-            if (status == ServerStatus.Error && !errorNotified && !string.IsNullOrEmpty(process.LastError))
+            if (status == ServerStatus.Error && Interlocked.CompareExchange(ref errorNotified, 1, 0) == 0 && !string.IsNullOrEmpty(process.LastError))
             {
-                errorNotified = true;
                 server.InstallStatus = process.LastError;
                 storage.UpdateServer(server);
                 OnServerStartError?.Invoke(server, process.LastError);
@@ -181,14 +181,13 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             {
                 Logger.Info($"[StartServerInternal] Calling process.Start() for {server.Name}", "McServerManager");
                 await Task.Run(() => process.Start());
-                
+
                 // Ждём немного для проверки статуса (ошибка может произойти асинхронно)
                 await Task.Delay(500);
 
-                // Проверяем, не произошла ли ошибка при запуске
-                if (!errorNotified && process.Status == ServerStatus.Error && !string.IsNullOrEmpty(process.LastError))
+                // Проверяем, не произошла ли ошибка при запуске (thread-safe через Interlocked)
+                if (Interlocked.CompareExchange(ref errorNotified, 1, 0) == 0 && process.Status == ServerStatus.Error && !string.IsNullOrEmpty(process.LastError))
                 {
-                    errorNotified = true;
                     Logger.Error($"[StartServerInternal] Server {server.Id} ({server.Name}) failed to start: {process.LastError}", null, "McServerManager");
                     server.Status = ServerStatus.Error;
                     server.InstallStatus = process.LastError;
@@ -209,9 +208,8 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             }
             catch (Exception ex)
             {
-                if (!errorNotified)
+                if (Interlocked.CompareExchange(ref errorNotified, 1, 0) == 0)
                 {
-                    errorNotified = true;
                     Logger.Error($"[StartServerInternal] Ошибка запуска сервера {server.Id} ({server.Name}): {ex.Message}", ex, "McServerManager");
                     server.Status = ServerStatus.Error;
                     server.InstallStatus = ex.Message;
@@ -336,7 +334,10 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         }
 
         // удаляем папку сервера
-        if (server?.Path != null && Directory.Exists(server.Path))
+        if (!string.IsNullOrWhiteSpace(server.Path) &&
+            !PathValidator.ContainsTraversalSequences(server.Path) &&
+            PathValidator.IsPathSafe(server.Path, Constants.ServersPath) &&
+            Directory.Exists(server.Path))
         {
             try
             {

@@ -8,6 +8,33 @@ public static partial class JavaVersionParser
     [GeneratedRegex(@"version ""?([^""\s]+)""?")]
     private static partial Regex VersionRegex();
 
+    [GeneratedRegex(@"Java (\d+)\+")]
+    private static partial Regex RequiredJavaPlusRegex();
+
+    [GeneratedRegex(@"compiled by a more recent version.*?class file version (\d+)", RegexOptions.Singleline)]
+    private static partial Regex ClassFileVersionRegex();
+
+    [GeneratedRegex(@"require(?:s|d)? at least (\d+)", RegexOptions.IgnoreCase)]
+    private static partial Regex RequireAtLeastRegex();
+
+    [GeneratedRegex(@"Java (\d+)")]
+    private static partial Regex JavaVersionFallbackRegex();
+
+    [GeneratedRegex(@"versions up to (\d+)")]
+    private static partial Regex VersionsUpToRegex();
+
+    [GeneratedRegex(@"Current Java is (\d+)", RegexOptions.IgnoreCase)]
+    private static partial Regex CurrentJavaIsRegex();
+
+    [GeneratedRegex(@"найдена Java (\d+)")]
+    private static partial Regex FoundJavaRussianRegex();
+
+    [GeneratedRegex(@"found Java (\d+)", RegexOptions.IgnoreCase)]
+    private static partial Regex FoundJavaEnglishRegex();
+
+    [GeneratedRegex(@"(?:Путь|Path)[:\s]+(.+?)(?:\n|$)")]
+    private static partial Regex JavaPathRegex();
+
     public static string ParseVersion(string versionOutput)
     {
         var match = VersionRegex().Match(versionOutput);
@@ -74,12 +101,12 @@ public static partial class JavaVersionParser
     public static int ParseRequiredJavaVersion(string msg)
     {
         // Формат 1: "Требуется Java X+" (наш формат)
-        var match = Regex.Match(msg, @"Java (\d+)\+");
+        var match = RequiredJavaPlusRegex().Match(msg);
         if (match.Success)
             return int.Parse(match.Groups[1].Value);
 
         // Формат 2: "class file version XX.0" → переводим в версию Java
-        var classVersionMatch = Regex.Match(msg, @"compiled by a more recent version.*?class file version (\d+)");
+        var classVersionMatch = ClassFileVersionRegex().Match(msg);
         if (classVersionMatch.Success)
         {
             var classVersion = int.Parse(classVersionMatch.Groups[1].Value);
@@ -87,12 +114,12 @@ public static partial class JavaVersionParser
         }
 
         // Формат 3: "Current Java is X but we require at least Y" (Forge bootstrap)
-        var forgeMatch = Regex.Match(msg, @"require(?:s|d)? at least (\d+)", RegexOptions.IgnoreCase);
+        var forgeMatch = RequireAtLeastRegex().Match(msg);
         if (forgeMatch.Success)
             return int.Parse(forgeMatch.Groups[1].Value);
 
         // Формат 4: "Java X" (общий fallback)
-        var fallbackMatch = Regex.Match(msg, @"Java (\d+)");
+        var fallbackMatch = JavaVersionFallbackRegex().Match(msg);
         return fallbackMatch.Success ? int.Parse(fallbackMatch.Groups[1].Value) : 0;
     }
 
@@ -104,7 +131,7 @@ public static partial class JavaVersionParser
     public static int ParseFoundJavaVersion(string msg)
     {
         // Формат 1: "recognizes class file versions up to XX.0"
-        var classVersionMatch = Regex.Match(msg, @"versions up to (\d+)");
+        var classVersionMatch = VersionsUpToRegex().Match(msg);
         if (classVersionMatch.Success)
         {
             var classVersion = int.Parse(classVersionMatch.Groups[1].Value);
@@ -112,17 +139,17 @@ public static partial class JavaVersionParser
         }
 
         // Формат 2: "Current Java is X but we require at least Y" (Forge bootstrap)
-        var forgeMatch = Regex.Match(msg, @"Current Java is (\d+)", RegexOptions.IgnoreCase);
+        var forgeMatch = CurrentJavaIsRegex().Match(msg);
         if (forgeMatch.Success)
             return int.Parse(forgeMatch.Groups[1].Value);
 
         // Формат 3: "найдена Java X" (наше кастомное сообщение, русский порядок)
-        var russianMatch = Regex.Match(msg, @"найдена Java (\d+)");
+        var russianMatch = FoundJavaRussianRegex().Match(msg);
         if (russianMatch.Success)
             return int.Parse(russianMatch.Groups[1].Value);
 
         // Формат 4: "found Java X" (английский вариант)
-        var englishMatch = Regex.Match(msg, @"found Java (\d+)", RegexOptions.IgnoreCase);
+        var englishMatch = FoundJavaEnglishRegex().Match(msg);
         if (englishMatch.Success)
             return int.Parse(englishMatch.Groups[1].Value);
 
@@ -163,7 +190,7 @@ public static partial class JavaVersionParser
     /// </summary>
     public static string ParseJavaPath(string msg)
     {
-        var match = Regex.Match(msg, @"(?:Путь|Path)[:\s]+(.+?)(?:\n|$)");
+        var match = JavaPathRegex().Match(msg);
         return match.Success ? match.Groups[1].Value.Trim() : "";
     }
 }

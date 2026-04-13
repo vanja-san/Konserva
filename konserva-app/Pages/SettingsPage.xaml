@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:utils="clr-namespace:Konserva.Utilities"
     Title="Settings">
 
     <Page.Resources>
@@ -76,7 +77,7 @@
                                         Text="{loc:Loc Settings_Servers_Dir}" />
                                     <ui:TextBlock
                                         FontSize="12"
-                                        Foreground="Gray"
+                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                         Text="{loc:Loc Settings_Servers_DirDesc}" />
                                 </StackPanel>
                                 <ui:TextBlock
@@ -98,40 +99,6 @@
                                 </ui:Button>
                             </Grid>
 
-                            <!--  Java по умолчанию  -->
-                            <Grid Margin="0,0,0,16" ColumnDefinitions="200,*,Auto">
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <ui:TextBlock
-                                        FontSize="14"
-                                        FontWeight="Bold"
-                                        Text="{loc:Loc Settings_Java}" />
-                                    <ui:TextBlock
-                                        FontSize="12"
-                                        Foreground="Gray"
-                                        Text="{loc:Loc Settings_JavaDesc}" />
-                                </StackPanel>
-                                <ComboBox
-                                    x:Name="JavaComboBox"
-                                    Grid.Column="1"
-                                    MinWidth="200"
-                                    Margin="8,0"
-                                    Padding="8,6"
-                                    VerticalAlignment="Center"
-                                    ContextMenu="{x:Null}"
-                                    SelectionChanged="JavaComboBox_SelectionChanged" />
-                                <ui:Button
-                                    Grid.Column="2"
-                                    Padding="8"
-                                    VerticalAlignment="Center"
-                                    Click="AddJava_Click"
-                                    ToolTip="{loc:Loc Settings_Java_Add}">
-                                    <ui:SymbolIcon
-                                        Width="15"
-                                        Height="15"
-                                        FontSize="13"
-                                        Symbol="Add32" />
-                                </ui:Button>
-                            </Grid>
                             <!--  Проверка обновления  -->
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
@@ -141,7 +108,7 @@
                                         Text="{loc:Loc Settings_CheckUpdates}" />
                                     <ui:TextBlock
                                         FontSize="12"
-                                        Foreground="Gray"
+                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                         Text="{loc:Loc Settings_CheckUpdates_Desc}" />
                                 </StackPanel>
                                 <CheckBox
@@ -154,6 +121,93 @@
                         </StackPanel>
                     </Border>
                 </ui:CardExpander>
+
+                <!--  Java установки  -->
+                <ui:CardExpander
+                    x:Name="JavaCardExpander"
+                    Margin="0,0,0,8"
+                    Padding="12"
+                    ContentPadding="8"
+                    IsExpanded="True">
+                    <ui:CardExpander.Icon>
+                        <ui:SymbolIcon
+                            Filled="True"
+                            FontSize="20"
+                            Symbol="SquareHintApps20" />
+                    </ui:CardExpander.Icon>
+                    <ui:CardExpander.Header>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <ui:TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="14"
+                                FontWeight="SemiBold"
+                                Text="{loc:Loc Settings_Java}" />
+                            <ui:Button
+                                Grid.Column="1"
+                                Margin="0,0,12,0"
+                                Padding="8"
+                                Click="AddJava_Click"
+                                ToolTip="{loc:Loc Settings_Java_Add}">
+                                <ui:SymbolIcon
+                                    Width="15"
+                                    Height="15"
+                                    FontSize="13"
+                                    Symbol="Add32" />
+                            </ui:Button>
+                        </Grid>
+                    </ui:CardExpander.Header>
+                    <Border Margin="12,8">
+                        <StackPanel>
+                            <ui:TextBlock
+                                Margin="0,0,0,8"
+                                FontSize="12"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc Settings_JavaDesc}" />
+                            <ItemsControl x:Name="JavaItemsControl">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:CardControl
+                                            Margin="0,0,0,8"
+                                            Padding="8"
+                                            Tag="{Binding}">
+                                            <ui:CardControl.Header>
+                                                <StackPanel Margin="12,0,0,0">
+                                                    <ui:TextBlock
+                                                        FontSize="13"
+                                                        FontWeight="Medium"
+                                                        Text="{Binding DisplayName}"
+                                                        TextTrimming="CharacterEllipsis" />
+                                                    <ui:TextBlock
+                                                        FontSize="11"
+                                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                        Text="{Binding Path}"
+                                                        TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </ui:CardControl.Header>
+                                            <ui:Button
+                                                Width="24"
+                                                Height="24"
+                                                Margin="0,0,12,0"
+                                                Padding="0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Click="DeleteJava_Click"
+                                                Tag="{Binding}"
+                                                ToolTip="{loc:Loc Settings_Java_Delete}">
+                                                <ui:SymbolIcon
+                                                    Filled="True"
+                                                    FontSize="20"
+                                                    Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}"
+                                                    Symbol="Delete20" />
+                                            </ui:Button>
+                                        </ui:CardControl>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </ui:CardExpander>
+
                 <!--  Внешний вид  -->
                 <ui:CardExpander
                     Margin="0,0,0,8"
@@ -180,7 +234,7 @@
                                         Text="{loc:Loc Settings_Theme}" />
                                     <ui:TextBlock
                                         FontSize="11"
-                                        Foreground="Gray"
+                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                         Text="{loc:Loc Settings_Theme_Desc}" />
                                 </StackPanel>
                                 <ComboBox
@@ -205,7 +259,7 @@
                                         Text="{loc:Loc Settings_Language}" />
                                     <ui:TextBlock
                                         FontSize="11"
-                                        Foreground="Gray"
+                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                         Text="{loc:Loc Settings_Language_Desc}" />
                                 </StackPanel>
                                 <ComboBox
@@ -243,13 +297,13 @@
                                 FontSize="24"
                                 FontWeight="Bold"
                                 Text="Konserva" />
-                            <ui:TextBlock FontSize="14" Foreground="Gray">
+                            <ui:TextBlock FontSize="14" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
                                 <Run Text="{loc:Loc Settings_About_Version}" />
-                                <Run Text="1.5.3" />
+                                <Run Text="{utils:AppVersion}" />
                             </ui:TextBlock>
                             <ui:TextBlock
                                 FontSize="13"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc Settings_About_Description}" />
 
                             <!--  Check for Updates Button  -->

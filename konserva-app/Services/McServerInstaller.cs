@@ -64,7 +64,7 @@ public static partial class McServerInstaller
         response.EnsureSuccessStatusCode();
 
         var contentStream = await response.Content.ReadAsStreamAsync(ct);
-        var decompressedStream = GetDecompressedStream(contentStream, response.Content.Headers);
+        var decompressedStream = StreamUtilities.GetDecompressedStream(contentStream, response.Content.Headers);
 
         using var reader = new StreamReader(decompressedStream);
         var responseText = await reader.ReadToEndAsync(ct);
@@ -113,7 +113,7 @@ public static partial class McServerInstaller
             response.EnsureSuccessStatusCode();
 
             var contentStream = await response.Content.ReadAsStreamAsync(ct);
-            using var decompressedStream = GetDecompressedStream(contentStream, response.Content.Headers);
+            using var decompressedStream = StreamUtilities.GetDecompressedStream(contentStream, response.Content.Headers);
             using var reader = new StreamReader(decompressedStream);
             var responseText = await reader.ReadToEndAsync(ct);
 
@@ -157,7 +157,7 @@ public static partial class McServerInstaller
             var downloadedBytes = 0L;
 
             using var contentStream = await response.Content.ReadAsStreamAsync(ct);
-            using var decompressedStream = GetDecompressedStream(contentStream, response.Content.Headers);
+            using var decompressedStream = StreamUtilities.GetDecompressedStream(contentStream, response.Content.Headers);
             using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
 
             var buffer = new byte[8192];
@@ -182,20 +182,6 @@ public static partial class McServerInstaller
             Logger.Error($"Download failed ({fileName}): {ex.Message}", ex, "McServerInstaller");
             return (false, $"{ex.GetType().Name}: {ex.Message}");
         }
-    }
-
-    private static Stream GetDecompressedStream(Stream compressedStream, HttpContentHeaders headers)
-    {
-        var contentEncoding = headers.ContentEncoding?.ToString() ?? "";
-        if (contentEncoding.Contains("gzip", StringComparison.OrdinalIgnoreCase))
-        {
-            return new System.IO.Compression.GZipStream(compressedStream, System.IO.Compression.CompressionMode.Decompress);
-        }
-        if (contentEncoding.Contains("deflate", StringComparison.OrdinalIgnoreCase))
-        {
-            return new System.IO.Compression.DeflateStream(compressedStream, System.IO.Compression.CompressionMode.Decompress);
-        }
-        return compressedStream;
     }
 
     /// <summary>
@@ -500,67 +486,6 @@ public static partial class McServerInstaller
         {
             Logger.Error($"Failed to get Fabric installer version: {ex.GetType().Name} - {ex.Message}");
             return null;
-        }
-    }
-
-    /// <summary>
-    /// Запустить Fabric installer
-    /// </summary>
-    private static async Task<bool> RunFabricInstaller(string installerPath, string mcVersion,
-        string loaderVersion, string destinationPath, CancellationToken ct, IProgress<string>? progress = null)
-    {
-        // Проверяем наличие Java
-        var javaPath = FindJavaPath();
-        if (string.IsNullOrEmpty(javaPath))
-        {
-            return false;
-        }
-
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = javaPath,
-            Arguments = $"-jar \"{installerPath}\" server -mcversion {mcVersion} -loader {loaderVersion} -downloadMinecraft -nogui",
-            WorkingDirectory = destinationPath,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-
-        try
-        {
-            using var process = Process.Start(startInfo);
-            if (process == null)
-                return false;
-
-            // Читаем вывод чтобы буфер не заполнялся
-            _ = process.StandardOutput.ReadToEndAsync();
-            _ = process.StandardError.ReadToEndAsync();
-
-            // Обновляем прогресс во время ожидания
-            var startTime = DateTime.Now;
-            var timeout = TimeSpan.FromMinutes(5);
-
-            while (!process.HasExited)
-            {
-                ct.ThrowIfCancellationRequested();
-                await Task.Delay(500, ct);
-
-                var elapsed = DateTime.Now - startTime;
-                if (elapsed < timeout)
-                {
-                    progress?.Report("Установка Fabric...");
-                }
-            }
-
-            await process.WaitForExitAsync(ct);
-
-            // Fabric installer может вернуть 0 даже при успехе
-            return process.ExitCode == 0 || File.Exists(Path.Combine(destinationPath, "fabric-server-launch.jar"));
-        }
-        catch
-        {
-            return false;
         }
     }
 
@@ -1405,7 +1330,7 @@ public static partial class McServerInstaller
             response.EnsureSuccessStatusCode();
 
             var contentStream = await response.Content.ReadAsStreamAsync(ct);
-            using var decompressedStream = GetDecompressedStream(contentStream, response.Content.Headers);
+            using var decompressedStream = StreamUtilities.GetDecompressedStream(contentStream, response.Content.Headers);
             using var reader = new StreamReader(decompressedStream);
             var responseText = await reader.ReadToEndAsync(ct);
 
@@ -1490,7 +1415,7 @@ public static partial class McServerInstaller
             response.EnsureSuccessStatusCode();
 
             var contentStream = await response.Content.ReadAsStreamAsync(ct);
-            using var decompressedStream = GetDecompressedStream(contentStream, response.Content.Headers);
+            using var decompressedStream = StreamUtilities.GetDecompressedStream(contentStream, response.Content.Headers);
             using var reader = new StreamReader(decompressedStream);
             var responseText = await reader.ReadToEndAsync(ct);
 

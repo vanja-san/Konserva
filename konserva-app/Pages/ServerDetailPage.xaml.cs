@@ -386,38 +386,7 @@ public partial class ServerDetailPage : Page, IDisposable
         if (_server != null)
             _server.ErrorDialogShown = true;
 
-        // Показываем Snackbar на UI потоке MainWindow
-        MainWindow.Instance?.Dispatcher.Invoke(() =>
-        {
-            ShowJavaErrorSnackbar(errorMessage);
-        });
-    }
-
-    /// <summary>
-    /// Показывает Snackbar с ошибкой несовместимости Java.
-    /// </summary>
-    private void ShowJavaErrorSnackbar(string errorMessage)
-    {
-        if (_server == null)
-            return;
-
-        bool isJavaError = errorMessage.Contains("Java", StringComparison.OrdinalIgnoreCase) ||
-                          errorMessage.Contains("java", StringComparison.OrdinalIgnoreCase) ||
-                          errorMessage.Contains("Требуется Java", StringComparison.OrdinalIgnoreCase);
-
-        if (!isJavaError)
-        {
-            MainWindow.Instance?.Dispatcher.InvokeAsync(async () => await UiHelper.ShowError(errorMessage));
-            return;
-        }
-
-        var requiredVersion = JavaVersionParser.ParseRequiredJavaVersion(errorMessage);
-        var foundVersion = JavaVersionParser.ParseFoundJavaVersion(errorMessage);
-
-        // Получаем все установленные Java
-        var allJava = App.ConfigService?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
-
-        MainWindow.Instance?.ShowJavaErrorSnackbar(_server, errorMessage, requiredVersion, foundVersion, allJava);
+        JavaManagementService.HandleServerStartError(server, errorMessage);
     }
 
     private async void StartStop_Click(object sender, RoutedEventArgs e)

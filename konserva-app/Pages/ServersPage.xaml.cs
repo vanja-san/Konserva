@@ -46,35 +46,7 @@ public partial class ServersPage : Page, IDisposable
     private void OnServerStartError(Server server, string errorMessage)
     {
         Logger.Info($"[ServersPage.OnServerStartError] Error for server {server.Name}: {errorMessage}", "ServersPage");
-
-        // Проверяем, является ли ошибка Java-совместимостью
-        bool isJavaError = errorMessage.Contains("Java", StringComparison.OrdinalIgnoreCase) ||
-                          errorMessage.Contains("java", StringComparison.OrdinalIgnoreCase) ||
-                          errorMessage.Contains("Требуется Java", StringComparison.OrdinalIgnoreCase);
-
-        Logger.Info($"[ServersPage.OnServerStartError] isJavaError={isJavaError}", "ServersPage");
-
-        if (isJavaError)
-        {
-            // Парсим информацию о версии Java из сообщения об ошибке
-            var requiredVersion = JavaVersionParser.ParseRequiredJavaVersion(errorMessage);
-            var foundVersion = JavaVersionParser.ParseFoundJavaVersion(errorMessage);
-
-            // Получаем все установленные Java
-            var allJava = App.ConfigService?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
-
-            Logger.Info($"[ServersPage.OnServerStartError] Calling ShowJavaErrorSnackbar: required={requiredVersion}, found={foundVersion}", "ServersPage");
-
-            // Вызываем на UI потоке MainWindow
-            MainWindow.Instance?.Dispatcher.Invoke(() =>
-            {
-                MainWindow.Instance?.ShowJavaErrorSnackbar(server, errorMessage, requiredVersion, foundVersion, allJava);
-            });
-        }
-        else
-        {
-            MainWindow.Instance?.Dispatcher.InvokeAsync(async () => await UiHelper.ShowError(errorMessage));
-        }
+        JavaManagementService.HandleServerStartError(server, errorMessage);
     }
 
     /// <summary>

@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace Konserva.Utilities;
 
 /// <summary>
@@ -87,6 +89,11 @@ public static class Constants
     /// Максимальная длина пути (260 символов для Windows)
     /// </summary>
     public const int MaxPathLength = 260;
+
+    /// <summary>
+    /// Базовая директория серверов (относительно каталога приложения)
+    /// </summary>
+    public static string ServersPath => Path.Combine(AppContext.BaseDirectory, "Servers");
 
     #endregion
 

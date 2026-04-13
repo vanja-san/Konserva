@@ -210,14 +210,14 @@
                         HorizontalAlignment="Center"
                         FontSize="16"
                         FontTypography="BodyStrong"
-                        Foreground="Gray"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         Text="{loc:Loc ServersPage_NoServers}" />
                     <ui:TextBlock
                         Margin="0,4,0,0"
                         HorizontalAlignment="Center"
                         FontSize="13"
                         FontTypography="Body"
-                        Foreground="Gray"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         Text="{loc:Loc ServersPage_NoServers_Description}" />
                 </StackPanel>
             </Grid>

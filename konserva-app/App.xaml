@@ -16,7 +16,6 @@
 
             <!--  Конвертеры  -->
             <converters:BoolToVisibilityConverter x:Key="BoolToVisibility" />
-            <converters:BoolToVisibilityInverseConverter x:Key="BoolToVisibilityInverse" />
             <converters:BoolToGreenBrushConverter x:Key="BoolToGreenBrush" />
             <converters:StringIsEmptyConverter x:Key="StringIsEmptyConverter" />
             <converters:StringToPlaceholderConverter x:Key="StringToPlaceholder" />

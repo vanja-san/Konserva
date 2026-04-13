@@ -59,7 +59,7 @@
                         ToolTip="{loc:Loc ServerDetail_Delete}">
                         <ui:SymbolIcon
                             FontSize="20"
-                            Foreground="IndianRed"
+                            Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}"
                             Symbol="Delete20" />
                     </ui:Button>
                 </StackPanel>
@@ -223,7 +223,7 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         FontSize="14"
-                        Foreground="Gray"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         IsHitTestVisible="False"
                         Text="{loc:Loc ServerDetail_Console_Empty}" />
                     <!--  Ввод команды  -->
@@ -341,7 +341,7 @@
                                                 <ui:SymbolIcon
                                                     Filled="True"
                                                     FontSize="16"
-                                                    Foreground="IndianRed"
+                                                    Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}"
                                                     Symbol="Delete20" />
                                             </ui:Button>
                                         </ui:CardControl>
@@ -452,7 +452,7 @@
                                                 <ui:SymbolIcon
                                                     Filled="True"
                                                     FontSize="16"
-                                                    Foreground="IndianRed"
+                                                    Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}"
                                                     Symbol="Delete20" />
                                             </ui:Button>
                                         </ui:CardControl>
@@ -502,7 +502,7 @@
                                                 Text="{loc:Loc ServerDetail_Settings_General}" />
                                             <ui:TextBlock
                                                 FontSize="11"
-                                                Foreground="Gray"
+                                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                 Text="{loc:Loc ServerDetail_Settings_General_Desc}" />
                                         </StackPanel>
                                         <ui:TextBox
@@ -546,7 +546,7 @@
                                                 Text="{loc:Loc ServerDetail_Settings_RAM_Min}" />
                                             <ui:TextBlock
                                                 FontSize="11"
-                                                Foreground="Gray"
+                                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                 Text="{loc:Loc ServerDetail_Settings_RAM_Min_Desc}" />
                                         </StackPanel>
                                         <ui:TextBox
@@ -570,7 +570,7 @@
                                                 Text="{loc:Loc ServerDetail_Settings_RAM_Max}" />
                                             <ui:TextBlock
                                                 FontSize="11"
-                                                Foreground="Gray"
+                                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                 Text="{loc:Loc ServerDetail_Settings_RAM_Max_Desc}" />
                                         </StackPanel>
                                         <ui:TextBox
@@ -613,7 +613,7 @@
                                             <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_Settings_AutoRestart_Enable}" />
                                             <ui:TextBlock
                                                 FontSize="11"
-                                                Foreground="Gray"
+                                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                 Text="{loc:Loc ServerDetail_Settings_AutoRestart_Desc}" />
                                         </StackPanel>
                                         <CheckBox
@@ -630,7 +630,7 @@
                                             <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_Settings_AutoRestart_Delay}" />
                                             <ui:TextBlock
                                                 FontSize="11"
-                                                Foreground="Gray"
+                                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                 Text="{loc:Loc ServerDetail_Settings_AutoRestart_Delay_Desc}" />
                                         </StackPanel>
                                         <ui:TextBox
@@ -673,7 +673,7 @@
                                             <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_Settings_Java_Auto}" />
                                             <ui:TextBlock
                                                 FontSize="11"
-                                                Foreground="Gray"
+                                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                 Text="{loc:Loc ServerDetail_Settings_Java_Auto_Desc}" />
                                         </StackPanel>
                                         <CheckBox

@@ -9,6 +9,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pages="clr-namespace:Konserva.Pages"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:utils="clr-namespace:Konserva.Utilities"
     Width="550"
     Height="700"
     MinWidth="550"
@@ -182,7 +183,7 @@
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         LineHeight="16"
                         VerticalAlignment="Center"
-                        Text="v1.5.3" />
+                        Text="{utils:AppVersion Prefix=v}" />
                     <controls:UpdateNotification x:Name="UpdateNotificationControl" />
                 </StackPanel>
             </Grid>

@@ -4,6 +4,8 @@ using Konserva.Utilities;
 using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
+using Wpf.Ui.Controls;
+using Button = Wpf.Ui.Controls.Button;
 
 namespace Konserva.Pages;
 
@@ -15,6 +17,7 @@ using Konserva.Services;
 public partial class SettingsPage(IConfigService? configService = null) : Page
 {
     private readonly IConfigService _configService = configService ?? App.ConfigService;
+    private readonly JavaManagementService _javaService = new(App.ConfigService);
     private bool _isUpdating; // Флаг для предотвращения рекурсивного сохранения
     private bool _isLoading = true; // Флаг загрузки страницы
 
@@ -40,62 +43,19 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
         ServersFolderPath.Text = config.ServersDirectory;
 
-        // Загрузка Java в ComboBox
-        JavaComboBox.Items.Clear();
-        JavaComboBox.Items.Add(new ComboBoxItem { Content = LocalizationManager.Get("Common_NotSelected"), Tag = null });
-
-        foreach (var java in config.JavaInstallations)
-        {
-            JavaComboBox.Items.Add(new ComboBoxItem
-            {
-                Content = java.DisplayName,
-                Tag = java
-            });
-        }
-
-        // Выбор выбранной Java по умолчанию
-        if (!string.IsNullOrEmpty(config.DefaultJavaId))
-        {
-            var defaultJava = config.JavaInstallations.FirstOrDefault(j => j.Id == config.DefaultJavaId);
-            if (defaultJava != null)
-            {
-                JavaComboBox.SelectedItem = JavaComboBox.Items
-                    .Cast<ComboBoxItem>()
-                    .FirstOrDefault(item => ((JavaInstallation)item.Tag)?.Id == defaultJava.Id);
-            }
-        }
-
-        if (JavaComboBox.SelectedItem == null)
-            JavaComboBox.SelectedIndex = 0;
+        // Загрузка Java в ItemsControl
+        JavaItemsControl.ItemsSource = config.JavaInstallations;
 
         CheckUpdatesBox.IsChecked = config.CheckUpdates;
 
         // Загрузка темы
         var theme = config.Theme ?? "System";
-        ThemeComboBox.SelectedIndex = -1; // Сброс
-        for (int i = 0; i < ThemeComboBox.Items.Count; i++)
-        {
-            if (ThemeComboBox.Items[i] is ComboBoxItem item && (string)item.Tag == theme)
-            {
-                ThemeComboBox.SelectedIndex = i;
-                break;
-            }
-        }
-        if (ThemeComboBox.SelectedIndex == -1)
+        if (!ThemeComboBox.SelectItemByTag(theme))
             ThemeComboBox.SelectedIndex = 0;
 
         // Загрузка языка - принудительно выбираем элемент
         var language = config.Language ?? "System";
-        LanguageComboBox.SelectedIndex = -1; // Сброс
-        for (int i = 0; i < LanguageComboBox.Items.Count; i++)
-        {
-            if (LanguageComboBox.Items[i] is ComboBoxItem item && (string)item.Tag == language)
-            {
-                LanguageComboBox.SelectedIndex = i;
-                break;
-            }
-        }
-        if (LanguageComboBox.SelectedIndex == -1)
+        if (!LanguageComboBox.SelectItemByTag(language))
             LanguageComboBox.SelectedIndex = 0;
 
         _isLoading = false; // Разрешаем сохранение после загрузки
@@ -117,12 +77,6 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
             var config = _configService.GetConfig();
             var languageChanged = false;
-
-            // Сохранение выбранной Java
-            config.DefaultJavaId = (JavaComboBox.SelectedItem is ComboBoxItem selectedItem &&
-                                    selectedItem.Tag is JavaInstallation selectedJava)
-                ? selectedJava.Id
-                : null;
 
             config.CheckUpdates = CheckUpdatesBox.IsChecked ?? false;
 
@@ -175,15 +129,25 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     private void ShowSaveNotification()
     {
         SaveNotification.Visibility = Visibility.Visible;
+        AutoHideAsync(SaveNotification, 2000);
+    }
 
-        // Автоматическое скрытие через 2 секунды
-        _ = Task.Delay(2000).ContinueWith(_ =>
-        {
-            Dispatcher.Invoke(() =>
-            {
-                SaveNotification.Visibility = Visibility.Collapsed;
-            });
-        });
+    /// <summary>
+    /// Асинхронно скрывает элемент через указанную задержку.
+    /// </summary>
+    private async void AutoHideAsync(System.Windows.UIElement element, int delayMs)
+    {
+        await Task.Delay(delayMs);
+        Dispatcher.Invoke(() => element.Visibility = Visibility.Collapsed);
+    }
+
+    /// <summary>
+    /// Асинхронно скрывает InfoBar через указанную задержку.
+    /// </summary>
+    private async void AutoHideInfoBarAsync(Wpf.Ui.Controls.InfoBar infoBar, int delayMs)
+    {
+        await Task.Delay(delayMs);
+        Dispatcher.Invoke(() => infoBar.IsOpen = false);
     }
 
     private void ChangeServersPath_Click(object sender, RoutedEventArgs e)
@@ -215,21 +179,12 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
         if (dialog.ShowDialog() == true)
         {
-            var javaService = new JavaManagementService(_configService);
-            var java = javaService.AddJava(dialog.FileName);
+            var java = _javaService.AddJava(dialog.FileName);
 
             if (java != null)
             {
-                // Обновляем ComboBox с новой Java
+                // Обновляем список Java
                 LoadSettings();
-
-                // Выбираем добавленную Java
-                var selectedItem = JavaComboBox.Items
-                    .Cast<ComboBoxItem>()
-                    .FirstOrDefault(item => ((JavaInstallation)item.Tag)?.Id == java.Id);
-
-                if (selectedItem != null)
-                    JavaComboBox.SelectedItem = selectedItem;
 
                 // Показываем InfoBar об успешной установке
                 JavaSuccessInfoBar.Title = LocalizationManager.Get("Settings_JavaAdded");
@@ -237,13 +192,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
                 JavaSuccessInfoBar.IsOpen = true;
 
                 // Автоматически закрываем через 5 секунд
-                _ = Task.Delay(Constants.InfoBarAutoCloseDelayMs).ContinueWith(_ =>
-                {
-                    this.Invoke(() =>
-                    {
-                        JavaSuccessInfoBar.IsOpen = false;
-                    });
-                });
+                AutoHideInfoBarAsync(JavaSuccessInfoBar, Constants.InfoBarAutoCloseDelayMs);
             }
             else
             {
@@ -252,9 +201,27 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         }
     }
 
-    private void JavaComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void DeleteJava_Click(object sender, RoutedEventArgs e)
     {
-        AutoSaveSettings();
+        if (sender is Button { Tag: JavaInstallation java })
+        {
+            var result = await UiHelper.ShowConfirm(
+                $"{LocalizationManager.Get("Settings_Java_Delete_Confirm_Message")}\n\n{java.DisplayName}",
+                LocalizationManager.Get("Settings_Java_Delete_Confirm_Title"));
+
+            if (result == ContentDialogResult.Primary)
+            {
+                var removed = _javaService.RemoveJava(java.Id);
+                if (removed)
+                {
+                    LoadSettings();
+                }
+                else
+                {
+                    await UiHelper.ShowWarning(LocalizationManager.Get("Settings_Java_Delete_Failed"));
+                }
+            }
+        }
     }
 
     private void DefaultRamMin_TextChanged(object sender, TextChangedEventArgs e)
@@ -302,15 +269,18 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         finally
         {
             // Возвращаем кнопку в активное состояние через 3 секунды
-            _ = Task.Delay(3000).ContinueWith(_ =>
-            {
-                Dispatcher.Invoke(() =>
-                {
-                    CheckUpdatesButton.IsEnabled = true;
-                    CheckUpdatesButton.Content = LocalizationManager.Get("Settings_CheckForUpdates");
-                });
-            });
+            ResetCheckUpdatesButtonAsync();
         }
+    }
+
+    private async void ResetCheckUpdatesButtonAsync()
+    {
+        await Task.Delay(3000);
+        Dispatcher.Invoke(() =>
+        {
+            CheckUpdatesButton.IsEnabled = true;
+            CheckUpdatesButton.Content = LocalizationManager.Get("Settings_CheckForUpdates");
+        });
     }
 
     private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -109,30 +109,6 @@ public class ConfigService : IConfigService, IDisposable
         }
     }
 
-    private async Task<AppConfig?> LoadConfigFromFileAsync(CancellationToken ct)
-    {
-        if (!File.Exists(_configPath))
-        {
-            var defaultConfig = new AppConfig();
-            await SaveConfigToFileAsync(defaultConfig, ct);
-            return defaultConfig;
-        }
-
-        try
-        {
-            await using var fileStream = new FileStream(_configPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, useAsync: true);
-            using var reader = new StreamReader(fileStream);
-            var json = await reader.ReadToEndAsync(ct);
-
-            return JsonConvert.DeserializeObject<AppConfig>(json);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Failed to load config: {ex.Message}", "ConfigService");
-            return null;
-        }
-    }
-
     private void SaveConfigToFile(AppConfig config)
     {
         try

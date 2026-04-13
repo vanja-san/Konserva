@@ -10,6 +10,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
     private readonly string _serversIndexPath;
     private readonly Lock _lock = new();
     private List<Server>? _cachedServers;
+    private DateTime _cacheWriteTime;
     private bool _disposed;
 
     public ServerStorageService()
@@ -24,10 +25,12 @@ public class ServerStorageService : IServerStorageService, IDisposable
     {
         lock (_lock)
         {
-            if (_cachedServers != null)
+            // Проверяем что кэш актуален (файл не менялся после кэширования)
+            if (_cachedServers != null && !IsFileModifiedSinceCache())
                 return [.. _cachedServers];
 
             _cachedServers = LoadServersFromFile();
+            _cacheWriteTime = GetFileLastWriteTime();
             return [.. _cachedServers];
         }
     }
@@ -36,7 +39,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
     {
         lock (_lock)
         {
-            if (_cachedServers != null)
+            if (_cachedServers != null && !IsFileModifiedSinceCache())
                 return [.. _cachedServers];
         }
 
@@ -45,6 +48,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
         lock (_lock)
         {
             _cachedServers = servers;
+            _cacheWriteTime = GetFileLastWriteTime();
             return [.. _cachedServers];
         }
     }
@@ -122,6 +126,15 @@ public class ServerStorageService : IServerStorageService, IDisposable
         if (!File.Exists(_serversIndexPath))
             return [];
 
+        // Проверяем размер файла чтобы избежать Memory Exhaustion
+        var fileInfo = new FileInfo(_serversIndexPath);
+        const long maxFileSize = 5 * 1024 * 1024; // 5 MB
+        if (fileInfo.Length > maxFileSize)
+        {
+            Logger.Warning($"Servers file too large ({fileInfo.Length / 1024} KB), ignoring: {_serversIndexPath}", "ServerStorageService");
+            return [];
+        }
+
         try
         {
             using var fileStream = new FileStream(_serversIndexPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -152,6 +165,15 @@ public class ServerStorageService : IServerStorageService, IDisposable
     {
         if (!File.Exists(_serversIndexPath))
             return [];
+
+        // Проверяем размер файла чтобы избежать Memory Exhaustion
+        var fileInfo = new FileInfo(_serversIndexPath);
+        const long maxFileSize = 5 * 1024 * 1024; // 5 MB
+        if (fileInfo.Length > maxFileSize)
+        {
+            Logger.Warning($"Servers file too large ({fileInfo.Length / 1024} KB), ignoring: {_serversIndexPath}", "ServerStorageService");
+            return [];
+        }
 
         try
         {
@@ -208,27 +230,13 @@ public class ServerStorageService : IServerStorageService, IDisposable
                 {
                     // Файл заблокирован, пробуем снова с задержкой
                     Logger.Warning($"Save attempt {attempt}/{maxRetries} failed (file locked): {ex.Message}", "ServerStorageService");
-                    Thread.Sleep(delayMs * attempt);
+                    // Используем Task.Wait вместо Thread.Sleep чтобы не блокировать поток полностью
+                    Task.Delay(delayMs * attempt).GetAwaiter().GetResult();
                 }
             }
 
             // Если все попытки не удались
             Logger.Error($"Failed to save servers after {maxRetries} attempts - file may be locked", null, "ServerStorageService");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Failed to save servers: {ex.Message}", ex, "ServerStorageService");
-        }
-    }
-
-    private async Task SaveServersToFileAsync(List<Server> servers, CancellationToken ct)
-    {
-        try
-        {
-            var json = JsonConvert.SerializeObject(servers, Formatting.Indented);
-            await using var fileStream = new FileStream(_serversIndexPath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, useAsync: true);
-            using var writer = new StreamWriter(fileStream);
-            await writer.WriteAsync(json.AsMemory(), ct);
         }
         catch (Exception ex)
         {
@@ -282,11 +290,39 @@ public class ServerStorageService : IServerStorageService, IDisposable
     private static void TryDeleteServerFolder(Server? server)
     {
         if (server == null) return;
-        _ = TryDeleteServerFolderAsync(server);
+
+        // Fire-and-forget с обработкой необработанных исключений
+        _ = TryDeleteServerFolderAsync(server).ContinueWith(t =>
+        {
+            if (t.IsFaulted && t.Exception != null)
+            {
+                Logger.Error($"Error deleting server folder: {t.Exception.Flatten().Message}", t.Exception, "ServerStorageService");
+            }
+        }, TaskScheduler.Default);
     }
 
     private static async Task TryDeleteServerFolderAsync(Server server)
     {
+        if (string.IsNullOrWhiteSpace(server.Path))
+        {
+            Logger.Warning($"Server path is empty: {server.Id}", "ServerStorageService");
+            return;
+        }
+
+        // Проверяем что путь не содержит escape-последовательностей
+        if (PathValidator.ContainsTraversalSequences(server.Path))
+        {
+            Logger.Warning($"Server path contains suspicious sequences: {server.Path}", "ServerStorageService");
+            return;
+        }
+
+        // Проверяем что путь находится внутри директории Servers
+        if (!PathValidator.IsPathSafe(server.Path, Constants.ServersPath))
+        {
+            Logger.Warning($"Server path is outside allowed directory: {server.Path}", "ServerStorageService");
+            return;
+        }
+
         if (!Directory.Exists(server.Path))
         {
             Logger.Info($"Server folder does not exist: {server.Path}", "ServerStorageService");
@@ -308,6 +344,33 @@ public class ServerStorageService : IServerStorageService, IDisposable
         }
 
         Logger.Warning($"Could not delete server folder (may be in use): {server.Path}", "ServerStorageService");
+    }
+
+    /// <summary>
+    /// Проверяет изменился ли файл servers.json после кэширования.
+    /// </summary>
+    private bool IsFileModifiedSinceCache()
+    {
+        var lastWrite = GetFileLastWriteTime();
+        return lastWrite > _cacheWriteTime;
+    }
+
+    /// <summary>
+    /// Возвращает время последней записи файла servers.json.
+    /// </summary>
+    private DateTime GetFileLastWriteTime()
+    {
+        if (!File.Exists(_serversIndexPath))
+            return DateTime.MinValue;
+
+        try
+        {
+            return File.GetLastWriteTimeUtc(_serversIndexPath);
+        }
+        catch
+        {
+            return DateTime.MinValue;
+        }
     }
 
     public void Dispose()

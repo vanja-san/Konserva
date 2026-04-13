@@ -134,9 +134,9 @@ public partial class MainWindow : FluentWindow, IDisposable
     {
         try
         {
-            while (!ct.IsCancellationRequested)
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+            while (await timer.WaitForNextTickAsync(ct))
             {
-                await Task.Delay(TimeSpan.FromSeconds(5), ct);
                 UpdateStatusBar();
             }
         }

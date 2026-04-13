@@ -43,7 +43,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ServerPort}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ServerPort_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -60,7 +60,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ServerIp}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ServerIp_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -77,7 +77,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_MaxPlayers}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_MaxPlayers_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -94,7 +94,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ViewDistance}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ViewDistance_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -111,7 +111,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_SimulationDistance}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SimulationDistance_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -128,7 +128,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_MOTD}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_MOTD_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -144,7 +144,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_EnableStatus}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnableStatus_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -181,7 +181,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_Gamemode}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_Gamemode_Desc}" />
                         </StackPanel>
                         <ComboBox
@@ -203,7 +203,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ForceGamemode}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ForceGamemode_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -219,7 +219,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_Difficulty}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_Difficulty_Desc}" />
                         </StackPanel>
                         <ComboBox
@@ -241,7 +241,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_Hardcore}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_Hardcore_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -257,7 +257,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_PvP}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_PvP_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -273,7 +273,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_AllowFlight}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_AllowFlight_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -289,7 +289,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_CommandBlocks}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_CommandBlocks_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -326,7 +326,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_LevelName}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_LevelName_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -342,7 +342,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_LevelSeed}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_LevelSeed_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -358,7 +358,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_LevelType}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_LevelType_Desc}" />
                         </StackPanel>
                         <ComboBox
@@ -381,7 +381,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_GeneratorSettings}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_GeneratorSettings_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -398,7 +398,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_MaxWorldSize}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_MaxWorldSize_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -415,7 +415,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnStructures}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SpawnStructures_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -431,7 +431,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_AllowNether}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_AllowNether_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -447,7 +447,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnRadius}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SpawnRadius_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -486,7 +486,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_OnlineMode}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_OnlineMode_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -502,7 +502,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_EnforceSecureProfile}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnforceSecureProfile_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -518,7 +518,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_PreventProxyConnections}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_PreventProxyConnections_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -534,7 +534,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_RateLimit}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_RateLimit_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -551,7 +551,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_NetworkCompression}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_NetworkCompression_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -568,7 +568,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_MaxTickTime}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_MaxTickTime_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -585,7 +585,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_PlayerIdleTimeout}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_PlayerIdleTimeout_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -602,7 +602,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_AcceptsTransfers}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_AcceptsTransfers_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -618,7 +618,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_StatusHeartbeatInterval}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_StatusHeartbeatInterval_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -656,7 +656,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_Whitelist}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_Whitelist_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -672,7 +672,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_EnforceWhitelist}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnforceWhitelist_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -688,7 +688,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_HideOnlinePlayers}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_HideOnlinePlayers_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -725,7 +725,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_EnableRcon}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnableRcon_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -741,7 +741,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_RconPassword}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_RconPassword_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -757,7 +757,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_RconPort}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_RconPort_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -795,7 +795,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_EnableQuery}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnableQuery_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -811,7 +811,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_QueryPort}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_QueryPort_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -849,7 +849,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnProtection}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SpawnProtection_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -865,7 +865,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_OpPermissionLevel}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_OpPermissionLevel_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -881,7 +881,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_FunctionPermissionLevel}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_FunctionPermissionLevel_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -897,7 +897,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_EnabledPacks}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnabledPacks_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -913,7 +913,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_DisabledPacks}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_DisabledPacks_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -950,7 +950,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerEnabled}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ManagementServerEnabled_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -966,7 +966,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerHost}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ManagementServerHost_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -983,7 +983,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerPort}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ManagementServerPort_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -1000,7 +1000,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerSecret}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ManagementServerSecret_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -1016,7 +1016,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerTlsEnabled}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ManagementServerTlsEnabled_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -1032,7 +1032,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerTlsKeystore}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ManagementServerTlsKeystore_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -1048,7 +1048,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerAllowedOrigins}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ManagementServerAllowedOrigins_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -1085,7 +1085,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ResourcePackUrl}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ResourcePackUrl_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -1101,7 +1101,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ResourcePackSha1}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ResourcePackSha1_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -1117,7 +1117,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ResourcePackId}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ResourcePackId_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -1133,7 +1133,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_ResourcePackPrompt}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ResourcePackPrompt_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -1149,7 +1149,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_RequireResourcePack}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_RequireResourcePack_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -1186,7 +1186,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_MaxChainedNeighborUpdates}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_MaxChainedNeighborUpdates_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -1203,7 +1203,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_EntityBroadcastRangePercentage}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EntityBroadcastRangePercentage_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -1220,7 +1220,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_SyncChunkWrites}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SyncChunkWrites_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -1236,7 +1236,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_UseNativeTransport}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_UseNativeTransport_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -1273,7 +1273,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_LogIps}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_LogIps_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -1289,7 +1289,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_BroadcastConsoleToOps}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_BroadcastConsoleToOps_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -1305,7 +1305,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_BroadcastRconToOps}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_BroadcastRconToOps_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -1321,7 +1321,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_EnableJmxMonitoring}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnableJmxMonitoring_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -1337,7 +1337,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_EnableCodeOfConduct}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnableCodeOfConduct_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -1353,7 +1353,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_BugReportLink}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_BugReportLink_Desc}" />
                         </StackPanel>
                         <ui:TextBox
@@ -1390,7 +1390,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnNPCs}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SpawnNPCs_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -1406,7 +1406,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnAnimals}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SpawnAnimals_Desc}" />
                         </StackPanel>
                         <CheckBox
@@ -1422,7 +1422,7 @@
                             <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnMonsters}" />
                             <ui:TextBlock
                                 FontSize="12"
-                                Foreground="Gray"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SpawnMonsters_Desc}" />
                         </StackPanel>
                         <CheckBox

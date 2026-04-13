@@ -92,15 +92,16 @@ namespace Konserva.Services
 
         /// <summary>
         /// Создаёт update.bat для замены файлов.
+        /// Пути экранируются от batch-метасимволов (&, |, %, ^, ! и др.).
         /// </summary>
         private static string CreateUpdateScript(string tempDir, string appDir)
         {
             var extractedDir = Path.Combine(tempDir, "extracted");
             var batchPath = Path.Combine(tempDir, "update.bat");
 
-            // Escaping paths with spaces
-            var tempEscaped = extractedDir.Replace("'", "''");
-            var appEscaped = appDir.Replace("'", "''");
+            // Санитизируем пути для batch-скриптов — экранируем &, |, %, ^, ! и др.
+            var tempEscaped = PathValidator.SanitizeForBatch(extractedDir);
+            var appEscaped = PathValidator.SanitizeForBatch(appDir);
 
             var batchContent = $@"@echo off
 setlocal enabledelayedexpansion
@@ -130,9 +131,13 @@ for %%F in (""{tempEscaped}\*.*"") do (
 REM Clean up temp
 rd /s /q ""{tempEscaped}""
 
+REM Wait for copy to complete
+timeout /t 1 /nobreak >nul
+
 REM Restart application
 start """" ""{appEscaped}\Konserva.exe""
 
+endlocal
 exit
 ";
 

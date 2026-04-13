@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Konserva.Services;
 
@@ -16,6 +17,9 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
     private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(1);
     private readonly SemaphoreSlim _cacheLock = new(1, 1);
     private bool _disposed;
+
+    [GeneratedRegex(@"<version>([^<]+)</version>")]
+    private static partial Regex XmlVersionRegex();
 
     private static HttpClient CreateDefaultHttpClient() => new()
     {
@@ -95,8 +99,8 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
 
             var versions = new HashSet<string>();
 
-            var matches = System.Text.RegularExpressions.Regex.Matches(response, @"<version>([^<]+)</version>");
-            foreach (System.Text.RegularExpressions.Match match in matches)
+            var matches = XmlVersionRegex().Matches(response);
+            foreach (Match match in matches)
             {
                 var fullVersion = match.Groups[1].Value;
                 if (fullVersion.StartsWith(mcVersion + "-"))
@@ -264,13 +268,13 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
     private static List<string> ParseNeoForgeVersions(string xml, string mcVersion)
     {
         var versions = new List<string>();
-        var matches = System.Text.RegularExpressions.Regex.Matches(xml, @"<version>([^<]+)</version>");
+        var matches = XmlVersionRegex().Matches(xml);
         Logger.Info($"Found {matches.Count} total NeoForge versions in XML", "McVersionsApi");
 
         var neoForgeMcVersion = ExtractNeoForgeMcVersion(mcVersion);
         Logger.Info($"Looking for NeoForge versions for MC {mcVersion} (NeoForge format: {neoForgeMcVersion})", "McVersionsApi");
 
-        foreach (System.Text.RegularExpressions.Match match in matches)
+        foreach (Match match in matches)
         {
             var fullVersion = match.Groups[1].Value;
 
@@ -417,24 +421,8 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var decompressedStream = GetDecompressedStream(stream, response.Content.Headers.ContentEncoding);
+        using var decompressedStream = StreamUtilities.GetDecompressedStream(stream, response.Content.Headers.ContentEncoding);
         using var reader = new StreamReader(decompressedStream);
         return await reader.ReadToEndAsync(ct);
-    }
-
-    /// <summary>
-    /// Распаковка потока в зависимости от gzip/deflate
-    /// </summary>
-    private static Stream GetDecompressedStream(Stream compressedStream, ICollection<string> contentEncoding)
-    {
-        var encoding = contentEncoding.FirstOrDefault()?.ToLowerInvariant();
-
-        if (encoding == "gzip")
-            return new System.IO.Compression.GZipStream(compressedStream, System.IO.Compression.CompressionMode.Decompress, leaveOpen: true);
-
-        if (encoding == "deflate")
-            return new System.IO.Compression.DeflateStream(compressedStream, System.IO.Compression.CompressionMode.Decompress, leaveOpen: true);
-
-        return compressedStream;
     }
 }
