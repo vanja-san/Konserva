@@ -1,5 +1,6 @@
 using Konserva.Models;
 using Konserva.Services;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Reflection;
 
@@ -179,7 +180,7 @@ public class ConfigServiceTests : IDisposable
             DefaultRamMin = 2048,
             DefaultRamMax = 8192,
             ServersDirectory = "C:\\Servers",
-            JavaInstallations = new List<JavaInstallation>
+            JavaInstallations = new ObservableCollection<JavaInstallation>
             {
                 new JavaInstallation { Id = "java1", Path = "C:\\Java17", IsDefault = true }
             },
@@ -204,7 +205,7 @@ public class ConfigServiceTests : IDisposable
         // Arrange
         var config = new AppConfig
         {
-            JavaInstallations = new List<JavaInstallation>
+            JavaInstallations = new ObservableCollection<JavaInstallation>
             {
                 new JavaInstallation { Id = "java1", Name = "Java 17", Path = "C:\\Java17", Version = "17.0.1", MajorVersion = 17, IsDefault = true },
                 new JavaInstallation { Id = "java2", Name = "Java 21", Path = "C:\\Java21", Version = "21.0.1", MajorVersion = 21, IsDefault = false }
@@ -282,7 +283,7 @@ public class ConfigServiceTests : IDisposable
         // Arrange
         var config = new AppConfig
         {
-            JavaInstallations = new List<JavaInstallation>
+            JavaInstallations = new ObservableCollection<JavaInstallation>
             {
                 new JavaInstallation { Id = "java1", Name = "Java 17", IsDefault = false },
                 new JavaInstallation { Id = "java2", Name = "Java 21", IsDefault = false }
@@ -305,7 +306,7 @@ public class ConfigServiceTests : IDisposable
         var config = new AppConfig
         {
             DefaultJavaId = "java2",
-            JavaInstallations = new List<JavaInstallation>
+            JavaInstallations = new ObservableCollection<JavaInstallation>
             {
                 new JavaInstallation { Id = "java1", Name = "Java 17", IsDefault = false },
                 new JavaInstallation { Id = "java2", Name = "Java 21", IsDefault = true }

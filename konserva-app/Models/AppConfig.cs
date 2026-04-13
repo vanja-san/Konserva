@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.ObjectModel;
+using System.IO;
 
 namespace Konserva.Models;
 
@@ -13,7 +14,7 @@ public class AppConfig
     /// <summary>
     /// Список установленных Java
     /// </summary>
-    public List<JavaInstallation> JavaInstallations { get; set; } = [];
+    public ObservableCollection<JavaInstallation> JavaInstallations { get; set; } = [];
 
     /// <summary>
     /// ID Java по умолчанию

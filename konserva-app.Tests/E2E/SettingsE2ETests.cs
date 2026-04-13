@@ -1,6 +1,7 @@
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Reflection;
 
@@ -46,7 +47,7 @@ public class SettingsE2ETests : IDisposable
         try
         {
             // ========== ARRANGE ==========
-            var javaInstallations = new List<JavaInstallation>
+            var javaInstallations = new ObservableCollection<JavaInstallation>
             {
                 new JavaInstallation
                 {
