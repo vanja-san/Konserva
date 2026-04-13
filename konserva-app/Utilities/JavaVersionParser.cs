@@ -49,8 +49,8 @@ public static partial class JavaVersionParser
             int.TryParse(parts[0], out var major) &&
             int.TryParse(parts[1], out var minor))
         {
-            // MC 26.1+ — требует Java 25
-            if (major > 26 || (major == 26 && minor >= 1)) return 25;
+            // MC 26.1+ — требует Java 25 (и все будущие мажорные версии 27+, 28+ и т.д.)
+            if (major >= 26) return 25;
 
             // MC 1.x
             if (major == 1 && minor >= 21) return 21;
