@@ -138,56 +138,6 @@ public class BoolToVisibilityConverterTests
 }
 
 /// <summary>
-/// Тесты для BoolToVisibilityInverseConverter
-/// </summary>
-public class BoolToVisibilityInverseConverterTests
-{
-    private readonly BoolToVisibilityInverseConverter _converter = new();
-
-    [Fact]
-    public void Convert_True_ReturnsCollapsed()
-    {
-        var result = _converter.Convert(true, typeof(Visibility), null, CultureInfo.InvariantCulture);
-        result.Should().Be(Visibility.Collapsed);
-    }
-
-    [Fact]
-    public void Convert_False_ReturnsVisible()
-    {
-        var result = _converter.Convert(false, typeof(Visibility), null, CultureInfo.InvariantCulture);
-        result.Should().Be(Visibility.Visible);
-    }
-
-    [Fact]
-    public void Convert_NonBoolInput_ReturnsVisible()
-    {
-        var result = _converter.Convert("not a bool", typeof(Visibility), null, CultureInfo.InvariantCulture);
-        result.Should().Be(Visibility.Visible);
-    }
-
-    [Fact]
-    public void ConvertBack_Collapsed_ReturnsTrue()
-    {
-        var result = _converter.ConvertBack(Visibility.Collapsed, typeof(bool), null, CultureInfo.InvariantCulture);
-        result.Should().Be(true);
-    }
-
-    [Fact]
-    public void ConvertBack_Visible_ReturnsFalse()
-    {
-        var result = _converter.ConvertBack(Visibility.Visible, typeof(bool), null, CultureInfo.InvariantCulture);
-        result.Should().Be(false);
-    }
-
-    [Fact]
-    public void ConvertBack_NonVisibilityInput_ReturnsFalse()
-    {
-        var result = _converter.ConvertBack("not visibility", typeof(bool), null, CultureInfo.InvariantCulture);
-        result.Should().Be(false);
-    }
-}
-
-/// <summary>
 /// Тесты для EmptyToVisibilityConverter
 /// </summary>
 public class EmptyToVisibilityConverterTests

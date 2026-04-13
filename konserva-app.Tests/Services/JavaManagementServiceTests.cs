@@ -250,7 +250,9 @@ public class JavaManagementServiceTests : IDisposable
         var java1 = new JavaInstallation { Id = "java1", IsDefault = false };
         var java2 = new JavaInstallation { Id = "java2", IsDefault = false };
         var java3 = new JavaInstallation { Id = "java3", IsDefault = false };
-        _testConfig.JavaInstallations.AddRange(new[] { java1, java2, java3 });
+        _testConfig.JavaInstallations.Add(java1);
+        _testConfig.JavaInstallations.Add(java2);
+        _testConfig.JavaInstallations.Add(java3);
 
         // Act
         _javaService.SetDefaultJava("java2");
