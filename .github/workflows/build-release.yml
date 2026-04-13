@@ -90,8 +90,7 @@ jobs:
         $changelog += "|---------|---------------|-------------|`n"
         $changelog += "| .NET Runtime | ✅ Built-in | ⚠️ Required |`n"
         $changelog += "| Size | ~60 MB | ~10 MB |`n"
-        $changelog += "| Setup | None | Install .NET 10 |`n"
-        $changelog += "| Recommended for | Most users | Developers |`n`n"
+        $changelog += "| Setup | None | Install .NET 10 |`n`n"
         $changelog += "**Download .NET 10 Runtime:** https://dotnet.microsoft.com/download/dotnet/10.0`n"
 
         # Write changelog

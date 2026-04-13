@@ -177,12 +177,16 @@
                 </StackPanel>
 
                 <!--  Version / Update Notification  -->
-                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
-                    <ui:TextBlock x:Name="VersionText"
+                <StackPanel
+                    Grid.Column="4"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <ui:TextBlock
+                        x:Name="VersionText"
+                        VerticalAlignment="Center"
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         LineHeight="16"
-                        VerticalAlignment="Center"
                         Text="{utils:AppVersion Prefix=v}" />
                     <controls:UpdateNotification x:Name="UpdateNotificationControl" />
                 </StackPanel>
@@ -194,9 +198,10 @@
             x:Name="SnackbarPresenter"
             Grid.Row="0"
             Grid.RowSpan="3"
-            Panel.ZIndex="100"
+            Margin="0,0,0,20"
             HorizontalAlignment="Stretch"
-            VerticalAlignment="Bottom" />
+            VerticalAlignment="Bottom"
+            Panel.ZIndex="100" />
 
         <!--  ContentDialog Host — для модальных диалогов  -->
         <ui:ContentDialogHost
