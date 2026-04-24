@@ -1,12 +1,20 @@
 ﻿using Konserva.Models;
 using Konserva.Utilities;
-using Newtonsoft.Json;
 using System.IO;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 
 namespace Konserva.Services;
 
 public class ServerStorageService : IServerStorageService, IDisposable
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     private readonly string _serversIndexPath;
     private readonly Lock _lock = new();
     private List<Server>? _cachedServers;
@@ -141,7 +149,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
             using var reader = new StreamReader(fileStream);
             var json = reader.ReadToEnd();
 
-            var servers = JsonConvert.DeserializeObject<List<Server>>(json) ?? [];
+            var servers = JsonSerializer.Deserialize<List<Server>>(json, JsonOptions) ?? [];
 
             foreach (var server in servers)
             {
@@ -181,7 +189,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
             using var reader = new StreamReader(fileStream);
             var json = await reader.ReadToEndAsync(ct);
 
-            var servers = JsonConvert.DeserializeObject<List<Server>>(json) ?? [];
+            var servers = JsonSerializer.Deserialize<List<Server>>(json, JsonOptions) ?? [];
 
             foreach (var server in servers)
             {
@@ -205,7 +213,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
     {
         try
         {
-            var json = JsonConvert.SerializeObject(servers, Formatting.Indented);
+            var json = JsonSerializer.Serialize(servers, JsonOptions);
 
             // Попытка записи с retry логикой (на случай блокировки файла антивирусом)
             const int maxRetries = 3;
@@ -248,7 +256,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
     {
         try
         {
-            var json = JsonConvert.SerializeObject(servers, Formatting.Indented);
+            var json = JsonSerializer.Serialize(servers, JsonOptions);
 
             const int maxRetries = 3;
             const int delayMs = 500;

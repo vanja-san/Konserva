@@ -1,15 +1,20 @@
 ﻿using Konserva.Models;
 using Konserva.Utilities;
-using Newtonsoft.Json;
 using System.IO;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 
 namespace Konserva.Services;
 
-/// <summary>
-/// Сервис управления конфигурацией приложения
-/// </summary>
 public class ConfigService : IConfigService, IDisposable
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     private readonly string _configPath;
     private readonly Lock _lock = new();
     private AppConfig? _config;
@@ -63,7 +68,7 @@ public class ConfigService : IConfigService, IDisposable
         lock (_lock)
         {
             _config = config;
-            json = JsonConvert.SerializeObject(config, Formatting.Indented);
+            json = JsonSerializer.Serialize(config, JsonOptions);
         }
 
         try
@@ -100,7 +105,7 @@ public class ConfigService : IConfigService, IDisposable
             using var reader = new StreamReader(fileStream);
             var json = reader.ReadToEnd();
 
-            return JsonConvert.DeserializeObject<AppConfig>(json);
+            return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions);
         }
         catch (Exception ex)
         {
@@ -113,7 +118,7 @@ public class ConfigService : IConfigService, IDisposable
     {
         try
         {
-            var json = JsonConvert.SerializeObject(config, Formatting.Indented);
+            var json = JsonSerializer.Serialize(config, JsonOptions);
             using var fileStream = new FileStream(_configPath, FileMode.Create, FileAccess.Write, FileShare.Read);
             using var writer = new StreamWriter(fileStream);
             writer.Write(json);
@@ -128,7 +133,7 @@ public class ConfigService : IConfigService, IDisposable
     {
         try
         {
-            var json = JsonConvert.SerializeObject(config, Formatting.Indented);
+            var json = JsonSerializer.Serialize(config, JsonOptions);
             await using var fileStream = new FileStream(_configPath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, useAsync: true);
             using var writer = new StreamWriter(fileStream);
             await writer.WriteAsync(json.AsMemory(), ct);

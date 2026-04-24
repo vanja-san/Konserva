@@ -267,4 +267,4 @@ Used by application for version resolution:
 ---
 
 **Last Updated**: 2026-04-07
-**Application Version**: 1.5.3
+**Application Version**: 1.6.0
