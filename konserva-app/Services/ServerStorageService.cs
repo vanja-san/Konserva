@@ -238,8 +238,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
                 {
                     // Файл заблокирован, пробуем снова с задержкой
                     Logger.Warning($"Save attempt {attempt}/{maxRetries} failed (file locked): {ex.Message}", "ServerStorageService");
-                    // Используем Task.Wait вместо Thread.Sleep чтобы не блокировать поток полностью
-                    Task.Delay(delayMs * attempt).GetAwaiter().GetResult();
+                    Thread.Sleep(delayMs * attempt);
                 }
             }
 
