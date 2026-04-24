@@ -11,7 +11,8 @@ public class ConfigService : IConfigService, IDisposable
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        PropertyNameCaseInsensitive = true
     };
 
     private readonly string _configPath;
