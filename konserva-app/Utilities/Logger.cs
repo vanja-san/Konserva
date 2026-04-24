@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Text;
 using System.Threading.Channels;
 
 namespace Konserva.Utilities;
@@ -31,6 +32,7 @@ public sealed record LogEntry(
 /// </summary>
 public sealed class Logger : IAsyncDisposable
 {
+    private static readonly Encoding Utf8NoBom = new UTF8Encoding(false);
     // Channel для асинхронной записи логов
     private static readonly Channel<LogEntry> _logChannel =
         Channel.CreateUnbounded<LogEntry>(new UnboundedChannelOptions
@@ -129,7 +131,7 @@ public sealed class Logger : IAsyncDisposable
         try
         {
             var logLine = FormatLogEntry(entry) + Environment.NewLine;
-            await File.AppendAllTextAsync(_logFilePath, logLine);
+            await File.AppendAllTextAsync(_logFilePath, logLine, Utf8NoBom);
 
             // Периодическая ротация логов
             await RotateLogsIfNeededAsync();
