@@ -47,7 +47,7 @@ public partial class CreateServerDialog : FluentWindow
         _configService = configService;
         _versionsApi = versionsApi
             ?? (App.ServiceProvider?.GetService(typeof(IMcVersionsApi)) as IMcVersionsApi)
-            ?? new McVersionsApi();
+            ?? throw new InvalidOperationException("IMcVersionsApi not available");
 
         InitializeComponent();
 
@@ -317,7 +317,8 @@ public partial class CreateServerDialog : FluentWindow
             }
             else
             {
-                Logger.Warning($"NO MC VERSIONS IN LIST! modLoader={selectedModLoader}", "CreateServerDialog");
+                // Если версий нет - просто выходим
+                return;
             }
         }
         finally
@@ -710,7 +711,7 @@ public partial class CreateServerDialog : FluentWindow
         var cts = _loaderLoadingCts;
 
         // Защита от повторной загрузки для тех же параметров
-        if (_isLoadingInProgress ||
+        if (_isLoadingInProgress &&
             (_lastLoadedModLoader == modLoaderType && _lastLoadedMcVersion == mcVersion))
         {
             Logger.Info($"LoadLoaderVersions skipped: isLoading={_isLoadingInProgress}, lastModLoader={_lastLoadedModLoader}, lastMcVersion={_lastLoadedMcVersion}", "CreateServerDialog");
@@ -724,10 +725,8 @@ public partial class CreateServerDialog : FluentWindow
             return;
         }
 
-        // Устанавливаем флаг загрузки и сохраняем кэш
+        // Устанавливаем флаг загрузки (но НЕ запоминаем версию - это сделаем после успешной загрузки)
         _isLoadingInProgress = true;
-        _lastLoadedModLoader = modLoaderType;
-        _lastLoadedMcVersion = mcVersion;
 
         try
         {
@@ -749,6 +748,10 @@ public partial class CreateServerDialog : FluentWindow
 
             Logger.Info($"Loaded {versions.Length} {modLoaderType} versions", "CreateServerDialog");
 
+            // Запоминаем успешно загруженные параметры (после успешной загрузки, а не перед)
+            _lastLoadedModLoader = modLoaderType;
+            _lastLoadedMcVersion = mcVersion;
+
             // Фильтруем снимки для NeoForge
             var showSnapshots = ShowSnapshotsBox?.IsChecked ?? false;
             if (modLoaderType == "NeoForge" && !showSnapshots)
@@ -761,95 +764,37 @@ public partial class CreateServerDialog : FluentWindow
             if (modLoaderType == "Quilt" && !showSnapshots)
             {
                 versions = [.. versions.Where(v => !IsQuiltSnapshot(v))];
-                Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerDialog");
+Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerDialog");
             }
 
-            // Если версий нет, пробуем найти совместимую версию Minecraft
-            if ((versions.Length == 0 || (versions.Length == 1 && versions[0] == "latest"))
-                && !_isFindingCompatibleVersion)
+            if (versions.Length == 0)
             {
-                _isFindingCompatibleVersion = true;
-                try
-                {
-                    var compatibleMcVersion = await FindLastCompatibleMcVersionAsync(modLoaderType, mcVersion, showSnapshots);
-
-                    if (compatibleMcVersion != null && compatibleMcVersion != mcVersion)
-                    {
-                        // Нашли совместимую версию — выбираем её в списке
-                        var compatibleItem = McVersionBox.Items.Cast<ComboBoxItem>()
-                            .FirstOrDefault(item => item.Content?.ToString() == compatibleMcVersion);
-
-                        if (compatibleItem != null)
-                        {
-                            // Сбрасываем флаг перед повторной загрузкой
-                            _isFindingCompatibleVersion = false;
-
-                            McVersionBox.SelectedItem = compatibleItem;
-                            // Рекурсивно загружаем версии для найденной версии
-                            _ = LoadLoaderVersions(modLoaderType, compatibleMcVersion);
-                            return;
-                        }
-                    }
-                }
-                finally
-                {
-                    // Сбрасываем флаг, если он ещё установлен
-                    if (_isFindingCompatibleVersion)
-                        _isFindingCompatibleVersion = false;
-                }
+                Logger.Warning($"No {modLoaderType} versions found for MC {mcVersion}", "CreateServerDialog");
+                return;
             }
 
-            if (versions.Length > 0)
+            // Сразу выбираем первую версию (стабильную или тестовую в зависимости от чекбокса)
+            var firstVersion = versions[0];
+            LoaderVersionBox.Items.Add(new ComboBoxItem
             {
-                // Сразу выбираем первую версию (стабильную или тестовую в зависимости от чекбокса)
-                var firstVersion = versions[0];
-                LoaderVersionBox.Items.Add(new ComboBoxItem
-                {
-                    Content = firstVersion,
-                    IsSelected = true
-                });
-                Logger.Info($"Selected {modLoaderType} version: {firstVersion}", "CreateServerDialog");
+                Content = firstVersion,
+                IsSelected = true
+            });
+            Logger.Info($"Selected {modLoaderType} version: {firstVersion}", "CreateServerDialog");
 
-                // Добавляем остальные версии (до 50)
-                foreach (var version in versions.Skip(1).Take(49))
-                {
-                    LoaderVersionBox.Items.Add(new ComboBoxItem { Content = version });
-                }
-            }
-            else
+            // Добавляем остальные версии (до 10)
+            foreach (var version in versions.Skip(1).Take(9))
             {
-                // Если версий нет, используем "latest" как запасной вариант
-                LoaderVersionBox.Items.Add(new ComboBoxItem
-                {
-                    Content = "latest",
-                    IsSelected = true
-                });
+                LoaderVersionBox.Items.Add(new ComboBoxItem { Content = version });
             }
         }
         catch (Exception ex)
         {
-            // Если модлоадер сменился — просто выходим, не показывая ошибку
-            if (_currentModLoader != modLoaderType)
-            {
-                Logger.Info($"LoadLoaderVersions error ignored (modloader changed): {modLoaderType} — {ex.Message}", "CreateServerDialog");
-                return;
-            }
-
-            Logger.Error($"Failed to load {modLoaderType} versions: {ex.Message}", ex, "CreateServerDialog");
-
-            LoaderVersionBox.Items.Add(new ComboBoxItem
-            {
-                Content = "latest",
-                IsSelected = true
-            });
+            Logger.Warning($"Error loading {modLoaderType} versions: {ex.Message}", "CreateServerDialog");
         }
         finally
         {
-            // Снимаем флаг загрузки только если модлоадер не сменился
-            if (_currentModLoader == modLoaderType)
-            {
-                _isLoadingInProgress = false;
-            }
+            _isLoadingInProgress = false;
         }
     }
 
@@ -1195,11 +1140,11 @@ public partial class CreateServerDialog : FluentWindow
                 Enum.TryParse(modLoaderTypeName, true, out modLoaderType);
             }
 
-            var loaderVersion = "latest";
+            var loaderVersion = string.Empty;
             if (LoaderVersionBox.IsEnabled &&
                 LoaderVersionBox.SelectedItem is ComboBoxItem loaderItem)
             {
-                loaderVersion = loaderItem.Content?.ToString() ?? "latest";
+                loaderVersion = loaderItem.Content?.ToString() ?? string.Empty;
             }
 
             var modLoader = new ModLoader

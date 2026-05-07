@@ -47,6 +47,7 @@ public partial class ServerPropertiesEditor : UserControl
         MaxPlayersBox.Text = _properties.MaxPlayers.ToString();
         ViewDistanceBox.Text = _properties.ViewDistance.ToString();
         SimulationDistanceBox.Text = _properties.SimulationDistance.ToString();
+        PauseWhenEmptySecondsBox.Text = _properties.PauseWhenEmptySeconds.ToString();
         MotdBox.Text = _properties.Motd;
         EnableStatusBox.IsChecked = _properties.EnableStatus;
 
@@ -108,6 +109,7 @@ public partial class ServerPropertiesEditor : UserControl
         ManagementServerSecretBox.Text = _properties.ManagementServerSecret;
         ManagementServerTlsEnabledBox.IsChecked = _properties.ManagementServerTlsEnabled;
         ManagementServerTlsKeystoreBox.Text = _properties.ManagementServerTlsKeystore;
+        ManagementServerTlsKeystorePasswordBox.Password = _properties.ManagementServerTlsKeystorePassword;
         ManagementServerAllowedOriginsBox.Text = _properties.ManagementServerAllowedOrigins;
 
         // Resource Pack
@@ -122,6 +124,7 @@ public partial class ServerPropertiesEditor : UserControl
         EntityBroadcastRangePercentageBox.Text = _properties.EntityBroadcastRangePercentage.ToString();
         SyncChunkWritesBox.IsChecked = _properties.SyncChunkWrites;
         UseNativeTransportBox.IsChecked = _properties.UseNativeTransport;
+        SelectComboBoxItem(RegionFileCompressionBox, _properties.RegionFileCompression);
 
         // Logging
         LogIpsBox.IsChecked = _properties.LogIps;
@@ -130,6 +133,8 @@ public partial class ServerPropertiesEditor : UserControl
         EnableJmxMonitoringBox.IsChecked = _properties.EnableJmxMonitoring;
         EnableCodeOfConductBox.IsChecked = _properties.EnableCodeOfConduct;
         BugReportLinkBox.Text = _properties.BugReportLink;
+        TextFilteringConfigBox.Text = _properties.TextFilteringConfig;
+        TextFilteringVersionBox.Text = _properties.TextFilteringVersion.ToString();
 
         // Spawn Settings (Legacy)
         SpawnNpcsBox.IsChecked = _properties.SpawnNpcs;
@@ -201,6 +206,7 @@ public partial class ServerPropertiesEditor : UserControl
             _properties.MaxPlayers = GetIntValue(MaxPlayersBox, 20);
             _properties.ViewDistance = GetIntValue(ViewDistanceBox, 10);
             _properties.SimulationDistance = GetIntValue(SimulationDistanceBox, 10);
+            _properties.PauseWhenEmptySeconds = GetIntValue(PauseWhenEmptySecondsBox, 60);
             _properties.Motd = MotdBox.Text;
             _properties.EnableStatus = GetBoolValue(EnableStatusBox);
 
@@ -262,6 +268,7 @@ public partial class ServerPropertiesEditor : UserControl
             _properties.ManagementServerSecret = ManagementServerSecretBox.Text;
             _properties.ManagementServerTlsEnabled = GetBoolValue(ManagementServerTlsEnabledBox);
             _properties.ManagementServerTlsKeystore = ManagementServerTlsKeystoreBox.Text;
+            _properties.ManagementServerTlsKeystorePassword = ManagementServerTlsKeystorePasswordBox.Password;
             _properties.ManagementServerAllowedOrigins = ManagementServerAllowedOriginsBox.Text;
 
             // Resource Pack
@@ -276,6 +283,7 @@ public partial class ServerPropertiesEditor : UserControl
             _properties.EntityBroadcastRangePercentage = GetIntValue(EntityBroadcastRangePercentageBox, 100);
             _properties.SyncChunkWrites = GetBoolValue(SyncChunkWritesBox);
             _properties.UseNativeTransport = GetBoolValue(UseNativeTransportBox);
+            _properties.RegionFileCompression = GetComboBoxValue(RegionFileCompressionBox, "deflate");
 
             // Logging
             _properties.LogIps = GetBoolValue(LogIpsBox);
@@ -284,6 +292,8 @@ public partial class ServerPropertiesEditor : UserControl
             _properties.EnableJmxMonitoring = GetBoolValue(EnableJmxMonitoringBox);
             _properties.EnableCodeOfConduct = GetBoolValue(EnableCodeOfConductBox);
             _properties.BugReportLink = BugReportLinkBox.Text;
+            _properties.TextFilteringConfig = TextFilteringConfigBox.Text;
+            _properties.TextFilteringVersion = GetIntValue(TextFilteringVersionBox, 0);
 
             // Spawn Settings (Legacy)
             _properties.SpawnNpcs = GetBoolValue(SpawnNpcsBox);

@@ -147,7 +147,7 @@ public partial class ServersPage : Page, IDisposable
             Logger.Info("Opening CreateServerDialog", "ServersPage");
 
             var versionsApi = App.ServiceProvider?.GetService(typeof(IMcVersionsApi)) as IMcVersionsApi
-                ?? new McVersionsApi();
+                ?? throw new InvalidOperationException("IMcVersionsApi not available");
 
             Logger.Info($"versionsApi created: {versionsApi != null}", "ServersPage");
 

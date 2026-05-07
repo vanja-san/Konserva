@@ -878,19 +878,22 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 }
             }
 
-            // Удаление архивов старше 7 дней
-            foreach (var file in Directory.GetFiles(logsDir, "*.log.gz"))
+            // Удаление старых логов — оставляем максимум 2 файла (latest.log + 1 архив)
+            var logFiles = Directory.GetFiles(logsDir, "latest.log.old-*")
+                .Concat(Directory.GetFiles(logsDir, "*.log.gz"))
+                .OrderByDescending(f => File.GetLastWriteTime(f))
+                .ToList();
+
+            // Удаляем все кроме 2 самых новых
+            foreach (var file in logFiles.Skip(2))
             {
                 try
                 {
-                    if (File.GetLastWriteTime(file) < DateTime.Now.AddDays(-7))
-                    {
-                        File.Delete(file);
-                    }
+                    File.Delete(file);
                 }
                 catch
                 {
-                    // Игнорируем ошибки
+                    // Игнорируем ошибки удаления
                 }
             }
         }

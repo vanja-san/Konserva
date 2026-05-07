@@ -2,6 +2,10 @@
 using Konserva.Services;
 using Konserva.Utilities;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Resilience;
+using Polly;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Windows;
@@ -143,11 +147,27 @@ public partial class App : Application
             services.AddSingleton<IConfigService, ConfigService>();
             services.AddSingleton<IServerStorageService, ServerStorageService>();
             services.AddSingleton<IServerManager, McServerManager>();
-            services.AddSingleton<IMcVersionsApi, McVersionsApi>();
             services.AddSingleton<IJavaManagementService, JavaManagementService>();
 
-            // HttpClient для API
-            services.AddHttpClient<IMcVersionsApi, McVersionsApi>();
+            // HttpClient для API с retry политикой
+            services.AddHttpClient<IMcVersionsApi, McVersionsApi>(options =>
+            {
+                options.Timeout = TimeSpan.FromSeconds(30);
+                options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
+            })
+                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+                    MaxConnectionsPerServer = 10,
+                    AutomaticDecompression = DecompressionMethods.All
+                })
+                .AddStandardResilienceHandler(options =>
+                {
+                    options.Retry.MaxRetryAttempts = 3;
+                    options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
+                    options.Retry.UseJitter = true;
+                });
 
             return services;
         }

@@ -98,29 +98,12 @@ public static class PathValidator
         var sb = new StringBuilder(path.Length + 10);
         foreach (var ch in path)
         {
-            switch (ch)
+            sb.Append(ch switch
             {
-                case '!':
-                    // При enabledelayedexpansion ! экранируется через ^!
-                    sb.Append('^');
-                    sb.Append(ch);
-                    break;
-                case '&':
-                case '|':
-                case '<':
-                case '>':
-                case '%':
-                case '^':
-                case '(':
-                case ')':
-                    // Экранируем спецсимволы batch через ^
-                    sb.Append('^');
-                    sb.Append(ch);
-                    break;
-                default:
-                    sb.Append(ch);
-                    break;
-            }
+                '!' => $"^{ch}",                    // При enabledelayedexpansion ! экранируется через ^!
+                '&' or '|' or '<' or '>' or '%' or '^' or '(' or ')' => $"^{ch}",  // Экранируем спецсимволы batch через ^
+                _ => ch.ToString()
+            });
         }
         return sb.ToString();
     }

@@ -1578,27 +1578,6 @@ public static partial class McServerInstaller
     }
 
     /// <summary>
-    /// Создать start скрипт
-    /// </summary>
-    public static void CreateStartScript(string serverPath, int ramMin = 1024, int ramMax = 4096)
-    {
-        var batPath = Path.Combine(serverPath, "start.bat");
-        var batContent = $"""
-            @echo off
-            java -Xms{ramMin}M -Xmx{ramMax}M -jar server.jar nogui
-            pause
-            """;
-        File.WriteAllText(batPath, batContent);
-
-        var psPath = Path.Combine(serverPath, "start.ps1");
-        var psContent = $"""
-            #!/usr/bin/env pwsh
-            java -Xms{ramMin}M -Xmx{ramMax}M -jar server.jar nogui
-            """;
-        File.WriteAllText(psPath, psContent);
-    }
-
-    /// <summary>
     /// Найти jar файл для запуска сервера
     /// </summary>
     public static string FindServerJar(string serverPath)
@@ -1777,7 +1756,6 @@ public static partial class McServerInstaller
             result.Status = InstallStatus.Configuring;
             CreateEula(serverPath);
             CreateServerProperties(serverPath, port);
-            CreateStartScript(serverPath, ramMin, ramMax);
 
             progress?.Report("Завершение...");
             result.Success = true;

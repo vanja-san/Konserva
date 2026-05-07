@@ -15,6 +15,7 @@ public class ServerProperties
     public string Motd { get; set; } = "A Minecraft Server";
     public int ViewDistance { get; set; } = 10;
     public int SimulationDistance { get; set; } = 10;
+    public int PauseWhenEmptySeconds { get; set; } = 60;
 
     // ===== Режим игры =====
     public string Gamemode { get; set; } = "survival";
@@ -200,7 +201,7 @@ public class ServerProperties
             ["network-compression-threshold"] = NetworkCompressionThreshold.ToString(),
             ["online-mode"] = OnlineMode.ToString().ToLower(),
             ["op-permission-level"] = OpPermissionLevel.ToString(),
-            ["pause-when-empty-seconds"] = "60",
+            ["pause-when-empty-seconds"] = PauseWhenEmptySeconds.ToString(),
             ["player-idle-timeout"] = PlayerIdleTimeout.ToString(),
             ["prevent-proxy-connections"] = PreventProxyConnections.ToString().ToLower(),
             ["query.port"] = QueryPort.ToString(),
@@ -255,6 +256,9 @@ public class ServerProperties
                 break;
             case "simulation-distance":
                 props.SimulationDistance = ParseInt(value, 10);
+                break;
+            case "pause-when-empty-seconds":
+                props.PauseWhenEmptySeconds = ParseInt(value, 60);
                 break;
             case "motd":
                 props.Motd = value;

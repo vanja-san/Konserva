@@ -59,9 +59,42 @@ public sealed class Logger : IAsyncDisposable
         _logDir = Path.Combine(exeDir, "Logs");
         Directory.CreateDirectory(_logDir);
 
+        // Очистка старых логов — оставляем максимум 2 файла
+        CleanupOldLogs();
+
         // Имя файла сессии: logs-21.01.26-11.22.log
         _sessionLogFileName = $"logs-{DateTime.Now:dd.MM.yy-HH.mm}.log";
         _logFilePath = Path.Combine(_logDir, _sessionLogFileName);
+    }
+
+    /// <summary>
+    /// Удаляет старые логи — оставляет максимум 2 файла
+    /// </summary>
+    private static void CleanupOldLogs()
+    {
+        try
+        {
+            var logFiles = Directory.GetFiles(_logDir, "logs-*.log")
+                .OrderByDescending(f => File.GetLastWriteTime(f))
+                .ToList();
+
+            // Удаляем все кроме 2 самых новых
+            foreach (var file in logFiles.Skip(2))
+            {
+                try
+                {
+                    File.Delete(file);
+                }
+                catch
+                {
+                    // Игнорируем ошибки удаления
+                }
+            }
+        }
+        catch
+        {
+            // Игнорируем ошибки
+        }
     }
 
     /// <summary>

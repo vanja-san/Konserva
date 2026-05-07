@@ -35,7 +35,7 @@
                     <Grid
                         Margin="8,0"
                         ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
                             Grid.Row="0"
                             Grid.Column="0"
@@ -152,6 +152,23 @@
                             Grid.Row="6"
                             Grid.Column="1"
                             HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="7"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_PauseWhenEmptySeconds}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc ServerProperties_PauseWhenEmptySeconds_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="PauseWhenEmptySecondsBox"
+                            Grid.Row="7"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="60" />
                     </Grid>
                 </ui:CardExpander>
 
@@ -942,7 +959,7 @@
                     <Grid
                         Margin="8,0"
                         ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
                             Grid.Row="0"
                             Grid.Column="0"
@@ -1054,6 +1071,22 @@
                         <ui:TextBox
                             x:Name="ManagementServerAllowedOriginsBox"
                             Grid.Row="6"
+                            Grid.Column="1"
+                            Margin="12,4,0,4" />
+
+                        <StackPanel
+                            Grid.Row="7"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_ManagementServerTlsKeystorePassword}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc ServerProperties_ManagementServerTlsKeystorePassword_Desc}" />
+                        </StackPanel>
+                        <PasswordBox
+                            x:Name="ManagementServerTlsKeystorePasswordBox"
+                            Grid.Row="7"
                             Grid.Column="1"
                             Margin="12,4,0,4" />
                     </Grid>
@@ -1178,7 +1211,7 @@
                     <Grid
                         Margin="8,0"
                         ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
                             Grid.Row="0"
                             Grid.Column="0"
@@ -1244,6 +1277,26 @@
                             Grid.Row="3"
                             Grid.Column="1"
                             HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="4"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_RegionFileCompression}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc ServerProperties_RegionFileCompression_Desc}" />
+                        </StackPanel>
+                        <ComboBox
+                            x:Name="RegionFileCompressionBox"
+                            Grid.Row="4"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            ContextMenu="{x:Null}">
+                            <ComboBoxItem Content="{loc:Loc ServerProperties_RegionFileCompression_Deflate}" Tag="deflate" />
+                            <ComboBoxItem Content="{loc:Loc ServerProperties_RegionFileCompression_Lz4}" Tag="lz4" />
+                        </ComboBox>
                     </Grid>
                 </ui:CardExpander>
 
@@ -1265,7 +1318,7 @@
                     <Grid
                         Margin="8,0"
                         ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
                             Grid.Row="0"
                             Grid.Column="0"
@@ -1361,10 +1414,43 @@
                             Grid.Row="5"
                             Grid.Column="1"
                             Margin="12,4,0,4" />
+
+                        <StackPanel
+                            Grid.Row="6"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_TextFilteringConfig}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc ServerProperties_TextFilteringConfig_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="TextFilteringConfigBox"
+                            Grid.Row="6"
+                            Grid.Column="1"
+                            Margin="12,4,0,4" />
+
+                        <StackPanel
+                            Grid.Row="7"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_TextFilteringVersion}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc ServerProperties_TextFilteringVersion_Desc}" />
+                        </StackPanel>
+                        <ui:TextBox
+                            x:Name="TextFilteringVersionBox"
+                            Grid.Row="7"
+                            Grid.Column="1"
+                            Margin="12,4,0,4"
+                            Text="0" />
                     </Grid>
                 </ui:CardExpander>
 
-                <!--  Spawn Settings (Legacy/Deprecated)  -->
+                <!--  Legacy Settings  -->
                 <ui:CardExpander
                     Margin="0,0,0,8"
                     Padding="12"
@@ -1374,15 +1460,15 @@
                         <ui:SymbolIcon
                             Filled="True"
                             FontSize="20"
-                            Symbol="AnimalCat20" />
+                            Symbol="Warning20" />
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_SpawnSettings}" />
+                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_Deprecated}" />
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
                         ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
                             Grid.Row="0"
                             Grid.Column="0"
@@ -1430,6 +1516,17 @@
                             Grid.Row="2"
                             Grid.Column="1"
                             HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            Grid.Row="3"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_AllowNether}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc ServerProperties_AllowNether_Desc}" />
+                        </StackPanel>
                     </Grid>
                 </ui:CardExpander>
             </StackPanel>

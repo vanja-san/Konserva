@@ -1,7 +1,9 @@
-﻿using Konserva.Utilities;
-using System.IO;
+﻿using System.Net;
 using System.Net.Http;
+using Konserva.Utilities;
+using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace Konserva.Services;
@@ -9,75 +11,85 @@ namespace Konserva.Services;
 /// <summary>
 /// API для получения версий Minecraft и модов
 /// </summary>
-public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsApi, IAsyncDisposable
+public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
 {
-    private readonly HttpClient _http = httpClient ?? CreateDefaultHttpClient();
+    private readonly HttpClient _http;
     private string[]? _mcVersions;
     private DateTime _mcVersionsCacheTime;
     private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(1);
+    private static readonly TimeSpan FileCacheTtl = TimeSpan.FromDays(7);
     private readonly SemaphoreSlim _cacheLock = new(1, 1);
+    private readonly SemaphoreSlim _fileLock = new(1, 1);
     private bool _disposed;
+    private VersionsCache? _fileCache;
+
+    private static readonly string CacheFolder = Path.Combine(
+        AppDomain.CurrentDomain.BaseDirectory, "Cache");
+
+    private static readonly string CacheFilePath = Path.Combine(CacheFolder, "versions_cache.json");
 
     [GeneratedRegex(@"<version>([^<]+)</version>")]
     private static partial Regex XmlVersionRegex();
 
-    private static HttpClient CreateDefaultHttpClient() => new()
+    public McVersionsApi(HttpClient httpClient)
     {
-        Timeout = TimeSpan.FromSeconds(30),
-        DefaultRequestHeaders =
-        {
-            UserAgent = { new("Konserva", "1.0") },
-            AcceptEncoding =
-            {
-                new("gzip", 1.0),
-                new("deflate", 1.0)
-            }
-        }
-    };
+        _http = httpClient;
+        _ = LoadFileCacheAsync();
+    }
 
     /// <summary>
     /// Получение всех версий Minecraft
     /// </summary>
     public async Task<string[]> GetMcVersions(CancellationToken ct = default)
     {
-        string[]? cached = _mcVersions;
-        if (cached != null && (DateTime.UtcNow - _mcVersionsCacheTime) < CacheTtl)
-            return cached;
-
-        // Ограничиваем время ожидания в 30 секунд
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        linkedCts.CancelAfter(TimeSpan.FromSeconds(30));
-
-        await _cacheLock.WaitAsync(linkedCts.Token);
+        // Пытаемся получить сеть (всегда проверяем на новые версии)
+        string[]? networkVersions = null;
         try
         {
-            string[]? local = _mcVersions;
-            if (local != null)
-                return local;
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            linkedCts.CancelAfter(TimeSpan.FromSeconds(10)); // Короткий таймаут
 
             var response = await GetStringWithDecompressionAsync(
                 "https://launchermeta.mojang.com/mc/game/version_manifest.json", linkedCts.Token);
 
             using var doc = JsonDocument.Parse(response);
-            var versions = doc.RootElement.GetProperty("versions")
+            networkVersions = doc.RootElement.GetProperty("versions")
                 .EnumerateArray()
                 .Select(v => v.GetProperty("id").GetString()!)
                 .ToArray();
 
-            _mcVersions = versions;
-            _mcVersionsCacheTime = DateTime.UtcNow;
-            return versions;
+            // Сохраняем в файл кэш
+            SaveMcVersionsToFileCache(networkVersions);
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Failed to get Minecraft versions: {ex.Message}", "McVersionsApi");
-            _mcVersions = [];
-            return _mcVersions;
+            Logger.Warning($"Failed to fetch MC versions from network: {ex.Message}", "McVersionsApi");
         }
-        finally
+
+        if (networkVersions != null)
         {
-            try { _cacheLock.Release(); } catch { /* Suppress lock release errors */ }
+            _mcVersions = networkVersions;
+            _mcVersionsCacheTime = DateTime.UtcNow;
+            return networkVersions;
         }
+
+        // Сеть недоступна - используем кэш
+        var cachedVersions = GetMcVersionsFromFileCache();
+        if (cachedVersions != null)
+        {
+            _mcVersions = cachedVersions;
+            _mcVersionsCacheTime = DateTime.UtcNow;
+            return cachedVersions;
+        }
+
+        // Если совсем ничего нет, возвращаем последние известные версии
+        string[]? memoryCached = _mcVersions;
+        if (memoryCached != null)
+            return memoryCached;
+
+        // Финальный fallback - пустой массив
+        _mcVersions = [];
+        return _mcVersions;
     }
 
     /// <summary>
@@ -85,6 +97,14 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
     /// </summary>
     public async Task<string[]> GetForgeVersions(string mcVersion, CancellationToken ct = default)
     {
+        // Сначала пробуем загрузить из кэша
+        var cachedVersions = GetFromFileCache("forge", mcVersion);
+        if (cachedVersions != null)
+        {
+            Logger.Info($"Returning cached Forge versions for MC {mcVersion}: {cachedVersions.Length}", "McVersionsApi");
+            return cachedVersions;
+        }
+
         Logger.Info($"Getting Forge versions for MC {mcVersion}...", "McVersionsApi");
 
         try
@@ -114,6 +134,10 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
             {
                 var result = versions.OrderByDescending(v => v).Take(50).ToArray();
                 Logger.Info($"Found {result.Length} Forge versions from Maven", "McVersionsApi");
+
+                // Сохраняем в кэш
+                SaveToFileCache("forge", mcVersion, result);
+
                 return result;
             }
 
@@ -137,6 +161,14 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
     /// </summary>
     public async Task<string[]> GetFabricVersions(string mcVersion, CancellationToken ct = default)
     {
+        // Сначала пробуем загрузить из кэша
+        var cachedVersions = GetFromFileCache("fabric", mcVersion);
+        if (cachedVersions != null)
+        {
+            Logger.Info($"Returning cached Fabric versions for MC {mcVersion}: {cachedVersions.Length}", "McVersionsApi");
+            return cachedVersions;
+        }
+
         try
         {
             var response = await GetStringWithDecompressionAsync(
@@ -160,13 +192,18 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
             }
 
             var result = versions.Take(50).ToArray();
-            return result.Length > 0 ? result : ["latest"];
+            if (result.Length > 0)
+            {
+                SaveToFileCache("fabric", mcVersion, result);
+                return result;
+            }
         }
         catch (Exception ex)
         {
             Logger.Warning($"Failed to get Fabric versions for MC {mcVersion}: {ex.Message}", "McVersionsApi");
-            return ["latest"];
         }
+
+        return ["latest"];
     }
 
     private readonly Dictionary<string, CachedEntry<string[]>> _neoForgeCache = new();
@@ -184,15 +221,23 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
     /// </summary>
     public async Task<string[]> GetNeoForgeVersions(string mcVersion, CancellationToken ct = default)
     {
+        // Сначала пробуем загрузить из кэша
+        var cachedVersions = GetFromFileCache("neoforge", mcVersion);
+        if (cachedVersions != null)
+        {
+            Logger.Info($"Returning cached NeoForge versions for MC {mcVersion}: {cachedVersions.Length}", "McVersionsApi");
+            return cachedVersions;
+        }
+
         Logger.Info($"Getting NeoForge versions for MC {mcVersion}...", "McVersionsApi");
 
-        // Проверяем кэш
+        // Проверяем память
         await _neoForgeCacheLock.WaitAsync(ct);
         try
         {
             if (_neoForgeCache.TryGetValue(mcVersion, out var cached) && cached.IsFresh)
             {
-                Logger.Info($"Returning cached NeoForge versions for MC {mcVersion}: {cached.Value.Length}", "McVersionsApi");
+                Logger.Info($"Returning memory cached NeoForge versions for MC {mcVersion}: {cached.Value.Length}", "McVersionsApi");
                 return cached.Value;
             }
         }
@@ -222,7 +267,10 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
                 var result = versions.OrderByDescending(v => v).Take(50).ToArray();
                 Logger.Info($"Found {result.Length} NeoForge versions for MC {mcVersion}", "McVersionsApi");
 
-                // Кэшируем результат
+                // Сохраняем в кэш
+                SaveToFileCache("neoforge", mcVersion, result);
+
+                // Кэшируем в память
                 await _neoForgeCacheLock.WaitAsync(ct);
                 try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(result, DateTime.UtcNow); }
                 finally { try { _neoForgeCacheLock.Release(); } catch { /* Suppress lock release errors */ } }
@@ -249,6 +297,8 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
                 var result = fallbackVersions.OrderByDescending(v => v).Take(50).ToArray();
                 Logger.Info($"Found {result.Length} NeoForge versions from fallback for MC {mcVersion}", "McVersionsApi");
 
+                SaveToFileCache("neoforge", mcVersion, result);
+
                 await _neoForgeCacheLock.WaitAsync(ct);
                 try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(result, DateTime.UtcNow); }
                 finally { try { _neoForgeCacheLock.Release(); } catch { /* Suppress lock release errors */ } }
@@ -261,7 +311,7 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
             Logger.Warning($"Fallback also failed for NeoForge MC {mcVersion}: {ex.Message}", "McVersionsApi");
         }
 
-        Logger.Warning($"All NeoForge sources failed for MC {mcVersion}", "McVersionsApi");
+        Logger.Warning("All NeoForge sources failed for MC {mcVersion}", "McVersionsApi");
         return ["latest"];
     }
 
@@ -337,6 +387,14 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
     /// </summary>
     public async Task<string[]> GetQuiltVersions(string mcVersion, CancellationToken ct = default)
     {
+        // Сначала пробуем загрузить из кэша
+        var cachedVersions = GetFromFileCache("quilt", mcVersion);
+        if (cachedVersions != null)
+        {
+            Logger.Info($"Returning cached Quilt versions for MC {mcVersion}: {cachedVersions.Length}", "McVersionsApi");
+            return cachedVersions;
+        }
+
         try
         {
             var url = $"https://meta.quiltmc.org/v3/versions/loader/{mcVersion}";
@@ -381,12 +439,19 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
             var sortedVersions = stableVersions.Concat(betaVersions).Take(50).ToArray();
 
             Logger.Info($"Found {sortedVersions.Length} Quilt versions", "McVersionsApi");
-            return sortedVersions.Length > 0 ? sortedVersions : ["latest"];
+
+            if (sortedVersions.Length > 0)
+            {
+                SaveToFileCache("quilt", mcVersion, sortedVersions);
+                return sortedVersions;
+            }
+
+            return ["latest"];
         }
         catch (HttpRequestException httpEx) when (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             Logger.Warning($"Quilt does not support MC {mcVersion} (404 Not Found)", "McVersionsApi");
-            return [];
+            return ["latest"];
         }
         catch (OperationCanceledException)
         {
@@ -417,12 +482,136 @@ public partial class McVersionsApi(HttpClient? httpClient = null) : IMcVersionsA
     /// </summary>
     public async Task<string> GetStringWithDecompressionAsync(string url, CancellationToken ct = default)
     {
-        var response = await _http.GetAsync(url, ct);
-        response.EnsureSuccessStatusCode();
-
-        await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var decompressedStream = StreamUtilities.GetDecompressedStream(stream, response.Content.Headers.ContentEncoding);
-        using var reader = new StreamReader(decompressedStream);
-        return await reader.ReadToEndAsync(ct);
+        return await _http.GetStringAsync(url, ct);
     }
+
+    #region File Cache
+
+    private async Task LoadFileCacheAsync()
+    {
+        try
+        {
+            if (!File.Exists(CacheFilePath))
+                return;
+
+            var json = await File.ReadAllTextAsync(CacheFilePath);
+            _fileCache = JsonSerializer.Deserialize<VersionsCache>(json);
+            Logger.Info($"Loaded file cache: {_fileCache?.LastUpdated}", "McVersionsApi");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Failed to load file cache: {ex.Message}", "McVersionsApi");
+        }
+    }
+
+    private async Task SaveFileCacheAsync()
+    {
+        if (_fileCache == null)
+            return;
+
+        await _fileLock.WaitAsync();
+        try
+        {
+            var dir = Path.GetDirectoryName(CacheFilePath);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            var json = JsonSerializer.Serialize(_fileCache);
+            await File.WriteAllTextAsync(CacheFilePath, json);
+            Logger.Info("File cache saved", "McVersionsApi");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Failed to save file cache: {ex.Message}", "McVersionsApi");
+        }
+        finally
+        {
+            try { _fileLock.Release(); } catch { }
+        }
+    }
+
+    private string[]? GetFromFileCache(string loader, string mcVersion)
+    {
+        if (_fileCache == null)
+            return null;
+
+        var cacheTime = _fileCache.LastUpdated;
+        if (DateTime.UtcNow - cacheTime > FileCacheTtl)
+            return null;
+
+        var loaderCache = loader.ToLower() switch
+        {
+            "forge" => _fileCache.Forge,
+            "neoforge" => _fileCache.NeoForge,
+            "fabric" => _fileCache.Fabric,
+            "quilt" => _fileCache.Quilt,
+            _ => null
+        };
+
+        if (loaderCache == null)
+            return null;
+
+        return loaderCache.TryGetValue(mcVersion, out var versions) ? versions : null;
+    }
+
+    private void SaveMcVersionsToFileCache(string[] versions)
+    {
+        _fileCache ??= new VersionsCache();
+        _fileCache.McVersions = versions;
+        _fileCache.LastUpdated = DateTime.UtcNow;
+        _ = SaveFileCacheAsync();
+    }
+
+    private string[]? GetMcVersionsFromFileCache()
+    {
+        return _fileCache?.McVersions;
+    }
+
+    private void SaveToFileCache(string loader, string mcVersion, string[] versions)
+    {
+        _fileCache ??= new VersionsCache();
+        _fileCache.LastUpdated = DateTime.UtcNow;
+
+        var loaderCache = loader.ToLower() switch
+        {
+            "forge" => _fileCache.Forge ??= new Dictionary<string, string[]>(),
+            "neoforge" => _fileCache.NeoForge ??= new Dictionary<string, string[]>(),
+            "fabric" => _fileCache.Fabric ??= new Dictionary<string, string[]>(),
+            "quilt" => _fileCache.Quilt ??= new Dictionary<string, string[]>(),
+            _ => null
+        };
+
+        if (loaderCache != null)
+        {
+            loaderCache[mcVersion] = versions;
+            _ = SaveFileCacheAsync();
+        }
+    }
+
+    #endregion
+
+    #region Cache Classes
+
+    public class VersionsCache
+    {
+        [JsonPropertyName("mcVersions")]
+        public string[]? McVersions { get; set; }
+
+        [JsonPropertyName("forge")]
+        public Dictionary<string, string[]>? Forge { get; set; }
+
+        [JsonPropertyName("neoforge")]
+        public Dictionary<string, string[]>? NeoForge { get; set; }
+
+        [JsonPropertyName("fabric")]
+        public Dictionary<string, string[]>? Fabric { get; set; }
+
+        [JsonPropertyName("quilt")]
+        public Dictionary<string, string[]>? Quilt { get; set; }
+
+        [JsonPropertyName("lastUpdated")]
+        public DateTime LastUpdated { get; set; }
+    }
+
+    #endregion
 }
