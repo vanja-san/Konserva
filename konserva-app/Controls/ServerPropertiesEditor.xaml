@@ -14,11 +14,41 @@
     </UserControl.Resources>
 
     <Grid RowDefinitions="*,Auto">
-        <!--  Основной контент  -->
-        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+        <!--  Сообщение если файла нет  -->
+        <Border
+            x:Name="NoFileMessage"
+            Grid.Row="0"
+            Padding="20"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center">
+            <StackPanel HorizontalAlignment="Center">
+                <ui:SymbolIcon
+                    FontSize="48"
+                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                    Symbol="DocumentBulletList24" />
+                <ui:TextBlock
+                    Margin="0,12,0,0"
+                    HorizontalAlignment="Center"
+                    FontSize="16"
+                    Text="{loc:Loc ServerProperties_FileNotCreated}" />
+                <ui:TextBlock
+                    Margin="0,4,0,0"
+                    HorizontalAlignment="Center"
+                    FontSize="12"
+                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                    Text="{loc:Loc ServerProperties_FileNotCreated_Hint}" />
+            </StackPanel>
+        </Border>
+
+        <!--  Основной контент (скрыт пока файл не создан)  -->
+        <ScrollViewer
+            x:Name="PropertiesScrollViewer"
+            Grid.Row="0"
+            VerticalScrollBarVisibility="Auto"
+            Visibility="Collapsed">
             <StackPanel>
-                <!--  Основные настройки  -->
                 <ui:CardExpander
+                    x:Name="GeneralExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -37,6 +67,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
+                            x:Name="ServerPortBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -54,6 +85,7 @@
                             Text="25565" />
 
                         <StackPanel
+                            x:Name="ServerIpBoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -71,6 +103,7 @@
                             Text="" />
 
                         <StackPanel
+                            x:Name="MaxPlayersBoxParent"
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -88,6 +121,7 @@
                             Text="20" />
 
                         <StackPanel
+                            x:Name="ViewDistanceBoxParent"
                             Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -105,6 +139,7 @@
                             Text="10" />
 
                         <StackPanel
+                            x:Name="SimulationDistanceBoxParent"
                             Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -122,39 +157,8 @@
                             Text="10" />
 
                         <StackPanel
+                            x:Name="PauseWhenEmptySecondsBoxParent"
                             Grid.Row="5"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_MOTD}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                Text="{loc:Loc ServerProperties_MOTD_Desc}" />
-                        </StackPanel>
-                        <ui:TextBox
-                            x:Name="MotdBox"
-                            Grid.Row="5"
-                            Grid.Column="1"
-                            Margin="12,4,0,4" />
-
-                        <StackPanel
-                            Grid.Row="6"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_EnableStatus}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                Text="{loc:Loc ServerProperties_EnableStatus_Desc}" />
-                        </StackPanel>
-                        <CheckBox
-                            x:Name="EnableStatusBox"
-                            Grid.Row="6"
-                            Grid.Column="1"
-                            HorizontalAlignment="Right" />
-
-                        <StackPanel
-                            Grid.Row="7"
                             Grid.Column="0"
                             VerticalAlignment="Center">
                             <ui:TextBlock Text="{loc:Loc ServerProperties_PauseWhenEmptySeconds}" />
@@ -165,7 +169,7 @@
                         </StackPanel>
                         <ui:TextBox
                             x:Name="PauseWhenEmptySecondsBox"
-                            Grid.Row="7"
+                            Grid.Row="5"
                             Grid.Column="1"
                             Margin="12,4,0,4"
                             Text="60" />
@@ -174,6 +178,7 @@
 
                 <!--  Режим игры  -->
                 <ui:CardExpander
+                    x:Name="GamemodeExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -192,6 +197,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
+                            x:Name="GamemodeBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -214,6 +220,7 @@
                         </ComboBox>
 
                         <StackPanel
+                            x:Name="ForceGamemodeBoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -230,6 +237,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="DifficultyBoxParent"
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -252,6 +260,7 @@
                         </ComboBox>
 
                         <StackPanel
+                            x:Name="HardcoreBoxParent"
                             Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -268,6 +277,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="PvpBoxParent"
                             Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -284,6 +294,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="AllowFlightBoxParent"
                             Grid.Row="5"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -300,6 +311,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="CommandBlocksBoxParent"
                             Grid.Row="6"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -319,6 +331,7 @@
 
                 <!--  Мир  -->
                 <ui:CardExpander
+                    x:Name="WorldExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -337,6 +350,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
+                            x:Name="LevelNameBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -353,6 +367,7 @@
                             Margin="12,4,0,4" />
 
                         <StackPanel
+                            x:Name="LevelSeedBoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -369,6 +384,7 @@
                             Margin="12,4,0,4" />
 
                         <StackPanel
+                            x:Name="LevelTypeBoxParent"
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -392,6 +408,7 @@
                         </ComboBox>
 
                         <StackPanel
+                            x:Name="GeneratorSettingsBoxParent"
                             Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -409,6 +426,7 @@
                             Text="{}" />
 
                         <StackPanel
+                            x:Name="MaxWorldSizeBoxParent"
                             Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -426,6 +444,7 @@
                             Text="29999984" />
 
                         <StackPanel
+                            x:Name="GenerateStructuresBoxParent"
                             Grid.Row="5"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -442,6 +461,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="AllowNetherBoxParent"
                             Grid.Row="6"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -458,6 +478,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="SpawnRadiusBoxParent"
                             Grid.Row="7"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -479,6 +500,7 @@
                 <!--  Безопасность и ограничения  -->
                 <!--  Сеть и безопасность  -->
                 <ui:CardExpander
+                    x:Name="NetworkExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -497,6 +519,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
+                            x:Name="OnlineModeBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -513,6 +536,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="EnforceSecureProfileBoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -529,6 +553,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="PreventProxyConnectionsBoxParent"
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -545,6 +570,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="RateLimitBoxParent"
                             Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -562,6 +588,7 @@
                             Text="0" />
 
                         <StackPanel
+                            x:Name="NetworkCompressionBoxParent"
                             Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -579,6 +606,7 @@
                             Text="256" />
 
                         <StackPanel
+                            x:Name="MaxTickTimeBoxParent"
                             Grid.Row="5"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -596,6 +624,7 @@
                             Text="60000" />
 
                         <StackPanel
+                            x:Name="PlayerIdleTimeoutBoxParent"
                             Grid.Row="6"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -613,6 +642,7 @@
                             Text="0" />
 
                         <StackPanel
+                            x:Name="AcceptsTransfersBoxParent"
                             Grid.Row="7"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -629,6 +659,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="StatusHeartbeatIntervalBoxParent"
                             Grid.Row="8"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -649,6 +680,7 @@
 
                 <!--  Whitelist  -->
                 <ui:CardExpander
+                    x:Name="WhitelistExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -667,6 +699,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto,Auto">
                         <StackPanel
+                            x:Name="WhiteListBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -683,6 +716,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="EnforceWhitelistBoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -699,6 +733,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="HideOnlinePlayersBoxParent"
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -718,6 +753,7 @@
 
                 <!--  RCON  -->
                 <ui:CardExpander
+                    x:Name="RconExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -736,6 +772,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto,Auto">
                         <StackPanel
+                            x:Name="EnableRconBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -752,6 +789,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="RconPasswordBoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -768,6 +806,7 @@
                             Margin="12,4,0,4" />
 
                         <StackPanel
+                            x:Name="RconPortBoxParent"
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -788,6 +827,7 @@
 
                 <!--  Query  -->
                 <ui:CardExpander
+                    x:Name="QueryExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -806,6 +846,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto">
                         <StackPanel
+                            x:Name="EnableQueryBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -822,6 +863,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="QueryPortBoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -842,6 +884,7 @@
 
                 <!--  Permissions  -->
                 <ui:CardExpander
+                    x:Name="PermissionsExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -860,6 +903,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
+                            x:Name="SpawnProtectionBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -876,6 +920,7 @@
                             Margin="12,4,0,4"
                             Text="16" />
                         <StackPanel
+                            x:Name="OpPermissionLevelBoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -892,6 +937,7 @@
                             Margin="12,4,0,4"
                             Text="4" />
                         <StackPanel
+                            x:Name="FunctionPermissionLevelBoxParent"
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -908,6 +954,7 @@
                             Margin="12,4,0,4"
                             Text="2" />
                         <StackPanel
+                            x:Name="InitialEnabledPacksBoxParent"
                             Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -924,6 +971,7 @@
                             Margin="12,4,0,4"
                             Text="vanilla" />
                         <StackPanel
+                            x:Name="InitialDisabledPacksBoxParent"
                             Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -943,6 +991,7 @@
 
                 <!--  Management Server  -->
                 <ui:CardExpander
+                    x:Name="ManagementServerExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -961,6 +1010,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
+                            x:Name="ManagementServerEnabledBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -977,6 +1027,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="ManagementServerHostBoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -994,6 +1045,7 @@
                             Text="localhost" />
 
                         <StackPanel
+                            x:Name="ManagementServerPortBoxParent"
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1011,6 +1063,7 @@
                             Text="0" />
 
                         <StackPanel
+                            x:Name="ManagementServerSecretBoxParent"
                             Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1027,6 +1080,7 @@
                             Margin="12,4,0,4" />
 
                         <StackPanel
+                            x:Name="ManagementServerTlsEnabledBoxParent"
                             Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1043,6 +1097,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="ManagementServerTlsKeystoreBoxParent"
                             Grid.Row="5"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1059,6 +1114,7 @@
                             Margin="12,4,0,4" />
 
                         <StackPanel
+                            x:Name="ManagementServerAllowedOriginsBoxParent"
                             Grid.Row="6"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1075,6 +1131,7 @@
                             Margin="12,4,0,4" />
 
                         <StackPanel
+                            x:Name="ManagementServerTlsKeystorePasswordBoxParent"
                             Grid.Row="7"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1094,6 +1151,7 @@
 
                 <!--  Resource Pack  -->
                 <ui:CardExpander
+                    x:Name="ResourcePackExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -1112,6 +1170,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
+                            x:Name="ResourcePackBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1128,6 +1187,7 @@
                             Margin="12,4,0,4" />
 
                         <StackPanel
+                            x:Name="ResourcePackSha1BoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1144,6 +1204,7 @@
                             Margin="12,4,0,4" />
 
                         <StackPanel
+                            x:Name="ResourcePackIdBoxParent"
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1160,6 +1221,7 @@
                             Margin="12,4,0,4" />
 
                         <StackPanel
+                            x:Name="ResourcePackPromptBoxParent"
                             Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1176,6 +1238,7 @@
                             Margin="12,4,0,4" />
 
                         <StackPanel
+                            x:Name="RequireResourcePackBoxParent"
                             Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1195,6 +1258,7 @@
 
                 <!--  Performance  -->
                 <ui:CardExpander
+                    x:Name="PerformanceExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -1213,6 +1277,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
+                            x:Name="MaxChainedNeighborUpdatesBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1230,6 +1295,7 @@
                             Text="1000000" />
 
                         <StackPanel
+                            x:Name="EntityBroadcastRangePercentageBoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1247,6 +1313,7 @@
                             Text="100" />
 
                         <StackPanel
+                            x:Name="SyncChunkWritesBoxParent"
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1263,6 +1330,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="UseNativeTransportBoxParent"
                             Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1279,6 +1347,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="RegionFileCompressionBoxParent"
                             Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1302,6 +1371,7 @@
 
                 <!--  Logging & Monitoring  -->
                 <ui:CardExpander
+                    x:Name="LoggingExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -1320,6 +1390,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
+                            x:Name="LogIpsBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1336,6 +1407,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="BroadcastConsoleToOpsBoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1352,6 +1424,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="BroadcastRconToOpsBoxParent"
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1368,6 +1441,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="EnableJmxMonitoringBoxParent"
                             Grid.Row="3"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1384,6 +1458,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="EnableCodeOfConductBoxParent"
                             Grid.Row="4"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1400,6 +1475,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="BugReportLinkBoxParent"
                             Grid.Row="5"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1416,6 +1492,7 @@
                             Margin="12,4,0,4" />
 
                         <StackPanel
+                            x:Name="TextFilteringConfigBoxParent"
                             Grid.Row="6"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1432,6 +1509,7 @@
                             Margin="12,4,0,4" />
 
                         <StackPanel
+                            x:Name="TextFilteringVersionBoxParent"
                             Grid.Row="7"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1452,6 +1530,7 @@
 
                 <!--  Legacy Settings  -->
                 <ui:CardExpander
+                    x:Name="LegacyExpander"
                     Margin="0,0,0,8"
                     Padding="12"
                     ContentPadding="8"
@@ -1470,6 +1549,7 @@
                         ColumnDefinitions="Auto,*"
                         RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
+                            x:Name="SpawnNpcsBoxParent"
                             Grid.Row="0"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1486,6 +1566,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="SpawnAnimalsBoxParent"
                             Grid.Row="1"
                             Grid.Column="0"
                             VerticalAlignment="Center">
@@ -1502,6 +1583,7 @@
                             HorizontalAlignment="Right" />
 
                         <StackPanel
+                            x:Name="SpawnMonstersBoxParent"
                             Grid.Row="2"
                             Grid.Column="0"
                             VerticalAlignment="Center">

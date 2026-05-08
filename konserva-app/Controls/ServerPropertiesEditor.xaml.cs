@@ -2,8 +2,10 @@
 using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Utilities;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace Konserva.Controls;
 
@@ -28,6 +30,19 @@ public partial class ServerPropertiesEditor : UserControl
     public void Load(string path)
     {
         _propertiesPath = path;
+
+        // Проверяем существование файла
+        if (!File.Exists(path))
+        {
+            NoFileMessage.Visibility = Visibility.Visible;
+            PropertiesScrollViewer.Visibility = Visibility.Collapsed;
+            _properties = null;
+            return;
+        }
+
+        // Файл существует - показываем редактор
+        NoFileMessage.Visibility = Visibility.Collapsed;
+        PropertiesScrollViewer.Visibility = Visibility.Visible;
         _properties = ServerProperties.Load(path);
         PopulateFields();
         ShowStatus(LocalizationManager.Get("Props_Loaded"), false);
@@ -48,8 +63,9 @@ public partial class ServerPropertiesEditor : UserControl
         ViewDistanceBox.Text = _properties.ViewDistance.ToString();
         SimulationDistanceBox.Text = _properties.SimulationDistance.ToString();
         PauseWhenEmptySecondsBox.Text = _properties.PauseWhenEmptySeconds.ToString();
-        MotdBox.Text = _properties.Motd;
-        EnableStatusBox.IsChecked = _properties.EnableStatus;
+        // MotdBox и EnableStatusBox отсутствуют в XAML
+        // MotdBox.Text = _properties.Motd;
+        // EnableStatusBox.IsChecked = _properties.EnableStatus;
 
         // Gamemode
         SelectComboBoxItem(GamemodeBox, _properties.Gamemode);
@@ -140,6 +156,232 @@ public partial class ServerPropertiesEditor : UserControl
         SpawnNpcsBox.IsChecked = _properties.SpawnNpcs;
         SpawnAnimalsBox.IsChecked = _properties.SpawnAnimals;
         SpawnMonstersBox.IsChecked = _properties.SpawnMonsters;
+
+        // Обновляем видимость строк на основе найденных в файле ключей
+        UpdateRowVisibility();
+    }
+
+    /// <summary>
+    /// Обновляет видимость строк на основе ключей, найденных в файле
+    /// </summary>
+    private void UpdateRowVisibility()
+    {
+        if (_properties == null) return;
+        var keys = _properties.FoundKeys;
+
+        // Helper для установки видимости обеих частей строки (label + control)
+        static void SetRowVisibility(bool exists, FrameworkElement labelParent, FrameworkElement? control)
+        {
+            var visibility = exists ? Visibility.Visible : Visibility.Collapsed;
+            labelParent.Visibility = visibility;
+            if (control != null)
+                control.Visibility = visibility;
+        }
+
+        static bool ContainsKey(HashSet<string> set, params string[] names) =>
+            names.Any(n => set.Contains(n));
+
+        // Общие свойства
+        SetRowVisibility(ContainsKey(keys, "server-port"), ServerPortBoxParent, ServerPortBox);
+        SetRowVisibility(ContainsKey(keys, "server-ip"), ServerIpBoxParent, ServerIpBox);
+        SetRowVisibility(ContainsKey(keys, "max-players"), MaxPlayersBoxParent, MaxPlayersBox);
+        SetRowVisibility(ContainsKey(keys, "view-distance"), ViewDistanceBoxParent, ViewDistanceBox);
+        SetRowVisibility(ContainsKey(keys, "simulation-distance"), SimulationDistanceBoxParent, SimulationDistanceBox);
+        SetRowVisibility(ContainsKey(keys, "pause-with-zero-players-delay-seconds"), PauseWhenEmptySecondsBoxParent, PauseWhenEmptySecondsBox);
+        // MotdBoxParent и EnableStatusBoxParent временно отключены - поля отсутствуют в XAML
+
+        // Режим игры
+        SetRowVisibility(ContainsKey(keys, "gamemode"), GamemodeBoxParent, GamemodeBox);
+        SetRowVisibility(ContainsKey(keys, "force-gamemode"), ForceGamemodeBoxParent, ForceGamemodeBox);
+        SetRowVisibility(ContainsKey(keys, "difficulty"), DifficultyBoxParent, DifficultyBox);
+        SetRowVisibility(ContainsKey(keys, "hardcore"), HardcoreBoxParent, HardcoreBox);
+        SetRowVisibility(ContainsKey(keys, "pvp"), PvpBoxParent, PvpBox);
+        SetRowVisibility(ContainsKey(keys, "allow-flight"), AllowFlightBoxParent, AllowFlightBox);
+        SetRowVisibility(ContainsKey(keys, "command-block-enabled"), CommandBlocksBoxParent, CommandBlocksBox);
+
+        // Мир
+        SetRowVisibility(ContainsKey(keys, "level-name"), LevelNameBoxParent, LevelNameBox);
+        SetRowVisibility(ContainsKey(keys, "level-seed"), LevelSeedBoxParent, LevelSeedBox);
+        SetRowVisibility(ContainsKey(keys, "level-type"), LevelTypeBoxParent, LevelTypeBox);
+        SetRowVisibility(ContainsKey(keys, "generator-settings"), GeneratorSettingsBoxParent, GeneratorSettingsBox);
+        SetRowVisibility(ContainsKey(keys, "max-world-size"), MaxWorldSizeBoxParent, MaxWorldSizeBox);
+        SetRowVisibility(ContainsKey(keys, "generate-structures"), GenerateStructuresBoxParent, GenerateStructuresBox);
+        SetRowVisibility(ContainsKey(keys, "allow-nether"), AllowNetherBoxParent, AllowNetherBox);
+        SetRowVisibility(ContainsKey(keys, "spawn-radius"), SpawnRadiusBoxParent, SpawnRadiusBox);
+
+        // Сеть
+        SetRowVisibility(ContainsKey(keys, "online-mode"), OnlineModeBoxParent, OnlineModeBox);
+        SetRowVisibility(ContainsKey(keys, "enforce-secure-profile"), EnforceSecureProfileBoxParent, EnforceSecureProfileBox);
+        SetRowVisibility(ContainsKey(keys, "prevent-proxy-connections"), PreventProxyConnectionsBoxParent, PreventProxyConnectionsBox);
+        SetRowVisibility(ContainsKey(keys, "rate-limit"), RateLimitBoxParent, RateLimitBox);
+        SetRowVisibility(ContainsKey(keys, "network-compression-threshold"), NetworkCompressionBoxParent, NetworkCompressionBox);
+        SetRowVisibility(ContainsKey(keys, "max-tick-time"), MaxTickTimeBoxParent, MaxTickTimeBox);
+        SetRowVisibility(ContainsKey(keys, "player-idle-timeout"), PlayerIdleTimeoutBoxParent, PlayerIdleTimeoutBox);
+        SetRowVisibility(ContainsKey(keys, "accepts-transfers"), AcceptsTransfersBoxParent, AcceptsTransfersBox);
+        SetRowVisibility(ContainsKey(keys, "status-heartbeat-interval"), StatusHeartbeatIntervalBoxParent, StatusHeartbeatIntervalBox);
+
+        // Whitelist
+        SetRowVisibility(ContainsKey(keys, "white-list"), WhiteListBoxParent, WhiteListBox);
+        SetRowVisibility(ContainsKey(keys, "enforce-whitelist"), EnforceWhitelistBoxParent, EnforceWhitelistBox);
+        SetRowVisibility(ContainsKey(keys, "hide-online-players"), HideOnlinePlayersBoxParent, HideOnlinePlayersBox);
+
+        // RCON
+        SetRowVisibility(ContainsKey(keys, "enable-rcon"), EnableRconBoxParent, EnableRconBox);
+        SetRowVisibility(ContainsKey(keys, "rcon.password"), RconPasswordBoxParent, RconPasswordBox);
+        SetRowVisibility(ContainsKey(keys, "rcon.port"), RconPortBoxParent, RconPortBox);
+
+        // Query
+        SetRowVisibility(ContainsKey(keys, "enable-query"), EnableQueryBoxParent, EnableQueryBox);
+        SetRowVisibility(ContainsKey(keys, "query.port"), QueryPortBoxParent, QueryPortBox);
+
+        // Permissions
+        SetRowVisibility(ContainsKey(keys, "spawn-protection"), SpawnProtectionBoxParent, SpawnProtectionBox);
+        SetRowVisibility(ContainsKey(keys, "op-permission-level"), OpPermissionLevelBoxParent, OpPermissionLevelBox);
+        SetRowVisibility(ContainsKey(keys, "function-permission-level"), FunctionPermissionLevelBoxParent, FunctionPermissionLevelBox);
+        SetRowVisibility(ContainsKey(keys, "initial-enabled-packs"), InitialEnabledPacksBoxParent, InitialEnabledPacksBox);
+        SetRowVisibility(ContainsKey(keys, "initial-disabled-packs"), InitialDisabledPacksBoxParent, InitialDisabledPacksBox);
+
+        // Management Server
+        SetRowVisibility(ContainsKey(keys, "enable-minecraft-server"), ManagementServerEnabledBoxParent, ManagementServerEnabledBox);
+        SetRowVisibility(ContainsKey(keys, "minecraft-server-host"), ManagementServerHostBoxParent, ManagementServerHostBox);
+        SetRowVisibility(ContainsKey(keys, "minecraft-server-port"), ManagementServerPortBoxParent, ManagementServerPortBox);
+        SetRowVisibility(ContainsKey(keys, "minecraft-server-api-secret"), ManagementServerSecretBoxParent, ManagementServerSecretBox);
+        SetRowVisibility(ContainsKey(keys, "minecraft-server-api-use-tls"), ManagementServerTlsEnabledBoxParent, ManagementServerTlsEnabledBox);
+        SetRowVisibility(ContainsKey(keys, "minecraft-server-api-tls-certificate-file"), ManagementServerTlsKeystoreBoxParent, ManagementServerTlsKeystoreBox);
+        SetRowVisibility(ContainsKey(keys, "minecraft-server-api-allowed-origins"), ManagementServerAllowedOriginsBoxParent, ManagementServerAllowedOriginsBox);
+        SetRowVisibility(ContainsKey(keys, "minecraft-server-api-tls-certificate-password"), ManagementServerTlsKeystorePasswordBoxParent, ManagementServerTlsKeystorePasswordBox);
+
+        // Resource Pack
+        SetRowVisibility(ContainsKey(keys, "resource-pack"), ResourcePackBoxParent, ResourcePackBox);
+        SetRowVisibility(ContainsKey(keys, "resource-pack-sha1"), ResourcePackSha1BoxParent, ResourcePackSha1Box);
+        SetRowVisibility(ContainsKey(keys, "resource-pack-id"), ResourcePackIdBoxParent, ResourcePackIdBox);
+        SetRowVisibility(ContainsKey(keys, "resource-pack-prompt"), ResourcePackPromptBoxParent, ResourcePackPromptBox);
+        SetRowVisibility(ContainsKey(keys, "require-resource-pack"), RequireResourcePackBoxParent, RequireResourcePackBox);
+
+        // Performance
+        SetRowVisibility(ContainsKey(keys, "max-chained-neighbor-updates"), MaxChainedNeighborUpdatesBoxParent, MaxChainedNeighborUpdatesBox);
+        SetRowVisibility(ContainsKey(keys, "entity-broadcast-range-percentage"), EntityBroadcastRangePercentageBoxParent, EntityBroadcastRangePercentageBox);
+        SetRowVisibility(ContainsKey(keys, "sync-chunk-writes"), SyncChunkWritesBoxParent, SyncChunkWritesBox);
+        SetRowVisibility(ContainsKey(keys, "use-native-transport"), UseNativeTransportBoxParent, UseNativeTransportBox);
+        SetRowVisibility(ContainsKey(keys, "region-file-compression"), RegionFileCompressionBoxParent, RegionFileCompressionBox);
+
+        // Logging
+        SetRowVisibility(ContainsKey(keys, "log-ips"), LogIpsBoxParent, LogIpsBox);
+        SetRowVisibility(ContainsKey(keys, "broadcast-console-to-ops"), BroadcastConsoleToOpsBoxParent, BroadcastConsoleToOpsBox);
+        SetRowVisibility(ContainsKey(keys, "broadcast-rcon-to-ops"), BroadcastRconToOpsBoxParent, BroadcastRconToOpsBox);
+        SetRowVisibility(ContainsKey(keys, "enable-jmx-monitoring"), EnableJmxMonitoringBoxParent, EnableJmxMonitoringBox);
+        SetRowVisibility(ContainsKey(keys, "enable-code-of-conduct"), EnableCodeOfConductBoxParent, EnableCodeOfConductBox);
+        SetRowVisibility(ContainsKey(keys, "bug-report-link"), BugReportLinkBoxParent, BugReportLinkBox);
+        SetRowVisibility(ContainsKey(keys, "text-filtering-config"), TextFilteringConfigBoxParent, TextFilteringConfigBox);
+        SetRowVisibility(ContainsKey(keys, "text-filtering-version"), TextFilteringVersionBoxParent, TextFilteringVersionBox);
+
+        // Spawn Settings (Legacy)
+        SetRowVisibility(ContainsKey(keys, "spawn-npcs"), SpawnNpcsBoxParent, SpawnNpcsBox);
+        SetRowVisibility(ContainsKey(keys, "spawn-animals"), SpawnAnimalsBoxParent, SpawnAnimalsBox);
+        SetRowVisibility(ContainsKey(keys, "spawn-monsters"), SpawnMonstersBoxParent, SpawnMonstersBox);
+
+        // Скрываем пустые экспандеры
+        UpdateExpanderVisibility();
+    }
+
+    /// <summary>
+    /// Скрывает экспандеры, у которых все строки скрыты
+    /// </summary>
+    private void UpdateExpanderVisibility()
+    {
+        static bool IsVisible(FrameworkElement? el) => el?.Visibility == Visibility.Visible;
+
+        // Общие свойства
+        GeneralExpander.Visibility =
+            IsVisible(ServerPortBoxParent) || IsVisible(ServerIpBoxParent) ||
+            IsVisible(MaxPlayersBoxParent) || IsVisible(ViewDistanceBoxParent) ||
+            IsVisible(SimulationDistanceBoxParent) || IsVisible(PauseWhenEmptySecondsBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        // Режим игры
+        GamemodeExpander.Visibility =
+            IsVisible(GamemodeBoxParent) || IsVisible(ForceGamemodeBoxParent) ||
+            IsVisible(DifficultyBoxParent) || IsVisible(HardcoreBoxParent) ||
+            IsVisible(PvpBoxParent) || IsVisible(AllowFlightBoxParent) ||
+            IsVisible(CommandBlocksBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        // Мир
+        WorldExpander.Visibility =
+            IsVisible(LevelNameBoxParent) || IsVisible(LevelSeedBoxParent) ||
+            IsVisible(LevelTypeBoxParent) || IsVisible(GeneratorSettingsBoxParent) ||
+            IsVisible(MaxWorldSizeBoxParent) || IsVisible(GenerateStructuresBoxParent) ||
+            IsVisible(AllowNetherBoxParent) || IsVisible(SpawnRadiusBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        // Сеть
+        NetworkExpander.Visibility =
+            IsVisible(OnlineModeBoxParent) || IsVisible(EnforceSecureProfileBoxParent) ||
+            IsVisible(PreventProxyConnectionsBoxParent) || IsVisible(RateLimitBoxParent) ||
+            IsVisible(NetworkCompressionBoxParent) || IsVisible(MaxTickTimeBoxParent) ||
+            IsVisible(PlayerIdleTimeoutBoxParent) || IsVisible(AcceptsTransfersBoxParent) ||
+            IsVisible(StatusHeartbeatIntervalBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        // Whitelist
+        WhitelistExpander.Visibility =
+            IsVisible(WhiteListBoxParent) || IsVisible(EnforceWhitelistBoxParent) ||
+            IsVisible(HideOnlinePlayersBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        // RCON
+        RconExpander.Visibility =
+            IsVisible(EnableRconBoxParent) || IsVisible(RconPasswordBoxParent) ||
+            IsVisible(RconPortBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        // Query
+        QueryExpander.Visibility =
+            IsVisible(EnableQueryBoxParent) || IsVisible(QueryPortBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        // Permissions
+        PermissionsExpander.Visibility =
+            IsVisible(SpawnProtectionBoxParent) || IsVisible(OpPermissionLevelBoxParent) ||
+            IsVisible(FunctionPermissionLevelBoxParent) || IsVisible(InitialEnabledPacksBoxParent) ||
+            IsVisible(InitialDisabledPacksBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        // Management Server
+        ManagementServerExpander.Visibility =
+            IsVisible(ManagementServerEnabledBoxParent) || IsVisible(ManagementServerHostBoxParent) ||
+            IsVisible(ManagementServerPortBoxParent) || IsVisible(ManagementServerSecretBoxParent) ||
+            IsVisible(ManagementServerTlsEnabledBoxParent) || IsVisible(ManagementServerTlsKeystoreBoxParent) ||
+            IsVisible(ManagementServerAllowedOriginsBoxParent) || IsVisible(ManagementServerTlsKeystorePasswordBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        // Resource Pack
+        ResourcePackExpander.Visibility =
+            IsVisible(ResourcePackBoxParent) || IsVisible(ResourcePackSha1BoxParent) ||
+            IsVisible(ResourcePackIdBoxParent) || IsVisible(ResourcePackPromptBoxParent) ||
+            IsVisible(RequireResourcePackBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        // Performance
+        PerformanceExpander.Visibility =
+            IsVisible(MaxChainedNeighborUpdatesBoxParent) || IsVisible(EntityBroadcastRangePercentageBoxParent) ||
+            IsVisible(SyncChunkWritesBoxParent) || IsVisible(UseNativeTransportBoxParent) ||
+            IsVisible(RegionFileCompressionBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        // Logging
+        LoggingExpander.Visibility =
+            IsVisible(LogIpsBoxParent) || IsVisible(BroadcastConsoleToOpsBoxParent) ||
+            IsVisible(BroadcastRconToOpsBoxParent) || IsVisible(EnableJmxMonitoringBoxParent) ||
+            IsVisible(EnableCodeOfConductBoxParent) || IsVisible(BugReportLinkBoxParent) ||
+            IsVisible(TextFilteringConfigBoxParent) || IsVisible(TextFilteringVersionBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        // Legacy
+        LegacyExpander.Visibility =
+            IsVisible(SpawnNpcsBoxParent) || IsVisible(SpawnAnimalsBoxParent) ||
+            IsVisible(SpawnMonstersBoxParent)
+                ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
@@ -207,8 +449,9 @@ public partial class ServerPropertiesEditor : UserControl
             _properties.ViewDistance = GetIntValue(ViewDistanceBox, 10);
             _properties.SimulationDistance = GetIntValue(SimulationDistanceBox, 10);
             _properties.PauseWhenEmptySeconds = GetIntValue(PauseWhenEmptySecondsBox, 60);
-            _properties.Motd = MotdBox.Text;
-            _properties.EnableStatus = GetBoolValue(EnableStatusBox);
+            // MotdBox и EnableStatusBox отсутствуют в XAML
+            // _properties.Motd = MotdBox.Text;
+            // _properties.EnableStatus = GetBoolValue(EnableStatusBox);
 
             // Gamemode
             _properties.Gamemode = GetComboBoxValue(GamemodeBox, "survival");

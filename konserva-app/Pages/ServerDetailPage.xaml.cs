@@ -257,13 +257,34 @@ public partial class ServerDetailPage : Page, IDisposable
         await this.InvokeAsync(() =>
         {
             var document = LogBox.Document;
+            var run = new System.Windows.Documents.Run(line + "\n");
+
+            // Цветной текст по типу сообщения
+            if (line.Contains("[ERROR]"))
+            {
+                run.Foreground = System.Windows.Media.Brushes.IndianRed;
+                run.FontWeight = System.Windows.FontWeights.Bold;
+            }
+            else if (line.Contains("[WARN]"))
+            {
+                run.Foreground = System.Windows.Media.Brushes.Orange;
+            }
+            else if (line.Contains("[INFO]"))
+            {
+                run.Foreground = System.Windows.Media.Brushes.LightGreen;
+            }
+            else if (line.Contains("[STDERR]") || line.Contains("Exception") || line.Contains("ERROR]:"))
+            {
+                run.Foreground = System.Windows.Media.Brushes.Red;
+            }
+
             if (document.Blocks.LastBlock is System.Windows.Documents.Paragraph lastParagraph)
             {
-                lastParagraph.Inlines.Add(new System.Windows.Documents.Run(line + "\n"));
+                lastParagraph.Inlines.Add(run);
             }
             else
             {
-                document.Blocks.Add(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(line + "\n")));
+                document.Blocks.Add(new System.Windows.Documents.Paragraph(run));
             }
             ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
             UpdatePageWidthForText(line);
@@ -381,11 +402,6 @@ public partial class ServerDetailPage : Page, IDisposable
         }
 
         Logger.Info($"[OnServerStartError] Received error for server {server.Name}: {errorMessage}", "ServerDetailPage");
-
-        // Помечаем, что Snackbar показан
-        if (_server != null)
-            _server.ErrorDialogShown = true;
-
         JavaManagementService.HandleServerStartError(server, errorMessage);
     }
 
