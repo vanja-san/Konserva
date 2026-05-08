@@ -8,6 +8,11 @@ namespace Konserva.Models;
 /// </summary>
 public class ServerProperties
 {
+    /// <summary>
+    /// Ключи свойств, которые были найдены в файле
+    /// </summary>
+    public HashSet<string> FoundKeys { get; } = new();
+
     // ===== Основные настройки =====
     public int ServerPort { get; set; } = 25565;
     public string ServerIp { get; set; } = "";
