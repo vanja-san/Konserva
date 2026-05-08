@@ -349,7 +349,7 @@ public static class RussianStrings
         { "ServerProperties_ManagementServerTlsKeystorePassword", "Пароль keystore TLS" },
         { "ServerProperties_ManagementServerTlsKeystorePassword_Desc", "Пароль для keystore TLS" },
         { "ServerProperties_Deprecated", "Устаревшие настройки" },
-        { "ServerProperties_AllowNether", "Доступ в Нижний мир" },
+        { "ServerProperties_SpawnSettings", "Спавн (устарев.)" },
         { "ServerDetail_Settings_General", "Название сервера" },
         { "ServerDetail_Settings_General_Desc", "Название сервера в приложении" },
         { "ServerDetail_Settings_Port", "Порт" },
