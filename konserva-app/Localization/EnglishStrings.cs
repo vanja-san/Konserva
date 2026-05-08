@@ -352,7 +352,6 @@ public static class EnglishStrings
         { "ServerProperties_ManagementServerTlsKeystorePassword", "TLS Keystore Password" },
         { "ServerProperties_ManagementServerTlsKeystorePassword_Desc", "Password for TLS keystore" },
         { "ServerProperties_Deprecated", "Legacy Settings" },
-        { "ServerProperties_SpawnSettings", "Spawn (Legacy)" },
         { "ServerDetail_Settings_General", "Server name" },
         { "ServerDetail_Settings_General_Desc", "Server name in app" },
         { "ServerDetail_Settings_Port", "Port" },
