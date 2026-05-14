@@ -33,8 +33,7 @@
             VerticalAlignment="Center"
             Appearance="Transparent"
             BorderThickness="0"
-            Click="UpdateButton_Click"
-            ToolTip="{Binding UpdateTooltip, RelativeSource={RelativeSource AncestorType=UserControl}}">
+            Click="UpdateButton_Click">
             <ui:TextBlock
                 x:Name="UpdateButtonText"
                 VerticalAlignment="Center"

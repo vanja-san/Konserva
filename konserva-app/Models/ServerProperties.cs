@@ -144,6 +144,9 @@ public class ServerProperties
             var key = trimmedLine[..eqIndex].Trim();
             var value = trimmedLine[(eqIndex + 1)..].Trim();
 
+            // Запоминаем ключ для последующей фильтрации UI
+            props.FoundKeys.Add(key);
+
             SetProperty(props, key, value);
         }
 
@@ -161,7 +164,7 @@ public class ServerProperties
         sb.AppendLine($"#{DateTime.Now:ddd MMM dd HH:mm:ss zzz yyyy}");
 
         // Sort properties alphabetically like vanilla Minecraft
-        var props = new SortedDictionary<string, string>
+        var allProps = new SortedDictionary<string, string>
         {
             ["accepts-transfers"] = AcceptsTransfers.ToString().ToLower(),
             ["allow-flight"] = AllowFlight.ToString().ToLower(),
@@ -222,6 +225,9 @@ public class ServerProperties
             ["server-ip"] = ServerIp,
             ["server-port"] = ServerPort.ToString(),
             ["simulation-distance"] = SimulationDistance.ToString(),
+            ["spawn-animals"] = SpawnAnimals.ToString().ToLower(),
+            ["spawn-monsters"] = SpawnMonsters.ToString().ToLower(),
+            ["spawn-npcs"] = SpawnNpcs.ToString().ToLower(),
             ["spawn-protection"] = SpawnProtection.ToString(),
             ["status-heartbeat-interval"] = StatusHeartbeatInterval.ToString(),
             ["sync-chunk-writes"] = SyncChunkWrites.ToString().ToLower(),
@@ -231,6 +237,11 @@ public class ServerProperties
             ["view-distance"] = ViewDistance.ToString(),
             ["white-list"] = WhiteList.ToString().ToLower(),
         };
+
+        // Сохраняем только те свойства, которые были в оригинальном файле
+        var props = FoundKeys.Count > 0
+            ? allProps.Where(kv => FoundKeys.Contains(kv.Key))
+            : allProps;
 
         foreach (var (key, value) in props)
         {

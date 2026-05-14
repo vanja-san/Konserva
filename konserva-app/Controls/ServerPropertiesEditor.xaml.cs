@@ -198,6 +198,9 @@ public partial class ServerPropertiesEditor : UserControl
         SetRowVisibility(ContainsKey(keys, "pvp"), PvpBoxParent, PvpBox);
         SetRowVisibility(ContainsKey(keys, "allow-flight"), AllowFlightBoxParent, AllowFlightBox);
         SetRowVisibility(ContainsKey(keys, "command-block-enabled"), CommandBlocksBoxParent, CommandBlocksBox);
+        SetRowVisibility(ContainsKey(keys, "spawn-npcs"), SpawnNpcsBoxParent, SpawnNpcsBox);
+        SetRowVisibility(ContainsKey(keys, "spawn-animals"), SpawnAnimalsBoxParent, SpawnAnimalsBox);
+        SetRowVisibility(ContainsKey(keys, "spawn-monsters"), SpawnMonstersBoxParent, SpawnMonstersBox);
 
         // Мир
         SetRowVisibility(ContainsKey(keys, "level-name"), LevelNameBoxParent, LevelNameBox);
@@ -275,11 +278,6 @@ public partial class ServerPropertiesEditor : UserControl
         SetRowVisibility(ContainsKey(keys, "text-filtering-config"), TextFilteringConfigBoxParent, TextFilteringConfigBox);
         SetRowVisibility(ContainsKey(keys, "text-filtering-version"), TextFilteringVersionBoxParent, TextFilteringVersionBox);
 
-        // Spawn Settings (Legacy)
-        SetRowVisibility(ContainsKey(keys, "spawn-npcs"), SpawnNpcsBoxParent, SpawnNpcsBox);
-        SetRowVisibility(ContainsKey(keys, "spawn-animals"), SpawnAnimalsBoxParent, SpawnAnimalsBox);
-        SetRowVisibility(ContainsKey(keys, "spawn-monsters"), SpawnMonstersBoxParent, SpawnMonstersBox);
-
         // Скрываем пустые экспандеры
         UpdateExpanderVisibility();
     }
@@ -303,7 +301,8 @@ public partial class ServerPropertiesEditor : UserControl
             IsVisible(GamemodeBoxParent) || IsVisible(ForceGamemodeBoxParent) ||
             IsVisible(DifficultyBoxParent) || IsVisible(HardcoreBoxParent) ||
             IsVisible(PvpBoxParent) || IsVisible(AllowFlightBoxParent) ||
-            IsVisible(CommandBlocksBoxParent)
+            IsVisible(CommandBlocksBoxParent) || IsVisible(SpawnNpcsBoxParent) ||
+            IsVisible(SpawnAnimalsBoxParent) || IsVisible(SpawnMonstersBoxParent)
                 ? Visibility.Visible : Visibility.Collapsed;
 
         // Мир
@@ -375,12 +374,6 @@ public partial class ServerPropertiesEditor : UserControl
             IsVisible(BroadcastRconToOpsBoxParent) || IsVisible(EnableJmxMonitoringBoxParent) ||
             IsVisible(EnableCodeOfConductBoxParent) || IsVisible(BugReportLinkBoxParent) ||
             IsVisible(TextFilteringConfigBoxParent) || IsVisible(TextFilteringVersionBoxParent)
-                ? Visibility.Visible : Visibility.Collapsed;
-
-        // Legacy
-        LegacyExpander.Visibility =
-            IsVisible(SpawnNpcsBoxParent) || IsVisible(SpawnAnimalsBoxParent) ||
-            IsVisible(SpawnMonstersBoxParent)
                 ? Visibility.Visible : Visibility.Collapsed;
     }
 

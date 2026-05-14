@@ -195,7 +195,7 @@
                     <Grid
                         Margin="8,0"
                         ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                        RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                         <StackPanel
                             x:Name="GamemodeBoxParent"
                             Grid.Row="0"
@@ -324,6 +324,58 @@
                         <CheckBox
                             x:Name="CommandBlocksBox"
                             Grid.Row="6"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <!--  Спавн существ (перемещено из устаревших)  -->
+                        <StackPanel
+                            x:Name="SpawnNpcsBoxParent"
+                            Grid.Row="7"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnNPCs}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc ServerProperties_SpawnNPCs_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="SpawnNpcsBox"
+                            Grid.Row="7"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            x:Name="SpawnAnimalsBoxParent"
+                            Grid.Row="8"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnAnimals}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc ServerProperties_SpawnAnimals_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="SpawnAnimalsBox"
+                            Grid.Row="8"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right" />
+
+                        <StackPanel
+                            x:Name="SpawnMonstersBoxParent"
+                            Grid.Row="9"
+                            Grid.Column="0"
+                            VerticalAlignment="Center">
+                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnMonsters}" />
+                            <ui:TextBlock
+                                FontSize="12"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc ServerProperties_SpawnMonsters_Desc}" />
+                        </StackPanel>
+                        <CheckBox
+                            x:Name="SpawnMonstersBox"
+                            Grid.Row="9"
                             Grid.Column="1"
                             HorizontalAlignment="Right" />
                     </Grid>
@@ -1525,90 +1577,6 @@
                             Grid.Column="1"
                             Margin="12,4,0,4"
                             Text="0" />
-                    </Grid>
-                </ui:CardExpander>
-
-                <!--  Legacy Settings  -->
-                <ui:CardExpander
-                    x:Name="LegacyExpander"
-                    Margin="0,0,0,8"
-                    Padding="12"
-                    ContentPadding="8"
-                    IsExpanded="False">
-                    <ui:CardExpander.Icon>
-                        <ui:SymbolIcon
-                            Filled="True"
-                            FontSize="20"
-                            Symbol="Warning20" />
-                    </ui:CardExpander.Icon>
-                    <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc ServerProperties_Deprecated}" />
-                    </ui:CardExpander.Header>
-                    <Grid
-                        Margin="8,0"
-                        ColumnDefinitions="Auto,*"
-                        RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                        <StackPanel
-                            x:Name="SpawnNpcsBoxParent"
-                            Grid.Row="0"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnNPCs}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                Text="{loc:Loc ServerProperties_SpawnNPCs_Desc}" />
-                        </StackPanel>
-                        <CheckBox
-                            x:Name="SpawnNpcsBox"
-                            Grid.Row="0"
-                            Grid.Column="1"
-                            HorizontalAlignment="Right" />
-
-                        <StackPanel
-                            x:Name="SpawnAnimalsBoxParent"
-                            Grid.Row="1"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnAnimals}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                Text="{loc:Loc ServerProperties_SpawnAnimals_Desc}" />
-                        </StackPanel>
-                        <CheckBox
-                            x:Name="SpawnAnimalsBox"
-                            Grid.Row="1"
-                            Grid.Column="1"
-                            HorizontalAlignment="Right" />
-
-                        <StackPanel
-                            x:Name="SpawnMonstersBoxParent"
-                            Grid.Row="2"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_SpawnMonsters}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                Text="{loc:Loc ServerProperties_SpawnMonsters_Desc}" />
-                        </StackPanel>
-                        <CheckBox
-                            x:Name="SpawnMonstersBox"
-                            Grid.Row="2"
-                            Grid.Column="1"
-                            HorizontalAlignment="Right" />
-
-                        <StackPanel
-                            Grid.Row="3"
-                            Grid.Column="0"
-                            VerticalAlignment="Center">
-                            <ui:TextBlock Text="{loc:Loc ServerProperties_AllowNether}" />
-                            <ui:TextBlock
-                                FontSize="12"
-                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                Text="{loc:Loc ServerProperties_AllowNether_Desc}" />
-                        </StackPanel>
                     </Grid>
                 </ui:CardExpander>
             </StackPanel>
