@@ -343,10 +343,10 @@ public static partial class McServerInstaller
 
             Logger.Info($"Fabric server downloaded successfully");
 
-            // 4. Создаем eula.txt и server.properties
+            // 4. Создаем eula.txt (server.properties создастся автоматически при запуске)
             progress?.Report("Создание конфигурации...");
             CreateEula(destinationPath);
-            CreateServerProperties(destinationPath, Constants.DefaultServerPort);
+            // server.properties создаётся автоматически при первом запуске сервера
 
             Logger.Info("Fabric server installation completed");
             progress?.Report("Завершение...");
@@ -1658,8 +1658,11 @@ public static partial class McServerInstaller
         // RAM настройки
         args.Append($"-Xms{settings.RamMin}M -Xmx{settings.RamMax}M ");
 
+        // Принудительно UTF-8 для всего вывода (чтобы русский текст не кракозябрился)
+        args.Append("-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 ");
+
         // G1GC оптимизации (для большинства серверов)
-        args.Append("-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 ");
+        args.Append("-XX:+UseG1GC -XX:MaxGCPauseMillis=200 ");
         args.Append("-XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch ");
         args.Append("-XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 ");
         args.Append("-XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 ");
@@ -1751,11 +1754,11 @@ public static partial class McServerInstaller
                 result.BuildNumber = installResult.BuildNumber;
             }
 
-            // Создание конфигурационных файлов
+            // Создание конфигурационных файлов (server.properties создастся при запуске)
             progress?.Report("Настройка сервера...");
             result.Status = InstallStatus.Configuring;
             CreateEula(serverPath);
-            CreateServerProperties(serverPath, port);
+            // server.properties создаётся автоматически при первом запуске сервера
 
             progress?.Report("Завершение...");
             result.Success = true;

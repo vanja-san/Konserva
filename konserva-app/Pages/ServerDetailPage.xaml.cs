@@ -234,10 +234,19 @@ public partial class ServerDetailPage : Page, IDisposable
             var document = LogBox.Document;
             document.Blocks.Clear();
             _maxContentWidth = 0;
+
             if (logs.Count > 0)
             {
-                var text = string.Join("\n", logs);
-                document.Blocks.Add(new System.Windows.Documents.Paragraph(new System.Windows.Documents.Run(text)));
+                var paragraph = new System.Windows.Documents.Paragraph();
+
+                foreach (var logLine in logs)
+                {
+                    var run = new System.Windows.Documents.Run(logLine + "\n");
+                    ApplyLogColor(run, logLine);
+                    paragraph.Inlines.Add(run);
+                }
+
+                document.Blocks.Add(paragraph);
                 ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
                 var longestLine = logs.OrderByDescending(l => l.Length).FirstOrDefault();
                 if (!string.IsNullOrEmpty(longestLine))
@@ -252,44 +261,51 @@ public partial class ServerDetailPage : Page, IDisposable
         });
     }
 
+    private static void ApplyLogColor(System.Windows.Documents.Run run, string line)
+    {
+        if (line.Contains("[ERROR]"))
+        {
+            run.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 100, 100));
+            run.FontWeight = System.Windows.FontWeights.Bold;
+        }
+        else if (line.Contains("[SUCCESS]"))
+        {
+            run.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(80, 200, 80));
+            run.FontWeight = System.Windows.FontWeights.Bold;
+        }
+    }
+
     private async void UpdateLog(string line)
     {
-        await this.InvokeAsync(() =>
+        try
         {
-            var document = LogBox.Document;
-            var run = new System.Windows.Documents.Run(line + "\n");
+            await this.InvokeAsync(() =>
+            {
+                var document = LogBox.Document;
+                var run = new System.Windows.Documents.Run(line + "\n");
+                ApplyLogColor(run, line);
 
-            // Цветной текст по типу сообщения
-            if (line.Contains("[ERROR]"))
-            {
-                run.Foreground = System.Windows.Media.Brushes.IndianRed;
-                run.FontWeight = System.Windows.FontWeights.Bold;
-            }
-            else if (line.Contains("[WARN]"))
-            {
-                run.Foreground = System.Windows.Media.Brushes.Orange;
-            }
-            else if (line.Contains("[INFO]"))
-            {
-                run.Foreground = System.Windows.Media.Brushes.LightGreen;
-            }
-            else if (line.Contains("[STDERR]") || line.Contains("Exception") || line.Contains("ERROR]:"))
-            {
-                run.Foreground = System.Windows.Media.Brushes.Red;
-            }
-
-            if (document.Blocks.LastBlock is System.Windows.Documents.Paragraph lastParagraph)
-            {
-                lastParagraph.Inlines.Add(run);
-            }
-            else
-            {
-                document.Blocks.Add(new System.Windows.Documents.Paragraph(run));
-            }
-            ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
-            UpdatePageWidthForText(line);
-            LogBox.ScrollToEnd();
-        });
+                if (document.Blocks.LastBlock is System.Windows.Documents.Paragraph lastParagraph)
+                {
+                    lastParagraph.Inlines.Add(run);
+                }
+                else
+                {
+                    document.Blocks.Add(new System.Windows.Documents.Paragraph(run));
+                }
+                ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
+                UpdatePageWidthForText(line);
+                LogBox.ScrollToEnd();
+            });
+        }
+        catch (TaskCanceledException)
+        {
+            // Игнорируем — приложение закрывается, диспетчер уже не работает
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"[UpdateLog] Error: {ex.Message}", "ServerDetailPage");
+        }
     }
 
     private async void UpdateStatus(ServerStatus status)

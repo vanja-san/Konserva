@@ -1,6 +1,7 @@
 ﻿using Konserva.Models;
 using Konserva.Utilities;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 
 namespace Konserva.Services;
@@ -139,6 +140,9 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
     private void StartServerInternal(Server server)
     {
         _processes.TryRemove(server.Id, out _);
+
+        // Убиваем зависшие Java процессы из папки этого сервера (могут держать session.lock)
+        KillZombieProcesses(server.Path);
 
         var process = new McServerProcess(server, configService);
         _processes[server.Id] = process;
@@ -380,4 +384,43 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
                     return 0;
                 }
             });
+
+    /// <summary>
+    /// Убивает zombie Java процессы, которые могут держать блокировки файлов сервера
+    /// </summary>
+    internal static void KillZombieProcesses(string serverPath)
+    {
+        try
+        {
+            var normalizedPath = serverPath.Replace('/', '\\').TrimEnd('\\');
+
+            foreach (var proc in Process.GetProcessesByName("java").Concat(Process.GetProcessesByName("javaw")))
+            {
+                try
+                {
+                    if (proc.Id == Environment.ProcessId) continue;
+
+                    // MainModule работает корректно с кириллицей в путях (в отличие от wmic)
+                    if (proc.MainModule?.FileName?.Contains(normalizedPath, StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        Logger.Info($"[KillZombieProcesses] Killing zombie PID={proc.Id} for {serverPath}", "McServerManager");
+                        proc.Kill(entireProcessTree: true);
+                        proc.WaitForExit(5000);
+                    }
+                }
+                catch
+                {
+                    // Нет доступа к процессу — пропускаем
+                }
+                finally
+                {
+                    proc.Dispose();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"[KillZombieProcesses] Failed: {ex.Message}", "McServerManager");
+        }
+    }
 }

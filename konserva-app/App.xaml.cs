@@ -234,7 +234,15 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        _ = CleanupAsync();
+        // Дожидаемся остановки серверов (иначе Java процессы останутся в фоне и заблокируют порт)
+        try
+        {
+            Task.Run(async () => await CleanupAsync()).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Cleanup error during shutdown: {ex.Message}", ex, "App");
+        }
 
         base.OnExit(e);
     }
@@ -257,7 +265,7 @@ public partial class App : Application
                     Logger.Info($"Stopping {runningServers.Count} server(s) on shutdown", "App");
 
                     // Пытаемся остановить все серверы с таймаутом
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
                     var stopTasks = runningServers.Select(s =>
                         serverManager.StopServerAsync(s.Id, cts.Token));
 
@@ -267,7 +275,13 @@ public partial class App : Application
                     }
                     catch (OperationCanceledException)
                     {
-                        Logger.Warning("Timeout stopping servers, continuing shutdown", "App");
+                        Logger.Warning("Timeout stopping servers, force killing remaining", "App");
+                    }
+
+                    // Принудительно убиваем оставшиеся Java процессы из папок серверов
+                    foreach (var server in runningServers)
+                    {
+                        McServerManager.KillZombieProcesses(server.Path);
                     }
                 }
 

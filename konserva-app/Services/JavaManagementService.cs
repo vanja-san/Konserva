@@ -47,23 +47,14 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         var javaInstallations = new List<JavaInstallation>();
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // 1. Поиск в PATH (java)
-        var javaInPath = FindJavaInPath();
-        if (javaInPath != null && seenPaths.Add(javaInPath.Path))
-            javaInstallations.Add(javaInPath);
-
-        // 2. Поиск в стандартных расположениях Windows
-        foreach (var path in GetStandardJavaPaths())
+        // 1. Все java.exe из PATH (покрывает Scoop, Chocolatey, ручные установки)
+        foreach (var java in FindAllJavaInPath())
         {
-            if ((File.Exists(path) || File.Exists(path + ".exe")) && seenPaths.Add(path))
-            {
-                var java = GetJavaInfo(path);
-                if (java != null)
-                    javaInstallations.Add(java);
-            }
+            if (seenPaths.Add(java.Path))
+                javaInstallations.Add(java);
         }
 
-        // 3. Поиск через реестр Windows
+        // 2. Из реестра Windows
         foreach (var path in FindJavaInRegistry())
         {
             if (seenPaths.Add(path))
@@ -74,7 +65,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
             }
         }
 
-        // 4. Поиск в Program Files
+        // 3. Рекурсивный поиск в Program Files, Program Files (x86), LocalAppData
         foreach (var path in FindJavaInProgramFiles())
         {
             if (seenPaths.Add(path))
@@ -90,10 +81,13 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Поиск Java в PATH
+    /// Поиск всех Java в PATH (where выводит все совпадения)
     /// </summary>
-    private static JavaInstallation? FindJavaInPath()
+    private static List<JavaInstallation> FindAllJavaInPath()
     {
+        var results = new List<JavaInstallation>();
+        var service = new JavaManagementService(App.ConfigService);
+
         try
         {
             var startInfo = new ProcessStartInfo
@@ -107,16 +101,20 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
 
             using var process = Process.Start(startInfo);
             if (process == null)
-                return null;
+                return results;
 
             var output = process.StandardOutput.ReadToEnd();
             process.WaitForExit(Constants.JavaPathCheckTimeoutMs);
 
-            var paths = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            if (paths.Length > 0)
+            var paths = output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                              .Select(p => p.Trim())
+                              .Where(p => !string.IsNullOrEmpty(p));
+
+            foreach (var javaPath in paths)
             {
-                var javaPath = paths[0].Trim();
-                return new JavaManagementService(App.ConfigService).GetJavaInfo(javaPath);
+                var java = service.GetJavaInfo(javaPath);
+                if (java != null)
+                    results.Add(java);
             }
         }
         catch (Exception ex)
@@ -124,39 +122,12 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
             Logger.Warning($"Failed to find Java in PATH: {ex.Message}", "JavaManagementService");
         }
 
-        return null;
+        return results;
     }
 
     /// <summary>
     /// Стандартные пути к Java
     /// </summary>
-    private static List<string> GetStandardJavaPaths()
-    {
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-        return
-        [
-            Path.Combine(programFiles, "Java", "jdk-21", "bin", "java.exe"),
-            Path.Combine(programFiles, "Java", "jdk-17", "bin", "java.exe"),
-            Path.Combine(programFiles, "Java", "jdk-11", "bin", "java.exe"),
-            Path.Combine(programFiles, "Java", "jdk-8", "bin", "java.exe"),
-            Path.Combine(programFiles, "Java", "jre-21", "bin", "java.exe"),
-            Path.Combine(programFiles, "Java", "jre-17", "bin", "java.exe"),
-            Path.Combine(programFiles, "Java", "jre-8", "bin", "java.exe"),
-            Path.Combine(programFilesX86, "Java", "jdk-21", "bin", "java.exe"),
-            Path.Combine(programFilesX86, "Java", "jdk-17", "bin", "java.exe"),
-            Path.Combine(programFilesX86, "Java", "jdk-11", "bin", "java.exe"),
-            Path.Combine(programFilesX86, "Java", "jdk-8", "bin", "java.exe"),
-            Path.Combine(programFiles, "Microsoft", "jdk-21.0.101-hotspot", "bin", "java.exe"),
-            Path.Combine(programFiles, "Microsoft", "jdk-17.0.101-hotspot", "bin", "java.exe"),
-            Path.Combine(programFiles, "Microsoft", "jdk-11.0.20.101-hotspot", "bin", "java.exe"),
-            Path.Combine(localAppData, "Programs", "Eclipse Adoptium", "jdk-21.0.101-hotspot", "bin", "java.exe"),
-            Path.Combine(localAppData, "Programs", "Eclipse Adoptium", "jdk-17.0.101-hotspot", "bin", "java.exe"),
-        ];
-    }
-
     /// <summary>
     /// Поиск Java в реестре Windows
     /// </summary>
@@ -164,33 +135,48 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     {
         var paths = new List<string>();
 
+        var registryRoots = new[]
+        {
+            @"HKLM:\SOFTWARE\JavaSoft",
+            @"HKLM:\SOFTWARE\IBM\Java",
+            @"HKLM:\SOFTWARE\Azul Zulu",
+            @"HKCU:\SOFTWARE\JavaSoft",
+            @"HKLM:\SOFTWARE\Microsoft\JDK",
+            @"HKLM:\SOFTWARE\Amazon Corretto",
+        };
+
+        var powershellScript = string.Join("; ", registryRoots.Select(r =>
+            $"Get-ChildItem -Path '{r}' -ErrorAction SilentlyContinue | ForEach-Object {{ " +
+            $"Get-ChildItem -Path $_.PsPath -Recurse -ErrorAction SilentlyContinue | " +
+            $"Where-Object {{{{ $_.GetType().Name -eq 'RegistryKey' }}}} | " +
+            $"ForEach-Object {{ (Get-ItemProperty -Path $_.PsPath -Name 'JavaHome' -ErrorAction SilentlyContinue).JavaHome }}" +
+            $"}}"));
+
         try
         {
             var startInfo = new ProcessStartInfo
             {
                 FileName = "powershell",
-                Arguments = "-Command \"Get-ChildItem -Path 'HKLM:\\SOFTWARE\\JavaSoft\\Java Runtime Environment' -ErrorAction SilentlyContinue | ForEach-Object { Get-ItemProperty -Path $_.PsPath -ErrorAction SilentlyContinue | Select-Object -ExpandProperty JavaHome }\"",
+                Arguments = $"-Command \"{powershellScript}\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 CreateNoWindow = true
             };
 
             using var process = Process.Start(startInfo);
-            if (process != null)
-            {
-                var output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit(Constants.JavaPathCheckTimeoutMs);
+            if (process == null) return paths;
 
-                foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
-                {
-                    var javaHome = line.Trim();
-                    if (!string.IsNullOrEmpty(javaHome) && Directory.Exists(javaHome))
-                    {
-                        var javaPath = Path.Combine(javaHome, "bin", "java.exe");
-                        if (File.Exists(javaPath))
-                            paths.Add(javaPath);
-                    }
-                }
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit(Constants.JavaPathCheckTimeoutMs);
+
+            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var javaHome = line.Trim();
+                if (string.IsNullOrEmpty(javaHome) || !Directory.Exists(javaHome)) continue;
+
+                var javaPath = Path.Combine(javaHome, "bin", "java.exe");
+                if (File.Exists(javaPath))
+                    paths.Add(javaPath);
             }
         }
         catch (Exception ex)
@@ -208,24 +194,57 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     {
         var paths = new List<string>();
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-        try
+        var searchRoots = new List<string>
         {
-            var javaDirs = Directory.GetDirectories(programFiles)
-                .Where(d => d.Contains("jdk", StringComparison.OrdinalIgnoreCase) ||
-                           d.Contains("java", StringComparison.OrdinalIgnoreCase) ||
-                           d.Contains("jre", StringComparison.OrdinalIgnoreCase));
+            programFiles,
+            programFilesX86,
+            localAppData,
+            Path.Combine(localAppData, "Programs"),
+        };
 
-            foreach (var dir in javaDirs)
+        // Scoop: проверяем переменную окружения SCOOP и стандартный путь
+        var scoopEnv = Environment.GetEnvironmentVariable("SCOOP");
+        if (!string.IsNullOrEmpty(scoopEnv) && Directory.Exists(scoopEnv))
+            searchRoots.Add(Path.Combine(scoopEnv, "apps"));
+        var defaultScoop = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "scoop", "apps");
+        if (Directory.Exists(defaultScoop))
+            searchRoots.Add(defaultScoop);
+
+        var keywords = new[] { "jdk", "jre", "java", "temurin", "corretto", "zulu",
+                               "liberica", "graalvm", "jbr", "openjdk", "adopt", "jetbrains" };
+
+        foreach (var root in searchRoots)
+        {
+            if (!Directory.Exists(root)) continue;
+
+            try
             {
-                var javaPath = Path.Combine(dir, "bin", "java.exe");
-                if (File.Exists(javaPath))
-                    paths.Add(javaPath);
+                var javaDirs = Directory.EnumerateDirectories(root, "*", new EnumerationOptions
+                {
+                    RecurseSubdirectories = true,
+                    MaxRecursionDepth = 4,
+                    IgnoreInaccessible = true
+                })
+                .Where(d => {
+                    var name = Path.GetFileName(d).ToLowerInvariant();
+                    return keywords.Any(k => name.Contains(k));
+                });
+
+                foreach (var dir in javaDirs)
+                {
+                    var javaPath = Path.Combine(dir, "bin", "java.exe");
+                    if (File.Exists(javaPath))
+                        paths.Add(javaPath);
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Failed to search Program Files for Java: {ex.Message}", "JavaManagementService");
+            catch (Exception ex)
+            {
+                Logger.Warning($"Failed to search {root}: {ex.Message}", "JavaManagementService");
+            }
         }
 
         return paths;
