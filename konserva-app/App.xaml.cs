@@ -169,6 +169,26 @@ public partial class App : Application
                     options.Retry.UseJitter = true;
                 });
 
+            // HttpClient для McServerInstaller (скачивание серверов) с retry политикой
+            services.AddHttpClient("McServerInstaller", options =>
+            {
+                options.Timeout = TimeSpan.FromMinutes(5);
+                options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
+            })
+                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+                    MaxConnectionsPerServer = 10,
+                    AutomaticDecompression = DecompressionMethods.All
+                })
+                .AddStandardResilienceHandler(options =>
+                {
+                    options.Retry.MaxRetryAttempts = 3;
+                    options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
+                    options.Retry.UseJitter = true;
+                });
+
             return services;
         }
     }
@@ -181,7 +201,8 @@ public partial class App : Application
         try
         {
             // Инициализация McServerInstaller (требуется для установки серверов)
-            var httpClient = _serviceProvider?.GetService<HttpClient>()
+            var httpClientFactory = _serviceProvider?.GetService<IHttpClientFactory>();
+            var httpClient = httpClientFactory?.CreateClient("McServerInstaller")
                 ?? new HttpClient();
             var configService = _serviceProvider?.GetService<IConfigService>();
             McServerInstaller.Initialize(httpClient, configService);

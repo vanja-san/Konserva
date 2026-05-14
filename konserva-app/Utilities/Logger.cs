@@ -48,6 +48,10 @@ public sealed class Logger : IAsyncDisposable
     private static Task? _writeTask;
     private static readonly string? _sessionLogFileName;
 
+    // Счётчик ожидающих записи и сигнал для FlushAsync
+    private static int _pendingLogEntries;
+    private static readonly SemaphoreSlim _flushSignal = new(0);
+
     // Кэш последних логов (thread-safe)
     private static readonly System.Collections.Concurrent.ConcurrentQueue<LogEntry> _recentLogs = new();
     private const int MaxRecentLogs = 500;
@@ -85,15 +89,15 @@ public sealed class Logger : IAsyncDisposable
                 {
                     File.Delete(file);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Игнорируем ошибки удаления
+                    System.Diagnostics.Debug.WriteLine($"Failed to delete old log file {file}: {ex.Message}");
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Игнорируем ошибки
+            System.Diagnostics.Debug.WriteLine($"Failed to cleanup old logs: {ex.Message}");
         }
     }
 
@@ -131,6 +135,12 @@ public sealed class Logger : IAsyncDisposable
 
                 // Выводим в Debug
                 System.Diagnostics.Debug.WriteLine(FormatLogEntry(entry));
+
+                // Сигналим FlushAsync когда все ожидающие записи обработаны
+                if (Interlocked.Decrement(ref _pendingLogEntries) <= 0)
+                {
+                    try { _flushSignal.Release(); } catch { }
+                }
             }
         }
         catch (OperationCanceledException)
@@ -221,16 +231,16 @@ public sealed class Logger : IAsyncDisposable
                     {
                         File.Delete(oldFile.File);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Игнорируем ошибки удаления
+                        System.Diagnostics.Debug.WriteLine($"Failed to rotate log file {oldFile.File}: {ex.Message}");
                     }
                 }
             });
         }
-        catch
+        catch (Exception ex)
         {
-            // Игнорируем ошибки ротации
+            System.Diagnostics.Debug.WriteLine($"Failed to rotate logs: {ex.Message}");
         }
     }
 
@@ -280,9 +290,12 @@ public sealed class Logger : IAsyncDisposable
 
         var entry = new LogEntry(level, message, ex, DateTime.Now, category);
 
+        Interlocked.Increment(ref _pendingLogEntries);
+
         // Отправляем запись в channel, если очередь заполнена - пропускаем
         if (!_logChannel.Writer.TryWrite(entry))
         {
+            Interlocked.Decrement(ref _pendingLogEntries);
             System.Diagnostics.Debug.WriteLine($"Log dropped (queue full): {message}");
         }
     }
@@ -308,13 +321,12 @@ public sealed class Logger : IAsyncDisposable
     /// </summary>
     public static async Task FlushAsync()
     {
-        while (!_logChannel.Reader.Completion.IsCompleted)
-        {
-            if (_logChannel.Reader.TryPeek(out _))
-                await Task.Delay(10);
-            else
-                break;
-        }
+        // Если нет ожидающих записей — возвращаемся сразу
+        if (Volatile.Read(ref _pendingLogEntries) <= 0)
+            return;
+
+        // Ждём сигнала с таймаутом
+        await _flushSignal.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     /// <summary>
@@ -355,6 +367,7 @@ public sealed class Logger : IAsyncDisposable
         }
 
         _logChannel.Writer.Complete();
+        _flushSignal.Dispose();
     }
 
     #endregion
