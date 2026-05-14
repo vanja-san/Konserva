@@ -50,3 +50,4 @@ Desktop.ini
 # CodeQL artifacts
 *.sarif
 *-extracted.csv
+*.Backup.tmp
