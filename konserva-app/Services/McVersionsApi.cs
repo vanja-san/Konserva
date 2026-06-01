@@ -218,7 +218,8 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
     }
 
     /// <summary>
-    /// Получение версий NeoForge
+    /// Получение версий NeoForge для указанной версии Minecraft.
+    /// Основной источник: BMCLAPI (JSON). Fallback: Maven XML и launchermeta.
     /// </summary>
     public async Task<string[]> GetNeoForgeVersions(string mcVersion, CancellationToken ct = default)
     {
@@ -249,96 +250,117 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
                 catch (SemaphoreFullException) { /* Already released */ }
         }
 
-        // Основной источник: maven.neoforged.net
-        var mavenUrl = NeoForgeMetadata;
+        // Основной источник: BMCLAPI — JSON API с фильтрацией по MC версии
+        var bmclapiUrl = $"{NeoForgeBmclapiList}/{mcVersion}";
+        Logger.Info($"Fetching NeoForge from BMCLAPI: {bmclapiUrl}", "McVersionsApi");
 
         try
         {
-            Logger.Info($"Fetching NeoForge from: {mavenUrl}", "McVersionsApi");
-
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
 
-            var response = await _http.GetStringAsync(mavenUrl, timeoutCts.Token);
+            var response = await _http.GetStringAsync(bmclapiUrl, timeoutCts.Token);
+            using var doc = JsonDocument.Parse(response);
+            var entries = doc.RootElement.EnumerateArray().ToArray();
 
-            Logger.Info($"Got NeoForge response: {response.Length} bytes", "McVersionsApi");
-
-            var versions = ParseNeoForgeVersions(response, mcVersion);
-
-            if (versions.Count > 0)
+            if (entries.Length > 0)
             {
-                var result = versions.OrderByDescending(v => v).Take(50).ToArray();
-                Logger.Info($"Found {result.Length} NeoForge versions for MC {mcVersion}", "McVersionsApi");
+                // BMCLAPI возвращает массив с полями: version (NeoForge), mcversion, installerPath
+                var versions = entries
+                    .Select(e => e.GetProperty("version").GetString()!)
+                    .Where(v => !string.IsNullOrWhiteSpace(v))
+                    .OrderByDescending(v => v)
+                    .Take(50)
+                    .ToArray();
 
-                // Сохраняем в кэш
-                SaveToFileCache("neoforge", mcVersion, result);
+                Logger.Info($"Found {versions.Length} NeoForge versions from BMCLAPI for MC {mcVersion}", "McVersionsApi");
 
-                // Кэшируем в память
-                await _neoForgeCacheLock.WaitAsync(ct);
-                try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(result, SystemTime.UtcNow); }
-                finally { try { _neoForgeCacheLock.Release(); }
-                    catch (ObjectDisposedException) { /* Disposed during shutdown */ }
-                    catch (SemaphoreFullException) { /* Already released */ } }
-
-                return result;
+                if (versions.Length > 0)
+                {
+                    SaveToFileCache("neoforge", mcVersion, versions);
+                    CacheInMemory(mcVersion, versions, ct);
+                    return versions;
+                }
             }
         }
         catch (OperationCanceledException)
         {
-            Logger.Warning($"Timeout getting NeoForge versions for MC {mcVersion}", "McVersionsApi");
+            Logger.Warning($"Timeout getting NeoForge versions from BMCLAPI for MC {mcVersion}", "McVersionsApi");
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Failed to get NeoForge versions from maven.neoforged.net: {ex.Message}", "McVersionsApi");
+            Logger.Warning($"Failed to get NeoForge versions from BMCLAPI: {ex.Message}", "McVersionsApi");
         }
 
-        // Fallback: используем список из launchermeta.mojang.com + маппинг версий
-        Logger.Info($"Trying fallback: launchermeta for NeoForge MC {mcVersion}", "McVersionsApi");
+        // Fallback 1: Maven XML метаданные
+        Logger.Info($"Trying Maven XML fallback for NeoForge MC {mcVersion}", "McVersionsApi");
+        try
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
+
+            var response = await _http.GetStringAsync(NeoForgeMetadata, timeoutCts.Token);
+            var mavenVersions = ParseNeoForgeVersionsFromXml(response, mcVersion);
+
+            if (mavenVersions.Count > 0)
+            {
+                var result = mavenVersions.OrderByDescending(v => v).Take(50).ToArray();
+                Logger.Info($"Found {result.Length} NeoForge versions from Maven for MC {mcVersion}", "McVersionsApi");
+
+                SaveToFileCache("neoforge", mcVersion, result);
+                CacheInMemory(mcVersion, result, ct);
+                return result;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Maven XML fallback failed: {ex.Message}", "McVersionsApi");
+        }
+
+        // Fallback 2: launchermeta.mojang.com
+        Logger.Info($"Trying launchermeta fallback for NeoForge MC {mcVersion}", "McVersionsApi");
         try
         {
             var fallbackVersions = await GetNeoForgeFromLauncherMeta(ct);
             if (fallbackVersions.Count > 0)
             {
                 var result = fallbackVersions.OrderByDescending(v => v).Take(50).ToArray();
-                Logger.Info($"Found {result.Length} NeoForge versions from fallback for MC {mcVersion}", "McVersionsApi");
+                Logger.Info($"Found {result.Length} NeoForge versions from launchermeta for MC {mcVersion}", "McVersionsApi");
 
                 SaveToFileCache("neoforge", mcVersion, result);
-
-                await _neoForgeCacheLock.WaitAsync(ct);
-                try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(result, SystemTime.UtcNow); }
-                finally { try { _neoForgeCacheLock.Release(); }
-                    catch (ObjectDisposedException) { /* Disposed during shutdown */ }
-                    catch (SemaphoreFullException) { /* Already released */ } }
-
+                CacheInMemory(mcVersion, result, ct);
                 return result;
             }
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Fallback also failed for NeoForge MC {mcVersion}: {ex.Message}", "McVersionsApi");
+            Logger.Warning($"Launchermeta fallback failed for NeoForge MC {mcVersion}: {ex.Message}", "McVersionsApi");
         }
 
-        Logger.Warning("All NeoForge sources failed for MC {mcVersion}", "McVersionsApi");
+        Logger.Warning($"All NeoForge sources failed for MC {mcVersion}", "McVersionsApi");
         return ["latest"];
     }
 
-    private static List<string> ParseNeoForgeVersions(string xml, string mcVersion)
+    /// <summary>
+    /// Парсинг NeoForge версий из Maven XML maven-metadata.xml.
+    /// </summary>
+    private static List<string> ParseNeoForgeVersionsFromXml(string xml, string mcVersion)
     {
         var versions = new List<string>();
         var matches = XmlVersionRegex().Matches(xml);
-        Logger.Info($"Found {matches.Count} total NeoForge versions in XML", "McVersionsApi");
 
-        var neoForgeMcVersion = ExtractNeoForgeMcVersion(mcVersion);
-        Logger.Info($"Looking for NeoForge versions for MC {mcVersion} (NeoForge format: {neoForgeMcVersion})", "McVersionsApi");
+        // NeoForge версии в Maven имеют формат XX.Y.Z (без префикса "1.")
+        // MC 1.21.1 → ищем версии, начинающиеся с "21.1."
+        // MC 1.20.1 → ищем версии, начинающиеся с "20.1."
+        var neoForgePrefix = mcVersion.StartsWith("1.") ? mcVersion[2..] : mcVersion;
 
         foreach (Match match in matches)
         {
             var fullVersion = match.Groups[1].Value;
 
-            if (fullVersion.StartsWith(neoForgeMcVersion + ".") || fullVersion.StartsWith(neoForgeMcVersion + "-"))
+            if (fullVersion.StartsWith(neoForgePrefix + ".") || fullVersion.StartsWith(neoForgePrefix + "-"))
             {
                 versions.Add(fullVersion);
-                Logger.Info($"Added NeoForge version: {fullVersion}", "McVersionsApi");
             }
         }
 
@@ -347,12 +369,10 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
 
     /// <summary>
     /// Fallback: получает список версий NeoForge через launchermeta.mojang.com.
-    /// NeoForge версии содержатся в version_manifest.json как отдельные записи.
     /// </summary>
     private async Task<List<string>> GetNeoForgeFromLauncherMeta(CancellationToken ct)
     {
-        var response = await GetStringWithDecompressionAsync(
-            MojangManifest, ct);
+        var response = await GetStringWithDecompressionAsync(MojangManifest, ct);
 
         using var doc = JsonDocument.Parse(response);
         var allVersions = doc.RootElement.GetProperty("versions")
@@ -360,8 +380,6 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
             .Select(v => v.GetProperty("id").GetString()!)
             .ToArray();
 
-        // NeoForge версии имеют формат "neoforge-MC_VERSION-NEOFORGE_VERSION"
-        // или содержат "neoforge" в type
         var versions = allVersions
             .Where(v => v.Contains("neoforge", StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -370,23 +388,20 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
     }
 
     /// <summary>
-    /// Преобразование версии Minecraft в формат NeoForge
-    /// 1.21.11 -> 21.11, 1.20.1 -> 20.1, 1.21.1 -> 21.1
+    /// Сохранить результат в memory-кэш NeoForge.
     /// </summary>
-    private static string ExtractNeoForgeMcVersion(string mcVersion)
+    private void CacheInMemory(string mcVersion, string[] versions, CancellationToken ct)
     {
-        Logger.Info($"ExtractNeoForgeMcVersion: input={mcVersion}", "McVersionsApi");
-
-        // Убираем префикс "1."
-        if (mcVersion.StartsWith("1."))
+        try
         {
-            var result = mcVersion[2..];
-            Logger.Info($"ExtractNeoForgeMcVersion: result={result}", "McVersionsApi");
-            return result;
+            _neoForgeCacheLock.Wait(ct);
+            try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(versions, SystemTime.UtcNow); }
+            finally { _neoForgeCacheLock.Release(); }
         }
-
-        Logger.Info($"ExtractNeoForgeMcVersion: no prefix, result={mcVersion}", "McVersionsApi");
-        return mcVersion;
+        catch
+        {
+            // Non-critical cache operation, ignore failures
+        }
     }
 
     /// <summary>

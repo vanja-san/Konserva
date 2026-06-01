@@ -25,6 +25,9 @@ public static class ApiUrls
     public const string ForgeMavenAlt = "https://files.minecraftforge.net/maven/net/minecraftforge/forge";
 
     // --- NeoForge ---
+    // BMCLAPI — JSON API для списка версий по MC версии (альтернатива Maven XML)
+    public const string NeoForgeBmclapiList = "https://bmclapi2.bangbang93.com/neoforge/list";
+    // Maven (оставлен как fallback через maven-metadata.xml)
     public const string NeoForgeMaven = "https://maven.neoforged.net";
     public const string NeoForgeReleases = NeoForgeMaven + "/releases/net/neoforged/forge";
     public const string NeoForgeApi = NeoForgeMaven + "/api/v1/installer";
