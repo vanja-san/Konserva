@@ -34,6 +34,13 @@ public partial class App : Application
         ?? throw new InvalidOperationException("App not initialized");
 
     /// <summary>
+    /// Главное окно приложения
+    /// </summary>
+    public static new MainWindow MainWindow =>
+        _serviceProvider?.GetRequiredService<MainWindow>()
+        ?? throw new InvalidOperationException("App not initialized");
+
+    /// <summary>
     /// Сервис провайдер
     /// </summary>
     public static IServiceProvider? ServiceProvider => _serviceProvider;
@@ -122,8 +129,8 @@ public partial class App : Application
                 Logger.Error($"Failed to apply language from config: {ex.Message}", ex, "App");
             }
 
-            // Показываем главное окно
-            var mainWindow = new MainWindow();
+            // Показываем главное окно (создаётся через DI)
+            var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
 
             Logger.Info("Application started successfully", "App");
@@ -148,6 +155,14 @@ public partial class App : Application
             services.AddSingleton<IServerStorageService, ServerStorageService>();
             services.AddSingleton<IServerManager, McServerManager>();
             services.AddSingleton<IJavaManagementService, JavaManagementService>();
+            services.AddSingleton<IServerInstaller>(sp =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var configService = sp.GetService<IConfigService>();
+                var httpClient = httpClientFactory.CreateClient("McServerInstaller");
+                return new McServerInstaller(httpClient, configService);
+            });
+            services.AddSingleton<MainWindow>();
 
             // HttpClient для API с retry политикой
             services.AddHttpClient<IMcVersionsApi, McVersionsApi>(options =>
@@ -167,6 +182,41 @@ public partial class App : Application
                     options.Retry.MaxRetryAttempts = 3;
                     options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
                     options.Retry.UseJitter = true;
+                });
+
+            // HttpClient для UpdateChecker (проверка обновлений GitHub)
+            services.AddHttpClient("UpdateChecker", options =>
+            {
+                options.Timeout = TimeSpan.FromSeconds(15);
+                options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
+                options.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
+            })
+                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+                    MaxConnectionsPerServer = 10,
+                    AutomaticDecompression = DecompressionMethods.All
+                })
+                .AddStandardResilienceHandler(options =>
+                {
+                    options.Retry.MaxRetryAttempts = 2;
+                    options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
+                    options.Retry.UseJitter = true;
+                });
+
+            // HttpClient для AppUpdater (скачивание обновлений)
+            services.AddHttpClient("AppUpdater", options =>
+            {
+                options.Timeout = TimeSpan.FromMinutes(10);
+                options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
+            })
+                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+                    MaxConnectionsPerServer = 10,
+                    AutomaticDecompression = DecompressionMethods.All
                 });
 
             // HttpClient для McServerInstaller (скачивание серверов) с retry политикой
@@ -200,14 +250,19 @@ public partial class App : Application
     {
         try
         {
-            // Инициализация McServerInstaller (требуется для установки серверов)
             var httpClientFactory = _serviceProvider?.GetService<IHttpClientFactory>();
-            var httpClient = httpClientFactory?.CreateClient("McServerInstaller")
-                ?? new HttpClient();
-            var configService = _serviceProvider?.GetService<IConfigService>();
-            McServerInstaller.Initialize(httpClient, configService);
 
-            Logger.Info("McServerInstaller initialized", "App");
+            // Инициализация UpdateChecker
+            var updateCheckHttpClient = httpClientFactory?.CreateClient("UpdateChecker")
+                ?? new HttpClient();
+            UpdateChecker.Initialize(updateCheckHttpClient);
+            Logger.Info("UpdateChecker initialized", "App");
+
+            // Инициализация AppUpdater
+            var updateHttpClient = httpClientFactory?.CreateClient("AppUpdater")
+                ?? new HttpClient();
+            AppUpdater.Initialize(updateHttpClient);
+            Logger.Info("AppUpdater initialized", "App");
         }
         catch (Exception ex)
         {

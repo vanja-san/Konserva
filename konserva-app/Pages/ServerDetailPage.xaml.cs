@@ -17,6 +17,7 @@ namespace Konserva.Pages;
 /// </summary>
 public partial class ServerDetailPage : Page, IDisposable
 {
+    private readonly IConfigService? _configService;
     private string? _serverId;
     private Server? _server;
     private McServerProcess? _process;
@@ -27,8 +28,9 @@ public partial class ServerDetailPage : Page, IDisposable
     /// <summary>
     /// Конструктор для навигации через NavigationView (с параметром serverId)
     /// </summary>
-    public ServerDetailPage()
+    public ServerDetailPage(IConfigService? configService = null)
     {
+        _configService = configService;
         InitializeComponent();
 
         // Подписываемся после InitializeComponent чтобы избежать NullReferenceException
@@ -56,7 +58,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
 
         // Подписываемся на событие ошибки запуска
-        MainWindow.ServerManager.OnServerStartError += OnServerStartError;
+        App.ServerManager.OnServerStartError += OnServerStartError;
 
         // Обновляем PageWidth лога при изменении размера
         LogBox.SizeChanged += LogBox_SizeChanged;
@@ -68,7 +70,7 @@ public partial class ServerDetailPage : Page, IDisposable
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         // Отписываемся от события ошибки запуска
-        MainWindow.ServerManager.OnServerStartError -= OnServerStartError;
+        App.ServerManager.OnServerStartError -= OnServerStartError;
         LogBox.SizeChanged -= LogBox_SizeChanged;
         StopStatusTimer();
         Dispose();
@@ -174,8 +176,8 @@ public partial class ServerDetailPage : Page, IDisposable
         if (_serverId == null)
             return;
 
-        _server = MainWindow.ServerManager.GetServer(_serverId!);
-        _process = MainWindow.ServerManager.GetProcess(_serverId!);
+        _server = App.ServerManager.GetServer(_serverId!);
+        _process = App.ServerManager.GetProcess(_serverId!);
 
         if (_server == null)
             return;
@@ -210,6 +212,9 @@ public partial class ServerDetailPage : Page, IDisposable
         SettingJavaAutoSelect.IsChecked = _server.Settings.JavaAutoSelect;
         LoadJavaComboBox();
         UpdateJavaComboBoxVisibility();
+
+        // JVM аргументы
+        SettingJvmArgs.Text = _server.Settings.JvmArgsText;
 
         UpdateStatus(_server.Status);
 
@@ -310,6 +315,8 @@ public partial class ServerDetailPage : Page, IDisposable
 
     private async void UpdateStatus(ServerStatus status)
     {
+        try
+        {
         // Если сервер успешно запущен — сбрасываем флаг ошибки
         if (status == ServerStatus.Running && _server != null)
         {
@@ -327,7 +334,7 @@ public partial class ServerDetailPage : Page, IDisposable
                 _process = null;
 
                 // Получаем свежий процесс
-                _process = MainWindow.ServerManager.GetProcess(_serverId!);
+                _process = App.ServerManager.GetProcess(_serverId!);
 
                 // Загружаем существующие логи и подписываемся на события
                 if (_process == null) return;
@@ -370,14 +377,26 @@ public partial class ServerDetailPage : Page, IDisposable
 
             StartStopButton.IsEnabled = status is not (ServerStatus.Starting or ServerStatus.Stopping);
         });
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"[UpdateStatus] Error: {ex.Message}", "ServerDetailPage");
+        }
     }
 
     private async void UpdatePlayers(int players)
     {
-        await this.InvokeAsync(() =>
+        try
         {
-            // Здесь обновляем UI с количеством игроков
-        });
+            await this.InvokeAsync(() =>
+            {
+                // Здесь обновляем UI с количеством игроков
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"[UpdatePlayers] Error: {ex.Message}", "ServerDetailPage");
+        }
     }
 
     /// <summary>
@@ -401,7 +420,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         else
         {
-            MainWindow.Instance?.ContentFrame?.Navigate(new Pages.ServersPage());
+            App.MainWindow?.ContentFrame?.Navigate(new Pages.ServersPage());
         }
     }
 
@@ -431,13 +450,13 @@ public partial class ServerDetailPage : Page, IDisposable
         {
             if (_server.IsRunning)
             {
-                MainWindow.ServerManager.StopServer(_serverId!);
+                App.ServerManager.StopServer(_serverId!);
             }
             else
             {
                 // Сбрасываем флаг ошибки перед новым запуском
                 _server.ErrorDialogShown = false;
-                MainWindow.ServerManager.StartServer(_serverId!);
+                App.ServerManager.StartServer(_serverId!);
             }
         }
         catch (Exception ex)
@@ -549,7 +568,7 @@ public partial class ServerDetailPage : Page, IDisposable
         if (string.IsNullOrEmpty(CommandBox.Text))
             return;
 
-        MainWindow.ServerManager.SendCommand(_serverId!, CommandBox.Text);
+        App.ServerManager.SendCommand(_serverId!, CommandBox.Text);
         CommandBox.Clear();
     }
 
@@ -574,7 +593,7 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private void LoadJavaComboBox()
     {
-        var config = App.ConfigService.GetConfig();
+        var config = _configService?.GetConfig() ?? App.ConfigService.GetConfig();
 
         SettingJavaComboBox.Items.Clear();
 
@@ -688,8 +707,11 @@ public partial class ServerDetailPage : Page, IDisposable
             _server.Settings.JavaId = null;
         }
 
+        // Сохраняем JVM аргументы
+        _server.Settings.JvmArgsText = SettingJvmArgs.Text;
+
         // Обновляем сервер в хранилище
-        MainWindow.ServerManager.UpdateServer(_server);
+        App.ServerManager.UpdateServer(_server);
     }
 
     /// <summary>
@@ -717,6 +739,14 @@ public partial class ServerDetailPage : Page, IDisposable
     /// Обработка выбора Java в ComboBox (автосохранение)
     /// </summary>
     private void SettingJavaComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        AutoSaveSettings();
+    }
+
+    /// <summary>
+    /// Сохранение JVM аргументов при потере фокуса
+    /// </summary>
+    private void SettingJvmArgs_LostFocus(object sender, RoutedEventArgs e)
     {
         AutoSaveSettings();
     }
@@ -957,7 +987,7 @@ public partial class ServerDetailPage : Page, IDisposable
 
         try
         {
-            await MainWindow.ServerManager.DeleteServerAsync(_serverId!);
+            await App.ServerManager.DeleteServerAsync(_serverId!);
             Back_Click(sender, e);
         }
         catch (Exception ex)
@@ -973,7 +1003,7 @@ public partial class ServerDetailPage : Page, IDisposable
     private async void ShowErrorSafe(string message)
     {
         try { await UiHelper.ShowError(message); }
-        catch { /* Игнорируем — диалог уже не критичен */ }
+        catch (Exception ex) { Logger.Warning($"[ShowErrorSafe] Error: {ex.Message}", "ServerDetailPage"); }
     }
 
     /// <summary>
@@ -982,7 +1012,7 @@ public partial class ServerDetailPage : Page, IDisposable
     private async void ShowWarningSafe(string message)
     {
         try { await UiHelper.ShowWarning(message); }
-        catch { /* Игнорируем */ }
+        catch (Exception ex) { Logger.Warning($"[ShowWarningSafe] Error: {ex.Message}", "ServerDetailPage"); }
     }
 
     public void Dispose()

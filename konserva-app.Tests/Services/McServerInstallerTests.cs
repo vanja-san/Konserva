@@ -1,6 +1,7 @@
 using Konserva.Models;
 using Konserva.Services;
 using System.IO;
+using System.Net.Http;
 using Xunit;
 
 namespace Konserva.Tests.Services;
@@ -11,11 +12,13 @@ namespace Konserva.Tests.Services;
 public class McServerInstallerTests : IDisposable
 {
     private readonly string _testDir;
+    private readonly McServerInstaller _installer;
 
     public McServerInstallerTests()
     {
         _testDir = Path.Combine(Path.GetTempPath(), $"konserva_installer_test_{Guid.NewGuid()}");
         Directory.CreateDirectory(_testDir);
+        _installer = new McServerInstaller(new HttpClient());
     }
 
     public void Dispose()
@@ -37,7 +40,7 @@ public class McServerInstallerTests : IDisposable
     public void TryParseMcVersion_ValidVersions_ReturnsTrue(string version, bool expectedValid)
     {
         // Act
-        var result = McServerInstaller.TryParseMcVersion(version, out var major, out var minor);
+        var result = _installer.TryParseMcVersion(version, out var major, out var minor);
 
         // Assert
         result.Should().Be(expectedValid);
@@ -57,7 +60,7 @@ public class McServerInstallerTests : IDisposable
     public void TryParseMcVersion_ExtractsMajorAndMinor(string version, int expectedMajor, int expectedMinor)
     {
         // Act
-        var result = McServerInstaller.TryParseMcVersion(version, out var major, out var minor);
+        var result = _installer.TryParseMcVersion(version, out var major, out var minor);
 
         // Assert
         result.Should().BeTrue();
@@ -71,7 +74,7 @@ public class McServerInstallerTests : IDisposable
     public void FindServerJar_ReturnsServerJar_WhenExists()
     {
         File.WriteAllText(Path.Combine(_testDir, "server.jar"), "fake");
-        var result = McServerInstaller.FindServerJar(_testDir);
+        var result = _installer.FindServerJar(_testDir);
         result.Should().EndWith("server.jar");
     }
 
@@ -79,7 +82,7 @@ public class McServerInstallerTests : IDisposable
     public void FindServerJar_ReturnsFabricJar_WhenExists()
     {
         File.WriteAllText(Path.Combine(_testDir, "fabric-server-launch.jar"), "fake");
-        var result = McServerInstaller.FindServerJar(_testDir);
+        var result = _installer.FindServerJar(_testDir);
         result.Should().EndWith("fabric-server-launch.jar");
     }
 
@@ -87,7 +90,7 @@ public class McServerInstallerTests : IDisposable
     public void FindServerJar_ReturnsForgeJar_WhenExists()
     {
         File.WriteAllText(Path.Combine(_testDir, "forge-1.21.1-52.0.1.jar"), "fake");
-        var result = McServerInstaller.FindServerJar(_testDir);
+        var result = _installer.FindServerJar(_testDir);
         result.Should().Contain("forge-");
     }
 
@@ -95,7 +98,7 @@ public class McServerInstallerTests : IDisposable
     public void FindServerJar_ReturnsShimJar_WhenExists()
     {
         File.WriteAllText(Path.Combine(_testDir, "minecraft-shim.jar"), "fake");
-        var result = McServerInstaller.FindServerJar(_testDir);
+        var result = _installer.FindServerJar(_testDir);
         result.Should().EndWith("-shim.jar");
     }
 
@@ -103,7 +106,7 @@ public class McServerInstallerTests : IDisposable
     public void FindServerJar_ReturnsNeoforgeJar_WhenExists()
     {
         File.WriteAllText(Path.Combine(_testDir, "neoforge-1.21.1.jar"), "fake");
-        var result = McServerInstaller.FindServerJar(_testDir);
+        var result = _installer.FindServerJar(_testDir);
         result.Should().Contain("neoforge-");
     }
 
@@ -111,14 +114,14 @@ public class McServerInstallerTests : IDisposable
     public void FindServerJar_ReturnsAnyJar_WhenNoPriorityJarExists()
     {
         File.WriteAllText(Path.Combine(_testDir, "custom-server.jar"), "fake");
-        var result = McServerInstaller.FindServerJar(_testDir);
+        var result = _installer.FindServerJar(_testDir);
         result.Should().EndWith("custom-server.jar");
     }
 
     [Fact]
     public void FindServerJar_ReturnsEmpty_WhenNoJarExists()
     {
-        var result = McServerInstaller.FindServerJar(_testDir);
+        var result = _installer.FindServerJar(_testDir);
         result.Should().BeEmpty();
     }
 
@@ -129,7 +132,7 @@ public class McServerInstallerTests : IDisposable
         File.WriteAllText(Path.Combine(_testDir, "fabric-server-launch.jar"), "fake");
         File.WriteAllText(Path.Combine(_testDir, "server.jar"), "fake");
 
-        var result = McServerInstaller.FindServerJar(_testDir);
+        var result = _installer.FindServerJar(_testDir);
         result.Should().EndWith("server.jar");
     }
 
@@ -141,55 +144,55 @@ public class McServerInstallerTests : IDisposable
     public void GetServerLaunchType_ReturnsFabric_WhenFabricJarExists()
     {
         File.WriteAllText(Path.Combine(_testDir, "fabric-server-launch.jar"), "fake");
-        var result = McServerInstaller.GetServerLaunchType(_testDir);
-        result.Should().Be(McServerInstaller.ServerLaunchType.Fabric);
+        var result = _installer.GetServerLaunchType(_testDir);
+        result.Should().Be(ServerLaunchType.Fabric);
     }
 
     [Fact]
     public void GetServerLaunchType_ReturnsQuilt_WhenQuiltJarExists()
     {
         File.WriteAllText(Path.Combine(_testDir, "quilt-server-0.25.0.jar"), "fake");
-        var result = McServerInstaller.GetServerLaunchType(_testDir);
-        result.Should().Be(McServerInstaller.ServerLaunchType.Quilt);
+        var result = _installer.GetServerLaunchType(_testDir);
+        result.Should().Be(ServerLaunchType.Quilt);
     }
 
     [Fact]
     public void GetServerLaunchType_ReturnsForge_WhenForgeJarExists()
     {
         File.WriteAllText(Path.Combine(_testDir, "forge-1.21.1.jar"), "fake");
-        var result = McServerInstaller.GetServerLaunchType(_testDir);
-        result.Should().Be(McServerInstaller.ServerLaunchType.Forge);
+        var result = _installer.GetServerLaunchType(_testDir);
+        result.Should().Be(ServerLaunchType.Forge);
     }
 
     [Fact]
     public void GetServerLaunchType_ReturnsForge_WhenShimJarExists()
     {
         File.WriteAllText(Path.Combine(_testDir, "minecraft-shim.jar"), "fake");
-        var result = McServerInstaller.GetServerLaunchType(_testDir);
-        result.Should().Be(McServerInstaller.ServerLaunchType.Forge);
+        var result = _installer.GetServerLaunchType(_testDir);
+        result.Should().Be(ServerLaunchType.Forge);
     }
 
     [Fact]
     public void GetServerLaunchType_ReturnsNeoForge_WhenNeoforgeJarExists()
     {
         File.WriteAllText(Path.Combine(_testDir, "neoforge-1.21.1.jar"), "fake");
-        var result = McServerInstaller.GetServerLaunchType(_testDir);
-        result.Should().Be(McServerInstaller.ServerLaunchType.NeoForge);
+        var result = _installer.GetServerLaunchType(_testDir);
+        result.Should().Be(ServerLaunchType.NeoForge);
     }
 
     [Fact]
     public void GetServerLaunchType_ReturnsStandard_WhenOnlyServerJarExists()
     {
         File.WriteAllText(Path.Combine(_testDir, "server.jar"), "fake");
-        var result = McServerInstaller.GetServerLaunchType(_testDir);
-        result.Should().Be(McServerInstaller.ServerLaunchType.Standard);
+        var result = _installer.GetServerLaunchType(_testDir);
+        result.Should().Be(ServerLaunchType.Standard);
     }
 
     [Fact]
     public void GetServerLaunchType_ReturnsStandard_WhenEmptyDirectory()
     {
-        var result = McServerInstaller.GetServerLaunchType(_testDir);
-        result.Should().Be(McServerInstaller.ServerLaunchType.Standard);
+        var result = _installer.GetServerLaunchType(_testDir);
+        result.Should().Be(ServerLaunchType.Standard);
     }
 
     #endregion
@@ -200,7 +203,7 @@ public class McServerInstallerTests : IDisposable
     public void BuildLaunchArgs_IncludesRamSettings()
     {
         var settings = new ServerSettings { RamMin = 2048, RamMax = 8192 };
-        var result = McServerInstaller.BuildLaunchArgs("/path/server.jar", settings);
+        var result = _installer.BuildLaunchArgs("/path/server.jar", settings);
 
         result.Should().Contain("-Xms2048M");
         result.Should().Contain("-Xmx8192M");
@@ -210,7 +213,7 @@ public class McServerInstallerTests : IDisposable
     public void BuildLaunchArgs_IncludesG1gcFlags()
     {
         var settings = new ServerSettings { RamMin = 1024, RamMax = 4096 };
-        var result = McServerInstaller.BuildLaunchArgs("/path/server.jar", settings);
+        var result = _installer.BuildLaunchArgs("/path/server.jar", settings);
 
         result.Should().Contain("-XX:+UseG1GC");
         result.Should().Contain("-XX:+ParallelRefProcEnabled");
@@ -221,7 +224,7 @@ public class McServerInstallerTests : IDisposable
     public void BuildLaunchArgs_IncludesJarAndNogui()
     {
         var settings = new ServerSettings { RamMin = 1024, RamMax = 4096 };
-        var result = McServerInstaller.BuildLaunchArgs("/path/server.jar", settings);
+        var result = _installer.BuildLaunchArgs("/path/server.jar", settings);
 
         result.Should().Contain("-jar \"server.jar\" nogui");
     }
@@ -235,7 +238,7 @@ public class McServerInstallerTests : IDisposable
             RamMax = 4096,
             JavaArgs = ["-Dfml.ignoreInvalidMinecraftCertificates=true", "-XX:+UseZGC"]
         };
-        var result = McServerInstaller.BuildLaunchArgs("/path/server.jar", settings);
+        var result = _installer.BuildLaunchArgs("/path/server.jar", settings);
 
         result.Should().Contain("-Dfml.ignoreInvalidMinecraftCertificates=true");
         result.Should().Contain("-XX:+UseZGC");
@@ -250,7 +253,7 @@ public class McServerInstallerTests : IDisposable
             RamMax = 4096,
             JavaArgs = ["", "   ", "-Xlog:gc"]
         };
-        var result = McServerInstaller.BuildLaunchArgs("/path/server.jar", settings);
+        var result = _installer.BuildLaunchArgs("/path/server.jar", settings);
 
         result.Should().NotContain("  ");
         result.Should().Contain("-Xlog:gc");
@@ -260,9 +263,9 @@ public class McServerInstallerTests : IDisposable
     public void BuildLaunchArgs_DifferentLaunchTypes_ProducesSameArgs()
     {
         var settings = new ServerSettings { RamMin = 2048, RamMax = 4096 };
-        var standard = McServerInstaller.BuildLaunchArgs("/path/server.jar", settings, McServerInstaller.ServerLaunchType.Standard);
-        var fabric = McServerInstaller.BuildLaunchArgs("/path/server.jar", settings, McServerInstaller.ServerLaunchType.Fabric);
-        var forge = McServerInstaller.BuildLaunchArgs("/path/server.jar", settings, McServerInstaller.ServerLaunchType.Forge);
+        var standard = _installer.BuildLaunchArgs("/path/server.jar", settings, ServerLaunchType.Standard);
+        var fabric = _installer.BuildLaunchArgs("/path/server.jar", settings, ServerLaunchType.Fabric);
+        var forge = _installer.BuildLaunchArgs("/path/server.jar", settings, ServerLaunchType.Forge);
 
         // В текущей реализации все типы запуска дают одинаковые аргументы
         standard.Should().Be(fabric);

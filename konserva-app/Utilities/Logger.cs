@@ -67,7 +67,7 @@ public sealed class Logger : IAsyncDisposable
         CleanupOldLogs();
 
         // Имя файла сессии: logs-21.01.26-11.22.log
-        _sessionLogFileName = $"logs-{DateTime.Now:dd.MM.yy-HH.mm}.log";
+        _sessionLogFileName = $"logs-{SystemTime.Now:dd.MM.yy-HH.mm}.log";
         _logFilePath = Path.Combine(_logDir, _sessionLogFileName);
     }
 
@@ -139,7 +139,9 @@ public sealed class Logger : IAsyncDisposable
                 // Сигналим FlushAsync когда все ожидающие записи обработаны
                 if (Interlocked.Decrement(ref _pendingLogEntries) <= 0)
                 {
-                    try { _flushSignal.Release(); } catch { }
+                    try { _flushSignal.Release(); }
+                    catch (ObjectDisposedException) { /* Logger shutting down */ }
+                    catch (SemaphoreFullException) { /* Already signaled, nothing to wait */ }
                 }
             }
         }
@@ -288,7 +290,7 @@ public sealed class Logger : IAsyncDisposable
         if (!_initialized)
             Initialize();
 
-        var entry = new LogEntry(level, message, ex, DateTime.Now, category);
+        var entry = new LogEntry(level, message, ex, SystemTime.Now, category);
 
         Interlocked.Increment(ref _pendingLogEntries);
 

@@ -11,6 +11,5 @@ public class ApiEndpoints
     public string QuiltMeta { get; set; } = "https://meta.quiltmc.org/v3";
     public string QuiltInstaller { get; set; } = "https://meta.quiltmc.org/v3/versions/installer";
     public string PaperApi { get; set; } = "https://api.papermc.io/v2";
-    public string PurpurApi { get; set; } = "https://api.purpurmc.org/v2";
     public string Adoptium { get; set; } = "https://adoptium.net";
 }

@@ -83,8 +83,7 @@
                         <ComboBoxItem Content="NeoForge" Tag="NeoForge" />
                         <ComboBoxItem Content="Fabric" Tag="Fabric" />
                         <ComboBoxItem Content="Quilt" Tag="Quilt" />
-                        <ComboBoxItem Content="Paper" Tag="Paper" />
-                        <ComboBoxItem Content="Purpur" Tag="Purpur" />
+                    <ComboBoxItem Content="Paper" Tag="Paper" />
                     </ComboBox>
                 </StackPanel>
 

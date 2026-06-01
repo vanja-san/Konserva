@@ -38,7 +38,7 @@ public static class UiHelper
     /// </summary>
     private static IContentDialogService? GetDialogService()
     {
-        return MainWindow.GetContentDialogService();
+        return App.MainWindow.ContentDialogService;
     }
 
     /// <summary>

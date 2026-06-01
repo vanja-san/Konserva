@@ -17,13 +17,15 @@ using Konserva.Services;
 public partial class SettingsPage(IConfigService? configService = null) : Page
 {
     private readonly IConfigService _configService = configService ?? App.ConfigService;
-    private readonly JavaManagementService _javaService = new(App.ConfigService);
+    private readonly JavaManagementService _javaService = new(configService ?? App.ConfigService);
     private bool _isUpdating; // Флаг для предотвращения рекурсивного сохранения
     private bool _isLoading = true; // Флаг загрузки страницы
 
     public SettingsPage() : this(null)
     {
         InitializeComponent();
+
+        Title = LocalizationManager.Get("Settings_Title");
         Loaded += OnLoaded;
     }
 
@@ -135,30 +137,31 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     }
 
     /// <summary>
-    /// Показ уведомления об успешном сохранении
+    /// Показ уведомления об успешном сохранении (через Snackbar)
     /// </summary>
     private void ShowSaveNotification()
     {
-        SaveNotification.Visibility = Visibility.Visible;
-        AutoHideAsync(SaveNotification, 2000);
-    }
-
-    /// <summary>
-    /// Асинхронно скрывает элемент через указанную задержку.
-    /// </summary>
-    private async void AutoHideAsync(System.Windows.UIElement element, int delayMs)
-    {
-        await Task.Delay(delayMs);
-        Dispatcher.Invoke(() => element.Visibility = Visibility.Collapsed);
+        App.MainWindow?.ShowSnackbar(
+            LocalizationManager.Get("Message_SettingsSaved"),
+            string.Empty,
+            ControlAppearance.Success,
+            2);
     }
 
     /// <summary>
     /// Асинхронно скрывает InfoBar через указанную задержку.
     /// </summary>
-    private async void AutoHideInfoBarAsync(Wpf.Ui.Controls.InfoBar infoBar, int delayMs)
+    private async Task AutoHideInfoBarAsync(Wpf.Ui.Controls.InfoBar infoBar, int delayMs)
     {
-        await Task.Delay(delayMs);
-        Dispatcher.Invoke(() => infoBar.IsOpen = false);
+        try
+        {
+            await Task.Delay(delayMs);
+            Dispatcher.Invoke(() => infoBar.IsOpen = false);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"AutoHideInfoBarAsync error: {ex.Message}", "SettingsPage");
+        }
     }
 
     private void ChangeServersPath_Click(object sender, RoutedEventArgs e)
@@ -181,57 +184,71 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
     private async void AddJava_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog
+        try
         {
-            Title = LocalizationManager.Get("Settings_SelectJava"),
-            Filter = LocalizationManager.Get("Settings_JavaFilter"),
-            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
-        };
+            var dialog = new OpenFileDialog
+            {
+                Title = LocalizationManager.Get("Settings_SelectJava"),
+                Filter = LocalizationManager.Get("Settings_JavaFilter"),
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+            };
 
-        if (dialog.ShowDialog() == true)
+            if (dialog.ShowDialog() == true)
+            {
+                var java = _javaService.AddJava(dialog.FileName);
+
+                if (java != null)
+                {
+                    // Обновляем список Java
+                    LoadSettings();
+
+                    // Показываем InfoBar об успешной установке
+                    JavaSuccessInfoBar.Title = LocalizationManager.Get("Settings_JavaAdded");
+                    JavaSuccessInfoBar.Message = $"{LocalizationManager.Get("Settings_JavaVersion")}: {java.Version}\n{LocalizationManager.Get("Settings_JavaPath")}: {java.Path}";
+                    JavaSuccessInfoBar.IsOpen = true;
+
+                    // Автоматически закрываем через 5 секунд
+                    _ = AutoHideInfoBarAsync(JavaSuccessInfoBar, Constants.InfoBarAutoCloseDelayMs);
+                }
+                else
+                {
+                    await UiHelper.ShowWarning(LocalizationManager.Get("Settings_JavaInvalid"));
+                }
+            }
+        }
+        catch (Exception ex)
         {
-            var java = _javaService.AddJava(dialog.FileName);
-
-            if (java != null)
-            {
-                // Обновляем список Java
-                LoadSettings();
-
-                // Показываем InfoBar об успешной установке
-                JavaSuccessInfoBar.Title = LocalizationManager.Get("Settings_JavaAdded");
-                JavaSuccessInfoBar.Message = $"{LocalizationManager.Get("Settings_JavaVersion")}: {java.Version}\n{LocalizationManager.Get("Settings_JavaPath")}: {java.Path}";
-                JavaSuccessInfoBar.IsOpen = true;
-
-                // Автоматически закрываем через 5 секунд
-                AutoHideInfoBarAsync(JavaSuccessInfoBar, Constants.InfoBarAutoCloseDelayMs);
-            }
-            else
-            {
-                await UiHelper.ShowWarning(LocalizationManager.Get("Settings_JavaInvalid"));
-            }
+            Logger.Error($"AddJava_Click error: {ex.Message}", ex, "SettingsPage");
         }
     }
 
     private async void DeleteJava_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: JavaInstallation java })
+        try
         {
-            var result = await UiHelper.ShowConfirm(
-                $"{LocalizationManager.Get("Settings_Java_Delete_Confirm_Message")}\n\n{java.DisplayName}",
-                LocalizationManager.Get("Settings_Java_Delete_Confirm_Title"));
-
-            if (result == ContentDialogResult.Primary)
+            if (sender is Button { Tag: JavaInstallation java })
             {
-                var removed = _javaService.RemoveJava(java.Id);
-                if (removed)
+                var result = await UiHelper.ShowConfirm(
+                    $"{LocalizationManager.Get("Settings_Java_Delete_Confirm_Message")}\n\n{java.DisplayName}",
+                    LocalizationManager.Get("Settings_Java_Delete_Confirm_Title"));
+
+                if (result == ContentDialogResult.Primary)
                 {
-                    LoadSettings();
-                }
-                else
-                {
-                    await UiHelper.ShowWarning(LocalizationManager.Get("Settings_Java_Delete_Failed"));
+                    var removed = _javaService.RemoveJava(java.Id);
+                    if (removed)
+                    {
+                        LoadSettings();
+                    }
+                    else
+                    {
+                        await UiHelper.ShowWarning(LocalizationManager.Get("Settings_Java_Delete_Failed"));
+                    }
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"DeleteJava_Click error: {ex.Message}", ex, "SettingsPage");
         }
     }
 
@@ -280,18 +297,25 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         finally
         {
             // Возвращаем кнопку в активное состояние через 3 секунды
-            ResetCheckUpdatesButtonAsync();
+            _ = ResetCheckUpdatesButtonAsync();
         }
     }
 
-    private async void ResetCheckUpdatesButtonAsync()
+    private async Task ResetCheckUpdatesButtonAsync()
     {
-        await Task.Delay(3000);
-        Dispatcher.Invoke(() =>
+        try
         {
-            CheckUpdatesButton.IsEnabled = true;
-            CheckUpdatesButton.Content = LocalizationManager.Get("Settings_CheckForUpdates");
-        });
+            await Task.Delay(3000);
+            Dispatcher.Invoke(() =>
+            {
+                CheckUpdatesButton.IsEnabled = true;
+                CheckUpdatesButton.Content = LocalizationManager.Get("Settings_CheckForUpdates");
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"ResetCheckUpdatesButtonAsync error: {ex.Message}", "SettingsPage");
+        }
     }
 
     private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

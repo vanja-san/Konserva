@@ -5,77 +5,64 @@
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:utils="clr-namespace:Konserva.Utilities"
+    xmlns:converters="clr-namespace:Konserva.Converters"
     Title="Settings">
 
     <Page.Resources>
-        <!--  Стиль для заголовка Expander с иконкой  -->
-        <Style x:Key="ExpanderHeaderStyle" TargetType="TextBlock">
+        <!-- Стиль заголовка группы карточек -->
+        <Style x:Key="CardGroupHeader" TargetType="ui:TextBlock">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+
+        <!-- Стиль заголовка настройки -->
+        <Style x:Key="SettingTitle" TargetType="ui:TextBlock">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
+
+        <!-- Стиль описания настройки -->
+        <Style x:Key="SettingDescription" TargetType="ui:TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorTertiaryBrush}" />
+        </Style>
+
+        <!-- Конвертер для позиционирования в группе слитных карточек -->
+        <converters:CardGroupPositionConverter x:Key="CardGroupPositionConverter" />
     </Page.Resources>
 
-    <Grid Margin="16,0,16,16" RowDefinitions="Auto,*,Auto">
-        <!--  Заголовок и индикатор сохранения  -->
-        <Grid
-            Grid.Row="0"
-            Margin="12"
-            VerticalAlignment="Center"
-            ColumnDefinitions="Auto,*">
-            <!--  Заголовок  -->
-            <ui:TextBlock
-                Grid.Column="0"
-                FontSize="24"
-                FontTypography="Title"
-                FontWeight="SemiBold"
-                Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
-                Text="{loc:Loc Settings_Title}" />
-            <!--  Индикатор сохранения (справа)  -->
-            <StackPanel
-                x:Name="SaveNotification"
-                Grid.Column="1"
-                HorizontalAlignment="Right"
-                Orientation="Horizontal"
-                Visibility="Collapsed">
-                <ui:SymbolIcon Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}" Symbol="Checkmark20" />
-                <ui:TextBlock
-                    Margin="8,0,0,0"
-                    VerticalAlignment="Center"
-                    FontSize="13"
-                    Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
-                    Text="{loc:Loc Message_SettingsSaved}" />
-            </StackPanel>
-        </Grid>
+    <Grid Margin="16,12,0,16" RowDefinitions="*,Auto">
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
+                      Padding="{Binding ComputedVerticalScrollBarVisibility,
+                                RelativeSource={RelativeSource Self},
+                                Converter={StaticResource ScrollBarPadding},
+                                ConverterParameter=16}">
+            <StackPanel Margin="0,0,0,16">
 
-        <!--  CardExpander с настройками  -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <!--  Общие настройки и Java  -->
-                <ui:CardExpander
-                    Margin="0,0,0,8"
-                    ContentPadding="8"
-                    IsExpanded="True">
-                    <ui:CardExpander.Icon>
-                        <ui:SymbolIcon
-                            Filled="True"
-                            FontSize="20"
-                            Symbol="TaskListSquaresettings20" />
-                    </ui:CardExpander.Icon>
-                    <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc Settings_Servers}" />
-                    </ui:CardExpander.Header>
-                    <Border Margin="12,8">
-                        <StackPanel>
-                            <!--  Папка серверов  -->
-                            <Grid Margin="0,0,0,16" ColumnDefinitions="200,*,Auto">
+                <!-- ========================================================= -->
+                <!-- Группа 1: Серверы (Общие настройки)                        -->
+                <!-- ========================================================= -->
+                <StackPanel Margin="0,0,0,24">
+                    <ui:TextBlock
+                        Text="{loc:Loc Settings_Servers}"
+                        Style="{StaticResource CardGroupHeader}" />
+
+                    <StackPanel>
+                        <!-- Карточка: Папка серверов (верхняя — скругление сверху) -->
+                        <Border
+                            CornerRadius="8,8,0,0"
+                            Padding="16,12"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                            BorderThickness="1,1,1,0">
+                            <Grid ColumnDefinitions="200,*,Auto">
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <ui:TextBlock
-                                        FontSize="14"
-                                        FontWeight="Bold"
+                                        Style="{StaticResource SettingTitle}"
                                         Text="{loc:Loc Settings_Servers_Dir}" />
                                     <ui:TextBlock
-                                        FontSize="12"
-                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                        Style="{StaticResource SettingDescription}"
                                         Text="{loc:Loc Settings_Servers_DirDesc}" />
                                 </StackPanel>
                                 <ui:TextBlock
@@ -96,17 +83,27 @@
                                     <ui:SymbolIcon FontSize="20" Symbol="FolderOpen20" />
                                 </ui:Button>
                             </Grid>
+                        </Border>
 
-                            <!--  Проверка обновления  -->
+                        <!-- Разделитель -->
+                        <Rectangle
+                            Height="1"
+                            Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
+
+                        <!-- Карточка: Проверка обновлений (нижняя — скругление снизу) -->
+                        <Border
+                            CornerRadius="0,0,8,8"
+                            Padding="16,12"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                            BorderThickness="1,0,1,1">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <ui:TextBlock
-                                        FontSize="14"
-                                        FontWeight="SemiBold"
+                                        Style="{StaticResource SettingTitle}"
                                         Text="{loc:Loc Settings_CheckUpdates}" />
                                     <ui:TextBlock
-                                        FontSize="12"
-                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                        Style="{StaticResource SettingDescription}"
                                         Text="{loc:Loc Settings_CheckUpdates_Desc}" />
                                 </StackPanel>
                                 <CheckBox
@@ -116,52 +113,65 @@
                                     Checked="CheckUpdatesBox_Checked"
                                     Unchecked="CheckUpdatesBox_Unchecked" />
                             </Grid>
-                        </StackPanel>
-                    </Border>
-                </ui:CardExpander>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
 
-                <!--  Java установки  -->
-                <ui:CardExpander
-                    x:Name="JavaCardExpander"
-                    Margin="0,0,0,8"
-                    ContentPadding="8"
-                    IsExpanded="True">
-                    <ui:CardExpander.Icon>
-                        <ui:SymbolIcon
-                            Filled="True"
-                            FontSize="20"
-                            Symbol="SquareHintApps20" />
-                    </ui:CardExpander.Icon>
-                    <ui:CardExpander.Header>
-                        <Grid ColumnDefinitions="*,Auto">
-                            <ui:TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{loc:Loc Settings_Java}" />
-                            <ui:Button
-                                Grid.Column="1"
-                                Margin="0,0,12,0"
-                                Padding="5"
-                                VerticalAlignment="Center"
-                                Click="AddJava_Click"
-                                ToolTip="{loc:Loc Settings_Java_Add}">
-                                <ui:SymbolIcon
-                                    Width="15"
-                                    Height="15"
-                                    FontSize="13"
-                                    Symbol="Add32" />
-                            </ui:Button>
-                        </Grid>
-                    </ui:CardExpander.Header>
-                    <Border Margin="8">
-                        <StackPanel>
-                            <ItemsControl x:Name="JavaItemsControl">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <ui:CardControl Padding="8" Tag="{Binding}">
-                                            <ui:CardControl.Header>
-                                                <StackPanel Margin="8,0,0,0">
+                <!-- ========================================================= -->
+                <!-- Группа 2: Java                                            -->
+                <!-- ========================================================= -->
+                <StackPanel Margin="0,0,0,24">
+                    <Grid Margin="0,0,0,8" ColumnDefinitions="*,Auto">
+                        <ui:TextBlock
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource CardGroupHeader}"
+                            Text="{loc:Loc Settings_Java}" />
+                        <ui:Button
+                            Grid.Column="1"
+                            Padding="5"
+                            VerticalAlignment="Center"
+                            Click="AddJava_Click"
+                            ToolTip="{loc:Loc Settings_Java_Add}">
+                            <ui:SymbolIcon
+                                Width="15"
+                                Height="15"
+                                FontSize="13"
+                                Symbol="Add32" />
+                        </ui:Button>
+                    </Grid>
+
+                    <!-- Список Java — слитные карточки как в остальных группах -->
+                    <StackPanel>
+                        <ItemsControl x:Name="JavaItemsControl" AlternationCount="9999">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <Border
+                                            Padding="12"
+                                            Tag="{Binding}"
+                                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}">
+                                            <Border.CornerRadius>
+                                                <MultiBinding Converter="{StaticResource CardGroupPositionConverter}"
+                                                              ConverterParameter="cornerRadius">
+                                                    <Binding RelativeSource="{RelativeSource AncestorType=ContentPresenter}"
+                                                             Path="(ItemsControl.AlternationIndex)" />
+                                                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}"
+                                                             Path="Items.Count" />
+                                                </MultiBinding>
+                                            </Border.CornerRadius>
+                                            <Border.BorderThickness>
+                                                <MultiBinding Converter="{StaticResource CardGroupPositionConverter}"
+                                                              ConverterParameter="borderThickness">
+                                                    <Binding RelativeSource="{RelativeSource AncestorType=ContentPresenter}"
+                                                             Path="(ItemsControl.AlternationIndex)" />
+                                                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}"
+                                                             Path="Items.Count" />
+                                                </MultiBinding>
+                                            </Border.BorderThickness>
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                                     <ui:TextBlock
                                                         FontSize="13"
                                                         FontWeight="Medium"
@@ -173,65 +183,79 @@
                                                         Text="{Binding Path}"
                                                         TextTrimming="CharacterEllipsis" />
                                                 </StackPanel>
-                                            </ui:CardControl.Header>
-                                            <ui:Button
-                                                Width="24"
-                                                Height="24"
-                                                Margin="0,0,12,0"
-                                                Padding="0"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Click="DeleteJava_Click"
-                                                Tag="{Binding}"
-                                                ToolTip="{loc:Loc Settings_Java_Delete}">
-                                                <ui:SymbolIcon
-                                                    Filled="True"
-                                                    FontSize="20"
-                                                    Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}"
-                                                    Symbol="Delete20" />
-                                            </ui:Button>
-                                        </ui:CardControl>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <ui:TextBlock
-                                x:Name="JavaEmptyText"
-                                Margin="0,16"
-                                HorizontalAlignment="Center"
-                                FontSize="13"
-                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                Text="{loc:Loc Settings_Java_Empty}"
-                                Visibility="Collapsed" />
-                        </StackPanel>
-                    </Border>
-                </ui:CardExpander>
+                                                <ui:Button
+                                                    Grid.Column="1"
+                                                    Width="24"
+                                                    Height="24"
+                                                    Margin="0,0,4,0"
+                                                    Padding="0"
+                                                    VerticalAlignment="Center"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Click="DeleteJava_Click"
+                                                    Tag="{Binding}"
+                                                    ToolTip="{loc:Loc Settings_Java_Delete}">
+                                                    <ui:SymbolIcon
+                                                        Filled="True"
+                                                        FontSize="20"
+                                                        Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}"
+                                                        Symbol="Delete20" />
+                                                </ui:Button>
+                                            </Grid>
+                                        </Border>
 
-                <!--  Внешний вид  -->
-                <ui:CardExpander
-                    Margin="0,0,0,8"
-                    ContentPadding="8"
-                    IsExpanded="False">
-                    <ui:CardExpander.Icon>
-                        <ui:SymbolIcon
-                            Filled="True"
-                            FontSize="20"
-                            Symbol="Color20" />
-                    </ui:CardExpander.Icon>
-                    <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc Settings_Theme}" />
-                    </ui:CardExpander.Header>
-                    <Border Padding="12,8">
-                        <StackPanel>
-                            <!--  Выбор темы  -->
-                            <Grid Margin="0,0,0,8" ColumnDefinitions="*,Auto">
+                                        <!-- Разделитель между карточками (скрыт у последней) -->
+                                        <Rectangle
+                                            Height="1"
+                                            Fill="{ui:ThemeResource ControlElevationBorderBrush}">
+                                            <Rectangle.Visibility>
+                                                <MultiBinding Converter="{StaticResource CardGroupPositionConverter}"
+                                                              ConverterParameter="separator">
+                                                    <Binding RelativeSource="{RelativeSource AncestorType=ContentPresenter}"
+                                                             Path="(ItemsControl.AlternationIndex)" />
+                                                    <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}"
+                                                             Path="Items.Count" />
+                                                </MultiBinding>
+                                            </Rectangle.Visibility>
+                                        </Rectangle>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <ui:TextBlock
+                            x:Name="JavaEmptyText"
+                            Margin="0,16"
+                            HorizontalAlignment="Center"
+                            FontSize="13"
+                            Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                            Text="{loc:Loc Settings_Java_Empty}"
+                            Visibility="Collapsed" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- ========================================================= -->
+                <!-- Группа 3: Внешний вид (Тема + Язык)                       -->
+                <!-- ========================================================= -->
+                <StackPanel Margin="0,0,0,24">
+                    <ui:TextBlock
+                        Text="{loc:Loc Settings_Theme}"
+                        Style="{StaticResource CardGroupHeader}" />
+
+                    <StackPanel>
+                        <!-- Карточка: Тема (верхняя — скругление сверху) -->
+                        <Border
+                            CornerRadius="8,8,0,0"
+                            Padding="16,12"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                            BorderThickness="1,1,1,0">
+                            <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <ui:TextBlock
-                                        FontSize="13"
-                                        FontWeight="SemiBold"
+                                        Style="{StaticResource SettingTitle}"
                                         Text="{loc:Loc Settings_Theme}" />
                                     <ui:TextBlock
-                                        FontSize="11"
-                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                        Style="{StaticResource SettingDescription}"
                                         Text="{loc:Loc Settings_Theme_Desc}" />
                                 </StackPanel>
                                 <ComboBox
@@ -246,17 +270,27 @@
                                     <ComboBoxItem Content="{loc:Loc Settings_Theme_Light}" Tag="Light" />
                                 </ComboBox>
                             </Grid>
+                        </Border>
 
-                            <!--  Выбор языка  -->
-                            <Grid Margin="0,8,0,0" ColumnDefinitions="*,Auto">
+                        <!-- Разделитель -->
+                        <Rectangle
+                            Height="1"
+                            Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
+
+                        <!-- Карточка: Язык (нижняя — скругление снизу) -->
+                        <Border
+                            CornerRadius="0,0,8,8"
+                            Padding="16,12"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                            BorderThickness="1,0,1,1">
+                            <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <ui:TextBlock
-                                        FontSize="13"
-                                        FontWeight="SemiBold"
+                                        Style="{StaticResource SettingTitle}"
                                         Text="{loc:Loc Settings_Language}" />
                                     <ui:TextBlock
-                                        FontSize="11"
-                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                        Style="{StaticResource SettingDescription}"
                                         Text="{loc:Loc Settings_Language_Desc}" />
                                 </StackPanel>
                                 <ComboBox
@@ -270,101 +304,133 @@
                                     <ComboBoxItem Content="{loc:Loc Settings_Language_Russian}" Tag="ru" />
                                 </ComboBox>
                             </Grid>
-                        </StackPanel>
-                    </Border>
-                </ui:CardExpander>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
 
-                <!--  О программе  -->
-                <ui:CardExpander ContentPadding="8" IsExpanded="False">
-                    <ui:CardExpander.Icon>
-                        <ui:SymbolIcon
-                            Filled="True"
-                            FontSize="20"
-                            Symbol="Info20" />
-                    </ui:CardExpander.Icon>
-                    <ui:CardExpander.Header>
-                        <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}" Text="{loc:Loc Settings_About}" />
-                    </ui:CardExpander.Header>
-                    <Border Padding="8">
-                        <StackPanel>
-                            <ui:TextBlock
-                                FontSize="24"
-                                FontWeight="Bold"
-                                Text="Konserva" />
-                            <ui:TextBlock FontSize="14" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
-                                <Run Text="{loc:Loc Settings_About_Version}" />
-                                <Run Text="{utils:AppVersion}" />
-                            </ui:TextBlock>
-                            <ui:TextBlock
-                                FontSize="13"
-                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                Text="{loc:Loc Settings_About_Description}" />
+                <!-- ========================================================= -->
+                <!-- Группа 4: О программе                                      -->
+                <!-- ========================================================= -->
+                <StackPanel Margin="0,0,0,24">
+                    <ui:TextBlock
+                        Text="{loc:Loc Settings_About}"
+                        Style="{StaticResource CardGroupHeader}" />
 
-                            <!--  Check for Updates Button  -->
-                            <Button
-                                x:Name="CheckUpdatesButton"
-                                Margin="0,16,0,0"
-                                Padding="12,8"
-                                HorizontalAlignment="Left"
-                                Click="CheckUpdatesButton_Click"
-                                Content="{loc:Loc Settings_CheckForUpdates}" />
-
-                            <ui:TextBlock
-                                Margin="0,21,0,8"
-                                FontSize="13"
-                                FontWeight="Bold"
-                                Text="{loc:Loc Settings_About_ModalLoaders}" />
-                            <StackPanel Orientation="Horizontal">
-                                <ui:InfoBadge
-                                    Margin="0,0,4,0"
-                                    Severity="Attention"
-                                    Value="Vanilla" />
-                                <ui:InfoBadge
-                                    Margin="0,0,4,0"
-                                    Severity="Caution"
-                                    Value="Forge" />
-                                <ui:InfoBadge
-                                    Margin="0,0,4,0"
-                                    Severity="Caution"
-                                    Value="NeoForge" />
-                                <ui:InfoBadge
-                                    Margin="0,0,4,0"
-                                    Severity="Caution"
-                                    Value="Fabric" />
-                                <ui:InfoBadge
-                                    Margin="0,0,4,0"
-                                    Severity="Caution"
-                                    Value="Quilt" />
-                                <ui:InfoBadge
-                                    Margin="0,0,4,0"
-                                    Severity="Attention"
-                                    Value="Paper" />
-                                <ui:InfoBadge
-                                    Margin="0,0,4,0"
-                                    Severity="Attention"
-                                    Value="Purpur" />
+                    <StackPanel>
+                        <!-- Карточка: Информация о приложении (верхняя) -->
+                        <Border
+                            CornerRadius="8,8,0,0"
+                            Padding="16,16"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                            BorderThickness="1,1,1,0">
+                            <StackPanel>
+                                <ui:TextBlock
+                                    FontSize="24"
+                                    FontWeight="Bold"
+                                    Text="Konserva" />
+                                <ui:TextBlock
+                                    FontSize="14"
+                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
+                                    <Run Text="{loc:Loc Settings_About_Version}" />
+                                    <Run Text="{utils:AppVersion}" />
+                                </ui:TextBlock>
+                                <ui:TextBlock
+                                    FontSize="13"
+                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                    Text="{loc:Loc Settings_About_Description}" />
                             </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </ui:CardExpander>
+                        </Border>
+
+                        <!-- Разделитель -->
+                        <Rectangle
+                            Height="1"
+                            Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
+
+                        <!-- Карточка: Кнопка проверки обновлений (средняя) -->
+                        <Border
+                            CornerRadius="0"
+                            Padding="16,12"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                            BorderThickness="1,0,1,0">
+                            <StackPanel>
+                                <Button
+                                    x:Name="CheckUpdatesButton"
+                                    Padding="12,8"
+                                    HorizontalAlignment="Left"
+                                    Click="CheckUpdatesButton_Click"
+                                    Content="{loc:Loc Settings_CheckForUpdates}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Разделитель -->
+                        <Rectangle
+                            Height="1"
+                            Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
+
+                        <!-- Карточка: Модлоадеры (нижняя) -->
+                        <Border
+                            CornerRadius="0,0,8,8"
+                            Padding="16,12"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                            BorderThickness="1,0,1,1">
+                            <StackPanel>
+                                <ui:TextBlock
+                                    Margin="0,0,0,8"
+                                    FontSize="13"
+                                    FontWeight="Bold"
+                                    Text="{loc:Loc Settings_About_ModalLoaders}" />
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:InfoBadge
+                                        Margin="0,0,4,0"
+                                        Severity="Attention"
+                                        Value="Vanilla" />
+                                    <ui:InfoBadge
+                                        Margin="0,0,4,0"
+                                        Severity="Caution"
+                                        Value="Forge" />
+                                    <ui:InfoBadge
+                                        Margin="0,0,4,0"
+                                        Severity="Caution"
+                                        Value="NeoForge" />
+                                    <ui:InfoBadge
+                                        Margin="0,0,4,0"
+                                        Severity="Caution"
+                                        Value="Fabric" />
+                                    <ui:InfoBadge
+                                        Margin="0,0,4,0"
+                                        Severity="Caution"
+                                        Value="Quilt" />
+                                    <ui:InfoBadge
+                                        Margin="0,0,4,0"
+                                        Severity="Attention"
+                                        Value="Paper" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
             </StackPanel>
         </ScrollViewer>
 
-        <!--  InfoBar для уведомления о смене языка  -->
+        <!-- InfoBar для уведомления о смене языка -->
         <ui:InfoBar
             x:Name="LanguageChangeInfoBar"
             Title="{loc:Loc Settings_Language}"
-            Grid.Row="2"
+            Grid.Row="1"
             Margin="0,8,0,0"
             IsClosable="True"
             IsOpen="False"
             Message="{loc:Loc Message_RestartRequired}"
             Severity="Informational" />
 
-        <!--  InfoBar для уведомления об успешной установке Java  -->
+        <!-- InfoBar для уведомления об успешной установке Java -->
         <ui:InfoBar
             x:Name="JavaSuccessInfoBar"
-            Grid.Row="2"
+            Grid.Row="1"
             Margin="0,8,0,0"
             IsClosable="True"
             IsOpen="False"

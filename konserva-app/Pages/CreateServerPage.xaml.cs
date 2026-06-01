@@ -1,4 +1,4 @@
-﻿using Konserva.Localization;
+using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
@@ -6,19 +6,17 @@ using static Konserva.Models.ApiUrls;
 using Microsoft.Win32;
 using System.IO;
 using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Interop;
 using Wpf.Ui.Controls;
 
-namespace Konserva.Dialogs;
+namespace Konserva.Pages;
 
 /// <summary>
-/// Диалог создания нового сервера
+/// Страница создания нового сервера
 /// </summary>
-public partial class CreateServerDialog : FluentWindow
+public partial class CreateServerPage : Page
 {
     private readonly IConfigService? _configService;
     private readonly IMcVersionsApi _versionsApi;
@@ -27,23 +25,21 @@ public partial class CreateServerDialog : FluentWindow
     private bool _isInstalling;
     private bool _isUpdating;
     private bool _isChangingSnapshots;
-    private bool _isChangingModLoader; // Флаг для защиты от повторного вызова ModLoaderBox_SelectionChanged
+    private bool _isChangingModLoader;
     private CancellationTokenSource? _installCts;
-    private bool _wasCancelled; // Флаг отмены пользователем
+    private bool _wasCancelled;
     private bool _isFindingCompatibleVersion;
     private string[] _allMcVersions = [];
     private HashSet<string> _paperVersions = [];
     private HashSet<string>? _neoForgeStableMcVersions;
     private HashSet<string>? _quiltSupportedVersions;
-
-    // Кэш для избежания повторной загрузки версий загрузчиков
     private string? _lastLoadedModLoader;
     private string? _lastLoadedMcVersion;
     private bool _isLoadingInProgress;
-    private string? _currentModLoader; // Текущий выбранный модлоадер
-    private CancellationTokenSource? _loaderLoadingCts; // Для отмены загрузки версий при смене модлоадера
+    private string? _currentModLoader;
+    private CancellationTokenSource? _loaderLoadingCts;
 
-    public CreateServerDialog(IConfigService? configService = null, IMcVersionsApi? versionsApi = null, IServerInstaller? installer = null)
+    public CreateServerPage(IConfigService? configService = null, IMcVersionsApi? versionsApi = null, IServerInstaller? installer = null)
     {
         _configService = configService;
         _versionsApi = versionsApi
@@ -55,102 +51,9 @@ public partial class CreateServerDialog : FluentWindow
 
         InitializeComponent();
 
-        // Подписываемся после InitializeComponent, чтобы избежать ошибок
+        Title = LocalizationManager.Get("CreateServer_Title");
         Loaded += OnLoaded;
-    }
-
-    private const int WM_GETMINMAXINFO = 0x0024;
-    private const int GWL_STYLE = -16;
-    private const int WS_SIZEBOX = 0x00040000;
-    private const int WS_MAXIMIZEBOX = 0x00010000;
-    private const int SC_SIZE = 0xF000;
-    private const int SC_MAXIMIZE = 0xF030;
-    private const int MF_BYCOMMAND = 0x00000000;
-
-    [LibraryImport("user32.dll")]
-    private static partial int GetWindowLongW(IntPtr hWnd, int nIndex);
-
-    [LibraryImport("user32.dll")]
-    private static partial int SetWindowLongW(IntPtr hWnd, int nIndex, int dwNewLong);
-
-    [LibraryImport("user32.dll")]
-    private static partial IntPtr GetSystemMenu(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool bRevert);
-
-    [LibraryImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool RemoveMenu(IntPtr hMenu, uint uPosition, uint uFlags);
-
-    /// <summary>
-    /// Переопределяем SourceInitialized чтобы установить свой WindowChrome
-    /// ПОСЛЕ FluentWindow (WPF-UI), тем самым блокируя все resize-зоны.
-    /// </summary>
-    protected override void OnSourceInitialized(EventArgs e)
-    {
-        base.OnSourceInitialized(e);
-
-        // FluentWindow (WPF-UI) уже установила свой WindowChrome.
-        // Переопределяем его — полностью отключаем resize.
-        var chrome = new System.Windows.Shell.WindowChrome
-        {
-            ResizeBorderThickness = new Thickness(0),
-            GlassFrameThickness = new Thickness(0),
-            CaptionHeight = 32,
-            CornerRadius = new CornerRadius(0),
-            UseAeroCaptionButtons = false
-        };
-        System.Windows.Shell.WindowChrome.SetWindowChrome(this, chrome);
-
-        var hwnd = new WindowInteropHelper(this).Handle;
-
-        // Убираем WS_SIZEBOX и WS_MAXIMIZEBOX из стилей Win32
-        var style = GetWindowLongW(hwnd, GWL_STYLE);
-        style &= ~(WS_SIZEBOX | WS_MAXIMIZEBOX);
-        SetWindowLongW(hwnd, GWL_STYLE, style);
-
-        // Убираем Size и Maximize из системного меню (Alt+Space)
-        var hMenu = GetSystemMenu(hwnd, false);
-        if (hMenu != IntPtr.Zero)
-        {
-            RemoveMenu(hMenu, SC_SIZE, MF_BYCOMMAND);
-            RemoveMenu(hMenu, SC_MAXIMIZE, MF_BYCOMMAND);
-        }
-
-        // WM_GETMINMAXINFO — страховка: фиксируем размер
-        var source = HwndSource.FromHwnd(hwnd);
-        source?.AddHook(WndProc);
-    }
-
-    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-    {
-        if (msg == WM_GETMINMAXINFO && lParam != IntPtr.Zero)
-        {
-            var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
-            mmi.ptMinTrackSize.x = 480;
-            mmi.ptMinTrackSize.y = 500;
-            mmi.ptMaxTrackSize.x = 480;
-            mmi.ptMaxTrackSize.y = 500;
-            Marshal.StructureToPtr(mmi, lParam, true);
-            handled = true;
-        }
-
-        return IntPtr.Zero;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct POINT
-    {
-        public int x;
-        public int y;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MINMAXINFO
-    {
-        public POINT ptReserved;
-        public POINT ptMaxSize;
-        public POINT ptMaxPosition;
-        public POINT ptMinTrackSize;
-        public POINT ptMaxTrackSize;
+        Unloaded += OnUnloaded;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -159,73 +62,89 @@ public partial class CreateServerDialog : FluentWindow
 
         try
         {
-            Logger.Info("Loading dialog data...", "CreateServerDialog");
+            Logger.Info("Loading CreateServerPage data...", "CreateServerPage");
 
-            // Подписываемся на события
             ShowSnapshotsBox.Checked += ShowSnapshotsBox_Changed;
             ShowSnapshotsBox.Unchecked += ShowSnapshotsBox_Changed;
 
-            // Подписываемся на изменение выбора модлоадера и версии Minecraft
             ModLoaderBox.SelectionChanged += ModLoaderBox_SelectionChanged;
             McVersionBox.SelectionChanged += McVersionBox_SelectionChanged;
 
-            // Загружаем версии Minecraft (асинхронно, чтобы не блокировать UI)
             _allMcVersions = await _versionsApi.GetMcVersions();
-            Logger.Info($"Loaded {_allMcVersions.Length} Minecraft versions", "CreateServerDialog");
+            Logger.Info($"Loaded {_allMcVersions.Length} Minecraft versions", "CreateServerPage");
 
-            // Путь по умолчанию
             ServerPathBox.Text = GetDefaultServerPath();
-            Logger.Info($"Server path: {ServerPathBox.Text}", "CreateServerDialog");
+            Logger.Info($"Server path: {ServerPathBox.Text}", "CreateServerPage");
 
-            // Заполняем ComboBox версий Minecraft
             await FilterMcVersionsAsync();
-            Logger.Info("FilterMcVersionsAsync completed", "CreateServerDialog");
+            Logger.Info("FilterMcVersionsAsync completed", "CreateServerPage");
         }
         catch (Exception ex)
         {
-            Logger.Error($"Dialog load error: {ex}", ex, "CreateServerDialog");
+            Logger.Error($"Page load error: {ex}", ex, "CreateServerPage");
             await UiHelper.ShowError($"{LocalizationManager.Get("CreateServer_Error_DialogLoad")}: {ex.Message}");
         }
 
         _isInitializing = false;
-        Logger.Info("Dialog loaded successfully", "CreateServerDialog");
+        Logger.Info("CreateServerPage loaded successfully", "CreateServerPage");
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        // Отменяем установку, если пользователь ушёл со страницы
+        if (_isInstalling && _installCts != null)
+        {
+            _wasCancelled = true;
+            _installCts.Cancel();
+        }
+
+        _installCts?.Dispose();
+        _installCts = null;
     }
 
     /// <summary>
-    /// Фильтрация версий Minecraft с учётом выбранного загрузчика
+    /// Навигация назад к списку серверов
     /// </summary>
+    private void NavigateBackToServers()
+    {
+        if (App.MainWindow?.ContentFrame.CanGoBack == true)
+        {
+            App.MainWindow.ContentFrame.GoBack();
+        }
+        else
+        {
+            App.MainWindow?.ContentFrame.Navigate(new ServersPage());
+        }
+    }
+
+    // ======================== Фильтрация версий ========================
+
     private async Task FilterMcVersionsAsync(string? modLoaderOverride = null)
     {
-        Logger.Info($"FilterMcVersionsAsync started: _isUpdating={_isUpdating}, modLoaderOverride={modLoaderOverride}", "CreateServerDialog");
+        Logger.Info($"FilterMcVersionsAsync started: _isUpdating={_isUpdating}, modLoaderOverride={modLoaderOverride}", "CreateServerPage");
 
-        // Защита от повторного входа
         if (_isUpdating || ShowSnapshotsBox == null || ModLoaderBox == null || McVersionBox == null)
         {
-            Logger.Info($"FilterMcVersionsAsync skipped: _isUpdating={_isUpdating}, ShowSnapshotsBox={ShowSnapshotsBox != null}, ModLoaderBox={ModLoaderBox != null}, McVersionBox={McVersionBox != null}", "CreateServerDialog");
+            Logger.Info($"FilterMcVersionsAsync skipped", "CreateServerPage");
             return;
         }
 
         _isUpdating = true;
-        _isChangingModLoader = true; // Блокируем ModLoaderBox_SelectionChanged
+        _isChangingModLoader = true;
         try
         {
             var showSnapshots = ShowSnapshotsBox.IsChecked ?? false;
-            // Получаем текущий выбранный загрузчик или переданный
             var selectedModLoader = modLoaderOverride ?? GetSelectedModLoader();
 
-            Logger.Info($"FilterMcVersionsAsync: modLoader={selectedModLoader}, showSnapshots={showSnapshots}", "CreateServerDialog");
+            Logger.Info($"FilterMcVersionsAsync: modLoader={selectedModLoader}, showSnapshots={showSnapshots}", "CreateServerPage");
 
-            // Загружаем список Paper один раз
             if (selectedModLoader == "Paper" && _paperVersions.Count == 0)
                 await LoadPaperVersionsAsync();
 
-            // Определяем поддерживаемые версии для выбранного загрузчика
             HashSet<string> supportedVersions;
 
             if (selectedModLoader == "NeoForge" && !showSnapshots)
             {
-                // Для NeoForge при скрытии снимков — только стабильные версии
-                // Если кэш ещё не загружен, используем fallback (MC 1.16+)
                 if (_neoForgeStableMcVersions != null)
                 {
                     supportedVersions = _neoForgeStableMcVersions.Count > 0
@@ -234,27 +153,23 @@ public partial class CreateServerDialog : FluentWindow
                 }
                 else
                 {
-                    // Загружаем в фоне, не блокируя UI
                     supportedVersions = [.. _allMcVersions.Where(v => TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
                     _ = LoadNeoForgeStableVersionsAsync();
                 }
             }
             else if (selectedModLoader == "NeoForge")
             {
-                // NeoForge со снапшотами — MC 1.16+
                 supportedVersions = [.. _allMcVersions.Where(v =>
                     TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
             }
             else if (selectedModLoader == "Quilt")
             {
-                // Для Quilt используем список поддерживаемых версий
                 if (_quiltSupportedVersions == null)
                 {
-                    Logger.Info("Loading Quilt supported versions...", "CreateServerDialog");
+                    Logger.Info("Loading Quilt supported versions...", "CreateServerPage");
                     _quiltSupportedVersions = await GetQuiltSupportedVersionsAsync();
-                    Logger.Info($"Loaded {_quiltSupportedVersions.Count} Quilt supported versions", "CreateServerDialog");
+                    Logger.Info($"Loaded {_quiltSupportedVersions.Count} Quilt supported versions", "CreateServerPage");
                 }
-
                 supportedVersions = _quiltSupportedVersions;
             }
             else if (selectedModLoader == "Paper")
@@ -265,8 +180,6 @@ public partial class CreateServerDialog : FluentWindow
             }
             else
             {
-                // Vanilla, Forge, Fabric — все версии Minecraft из манифеста Mojang.
-                // Список _allMcVersions приходит ТОЛЬКО от Mojang и содержит только MC версии.
                 supportedVersions = [.. _allMcVersions];
             }
 
@@ -275,9 +188,8 @@ public partial class CreateServerDialog : FluentWindow
                 .Where(v => showSnapshots || !IsSnapshot(v))
                 .ToArray();
 
-            Logger.Info($"Filtered MC versions for {selectedModLoader}: {versions.Length} (from {_allMcVersions.Length})", "CreateServerDialog");
+            Logger.Info($"Filtered MC versions for {selectedModLoader}: {versions.Length} (from {_allMcVersions.Length})", "CreateServerPage");
 
-            // Сохраняем текущую выбранную версию
             var currentMcVersion = McVersionBox.SelectedItem is ComboBoxItem currentItem ? currentItem.Content?.ToString() : null;
 
             McVersionBox.Items.Clear();
@@ -290,7 +202,6 @@ public partial class CreateServerDialog : FluentWindow
                 });
             }
 
-            // Восстанавливаем выбранную версию, если она всё ещё доступна
             if (!string.IsNullOrEmpty(currentMcVersion) && versions.Contains(currentMcVersion))
             {
                 var matchingItem = McVersionBox.Items.Cast<ComboBoxItem>()
@@ -298,53 +209,41 @@ public partial class CreateServerDialog : FluentWindow
                 if (matchingItem != null)
                 {
                     McVersionBox.SelectedItem = matchingItem;
-                    var selectedModLoaderTag = modLoaderOverride ?? GetSelectedModLoader();
-                    Logger.Info($"Selected MC version: {currentMcVersion}, modLoader: {selectedModLoaderTag}", "CreateServerDialog");
                 }
             }
             else if (McVersionBox.Items.Count > 0)
             {
                 McVersionBox.SelectedIndex = 0;
-                var selectedModLoaderTag = modLoaderOverride ?? GetSelectedModLoader();
-                var firstMcVersion = (McVersionBox.Items[0] as ComboBoxItem)?.Content?.ToString();
-                Logger.Info($"First MC version: {firstMcVersion}, modLoader: {selectedModLoaderTag}", "CreateServerDialog");
-                Logger.Info($"Total MC versions in list: {McVersionBox.Items.Count}", "CreateServerDialog");
-                Logger.Info($"All MC versions (first 10): {string.Join(", ", McVersionBox.Items.Cast<ComboBoxItem>().Take(10).Select(i => i.Content?.ToString()))}", "CreateServerDialog");
             }
             else
             {
-                // Если версий нет - просто выходим
                 return;
             }
+
+
         }
         finally
         {
             _isUpdating = false;
-            _isChangingModLoader = false; // Разблокируем ModLoaderBox_SelectionChanged
-            Logger.Info("FilterMcVersionsAsync completed", "CreateServerDialog");
+            _isChangingModLoader = false;
+            Logger.Info("FilterMcVersionsAsync completed", "CreateServerPage");
         }
 
-        // Вызываем McVersionBox_SelectionChanged вручную для загрузки версий загрузчика
-        // (автоматический вызов был заблокирован через _isChangingModLoader)
         if (!string.IsNullOrEmpty(_currentModLoader) && _currentModLoader is "Forge" or "NeoForge" or "Fabric" or "Quilt")
         {
             var selectedMcVersion = (McVersionBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
             if (!string.IsNullOrEmpty(selectedMcVersion))
             {
-                Logger.Info($"Calling McVersionBox_SelectionChanged manually: {_currentModLoader} for MC {selectedMcVersion}", "CreateServerDialog");
+                Logger.Info($"Calling LoadLoaderVersions manually: {_currentModLoader} for MC {selectedMcVersion}", "CreateServerPage");
                 _ = LoadLoaderVersions(_currentModLoader, selectedMcVersion);
             }
         }
     }
 
-    /// <summary>
-    /// Получает список версий Minecraft, поддерживаемых Quilt
-    /// </summary>
     private async Task<HashSet<string>> GetQuiltSupportedVersionsAsync()
     {
         var supported = new HashSet<string>();
 
-        // Проверяем последние 50 версий (быстро)
         var recentVersions = _allMcVersions
             .Where(v => TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))
             .Take(50)
@@ -352,17 +251,16 @@ public partial class CreateServerDialog : FluentWindow
 
         using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
 
-        foreach (var version in recentVersions.Take(20)) // Проверяем только первые 20 для скорости
+        foreach (var version in recentVersions.Take(20))
         {
             try
             {
-                    var url = $"{QuiltVersionsLoader}/{version}";
+                var url = $"{QuiltVersionsLoader}/{version}";
                 var response = await httpClient.GetStringAsync(url);
 
                 using var doc = System.Text.Json.JsonDocument.Parse(response);
                 var array = doc.RootElement.EnumerateArray();
 
-                // Если есть хотя бы один loader — версия поддерживается
                 if (array.Any())
                 {
                     supported.Add(version);
@@ -370,11 +268,11 @@ public partial class CreateServerDialog : FluentWindow
             }
             catch (HttpRequestException httpEx) when (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                // 404 — версия не поддерживается, пропускаем
+                // 404 — версия не поддерживается
             }
             catch (Exception ex)
             {
-                Logger.Warning($"Failed to check Quilt support for version {version}: {ex.Message}", "CreateServerDialog");
+                Logger.Warning($"Failed to check Quilt support for version {version}: {ex.Message}", "CreateServerPage");
             }
         }
 
@@ -385,11 +283,9 @@ public partial class CreateServerDialog : FluentWindow
     {
         try
         {
-            // PaperMC Downloads Service v3 возвращает версии, сгруппированные по мажорной версии
             var response = await _versionsApi.GetStringWithDecompressionAsync(
-                    PaperApi + "/projects/paper");
+                PaperApi + "/projects/paper");
             using var doc = System.Text.Json.JsonDocument.Parse(response);
-            // v3: { "versions": { "1.20": ["1.20.1", ...], "1.21": ["1.21", ...] } }
             _paperVersions = [.. doc.RootElement.GetProperty("versions")
                 .EnumerateObject()
                 .SelectMany(g => g.Value.EnumerateArray())
@@ -397,7 +293,7 @@ public partial class CreateServerDialog : FluentWindow
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Failed to load Paper versions, using fallback: {ex.Message}", "CreateServerDialog");
+            Logger.Warning($"Failed to load Paper versions, using fallback: {ex.Message}", "CreateServerPage");
             _paperVersions = [.. _allMcVersions];
         }
     }
@@ -419,7 +315,7 @@ public partial class CreateServerDialog : FluentWindow
         }
         catch
         {
-            // Ignore parse errors — version string is not standard format
+            // Ignore parse errors
         }
 
         return false;
@@ -438,7 +334,7 @@ public partial class CreateServerDialog : FluentWindow
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Failed to get config for default server path: {ex.Message}", "CreateServerDialog");
+            Logger.Warning($"Failed to get config for default server path: {ex.Message}", "CreateServerPage");
         }
 
         var exeDir = AppContext.BaseDirectory;
@@ -456,34 +352,25 @@ public partial class CreateServerDialog : FluentWindow
 
     private static bool IsSnapshot(string version)
     {
-        // Признаки снимков
         var snapshotMarkers = new[] { "w", "-pre", "-rc", "-snapshot", "Pre-Release", " pre", "inf" };
         if (snapshotMarkers.Any(m => version.Contains(m, StringComparison.OrdinalIgnoreCase)))
             return true;
 
-        // Снапшоты старых версий
         var snapshotPrefixes = new[] { "a", "b", "c", "rd" };
         if (snapshotPrefixes.Any(p => version.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
             return true;
 
-        // Quilt beta версии
         if (version.Contains("-beta", StringComparison.OrdinalIgnoreCase))
             return true;
 
         return false;
     }
 
-    /// <summary>
-    /// Проверка: является ли версия NeoForge снимком (нестабильной)
-    /// Формат: MAJOR.MINOR.PATCH[-beta/-alpha.x+pre-x/-alpha.x+snapshot-x]
-    /// Примеры: 21.10.64 (стабильная), 21.11.0-beta (beta), 26.1.0.0-alpha.1+snapshot-1 (alpha)
-    /// </summary>
     private static bool IsNeoForgeSnapshot(string fullVersion)
     {
         if (string.IsNullOrEmpty(fullVersion))
             return false;
 
-        // Проверяем наличие суффиксов
         if (fullVersion.Contains("-beta", StringComparison.OrdinalIgnoreCase))
             return true;
 
@@ -499,17 +386,11 @@ public partial class CreateServerDialog : FluentWindow
         return false;
     }
 
-    /// <summary>
-    /// Проверка: является ли версия Quilt снимком
-    /// Формат: X.Y.Z[-beta.X/-pre.X/-rc.X]
-    /// Примеры: 0.12.0 (стабильная), 0.13.0-beta.1 (beta), 0.14.0-pre.2 (pre-release)
-    /// </summary>
     private static bool IsQuiltSnapshot(string fullVersion)
     {
         if (string.IsNullOrEmpty(fullVersion))
             return false;
 
-        // Проверяем суффиксы: -beta, -pre, -rc
         if (fullVersion.Contains("-beta", StringComparison.OrdinalIgnoreCase))
             return true;
 
@@ -522,18 +403,13 @@ public partial class CreateServerDialog : FluentWindow
         return false;
     }
 
-    /// <summary>
-    /// Получает версии Minecraft, для которых есть стабильные выпуски NeoForge
-    /// Формат версии NeoForge: MAJOR.MINOR.PATCH или MAJOR.MINOR.PATCH-beta
-    /// Пример: 21.10.64 -> MC 1.21.10, 21.11.0-beta -> MC 1.21.11 (beta)
-    /// </summary>
     private static async Task<HashSet<string>> GetNeoForgeStableMcVersionsAsync()
     {
         var stableVersions = new HashSet<string>();
 
         try
         {
-                    var url = NeoForgeMetadata;
+            var url = NeoForgeMetadata;
 
             using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
             var response = await httpClient.GetStringAsync(url);
@@ -543,19 +419,13 @@ public partial class CreateServerDialog : FluentWindow
             foreach (Match match in matches)
             {
                 var fullVersion = match.Groups[1].Value;
-
-                // Пример: 21.10.64 или 21.11.0-beta или 26.1.0.0-alpha.1+snapshot-1
-                // Извлекаем MAJOR.MINOR из первой части (до дефиса)
-                var versionPart = fullVersion.Split('-')[0]; // "21.10.64" или "26.1.0.0"
+                var versionPart = fullVersion.Split('-')[0];
                 var parts = versionPart.Split('.');
 
                 if (parts.Length >= 2)
                 {
-                    // Формируем версию Minecraft: 1.MAJOR.MINOR
-                    // 21.10 -> 1.21.10, 26.1 -> 1.26.1
                     var mcVersion = $"1.{parts[0]}.{parts[1]}";
 
-                    // Добавляем только стабильные версии (не снимки)
                     if (!IsNeoForgeSnapshot(fullVersion))
                     {
                         stableVersions.Add(mcVersion);
@@ -565,15 +435,12 @@ public partial class CreateServerDialog : FluentWindow
         }
         catch
         {
-            // При ошибке возвращаем пустой список, потом будет fallback
+            // При ошибке возвращаем пустой список
         }
 
         return stableVersions;
     }
 
-    /// <summary>
-    /// Загружает стабильные версии NeoForge в фоне (не блокируя UI).
-    /// </summary>
     private async Task LoadNeoForgeStableVersionsAsync()
     {
         try
@@ -581,7 +448,6 @@ public partial class CreateServerDialog : FluentWindow
             var versions = await GetNeoForgeStableMcVersionsAsync();
             _neoForgeStableMcVersions = versions;
 
-            // Если сейчас выбран NeoForge без снапшотов — перефильтруем
             if (GetSelectedModLoader() == "NeoForge" && !(ShowSnapshotsBox?.IsChecked ?? false))
             {
                 _ = FilterMcVersionsAsync();
@@ -589,20 +455,18 @@ public partial class CreateServerDialog : FluentWindow
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Failed to load NeoForge stable versions: {ex.Message}", "CreateServerDialog");
+            Logger.Warning($"Failed to load NeoForge stable versions: {ex.Message}", "CreateServerPage");
         }
     }
 
     private void ShowSnapshotsBox_Changed(object? sender, RoutedEventArgs e)
     {
-        // Защита от вызова во время инициализации и повторных входов
         if (_isInitializing || _isChangingSnapshots || _isUpdating || McVersionBox == null || ModLoaderBox == null)
             return;
 
         _isChangingSnapshots = true;
         try
         {
-            // Сбрасываем кэш для перезагрузки версий
             _lastLoadedModLoader = null;
             _lastLoadedMcVersion = null;
 
@@ -632,36 +496,33 @@ public partial class CreateServerDialog : FluentWindow
     {
         try
         {
-            // Защита от повторного вызова
             if (_isChangingModLoader)
             {
-                Logger.Info($"ModLoaderBox_SelectionChanged skipped: _isChangingModLoader=True", "CreateServerDialog");
+                Logger.Info($"ModLoaderBox_SelectionChanged skipped: _isChangingModLoader=True", "CreateServerPage");
                 return;
             }
 
-            // Если идёт обновление или ещё не инициализировано — пропускаем
             if (_isUpdating)
             {
-                Logger.Info("ModLoaderBox_SelectionChanged skipped: _isUpdating=True", "CreateServerDialog");
+                Logger.Info("ModLoaderBox_SelectionChanged skipped: _isUpdating=True", "CreateServerPage");
                 return;
             }
 
             if (_isInitializing || LoaderVersionBox == null || McVersionBox == null)
             {
-                Logger.Info($"ModLoaderBox_SelectionChanged skipped: _isInitializing={_isInitializing}, LoaderVersionBox={LoaderVersionBox != null}, McVersionBox={McVersionBox != null}", "CreateServerDialog");
+                Logger.Info($"ModLoaderBox_SelectionChanged skipped", "CreateServerPage");
                 return;
             }
 
             if (ModLoaderBox.SelectedItem is not ComboBoxItem item)
             {
-                Logger.Info("ModLoaderBox_SelectionChanged: no selected item", "CreateServerDialog");
+                Logger.Info("ModLoaderBox_SelectionChanged: no selected item", "CreateServerPage");
                 return;
             }
 
             var tag = item.Tag?.ToString();
-            Logger.Info($"ModLoaderBox_SelectionChanged: {tag}", "CreateServerDialog");
+            Logger.Info($"ModLoaderBox_SelectionChanged: {tag}", "CreateServerPage");
 
-            // Отменяем любую текущую загрузку версий загрузчика
             _loaderLoadingCts?.Cancel();
             _loaderLoadingCts?.Dispose();
             _loaderLoadingCts = null;
@@ -670,53 +531,44 @@ public partial class CreateServerDialog : FluentWindow
             _lastLoadedMcVersion = null;
             _isFindingCompatibleVersion = false;
 
-            // Сохраняем текущий модлоадер
             _currentModLoader = tag;
 
             var isEnabled = tag is "Forge" or "NeoForge" or "Fabric" or "Quilt";
             LoaderVersionBox.IsEnabled = isEnabled;
-
-            // Очищаем список версий загрузчика
             LoaderVersionBox.Items.Clear();
 
-            // Перефильтруем версии Minecraft для нового загрузчика
             await FilterMcVersionsAsync(tag);
         }
         catch (Exception ex)
         {
-            Logger.Error($"ModLoaderBox_SelectionChanged error: {ex.Message}", ex, "CreateServerDialog");
+            Logger.Error($"ModLoaderBox_SelectionChanged error: {ex.Message}", ex, "CreateServerPage");
         }
     }
 
-    /// <summary>
-    /// Загружает версии загрузчика для указанной версии Minecraft
-    /// </summary>
+    // ======================== Загрузка версий загрузчика ========================
+
     private async Task LoadLoaderVersions(string modLoaderType, string mcVersion)
     {
-        Logger.Info($"LoadLoaderVersions: {modLoaderType} for MC {mcVersion}", "CreateServerDialog");
+        Logger.Info($"LoadLoaderVersions: {modLoaderType} for MC {mcVersion}", "CreateServerPage");
 
-        // Создаём новый CTS для этой загрузки (предыдущий уже отменён при смене модлоадера)
         _loaderLoadingCts?.Cancel();
         _loaderLoadingCts?.Dispose();
         _loaderLoadingCts = new CancellationTokenSource();
         var cts = _loaderLoadingCts;
 
-        // Защита от повторной загрузки для тех же параметров
         if (_isLoadingInProgress &&
             (_lastLoadedModLoader == modLoaderType && _lastLoadedMcVersion == mcVersion))
         {
-            Logger.Info($"LoadLoaderVersions skipped: isLoading={_isLoadingInProgress}, lastModLoader={_lastLoadedModLoader}, lastMcVersion={_lastLoadedMcVersion}", "CreateServerDialog");
+            Logger.Info($"LoadLoaderVersions skipped: already loaded", "CreateServerPage");
             return;
         }
 
-        // Защита от параллельного поиска совместимой версии
         if (_isFindingCompatibleVersion)
         {
-            Logger.Info($"LoadLoaderVersions skipped: _isFindingCompatibleVersion=True", "CreateServerDialog");
+            Logger.Info($"LoadLoaderVersions skipped: _isFindingCompatibleVersion=True", "CreateServerPage");
             return;
         }
 
-        // Устанавливаем флаг загрузки (но НЕ запоминаем версию - это сделаем после успешной загрузки)
         _isLoadingInProgress = true;
 
         try
@@ -730,50 +582,44 @@ public partial class CreateServerDialog : FluentWindow
                 _ => []
             };
 
-            // Проверяем, не была ли операция отменена
             if (cts.IsCancellationRequested)
             {
-                Logger.Info($"LoadLoaderVersions cancelled after API call: {modLoaderType}", "CreateServerDialog");
+                Logger.Info($"LoadLoaderVersions cancelled after API call: {modLoaderType}", "CreateServerPage");
                 return;
             }
 
-            Logger.Info($"Loaded {versions.Length} {modLoaderType} versions", "CreateServerDialog");
+            Logger.Info($"Loaded {versions.Length} {modLoaderType} versions", "CreateServerPage");
 
-            // Запоминаем успешно загруженные параметры (после успешной загрузки, а не перед)
             _lastLoadedModLoader = modLoaderType;
             _lastLoadedMcVersion = mcVersion;
 
-            // Фильтруем снимки для NeoForge
             var showSnapshots = ShowSnapshotsBox?.IsChecked ?? false;
             if (modLoaderType == "NeoForge" && !showSnapshots)
             {
                 versions = [.. versions.Where(v => !IsNeoForgeSnapshot(v))];
-                Logger.Info($"Filtered NeoForge versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerDialog");
+                Logger.Info($"Filtered NeoForge versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerPage");
             }
 
-            // Фильтруем снимки для Quilt
             if (modLoaderType == "Quilt" && !showSnapshots)
             {
                 versions = [.. versions.Where(v => !IsQuiltSnapshot(v))];
-Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerDialog");
+                Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerPage");
             }
 
             if (versions.Length == 0)
             {
-                Logger.Warning($"No {modLoaderType} versions found for MC {mcVersion}", "CreateServerDialog");
+                Logger.Warning($"No {modLoaderType} versions found for MC {mcVersion}", "CreateServerPage");
                 return;
             }
 
-            // Сразу выбираем первую версию (стабильную или тестовую в зависимости от чекбокса)
             var firstVersion = versions[0];
             LoaderVersionBox.Items.Add(new ComboBoxItem
             {
                 Content = firstVersion,
                 IsSelected = true
             });
-            Logger.Info($"Selected {modLoaderType} version: {firstVersion}", "CreateServerDialog");
+            Logger.Info($"Selected {modLoaderType} version: {firstVersion}", "CreateServerPage");
 
-            // Добавляем остальные версии (до 10)
             foreach (var version in versions.Skip(1).Take(9))
             {
                 LoaderVersionBox.Items.Add(new ComboBoxItem { Content = version });
@@ -781,7 +627,7 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Error loading {modLoaderType} versions: {ex.Message}", "CreateServerDialog");
+            Logger.Warning($"Error loading {modLoaderType} versions: {ex.Message}", "CreateServerPage");
         }
         finally
         {
@@ -789,87 +635,32 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
         }
     }
 
-    /// <summary>
-    /// Ищет последнюю совместимую версию Minecraft для загрузчика
-    /// </summary>
-    private async Task<string?> FindLastCompatibleMcVersionAsync(string modLoaderType, string _, bool showSnapshots)
+    private async void McVersionBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        // Проверяем последние 10 версий Minecraft (наиболее новые)
-        var mcVersions = _allMcVersions
-            .Where(v => showSnapshots || !IsSnapshot(v))
-            .ToList();
-
-        int checkCount = Math.Min(10, mcVersions.Count);
-
-        for (int i = 0; i < checkCount; i++)
-        {
-            var version = mcVersions[i]; // идём от самой новой к старой
-            try
-            {
-                string[] versions = modLoaderType switch
-                {
-                    "Forge" => await _versionsApi.GetForgeVersions(version),
-                    "NeoForge" => await _versionsApi.GetNeoForgeVersions(version),
-                    "Fabric" => await _versionsApi.GetFabricVersions(version),
-                    "Quilt" => await _versionsApi.GetQuiltVersions(version),
-                    _ => []
-                };
-
-                // Фильтруем снимки для NeoForge/Quilt
-                if (modLoaderType == "NeoForge" && !showSnapshots)
-                {
-                    versions = [.. versions.Where(v => !IsNeoForgeSnapshot(v))];
-                }
-                else if (modLoaderType == "Quilt" && !showSnapshots)
-                {
-                    versions = [.. versions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))];
-                }
-
-                if (versions.Length > 0 && versions[0] != "latest")
-                {
-                    return version;
-                }
-            }
-            catch (HttpRequestException httpEx) when (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                // 404 — версия не поддерживается, пропускаем
-            }
-            catch
-            {
-                // Игнорируем остальные ошибки
-            }
-        }
-
-        return null;
-    }
-
-    private void McVersionBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        // Защита от вызова во время инициализации, обновления или смены модлоадера
         if (_isInitializing || _isChangingSnapshots || _isFindingCompatibleVersion || _isChangingModLoader || McVersionBox == null || ModLoaderBox == null)
         {
-            Logger.Info($"McVersionBox_SelectionChanged skipped: _isInitializing={_isInitializing}, _isChangingSnapshots={_isChangingSnapshots}, _isFindingCompatibleVersion={_isFindingCompatibleVersion}, _isChangingModLoader={_isChangingModLoader}", "CreateServerDialog");
+            Logger.Info($"McVersionBox_SelectionChanged skipped", "CreateServerPage");
             return;
         }
 
-        // При смене версии Minecraft перезагружаем версии загрузчика
         if (ModLoaderBox.SelectedItem is ComboBoxItem item &&
             McVersionBox.SelectedItem is ComboBoxItem mcItem)
         {
-            // Используем сохранённый модлоадер, а не текущий выбранный (чтобы избежать гонки)
             var tag = _currentModLoader ?? item.Tag?.ToString();
             var mcVersion = mcItem.Content?.ToString();
 
             if (!string.IsNullOrEmpty(tag) && !string.IsNullOrEmpty(mcVersion) &&
                 tag is "Forge" or "NeoForge" or "Fabric" or "Quilt")
             {
-                // Очищаем старые версии и загружаем новые
                 LoaderVersionBox.Items.Clear();
-                Logger.Info($"McVersionBox_SelectionChanged: calling LoadLoaderVersions for {tag}, MC: {mcVersion}", "CreateServerDialog");
+                Logger.Info($"McVersionBox_SelectionChanged: calling LoadLoaderVersions for {tag}, MC: {mcVersion}", "CreateServerPage");
                 _ = LoadLoaderVersions(tag, mcVersion);
             }
         }
+
     }
+
+    // ======================== Путь к серверу ========================
 
     private void BrowsePath_Click(object sender, RoutedEventArgs e)
     {
@@ -915,7 +706,7 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
         }
         catch
         {
-            // Suppress config load errors, fallback to default
+            // Suppress config load errors
         }
 
         var exeDir = AppContext.BaseDirectory;
@@ -923,6 +714,8 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
         Directory.CreateDirectory(serversDir);
         return serversDir;
     }
+
+    // ======================== Импорт сервера ========================
 
     private async void Import_Click(object sender, RoutedEventArgs e)
     {
@@ -987,10 +780,12 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
                 var serverName = Path.GetFileName(serverPath);
                 _ = App.ServerManager.CreateServer(serverName, mcVersion, modLoader, serverPath);
 
-                App.MainWindow?.ShowSnackbar(LocalizationManager.Get("CreateServer_Import_Success_Title") ?? "Импорт завершён", string.Format(LocalizationManager.Get("CreateServer_Import_Success"), serverName), Wpf.Ui.Controls.ControlAppearance.Success);
+                App.MainWindow?.ShowSnackbar(
+                    LocalizationManager.Get("CreateServer_Import_Success_Title") ?? "Импорт завершён",
+                    string.Format(LocalizationManager.Get("CreateServer_Import_Success"), serverName),
+                    Wpf.Ui.Controls.ControlAppearance.Success);
 
-                DialogResult = true;
-                Close();
+                NavigateBackToServers();
             }
         }
         catch (Exception ex)
@@ -999,11 +794,7 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
         }
     }
 
-    private void Cancel_Click(object sender, RoutedEventArgs e)
-    {
-        DialogResult = false;
-        Close();
-    }
+    // ======================== Состояние установки ========================
 
     private void SetInstallingState(bool isInstalling)
     {
@@ -1016,70 +807,56 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
         LoaderVersionBox.IsEnabled = !isInstalling;
         ServerPathBox.IsEnabled = !isInstalling;
 
-        this.Invoke(() =>
+        Dispatcher.Invoke(() =>
         {
             if (isInstalling)
             {
-                // Показываем статус
                 ProgressText.Visibility = Visibility.Visible;
                 ProgressText.Text = "Подготовка...";
 
-                // Меняем кнопку на "Отмена"
                 ActionOrCancelButton.Content = "Отмена";
                 ActionOrCancelButton.Appearance = ControlAppearance.Danger;
                 ActionOrCancelButton.IsEnabled = true;
 
-                // Скрываем импорт
                 ImportButton.Visibility = Visibility.Collapsed;
                 ImportButton.IsEnabled = false;
             }
             else
             {
-                // Скрываем статус
                 ProgressText.Visibility = Visibility.Collapsed;
 
-                // Возвращаем кнопку "Создать"
                 ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Create") ?? "Создать";
                 ActionOrCancelButton.Appearance = ControlAppearance.Success;
                 ActionOrCancelButton.IsEnabled = true;
 
-                // Показываем импорт
                 ImportButton.Visibility = Visibility.Visible;
                 ImportButton.IsEnabled = true;
             }
         });
-
-        Title = isInstalling ? "Установка сервера..." : "Создание сервера";
     }
 
-    /// <summary>
-    /// Обработчик кнопки Создать/Отмена
-    /// </summary>
     private async void ActionOrCancel_Click(object sender, RoutedEventArgs e)
     {
         try
         {
             if (_isInstalling)
             {
-                // Отмена установки
                 _wasCancelled = true;
                 _installCts?.Cancel();
             }
             else
             {
-                // Создание сервера
                 await Create_Click_Handler();
             }
         }
         catch (Exception ex)
         {
-            Logger.Error($"ActionOrCancel_Click error: {ex.Message}", ex, "CreateServerDialog");
+            Logger.Error($"ActionOrCancel_Click error: {ex.Message}", ex, "CreateServerPage");
         }
     }
 
-    /// <summary>
-    /// Логика создания сервера (из Create_Click)
-    /// </summary>
+    // ======================== Создание сервера ========================
+
     private async Task Create_Click_Handler()
     {
         try
@@ -1109,7 +886,6 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
 
             var serverName = ServerNameBox.Text.Trim();
 
-            // Проверяем, существует ли сервер с таким именем
             var existingServers = App.ServerManager.GetServers();
             if (existingServers.Any(s => s.Name.Equals(serverName, StringComparison.OrdinalIgnoreCase)))
             {
@@ -1118,7 +894,6 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
                 return;
             }
 
-            // Валидация пути к серверу
             var serverPath = ServerPathBox.Text.Trim();
             var pathValidationResult = ValidateServerPath(serverPath);
             if (!pathValidationResult.IsValid)
@@ -1160,27 +935,15 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
         }
         catch (Exception ex)
         {
-            Logger.Error($"Create server failed: {ex.Message}", ex, "CreateServerDialog");
+            Logger.Error($"Create server failed: {ex.Message}", ex, "CreateServerPage");
             SetInstallingState(false);
             await UiHelper.ShowError($"{LocalizationManager.Get("CreateServer_Error_CreateFailed")}: {ex.Message}");
         }
     }
 
-    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
-    {
-        if (_isInstalling && _installCts != null)
-        {
-            _installCts.Cancel();
-        }
-        base.OnClosing(e);
-    }
-
-    /// <summary>
-    /// Обновляет текстовый статус установки
-    /// </summary>
     private void UpdateStatus(string statusText)
     {
-        this.Invoke(() =>
+        Dispatcher.Invoke(() =>
         {
             ProgressText.Text = statusText;
         });
@@ -1189,13 +952,12 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
     private async Task InstallServerInBackground(Server server, ModLoaderType modLoaderType,
         string mcVersion, string loaderVersion, string serverPath)
     {
-        _wasCancelled = false; // Сбрасываем флаг отмены
+        _wasCancelled = false;
         _installCts = new CancellationTokenSource();
 
         try
         {
-            // Показываем статус
-            this.Invoke(() =>
+            Dispatcher.Invoke(() =>
             {
                 ProgressText.Visibility = Visibility.Visible;
                 ProgressText.Text = "Подготовка...";
@@ -1204,7 +966,6 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
             server.InstallStatus = $"Установка {server.Name}...";
             App.ServerManager.UpdateServer(server);
 
-            // Текстовый прогресс
             var progress = new Progress<string>(statusText =>
             {
                 UpdateStatus(statusText);
@@ -1225,14 +986,13 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
 
             if (!installResult.Success)
             {
-                // Не показываем ошибку если отмена пользователем
                 if (!_wasCancelled)
                 {
                     server.InstallStatus = $"Ошибка: {installResult.Error}";
                     server.Status = ServerStatus.Error;
                     Logger.Error($"Server install failed: {installResult.Error}");
 
-                    await this.InvokeAsync(async () =>
+                    await Dispatcher.InvokeAsync(async () =>
                     {
                         SetInstallingState(false);
                         await UiHelper.ShowError($"{LocalizationManager.Get("CreateServer_Error_InstallFailed")}\n{installResult.Error}");
@@ -1244,7 +1004,6 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
                     server.Status = ServerStatus.Stopped;
                     Logger.Info("Server install cancelled by user");
 
-                    // Удаляем папку недосозданного сервера
                     try
                     {
                         if (!string.IsNullOrEmpty(server.Path) && System.IO.Directory.Exists(server.Path))
@@ -1258,10 +1017,9 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
                         Logger.Warning($"Failed to delete server folder on cancel: {ex.Message}");
                     }
 
-                    await this.InvokeAsync(async () =>
+                    await Dispatcher.InvokeAsync(async () =>
                     {
                         SetInstallingState(false);
-                        // Удаляем сервер из списка
                         await App.ServerManager.DeleteServerAsync(server.Id);
                     });
                 }
@@ -1272,18 +1030,15 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
                 server.Status = ServerStatus.Stopped;
                 Logger.Info($"Server install completed: {server.Name}");
 
-                // Сохраняем номер сборки для Paper
                 if (installResult.BuildNumber.HasValue)
                 {
                     server.ServerBuild = installResult.BuildNumber.Value;
-                    Logger.Info($"Server build number saved: {server.ServerBuild}", "CreateServerDialog");
+                    Logger.Info($"Server build number saved: {server.ServerBuild}", "CreateServerPage");
                 }
 
-                // Закрываем диалог
-                this.Invoke(() =>
+                Dispatcher.Invoke(() =>
                 {
-                    DialogResult = true;
-                    Close();
+                    NavigateBackToServers();
                 });
             }
         }
@@ -1293,7 +1048,7 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
             server.Status = ServerStatus.Error;
             Logger.Info("Server install cancelled");
 
-            await this.InvokeAsync(() =>
+            await Dispatcher.InvokeAsync(() =>
             {
                 SetInstallingState(false);
             });
@@ -1304,7 +1059,7 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
             server.Status = ServerStatus.Error;
             Logger.Error($"Server install exception: {ex}");
 
-            await this.InvokeAsync(async () =>
+            await Dispatcher.InvokeAsync(async () =>
             {
                 SetInstallingState(false);
                 await UiHelper.ShowError($"{LocalizationManager.Get("CreateServer_Error_InstallFailed_Exception")}\n{ex.Message}");
@@ -1319,23 +1074,18 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
         App.ServerManager.UpdateServer(server);
     }
 
-    /// <summary>
-    /// Результат валидации пути
-    /// </summary>
+    // ======================== Валидация пути ========================
+
     private sealed class PathValidationResult
     {
         public bool IsValid { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
     }
 
-    /// <summary>
-    /// Валидация пути к серверу
-    /// </summary>
     private static PathValidationResult ValidateServerPath(string path)
     {
         try
         {
-            // Проверка на пустой путь
             if (string.IsNullOrWhiteSpace(path))
             {
                 return new PathValidationResult
@@ -1345,7 +1095,6 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
                 };
             }
 
-            // Проверка на недопустимые символы в пути
             var invalidPathChars = Path.GetInvalidPathChars();
             if (path.IndexOfAny(invalidPathChars) >= 0)
             {
@@ -1356,7 +1105,6 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
                 };
             }
 
-            // Проверка на слишком длинный путь (максимум 260 символов для Windows)
             if (path.Length > 260)
             {
                 return new PathValidationResult
@@ -1366,7 +1114,6 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
                 };
             }
 
-            // Если папка существует - проверяем, не является ли она файлом
             if (File.Exists(path))
             {
                 return new PathValidationResult
@@ -1376,12 +1123,10 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
                 };
             }
 
-            // Если папка существует - проверяем, не является ли она системной
             if (Directory.Exists(path))
             {
                 var normalizedPath = Path.GetFullPath(path).ToLowerInvariant();
 
-                // Запрещаем создание серверов в системных папках
                 var systemPaths = new[]
                 {
                     Environment.GetFolderPath(Environment.SpecialFolder.Windows).ToLowerInvariant(),
@@ -1398,20 +1143,18 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
                     };
                 }
 
-                // Проверяем, пуста ли папка (если не пуста - предупреждаем)
                 var files = Directory.GetFiles(path);
                 if (files.Length > 0)
                 {
                     return new PathValidationResult
                     {
-                        IsValid = true, // Не ошибка, но предупреждение
+                        IsValid = true,
                         ErrorMessage = $"Папка не пуста ({files.Length} файлов). Убедитесь, что это правильное место для сервера."
                     };
                 }
             }
             else
             {
-                // Папка не существует - проверяем, можем ли её создать
                 var parentDir = Path.GetDirectoryName(path);
                 if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
                 {
@@ -1422,7 +1165,6 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
                     };
                 }
 
-                // Проверяем, есть ли права на создание папки
                 try
                 {
                     var tempPath = Path.Combine(path, ".konserva_test");
@@ -1447,7 +1189,7 @@ Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSna
         }
         catch (Exception ex)
         {
-            Logger.Error($"Path validation error: {ex.Message}", ex, "CreateServerDialog");
+            Logger.Error($"Path validation error: {ex.Message}", ex, "CreateServerPage");
             return new PathValidationResult
             {
                 IsValid = false,

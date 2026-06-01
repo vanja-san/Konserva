@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using Konserva.Utilities;
 
 namespace Konserva.Models;
@@ -58,9 +59,42 @@ public class ServerSettings
     public bool JavaAutoSelect { get; set; } = true;
 
     /// <summary>
-    /// Аргументы запуска Java
+    /// Аргументы запуска Java (пользовательские, можно безопасно менять/удалять)
     /// </summary>
-    public List<string> JavaArgs { get; set; } = [];
+    public List<string> JavaArgs { get; set; } = DefaultJvmArgs;
+
+    /// <summary>
+    /// Стандартные JVM аргументы оптимизации (безопасны для удаления пользователем).
+    /// Критические аргументы (encoding, terminal, -jar) остаются в коде.
+    /// </summary>
+    public static List<string> DefaultJvmArgs { get; } =
+    [
+        "-XX:+UseG1GC",
+        "-XX:MaxGCPauseMillis=200",
+        "-XX:+ParallelRefProcEnabled",
+        "-XX:+UnlockExperimentalVMOptions",
+        "-XX:+DisableExplicitGC",
+        "-XX:+AlwaysPreTouch",
+        "-XX:G1NewSizePercent=30",
+        "-XX:G1MaxNewSizePercent=40",
+        "-XX:G1HeapRegionSize=8M",
+        "-XX:G1ReservePercent=20",
+        "-XX:G1HeapWastePercent=5",
+        "-XX:G1MixedGCCountTarget=4",
+        "-XX:InitiatingHeapOccupancyPercent=15"
+    ];
+
+    /// <summary>
+    /// Текстовое представление JVM аргументов (по одному аргументу на строку) для UI.
+    /// </summary>
+    public string JvmArgsText
+    {
+        get => string.Join(Environment.NewLine, JavaArgs);
+        set => JavaArgs = [.. (value ?? "")
+            .Split(["\r\n", "\n", "\r"], StringSplitOptions.None)
+            .Select(a => a.Trim())
+            .Where(a => !string.IsNullOrWhiteSpace(a))];
+    }
 
     /// <summary>
     /// Автоматический рестарт при остановке

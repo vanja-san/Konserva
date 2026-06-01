@@ -394,7 +394,7 @@ public class ModLoaderTests
         var types = new[]
         {
             ModLoaderType.Forge, ModLoaderType.NeoForge, ModLoaderType.Fabric,
-            ModLoaderType.Quilt, ModLoaderType.Paper, ModLoaderType.Purpur
+            ModLoaderType.Quilt, ModLoaderType.Paper
         };
 
         foreach (var type in types)
@@ -453,7 +453,7 @@ public class ModLoaderTests
     [Fact]
     public void ModLoaderType_AllValues_Exist()
     {
-        Enum.GetValues<ModLoaderType>().Should().HaveCount(7);
+        Enum.GetValues<ModLoaderType>().Should().HaveCount(6);
         Enum.GetNames<ModLoaderType>().Should().Contain("Vanilla");
         Enum.GetNames<ModLoaderType>().Should().Contain("Forge");
         Enum.GetNames<ModLoaderType>().Should().Contain("Fabric");
@@ -553,7 +553,6 @@ public class ApiEndpointsTests
         endpoints.QuiltMeta.Should().NotBeNullOrEmpty();
         endpoints.QuiltInstaller.Should().NotBeNullOrEmpty();
         endpoints.PaperApi.Should().NotBeNullOrEmpty();
-        endpoints.PurpurApi.Should().NotBeNullOrEmpty();
         endpoints.Adoptium.Should().NotBeNullOrEmpty();
     }
 
@@ -567,7 +566,7 @@ public class ApiEndpointsTests
             endpoints.MojangManifest, endpoints.FabricMeta, endpoints.FabricInstaller,
             endpoints.ForgeMaven, endpoints.NeoForgeMaven, endpoints.NeoForgeApi,
             endpoints.QuiltMeta, endpoints.QuiltInstaller, endpoints.PaperApi,
-            endpoints.PurpurApi, endpoints.Adoptium
+            endpoints.Adoptium
         };
 
         foreach (var url in urls)

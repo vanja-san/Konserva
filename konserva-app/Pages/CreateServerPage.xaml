@@ -1,0 +1,218 @@
+<Page
+    x:Class="Konserva.Pages.CreateServerPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:loc="clr-namespace:Konserva.Localization"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="CreateServer"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <!-- Стиль заголовка настройки (как на SettingsPage) -->
+        <Style x:Key="SettingTitle" TargetType="ui:TextBlock">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+    </Page.Resources>
+
+    <Grid RowDefinitions="*,Auto">
+        <!--  Content (скроллируемая форма)  -->
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
+                      Padding="{Binding ComputedVerticalScrollBarVisibility,
+                                RelativeSource={RelativeSource Self},
+                                Converter={StaticResource ScrollBarPadding},
+                                ConverterParameter=16}">
+            <StackPanel Margin="16,12,0,16">
+
+                <!-- Ошибка валидации имени -->
+                <Border
+                    x:Name="ServerNameError"
+                    Margin="0,0,0,12"
+                    Padding="8,6"
+                    Background="{ui:ThemeResource SystemFillColorCriticalBrush}"
+                    CornerRadius="4"
+                    Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon
+                            Margin="0,0,8,0"
+                            Foreground="{ui:ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                            Symbol="Warning24" />
+                        <ui:TextBlock
+                            VerticalAlignment="Center"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Foreground="{ui:ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                            Text="{loc:Loc CreateServer_Error_NoName}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Группа карточек: Параметры сервера -->
+                <StackPanel Margin="0,0,0,24">
+
+                    <!-- Карточка: Название + Версия (верхняя) -->
+                    <Border
+                        CornerRadius="8,8,0,0"
+                        Padding="16,12"
+                        Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                        BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                        BorderThickness="1,1,1,0">
+                        <Grid ColumnDefinitions="*,16,*">
+                            <StackPanel Grid.Column="0">
+                                <ui:TextBlock
+                                    Style="{StaticResource SettingTitle}"
+                                    Text="{loc:Loc CreateServer_Name}" />
+                                <ui:TextBox x:Name="ServerNameBox" TextChanged="ServerNameBox_TextChanged" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <ui:TextBlock
+                                    Style="{StaticResource SettingTitle}"
+                                    Text="{loc:Loc CreateServer_MinecraftVersion}" />
+                                <ComboBox
+                                    x:Name="McVersionBox"
+                                    ContextMenu="{x:Null}"
+                                    SelectionChanged="McVersionBox_SelectionChanged" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Разделитель -->
+                    <Rectangle
+                        Height="1"
+                        Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
+
+                    <!-- Карточка: Модлоадер + Версия загрузчика -->
+                    <Border
+                        CornerRadius="0"
+                        Padding="16,12"
+                        Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                        BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                        BorderThickness="1,0,1,0">
+                        <Grid ColumnDefinitions="*,16,*">
+                            <StackPanel Grid.Column="0">
+                                <ui:TextBlock
+                                    Style="{StaticResource SettingTitle}"
+                                    Text="{loc:Loc CreateServer_ModLoader}" />
+                                <ComboBox
+                                    x:Name="ModLoaderBox"
+                                    ContextMenu="{x:Null}"
+                                    SelectionChanged="ModLoaderBox_SelectionChanged">
+                                    <ComboBoxItem
+                                        Content="Vanilla"
+                                        IsSelected="True"
+                                        Tag="Vanilla" />
+                                    <ComboBoxItem Content="Forge" Tag="Forge" />
+                                    <ComboBoxItem Content="NeoForge" Tag="NeoForge" />
+                                    <ComboBoxItem Content="Fabric" Tag="Fabric" />
+                                    <ComboBoxItem Content="Quilt" Tag="Quilt" />
+                                    <ComboBoxItem Content="Paper" Tag="Paper" />
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <ui:TextBlock
+                                    Style="{StaticResource SettingTitle}"
+                                    Text="{loc:Loc CreateServer_ModLoaderVersion}" />
+                                <ComboBox
+                                    x:Name="LoaderVersionBox"
+                                    ContextMenu="{x:Null}"
+                                    IsEnabled="False" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Разделитель -->
+                    <Rectangle
+                        Height="1"
+                        Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
+
+                    <!-- Карточка: Snapshot фильтр -->
+                    <Border
+                        CornerRadius="0"
+                        Padding="16,12"
+                        Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                        BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                        BorderThickness="1,0,1,0">
+                        <CheckBox
+                            x:Name="ShowSnapshotsBox"
+                            VerticalAlignment="Center"
+                            Content="{loc:Loc CreateServer_Filter_Stable}"
+                            ToolTip="{loc:Loc CreateServer_Filter_Stable}" />
+                    </Border>
+
+                    <!-- Разделитель -->
+                    <Rectangle
+                        Height="1"
+                        Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
+
+                    <!-- Карточка: Расположение сервера (нижняя) -->
+                    <Border
+                        CornerRadius="0,0,8,8"
+                        Padding="16,12"
+                        Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                        BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                        BorderThickness="1,0,1,1">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <ui:TextBlock
+                                Grid.Column="0"
+                                VerticalAlignment="Center"
+                                FontSize="13"
+                                Text="{loc:Loc CreateServer_Folder}"
+                                ToolTip="{loc:Loc CreateServer_Folder}" />
+                            <Grid Grid.Column="1" ColumnDefinitions="*,Auto" Margin="16,0,0,0">
+                                <ui:TextBox
+                                    x:Name="ServerPathBox"
+                                    Grid.Column="0"
+                                    Margin="0,0,8,0"
+                                    IsReadOnly="True" />
+                                <ui:Button
+                                    Grid.Column="1"
+                                    Padding="16,8"
+                                    Click="BrowsePath_Click"
+                                    Content="{loc:Loc CreateServer_Browse}" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!--  Кнопки и прогресс (фиксировано внизу)  -->
+        <Border
+            Grid.Row="1"
+            Padding="0"
+            Background="{ui:ThemeResource LayerFillColorDefaultBrush}"
+            BorderBrush="{ui:ThemeResource ControlStrokeColorDefaultBrush}"
+            BorderThickness="0,1,0,0">
+            <Grid Margin="12,8" ColumnDefinitions="Auto,*,Auto">
+                <!--  Кнопка Импорт  -->
+                <ui:Button
+                    x:Name="ImportButton"
+                    Grid.Column="0"
+                    Click="Import_Click"
+                    Content="{loc:Loc CreateServer_Import}" />
+
+                <!--  Статус установки  -->
+                <ui:TextBlock
+                    x:Name="ProgressText"
+                    Grid.Column="1"
+                    Margin="8,0"
+                    VerticalAlignment="Center"
+                    FontSize="12"
+                    Text="{loc:Loc Common_Preparing}"
+                    TextTrimming="CharacterEllipsis"
+                    Visibility="Collapsed" />
+
+                <!--  Кнопка Создать/Отмена  -->
+                <ui:Button
+                    x:Name="ActionOrCancelButton"
+                    Grid.Column="2"
+                    Appearance="Success"
+                    Click="ActionOrCancel_Click"
+                    Content="{loc:Loc CreateServer_Create}" />
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

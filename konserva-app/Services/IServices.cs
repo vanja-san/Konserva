@@ -70,10 +70,10 @@ public interface IMcVersionsApi
 /// </summary>
 public interface IServerInstaller
 {
-    Task<bool> InstallServer(Server server, string destinationPath, IProgress<double>? progress = null, CancellationToken ct = default);
-    Task<string?> FindServerJar(string path);
-    string BuildLaunchArgs(string jarFile, ServerSettings settings, McServerInstaller.ServerLaunchType launchType);
-    McServerInstaller.ServerLaunchType GetServerLaunchType(string path);
+    Task<McServerInstaller.InstallResult> InstallServer(ModLoaderType modLoaderType, string mcVersion, string loaderVersion, string serverPath, int port, int ramMin, int ramMax, IProgress<string>? progress = null, CancellationToken ct = default);
+    string FindServerJar(string path);
+    string BuildLaunchArgs(string jarPath, ServerSettings settings, ServerLaunchType launchType = ServerLaunchType.Standard, int javaMajorVersion = 0);
+    ServerLaunchType GetServerLaunchType(string path);
 }
 
 /// <summary>

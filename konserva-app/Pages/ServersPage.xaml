@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Title="Servers">
+    Title="">
     <Grid Margin="16" RowDefinitions="Auto,*">
         <!--  Поиск и фильтры  -->
         <Border Grid.Row="0" Margin="0,0,0,8">
@@ -50,7 +50,6 @@
                     <ComboBoxItem Content="NeoForge" Tag="NeoForge" />
                     <ComboBoxItem Content="Fabric" Tag="Fabric" />
                     <ComboBoxItem Content="Paper" Tag="Paper" />
-                    <ComboBoxItem Content="Purpur" Tag="Purpur" />
                     <ComboBoxItem
                         Content="Quilt"
                         IsEnabled="False"

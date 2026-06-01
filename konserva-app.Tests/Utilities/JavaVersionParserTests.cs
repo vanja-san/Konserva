@@ -1,3 +1,4 @@
+using Konserva.Models;
 using Konserva.Utilities;
 using Xunit;
 
@@ -156,30 +157,30 @@ public class JavaVersionParserTests
 
     [Theory]
     // Forge — старые MC версии (1.x)
-    [InlineData("1.20.4", McServerInstaller.ServerLaunchType.Forge, 17)]       // Forge MC 1.20.4 требует Java 17
-    [InlineData("1.20.5", McServerInstaller.ServerLaunchType.Forge, 21)]       // Forge MC 1.20.5 требует Java 21
-    [InlineData("1.21.1", McServerInstaller.ServerLaunchType.Forge, 21)]       // Forge MC 1.21+ требует Java 21
+    [InlineData("1.20.4", ServerLaunchType.Forge, 17)]       // Forge MC 1.20.4 требует Java 17
+    [InlineData("1.20.5", ServerLaunchType.Forge, 21)]       // Forge MC 1.20.5 требует Java 21
+    [InlineData("1.21.1", ServerLaunchType.Forge, 21)]       // Forge MC 1.21+ требует Java 21
     // NeoForge — старые MC версии (1.x)
-    [InlineData("1.20.4", McServerInstaller.ServerLaunchType.NeoForge, 17)]    // NeoForge MC 1.20.4 требует Java 17
-    [InlineData("1.21.1", McServerInstaller.ServerLaunchType.NeoForge, 21)]    // NeoForge MC 1.21+ требует Java 21
+    [InlineData("1.20.4", ServerLaunchType.NeoForge, 17)]    // NeoForge MC 1.20.4 требует Java 17
+    [InlineData("1.21.1", ServerLaunchType.NeoForge, 21)]    // NeoForge MC 1.21+ требует Java 21
     // Fabric — следует требованиям MC версии
-    [InlineData("1.21.1", McServerInstaller.ServerLaunchType.Fabric, 21)]      // Fabric MC 1.21+ требует Java 21
-    [InlineData("1.20.4", McServerInstaller.ServerLaunchType.Fabric, 17)]      // Fabric MC 1.20.4 требует Java 17
-    // Standard (Vanilla, Paper, Purpur)
-    [InlineData("1.20.6", McServerInstaller.ServerLaunchType.Standard, 21)]    // Vanilla 1.20.5+ требует Java 21
-    [InlineData("1.18.2", McServerInstaller.ServerLaunchType.Standard, 17)]    // Vanilla 1.18+ требует Java 17
-    [InlineData("1.16.5", McServerInstaller.ServerLaunchType.Standard, 8)]     // Vanilla 1.16 требует Java 8
-    [InlineData("1.17.0", McServerInstaller.ServerLaunchType.Standard, 16)]    // Vanilla 1.17 требует Java 16
+    [InlineData("1.21.1", ServerLaunchType.Fabric, 21)]      // Fabric MC 1.21+ требует Java 21
+    [InlineData("1.20.4", ServerLaunchType.Fabric, 17)]      // Fabric MC 1.20.4 требует Java 17
+    // Standard (Vanilla, Paper)
+    [InlineData("1.20.6", ServerLaunchType.Standard, 21)]    // Vanilla 1.20.5+ требует Java 21
+    [InlineData("1.18.2", ServerLaunchType.Standard, 17)]    // Vanilla 1.18+ требует Java 17
+    [InlineData("1.16.5", ServerLaunchType.Standard, 8)]     // Vanilla 1.16 требует Java 8
+    [InlineData("1.17.0", ServerLaunchType.Standard, 16)]    // Vanilla 1.17 требует Java 16
     // MC 26.x (новый формат без префикса 1.)
-    [InlineData("26.1.0", McServerInstaller.ServerLaunchType.Forge, 25)]       // MC 26.1+ требует Java 25
-    [InlineData("26.1.1", McServerInstaller.ServerLaunchType.Forge, 25)]       // MC 26.1.1 требует Java 25
-    [InlineData("26.2.0", McServerInstaller.ServerLaunchType.Forge, 25)]       // MC 26.2+ требует Java 25
-    [InlineData("27.0.0", McServerInstaller.ServerLaunchType.Forge, 25)]       // MC 27+ требует Java 25
-    [InlineData("26.1.1", McServerInstaller.ServerLaunchType.Standard, 25)]    // MC 26.1.1 Vanilla требует Java 25
+    [InlineData("26.1.0", ServerLaunchType.Forge, 25)]       // MC 26.1+ требует Java 25
+    [InlineData("26.1.1", ServerLaunchType.Forge, 25)]       // MC 26.1.1 требует Java 25
+    [InlineData("26.2.0", ServerLaunchType.Forge, 25)]       // MC 26.2+ требует Java 25
+    [InlineData("27.0.0", ServerLaunchType.Forge, 25)]       // MC 27+ требует Java 25
+    [InlineData("26.1.1", ServerLaunchType.Standard, 25)]    // MC 26.1.1 Vanilla требует Java 25
     // Старые версии
-    [InlineData("1.12.2", McServerInstaller.ServerLaunchType.Forge, 17)]       // Forge старая версия требует Java 17
-    [InlineData("1.12.2", McServerInstaller.ServerLaunchType.Standard, 8)]     // Vanilla 1.12 требует Java 8
-    public void GetRequiredJavaVersion_AllCombinations_ReturnsCorrectVersion(string mcVersion, McServerInstaller.ServerLaunchType launchType, int expected)
+    [InlineData("1.12.2", ServerLaunchType.Forge, 17)]       // Forge старая версия требует Java 17
+    [InlineData("1.12.2", ServerLaunchType.Standard, 8)]     // Vanilla 1.12 требует Java 8
+    public void GetRequiredJavaVersion_AllCombinations_ReturnsCorrectVersion(string mcVersion, ServerLaunchType launchType, int expected)
     {
         var result = JavaVersionParser.GetRequiredJavaVersion(mcVersion, launchType);
         Assert.Equal(expected, result);

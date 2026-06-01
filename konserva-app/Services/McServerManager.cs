@@ -148,7 +148,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         _processes[server.Id] = process;
 
         server.Status = ServerStatus.Starting;
-        server.LastPlayed = DateTime.Now;
+        server.LastPlayed = SystemTime.Now;
 
         Logger.Info($"[StartServerInternal] Starting server {server.Id} ({server.Name})", "McServerManager");
 

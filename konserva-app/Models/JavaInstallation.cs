@@ -1,4 +1,6 @@
-﻿namespace Konserva.Models;
+﻿using Konserva.Utilities;
+
+namespace Konserva.Models;
 
 /// <summary>
 /// Информация об установленной Java
@@ -11,7 +13,7 @@ public class JavaInstallation
     public string Version { get; set; } = string.Empty;
     public int MajorVersion { get; set; }
     public bool IsDefault { get; set; }
-    public DateTime? AddedDate { get; set; } = DateTime.Now;
+    public DateTime? AddedDate { get; set; } = SystemTime.Now;
 
     /// <summary>
     /// Отображаемое имя

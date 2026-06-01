@@ -14,7 +14,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     /// Проверяет является ли ошибка ошибкой Java-совместимости и показывает snackbar.
     /// Общий метод для ServersPage, ServerDetailPage и MainWindow.
     /// </summary>
-    public static void HandleServerStartError(Server server, string errorMessage)
+    public static void HandleServerStartError(Server server, string errorMessage, IConfigService? configService = null)
     {
         bool isJavaError = errorMessage.Contains("Java", StringComparison.OrdinalIgnoreCase) ||
                           errorMessage.Contains("java", StringComparison.OrdinalIgnoreCase) ||
@@ -31,11 +31,12 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         var foundVersion = JavaVersionParser.ParseFoundJavaVersion(errorMessage);
 
         // Получаем все установленные Java
-        var allJava = App.ConfigService?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
+        var cfg = configService ?? App.ConfigService;
+        var allJava = cfg?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
 
-        MainWindow.Instance?.Dispatcher.Invoke(() =>
+        App.MainWindow?.Dispatcher.Invoke(() =>
         {
-            MainWindow.Instance?.ShowJavaErrorSnackbar(server, errorMessage, requiredVersion, foundVersion, allJava);
+            App.MainWindow?.ShowJavaErrorSnackbar(server, errorMessage, requiredVersion, foundVersion, allJava);
         });
     }
 
@@ -83,10 +84,9 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     /// <summary>
     /// Поиск всех Java в PATH (where выводит все совпадения)
     /// </summary>
-    private static List<JavaInstallation> FindAllJavaInPath()
+    private List<JavaInstallation> FindAllJavaInPath()
     {
         var results = new List<JavaInstallation>();
-        var service = new JavaManagementService(App.ConfigService);
 
         try
         {
@@ -112,7 +112,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
 
             foreach (var javaPath in paths)
             {
-                var java = service.GetJavaInfo(javaPath);
+                var java = GetJavaInfo(javaPath);
                 if (java != null)
                     results.Add(java);
             }
@@ -462,7 +462,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     /// <summary>
     /// Получение требуемой версии Java
     /// </summary>
-    private static int GetRequiredJavaVersion(string mcVersion, McServerInstaller.ServerLaunchType launchType)
+    private static int GetRequiredJavaVersion(string mcVersion, ServerLaunchType launchType)
     {
         return JavaVersionParser.GetRequiredJavaVersion(mcVersion, launchType);
     }

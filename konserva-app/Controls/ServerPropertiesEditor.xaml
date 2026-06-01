@@ -7,10 +7,7 @@
     Margin="0">
 
     <UserControl.Resources>
-        <Style x:Key="ExpanderHeaderStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
+        <Style x:Key="ExpanderHeaderStyle" TargetType="TextBlock" />
     </UserControl.Resources>
 
     <Grid RowDefinitions="*,Auto">

@@ -356,7 +356,6 @@ public class LocalizationTests : IDisposable
                 { "ModLoader_Fabric", "Fabric" },
                 { "ModLoader_Quilt", "Quilt" },
                 { "ModLoader_Paper", "Paper" },
-                { "ModLoader_Purpur", "Purpur" },
                 { "ModLoader_Spigot", "Spigot" },
                 // ServerDetail
                 { "ServerDetail_Title", "Детали сервера" },
@@ -451,7 +450,6 @@ public class LocalizationTests : IDisposable
                 { "ModLoader_Fabric", "Fabric" },
                 { "ModLoader_Quilt", "Quilt" },
                 { "ModLoader_Paper", "Paper" },
-                { "ModLoader_Purpur", "Purpur" },
                 { "ModLoader_Spigot", "Spigot" },
                 // ServerDetail
                 { "ServerDetail_Title", "Server Details" },

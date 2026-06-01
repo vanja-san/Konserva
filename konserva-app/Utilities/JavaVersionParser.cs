@@ -1,4 +1,5 @@
-﻿using Konserva.Services;
+﻿using Konserva.Models;
+using Konserva.Services;
 using System.Text.RegularExpressions;
 
 namespace Konserva.Utilities;
@@ -69,7 +70,7 @@ public static partial class JavaVersionParser
         return majorVersion;
     }
 
-    public static int GetRequiredJavaVersion(string mcVersion, McServerInstaller.ServerLaunchType launchType)
+    public static int GetRequiredJavaVersion(string mcVersion, ServerLaunchType launchType)
     {
         var parts = mcVersion.Split('.');
         if (parts.Length >= 2 &&
@@ -87,7 +88,7 @@ public static partial class JavaVersionParser
         }
 
         // Forge/NeoForge: для старых версий MC повышаем минимум
-        if (launchType is McServerInstaller.ServerLaunchType.Forge or McServerInstaller.ServerLaunchType.NeoForge)
+        if (launchType is ServerLaunchType.Forge or ServerLaunchType.NeoForge)
             return 17;
 
         return 8;

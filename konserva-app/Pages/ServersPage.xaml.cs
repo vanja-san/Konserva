@@ -29,15 +29,15 @@ public partial class ServersPage : Page, IDisposable
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        MainWindow.ServerManager.OnServersChanged += OnServersChanged;
-        MainWindow.ServerManager.OnServerStartError += OnServerStartError;
+        App.ServerManager.OnServersChanged += OnServersChanged;
+        App.ServerManager.OnServerStartError += OnServerStartError;
         RefreshList();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        MainWindow.ServerManager.OnServersChanged -= OnServersChanged;
-        MainWindow.ServerManager.OnServerStartError -= OnServerStartError;
+        App.ServerManager.OnServersChanged -= OnServersChanged;
+        App.ServerManager.OnServerStartError -= OnServerStartError;
     }
 
     /// <summary>
@@ -55,7 +55,7 @@ public partial class ServersPage : Page, IDisposable
     private void OnServersChanged()
     {
         // Снимаем блокировку для серверов, которые не запущены
-        var servers = MainWindow.ServerManager.GetServers();
+        var servers = App.ServerManager.GetServers();
         foreach (var server in servers.Where(s => !s.IsRunning))
         {
             _busyServers.Remove(server.Id);
@@ -71,7 +71,7 @@ public partial class ServersPage : Page, IDisposable
         if (ServersList == null || NoServersPanel == null)
             return;
 
-        var servers = MainWindow.ServerManager.GetServers();
+        var servers = App.ServerManager.GetServers();
 
         var filtered = servers.Where(s =>
         {
@@ -131,45 +131,10 @@ public partial class ServersPage : Page, IDisposable
         }
     }
 
-    private async void CreateServer_Click(object sender, RoutedEventArgs e)
+    private void CreateServer_Click(object sender, RoutedEventArgs e)
     {
-        Logger.Info("CreateServer_Click START", "ServersPage");
-
-        try
-        {
-            if (MainWindow.Instance == null)
-            {
-                Logger.Error("MainWindow.Instance is null", null, "ServersPage");
-                await UiHelper.ShowError(LocalizationManager.Get("ServersPage_Error_AppNotInitialized"));
-                return;
-            }
-
-            Logger.Info("Opening CreateServerDialog", "ServersPage");
-
-            var versionsApi = App.ServiceProvider?.GetService(typeof(IMcVersionsApi)) as IMcVersionsApi
-                ?? throw new InvalidOperationException("IMcVersionsApi not available");
-
-            Logger.Info($"versionsApi created: {versionsApi != null}", "ServersPage");
-
-            var dialog = new Dialogs.CreateServerDialog(App.ConfigService, versionsApi);
-
-            Logger.Info("CreateServerDialog created", "ServersPage");
-
-            dialog.Owner = MainWindow.Instance;
-
-            Logger.Info("Dialog.Owner set", "ServersPage");
-
-            if (dialog.ShowDialog() == true)
-            {
-                Logger.Info("CreateServerDialog completed with OK", "ServersPage");
-                RefreshList();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"CreateServer_Click error: {ex}", ex, "ServersPage");
-            await UiHelper.ShowError($"Ошибка: {ex.Message}");
-        }
+        Logger.Info("Navigating to CreateServerPage", "ServersPage");
+        App.MainWindow?.NavigateToCreateServer();
     }
 
     private async void Play_Click(object sender, RoutedEventArgs e)
@@ -185,13 +150,13 @@ public partial class ServersPage : Page, IDisposable
         {
             if (server.IsRunning)
             {
-                MainWindow.ServerManager.StopServer(server.Id);
+                App.ServerManager.StopServer(server.Id);
             }
             else
             {
                 Logger.Info($"Starting server: {server.Name}", "ServersPage");
                 server.ErrorDialogShown = false;
-                MainWindow.ServerManager.StartServer(server.Id);
+                App.ServerManager.StartServer(server.Id);
             }
         }
         catch (Exception ex)
@@ -215,7 +180,7 @@ public partial class ServersPage : Page, IDisposable
 
         if (sender is CardAction { Tag: Server server } cardAction)
         {
-            MainWindow.Instance?.NavigateToServer(server.Id);
+            App.MainWindow?.NavigateToServer(server.Id);
         }
     }
 
@@ -248,7 +213,7 @@ public partial class ServersPage : Page, IDisposable
 
         try
         {
-            await MainWindow.ServerManager.DeleteServerAsync(server.Id);
+            await App.ServerManager.DeleteServerAsync(server.Id);
             RefreshList();
         }
         catch (Exception ex)
@@ -263,8 +228,8 @@ public partial class ServersPage : Page, IDisposable
         if (_disposed)
             return;
 
-        MainWindow.ServerManager.OnServersChanged -= OnServersChanged;
-        MainWindow.ServerManager.OnServerStartError -= OnServerStartError;
+        App.ServerManager.OnServersChanged -= OnServersChanged;
+        App.ServerManager.OnServerStartError -= OnServerStartError;
         _disposed = true;
     }
 }

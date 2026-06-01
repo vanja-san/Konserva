@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Text;
+using Konserva.Utilities;
 
 namespace Konserva.Models;
 
@@ -161,7 +162,7 @@ public class ServerProperties
         var sb = new StringBuilder();
 
         sb.AppendLine("#Minecraft server properties");
-        sb.AppendLine($"#{DateTime.Now:ddd MMM dd HH:mm:ss zzz yyyy}");
+        sb.AppendLine($"#{SystemTime.Now:ddd MMM dd HH:mm:ss zzz yyyy}");
 
         // Sort properties alphabetically like vanilla Minecraft
         var allProps = new SortedDictionary<string, string>

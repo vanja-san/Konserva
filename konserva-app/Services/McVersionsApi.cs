@@ -5,6 +5,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using static Konserva.Models.ApiUrls;
 
 namespace Konserva.Services;
 
@@ -50,7 +51,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
             linkedCts.CancelAfter(TimeSpan.FromSeconds(10)); // Короткий таймаут
 
             var response = await GetStringWithDecompressionAsync(
-                "https://launchermeta.mojang.com/mc/game/version_manifest.json", linkedCts.Token);
+                MojangManifest, linkedCts.Token);
 
             using var doc = JsonDocument.Parse(response);
             networkVersions = doc.RootElement.GetProperty("versions")
@@ -69,7 +70,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
         if (networkVersions != null)
         {
             _mcVersions = networkVersions;
-            _mcVersionsCacheTime = DateTime.UtcNow;
+            _mcVersionsCacheTime = SystemTime.UtcNow;
             return networkVersions;
         }
 
@@ -78,7 +79,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
         if (cachedVersions != null)
         {
             _mcVersions = cachedVersions;
-            _mcVersionsCacheTime = DateTime.UtcNow;
+            _mcVersionsCacheTime = SystemTime.UtcNow;
             return cachedVersions;
         }
 
@@ -109,7 +110,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
 
         try
         {
-            var url = $"https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml";
+            var url = $"{ForgeMaven}/net/minecraftforge/forge/maven-metadata.xml";
             Logger.Info($"Fetching Forge from Maven: {url}", "McVersionsApi");
 
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -172,7 +173,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
         try
         {
             var response = await GetStringWithDecompressionAsync(
-                $"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}", ct);
+                $"{FabricVersionsLoader}/{mcVersion}", ct);
 
             using var doc = JsonDocument.Parse(response);
             var array = doc.RootElement.EnumerateArray();
@@ -213,7 +214,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
     {
         public readonly T Value = value;
         public readonly DateTime Time = time;
-        public bool IsFresh => (DateTime.UtcNow - Time) < CacheTtl;
+        public bool IsFresh => (SystemTime.UtcNow - Time) < CacheTtl;
     }
 
     /// <summary>
@@ -243,11 +244,13 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
         }
         finally
         {
-            try { _neoForgeCacheLock.Release(); } catch { /* Suppress lock release errors */ }
+            try { _neoForgeCacheLock.Release(); }
+                catch (ObjectDisposedException) { /* Disposed during shutdown */ }
+                catch (SemaphoreFullException) { /* Already released */ }
         }
 
         // Основной источник: maven.neoforged.net
-        var mavenUrl = "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml";
+        var mavenUrl = NeoForgeMetadata;
 
         try
         {
@@ -272,8 +275,10 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
 
                 // Кэшируем в память
                 await _neoForgeCacheLock.WaitAsync(ct);
-                try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(result, DateTime.UtcNow); }
-                finally { try { _neoForgeCacheLock.Release(); } catch { /* Suppress lock release errors */ } }
+                try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(result, SystemTime.UtcNow); }
+                finally { try { _neoForgeCacheLock.Release(); }
+                    catch (ObjectDisposedException) { /* Disposed during shutdown */ }
+                    catch (SemaphoreFullException) { /* Already released */ } }
 
                 return result;
             }
@@ -300,8 +305,10 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
                 SaveToFileCache("neoforge", mcVersion, result);
 
                 await _neoForgeCacheLock.WaitAsync(ct);
-                try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(result, DateTime.UtcNow); }
-                finally { try { _neoForgeCacheLock.Release(); } catch { /* Suppress lock release errors */ } }
+                try { _neoForgeCache[mcVersion] = new CachedEntry<string[]>(result, SystemTime.UtcNow); }
+                finally { try { _neoForgeCacheLock.Release(); }
+                    catch (ObjectDisposedException) { /* Disposed during shutdown */ }
+                    catch (SemaphoreFullException) { /* Already released */ } }
 
                 return result;
             }
@@ -345,7 +352,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
     private async Task<List<string>> GetNeoForgeFromLauncherMeta(CancellationToken ct)
     {
         var response = await GetStringWithDecompressionAsync(
-            "https://launchermeta.mojang.com/mc/game/version_manifest.json", ct);
+            MojangManifest, ct);
 
         using var doc = JsonDocument.Parse(response);
         var allVersions = doc.RootElement.GetProperty("versions")
@@ -397,7 +404,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
 
         try
         {
-            var url = $"https://meta.quiltmc.org/v3/versions/loader/{mcVersion}";
+            var url = $"{QuiltVersionsLoader}/{mcVersion}";
             Logger.Info($"Fetching Quilt from: {url}", "McVersionsApi");
 
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -526,7 +533,9 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
         }
         finally
         {
-            try { _fileLock.Release(); } catch { }
+            try { _fileLock.Release(); }
+                catch (ObjectDisposedException) { /* Disposed during shutdown */ }
+                catch (SemaphoreFullException) { Logger.Warning("File lock already released", "McVersionsApi"); }
         }
     }
 
@@ -536,7 +545,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
             return null;
 
         var cacheTime = _fileCache.LastUpdated;
-        if (DateTime.UtcNow - cacheTime > FileCacheTtl)
+        if (SystemTime.UtcNow - cacheTime > FileCacheTtl)
             return null;
 
         var loaderCache = loader.ToLower() switch
@@ -558,7 +567,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
     {
         _fileCache ??= new VersionsCache();
         _fileCache.McVersions = versions;
-        _fileCache.LastUpdated = DateTime.UtcNow;
+        _fileCache.LastUpdated = SystemTime.UtcNow;
         _ = SaveFileCacheAsync();
     }
 
@@ -570,7 +579,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
     private void SaveToFileCache(string loader, string mcVersion, string[] versions)
     {
         _fileCache ??= new VersionsCache();
-        _fileCache.LastUpdated = DateTime.UtcNow;
+        _fileCache.LastUpdated = SystemTime.UtcNow;
 
         var loaderCache = loader.ToLower() switch
         {

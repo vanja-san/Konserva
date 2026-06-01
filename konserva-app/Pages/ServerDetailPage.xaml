@@ -5,7 +5,7 @@
     xmlns:controls="clr-namespace:Konserva.Controls"
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Title="Server Details">
+    Title="">
 
     <Grid Margin="20,0,20,16" RowDefinitions="Auto,Auto,*">
         <!--  Заголовок с кнопками управления  -->
@@ -486,8 +486,6 @@
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
                                     <ui:TextBlock
-                                        FontSize="14"
-                                        FontWeight="SemiBold"
                                         Text="{loc:Loc ServerProperties_General}" />
                                 </ui:CardExpander.Header>
                                 <Grid Margin="8,0" RowDefinitions="Auto">
@@ -530,8 +528,6 @@
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
                                     <ui:TextBlock
-                                        FontSize="14"
-                                        FontWeight="SemiBold"
                                         Text="{loc:Loc ServerDetail_Settings_RAM}" />
                                 </ui:CardExpander.Header>
                                 <Grid Margin="8,0" RowDefinitions="Auto,Auto">
@@ -600,8 +596,6 @@
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
                                     <ui:TextBlock
-                                        FontSize="14"
-                                        FontWeight="SemiBold"
                                         Text="{loc:Loc ServerDetail_Settings_AutoRestart}" />
                                 </ui:CardExpander.Header>
                                 <Grid Margin="8,0" RowDefinitions="Auto,Auto">
@@ -660,11 +654,9 @@
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
                                     <ui:TextBlock
-                                        FontSize="14"
-                                        FontWeight="SemiBold"
                                         Text="{loc:Loc ServerDetail_Java}" />
                                 </ui:CardExpander.Header>
-                                <Grid Margin="8,0" RowDefinitions="Auto,Auto">
+                                <Grid Margin="8,0" RowDefinitions="Auto,Auto,Auto">
                                     <Grid
                                         Grid.Row="0"
                                         Margin="0,8"
@@ -698,6 +690,28 @@
                                             MinWidth="200"
                                             HorizontalAlignment="Right"
                                             SelectionChanged="SettingJavaComboBox_SelectionChanged" />
+                                    </Grid>
+
+                                    <!--  JVM аргументы  -->
+                                    <Grid Grid.Row="2" Margin="0,8,0,0">
+                                        <Grid RowDefinitions="Auto,Auto">
+                                            <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                                                <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_Settings_JvmArgs}" />
+                                                <ui:TextBlock
+                                                    FontSize="11"
+                                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                    Text="{loc:Loc ServerDetail_Settings_JvmArgs_Desc}" />
+                                            </StackPanel>
+                                            <TextBox
+                                                x:Name="SettingJvmArgs"
+                                                Grid.Row="1"
+                                                MinHeight="100"
+                                                AcceptsReturn="True"
+                                                TextWrapping="NoWrap"
+                                                FontFamily="Consolas"
+                                                FontSize="12"
+                                                LostFocus="SettingJvmArgs_LostFocus" />
+                                        </Grid>
                                     </Grid>
                                 </Grid>
                             </ui:CardExpander>

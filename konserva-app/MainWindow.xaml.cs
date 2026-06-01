@@ -13,7 +13,6 @@ namespace Konserva;
 /// </summary>
 public partial class MainWindow : FluentWindow, IDisposable
 {
-    private static MainWindow? _instance;
     private readonly IConfigService _config;
     private readonly IServerManager _serverManager;
     private IContentDialogService? _contentDialogService;
@@ -21,13 +20,12 @@ public partial class MainWindow : FluentWindow, IDisposable
     private bool _isUpdatingStatusBar;
     private CancellationTokenSource? _statusBarCts;
 
-    public MainWindow()
+    public MainWindow(IConfigService configService, IServerManager serverManager)
     {
-        _instance = this;
         InitializeComponent();
 
-        _config = App.ConfigService;
-        _serverManager = App.ServerManager;
+        _config = configService;
+        _serverManager = serverManager;
 
         _serverManager.OnServersChanged += UpdateStatusBar;
 
@@ -63,7 +61,10 @@ public partial class MainWindow : FluentWindow, IDisposable
         AutoDetectJava();
         StartStatusBarTimer();
 
-        // Подписываемся на событие навигации для обновления кнопки "Назад"
+        // Начальный заголовок (до первой навигации)
+        WindowTitleText.Text = LocalizationManager.Get("MainWindow_Header");
+
+        // Подписываемся на событие навигации для обновления кнопки "Назад" и заголовка
         ContentFrame.Navigated += ContentFrame_Navigated;
 
         // Navigate to Servers page by default
@@ -77,7 +78,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Обработчик события навигации - обновляет видимость кнопки "Назад"
+    /// Обработчик события навигации — обновляет кнопку "Назад" и заголовок в TitleBar
     /// </summary>
     private void ContentFrame_Navigated(object sender, System.Windows.Navigation.NavigationEventArgs e)
     {
@@ -85,27 +86,13 @@ public partial class MainWindow : FluentWindow, IDisposable
         {
             BackButton.Visibility = ContentFrame.CanGoBack ? Visibility.Visible : Visibility.Collapsed;
         }
+
+        // Обновляем заголовок окна: "Konserva Manager — <page title>"
+        var mainTitle = LocalizationManager.Get("MainWindow_Header");
+        WindowTitleText.Text = e.Content is System.Windows.Controls.Page page && !string.IsNullOrEmpty(page.Title?.ToString())
+            ? $"{mainTitle} — {page.Title}"
+            : mainTitle;
     }
-
-    /// <summary>
-    /// Текущий экземпляр окна
-    /// </summary>
-    public static MainWindow? Instance => _instance;
-
-    /// <summary>
-    /// Сервис ContentDialog для использования из UiHelper
-    /// </summary>
-    public static IContentDialogService? GetContentDialogService() => _instance?.ContentDialogService;
-
-    /// <summary>
-    /// Сервис конфигурации
-    /// </summary>
-    public static IConfigService Config => App.ConfigService;
-
-    /// <summary>
-    /// Менеджер серверов
-    /// </summary>
-    public static IServerManager ServerManager => App.ServerManager;
 
     /// <summary>
     /// Запуск обновления статусбара
@@ -179,13 +166,21 @@ public partial class MainWindow : FluentWindow, IDisposable
     /// </summary>
     public void NavigateToSettings()
     {
-        // Проверяем, не открыта ли уже страница настроек
         if (ContentFrame.Content is Pages.SettingsPage)
-        {
             return;
-        }
 
         ContentFrame.Navigate(new Pages.SettingsPage());
+    }
+
+    /// <summary>
+    /// Навигация к странице создания сервера
+    /// </summary>
+    public void NavigateToCreateServer()
+    {
+        if (ContentFrame.Content is Pages.CreateServerPage)
+            return;
+
+        ContentFrame.Navigate(new Pages.CreateServerPage());
     }
 
     /// <summary>
@@ -240,9 +235,9 @@ public partial class MainWindow : FluentWindow, IDisposable
     /// </summary>
     public static void NavigateToServerCommand(object parameter)
     {
-        if (parameter is string serverId && _instance != null)
+        if (parameter is string serverId && App.MainWindow != null)
         {
-            _instance.NavigateToServer(serverId);
+            App.MainWindow.NavigateToServer(serverId);
         }
     }
 
@@ -346,7 +341,7 @@ public partial class MainWindow : FluentWindow, IDisposable
             // Проверяем интервал
             if (config.LastUpdateCheck.HasValue)
             {
-                var elapsed = DateTime.UtcNow - config.LastUpdateCheck.Value;
+                var elapsed = SystemTime.UtcNow - config.LastUpdateCheck.Value;
                 if (elapsed < UpdateCheckInterval)
                     return;
             }
@@ -354,7 +349,7 @@ public partial class MainWindow : FluentWindow, IDisposable
             var updateInfo = await UpdateChecker.CheckAsync();
 
             // Обновляем время проверки
-            _config.UpdateConfig(c => c.LastUpdateCheck = DateTime.UtcNow);
+            _config.UpdateConfig(c => c.LastUpdateCheck = SystemTime.UtcNow);
 
             if (updateInfo.IsAvailable)
             {

@@ -18,6 +18,15 @@ namespace Konserva.Services
     {
         private static readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
         private static readonly string UpdateLogPath = Path.Combine(AppContext.BaseDirectory, "Logs", "Update.log");
+        private static HttpClient? _client;
+
+        /// <summary>
+        /// Инициализация с HttpClient из DI (вызывается при старте приложения).
+        /// </summary>
+        public static void Initialize(HttpClient httpClient)
+        {
+            _client = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        }
 
         /// <summary>
         /// Выполняет обновление: скачивает ZIP, распаковывает, запускает батник, закрывает приложение.
@@ -150,10 +159,11 @@ exit
         /// </summary>
         private static async Task DownloadFileAsync(string url, string destPath, string currentVersion, IProgress<double>? progress)
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+            var client = _client ?? new HttpClient();
             client.DefaultRequestHeaders.UserAgent.ParseAdd($"Konserva/{currentVersion}");
 
-            using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+            using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
             response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? -1;
@@ -194,12 +204,12 @@ exit
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
-                var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}][{level}] {message}";
+                var line = $"[{SystemTime.Now:yyyy-MM-dd HH:mm:ss.fff}][{level}] {message}";
                 File.AppendAllText(UpdateLogPath, line + Environment.NewLine, new System.Text.UTF8Encoding(true));
             }
-            catch
+            catch (Exception ex)
             {
-                // Не критично — основной лог всё равно запишет
+                System.Diagnostics.Debug.WriteLine($"[AppUpdater] UpdateLog error: {ex.Message}");
             }
         }
 

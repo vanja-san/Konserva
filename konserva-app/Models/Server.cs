@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Konserva.Utilities;
 
 namespace Konserva.Models;
 
@@ -73,7 +74,7 @@ public class Server
     /// <summary>
     /// Дата создания сервера
     /// </summary>
-    public DateTime CreatedAt { get; init; } = DateTime.Now;
+    public DateTime CreatedAt { get; init; } = SystemTime.Now;
 
     /// <summary>
     /// Порт сервера (1-65535)
@@ -91,7 +92,7 @@ public class Server
     public bool AutoStart { get; set; }
 
     /// <summary>
-    /// Номер сборки сервера (для Paper/Purpur)
+        /// Номер сборки сервера (для Paper)
     /// </summary>
     public int? ServerBuild { get; set; }
 
@@ -107,7 +108,7 @@ public class Server
     }
 
     private static string GenerateShortId() =>
-        $"{DateTime.Now:yyyyMMdd}-{Interlocked.Increment(ref _idCounter):X4}";
+        $"{SystemTime.Now:yyyyMMdd}-{Interlocked.Increment(ref _idCounter):X4}";
 
     /// <summary>
     /// Инициализация счётчика ID при загрузке существующих серверов

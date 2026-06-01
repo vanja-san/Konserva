@@ -23,6 +23,7 @@
             <converters:StatusToBrushConverter x:Key="StatusToBrush" />
             <converters:FileSizeConverter x:Key="FileSizeConverter" />
             <converters:PercentToWidthConverter x:Key="PercentToWidth" />
+            <converters:ScrollBarPaddingConverter x:Key="ScrollBarPadding" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

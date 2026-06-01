@@ -3,6 +3,7 @@ using Konserva.Models;
 using Konserva.Utilities;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -11,8 +12,10 @@ namespace Konserva.Services;
 /// <summary>
 /// Управление процессом сервера Minecraft
 /// </summary>
-public partial class McServerProcess(Server server, IConfigService? configService = null) : IDisposable
+public partial class McServerProcess(Server server, IConfigService? configService = null, IServerInstaller? installer = null) : IDisposable
 {
+    private readonly IServerInstaller _installer = installer ?? s_defaultInstaller;
+    private static readonly IServerInstaller s_defaultInstaller = new McServerInstaller(new HttpClient());
     private Process? _process;
     private readonly StringBuilder _logs = new();
     private readonly List<string> _logLines = [];
@@ -149,7 +152,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             ct.ThrowIfCancellationRequested();
 
-            var launchType = McServerInstaller.GetServerLaunchType(Server.Path);
+            var launchType = _installer.GetServerLaunchType(Server.Path);
             AppendLog($" {string.Format(LocalizationManager.Get("Log_LaunchType"), launchType)}");
 
             var jarFile = FindServerJar(Server.Path);
@@ -184,7 +187,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             ValidateJavaVersion(javaCheckResult);
 
-            var javaArgs = BuildJavaArgs(jarFile, launchType);
+            var javaArgs = BuildJavaArgs(jarFile, launchType, javaCheckResult.MajorVersion);
             AppendLog($" {string.Format(LocalizationManager.Get("Log_JavaArgs"), javaArgs)}");
             AppendLog($" {string.Format(LocalizationManager.Get("Log_WorkingDirectory"), Server.Path)}");
             AppendLog($" {LocalizationManager.Get("Log_LaunchingProcess")}");
@@ -242,7 +245,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     /// </summary>
     private void ValidateJavaVersion(JavaCheckResult javaCheckResult)
     {
-        var launchType = McServerInstaller.GetServerLaunchType(Server.Path);
+        var launchType = _installer.GetServerLaunchType(Server.Path);
         var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, launchType);
 
         Logger.Info($"[ValidateJavaVersion] Required Java {requiredJavaVersion}+, Found Java {javaCheckResult.MajorVersion} ({javaCheckResult.Version})", "McServerProcess");
@@ -380,7 +383,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     /// <summary>
     /// Получить требуемую минимальную версию Java для версии Minecraft
     /// </summary>
-    private static int GetRequiredJavaVersion(string mcVersion, McServerInstaller.ServerLaunchType launchType) =>
+    private static int GetRequiredJavaVersion(string mcVersion, ServerLaunchType launchType) =>
         JavaVersionParser.GetRequiredJavaVersion(mcVersion, launchType);
 
     /// <summary>
@@ -683,13 +686,13 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     /// <summary>
     /// Найти jar файл сервера
     /// </summary>
-    private static string FindServerJar(string path) => McServerInstaller.FindServerJar(path);
+    private string FindServerJar(string path) => _installer.FindServerJar(path);
 
     /// <summary>
     /// Построить аргументы Java
     /// </summary>
-    private string BuildJavaArgs(string jarFile, McServerInstaller.ServerLaunchType launchType) =>
-        McServerInstaller.BuildLaunchArgs(jarFile, Server.Settings, launchType);
+    private string BuildJavaArgs(string jarFile, ServerLaunchType launchType, int javaMajorVersion) =>
+        _installer.BuildLaunchArgs(jarFile, Server.Settings, launchType, javaMajorVersion);
 
     private void OnOutput(object sender, DataReceivedEventArgs e)
     {
@@ -828,7 +831,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     {
         lock (_lock)
         {
-            var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+            var timestamp = SystemTime.Now.ToString("HH:mm:ss.fff");
             var logLine = $"[{timestamp}] {line}";
 
             _logs.AppendLine(logLine);
@@ -872,7 +875,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 }
                 catch (IOException)
                 {
-                    var backupName = Path.Combine(logsDir, $"latest.log.old-{DateTime.Now:yyyyMMdd-HHmmss}");
+                    var backupName = Path.Combine(logsDir, $"latest.log.old-{SystemTime.Now:yyyyMMdd-HHmmss}");
                     File.Move(latestLog, backupName);
                     AppendLog($" {string.Format(LocalizationManager.Get("Log_LogMoved"), Path.GetFileName(backupName))}");
                 }
@@ -921,7 +924,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 _serverReady = true;
                 AppendLog($"[SUCCESS] {LocalizationManager.Get("Log_ServerStarted")}");
             }
-            // Paper/Purpur
+            // Paper
             else if (line.Contains("Done (") || line.Contains("For help, type"))
             {
                 _serverReady = true;
@@ -996,7 +999,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         // Автовыбор Java по версии Minecraft
         if (Server.Settings.JavaAutoSelect)
         {
-            var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, McServerInstaller.GetServerLaunchType(Server.Path));
+            var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, _installer.GetServerLaunchType(Server.Path));
             AppendLog($" {string.Format(LocalizationManager.Get("Log_AutoSelectJava"), requiredJavaVersion, Server.McVersion)}");
 
             // Ищем подходящую Java среди установленных

@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Konserva.Models;
 using Konserva.Utilities;
+using static Konserva.Models.ApiUrls;
 
 namespace Konserva.Services
 {
@@ -15,7 +16,15 @@ namespace Konserva.Services
     /// </summary>
     public static class UpdateChecker
     {
-        private const string GitHubApiUrl = "https://api.github.com/repos/vanja-san/Konserva/releases/latest";
+        private static HttpClient? _client;
+
+        /// <summary>
+        /// Инициализация с HttpClient из DI (вызывается при старте приложения).
+        /// </summary>
+        public static void Initialize(HttpClient httpClient)
+        {
+            _client = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        }
 
         /// <summary>
         /// Проверяет наличие обновления. Тип сборки определяется автоматически по размеру exe.
@@ -28,11 +37,12 @@ namespace Konserva.Services
 
             try
             {
-                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                var client = _client ?? new HttpClient();
                 client.DefaultRequestHeaders.UserAgent.ParseAdd($"Konserva/{currentVersion}");
                 client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
 
-                var response = await client.GetAsync(GitHubApiUrl);
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                var response = await client.GetAsync(GitHubReleasesLatest, cts.Token);
                 if (!response.IsSuccessStatusCode)
                 {
                     Logger.Warning($"Update check failed with status {response.StatusCode}", "UpdateChecker");
@@ -96,8 +106,9 @@ namespace Konserva.Services
                 var size = new FileInfo(exePath).Length;
                 return size > 30_000_000 ? "full" : "deps";
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Warning($"DetectBuildType failed: {ex.Message}", "UpdateChecker");
                 return "deps";
             }
         }

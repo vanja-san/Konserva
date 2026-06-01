@@ -1,6 +1,7 @@
 using Konserva.Services;
 using Moq;
 using Moq.Protected;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
@@ -35,6 +36,12 @@ public class McVersionsApiTests
     [Fact]
     public async Task GetMcVersions_ReturnsEmptyArray_OnFailure()
     {
+        // Чистим кэш перед тестом для изоляции
+        var cacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Cache");
+        var cacheFile = Path.Combine(cacheDir, "versions_cache.json");
+        if (File.Exists(cacheFile))
+            File.Delete(cacheFile);
+
         var api = CreateApiWithMockHandler("invalid json");
         var versions = await api.GetMcVersions();
 
@@ -87,12 +94,14 @@ public class McVersionsApiTests
     }
 
     [Fact]
-    public async Task GetQuiltVersions_ReturnsEmpty_On404()
+    public async Task GetQuiltVersions_ReturnsLatest_On404()
     {
+        // API возвращает ["latest"] при 404 как fallback
         var api = CreateApiWithMockHandler("Not Found", HttpStatusCode.NotFound);
         var versions = await api.GetQuiltVersions("1.0.0");
 
-        Assert.Empty(versions);
+        Assert.Single(versions);
+        Assert.Equal("latest", versions[0]);
     }
 
     private static McVersionsApi CreateApiWithMockHandler(string responseContent, HttpStatusCode statusCode = HttpStatusCode.OK)

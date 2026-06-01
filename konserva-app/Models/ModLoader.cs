@@ -10,8 +10,7 @@ public enum ModLoaderType
     NeoForge,
     Fabric,
     Quilt,
-    Paper,
-    Purpur
+    Paper
 }
 
 /// <summary>
