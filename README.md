@@ -1,6 +1,4 @@
 <div align="center">
-  <img src=".github/screenshots/Main.png" alt="Konserva" width="640">
-  <br><br>
   <h1>🥫 Konserva</h1>
   <p><strong>Minecraft Server Manager for Windows</strong></p>
   <p>
