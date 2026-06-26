@@ -88,14 +88,6 @@
 
 ---
 
-## 📦 Data Storage
-
-All data (configs, servers, logs, translations) is stored alongside the executable — fully portable.
-
-<br>
-
----
-
 ## ⚖️ License
 
 **MIT License** — see [LICENSE.txt](LICENSE.txt).
