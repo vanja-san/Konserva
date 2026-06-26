@@ -99,4 +99,4 @@
 
 ---
 
-<p align="center">Built with 🧡 using <a href="https://github.com/lepoide/wpfui">WPF UI</a></p>
+<p align="center">Built with 🧡 using <a href="https://github.com/lepoco/wpfui">WPF UI</a></p>
