@@ -93,7 +93,7 @@ public partial class App : Application
             Logger.Info("Services initializing...", "App");
 
             // Настройка DI
-            var services = ConfigureServices;
+            var services = ConfigureServices();
             _serviceProvider = services.BuildServiceProvider();
 
             Logger.Info("DI container built", "App");
@@ -144,103 +144,101 @@ public partial class App : Application
     /// <summary>
     /// Настройка Dependency Injection
     /// </summary>
-    private static IServiceCollection ConfigureServices
+    private static IServiceCollection ConfigureServices()
     {
-        get
+        var services = new ServiceCollection();
+
+        // Сервисы (Singleton)
+        services.AddSingleton<IConfigService, ConfigService>();
+        services.AddSingleton<IServerStorageService, ServerStorageService>();
+        services.AddSingleton<IServerManager, McServerManager>();
+        services.AddSingleton<IJavaManagementService, JavaManagementService>();
+        services.AddSingleton<IServerInstaller>(sp =>
         {
-            var services = new ServiceCollection();
+            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+            var configService = sp.GetService<IConfigService>();
+            var httpClient = httpClientFactory.CreateClient("McServerInstaller");
+            return new McServerInstaller(httpClient, configService);
+        });
+        services.AddSingleton<MainWindow>();
 
-            // Сервисы (Singleton)
-            services.AddSingleton<IConfigService, ConfigService>();
-            services.AddSingleton<IServerStorageService, ServerStorageService>();
-            services.AddSingleton<IServerManager, McServerManager>();
-            services.AddSingleton<IJavaManagementService, JavaManagementService>();
-            services.AddSingleton<IServerInstaller>(sp =>
+        // HttpClient для API с retry политикой
+        services.AddHttpClient<IMcVersionsApi, McVersionsApi>(options =>
+        {
+            options.Timeout = TimeSpan.FromSeconds(30);
+            options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
+        })
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
-                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-                var configService = sp.GetService<IConfigService>();
-                var httpClient = httpClientFactory.CreateClient("McServerInstaller");
-                return new McServerInstaller(httpClient, configService);
+                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+                MaxConnectionsPerServer = 10,
+                AutomaticDecompression = DecompressionMethods.All
+            })
+            .AddStandardResilienceHandler(options =>
+            {
+                options.Retry.MaxRetryAttempts = 3;
+                options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
+                options.Retry.UseJitter = true;
             });
-            services.AddSingleton<MainWindow>();
 
-            // HttpClient для API с retry политикой
-            services.AddHttpClient<IMcVersionsApi, McVersionsApi>(options =>
+        // HttpClient для UpdateChecker (проверка обновлений GitHub)
+        services.AddHttpClient("UpdateChecker", options =>
+        {
+            options.Timeout = TimeSpan.FromSeconds(15);
+            options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
+            options.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
+        })
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
-                options.Timeout = TimeSpan.FromSeconds(30);
-                options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
+                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+                MaxConnectionsPerServer = 10,
+                AutomaticDecompression = DecompressionMethods.All
             })
-                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-                {
-                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-                    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
-                    MaxConnectionsPerServer = 10,
-                    AutomaticDecompression = DecompressionMethods.All
-                })
-                .AddStandardResilienceHandler(options =>
-                {
-                    options.Retry.MaxRetryAttempts = 3;
-                    options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
-                    options.Retry.UseJitter = true;
-                });
-
-            // HttpClient для UpdateChecker (проверка обновлений GitHub)
-            services.AddHttpClient("UpdateChecker", options =>
+            .AddStandardResilienceHandler(options =>
             {
-                options.Timeout = TimeSpan.FromSeconds(15);
-                options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
-                options.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
-            })
-                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-                {
-                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-                    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
-                    MaxConnectionsPerServer = 10,
-                    AutomaticDecompression = DecompressionMethods.All
-                })
-                .AddStandardResilienceHandler(options =>
-                {
-                    options.Retry.MaxRetryAttempts = 2;
-                    options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
-                    options.Retry.UseJitter = true;
-                });
+                options.Retry.MaxRetryAttempts = 2;
+                options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
+                options.Retry.UseJitter = true;
+            });
 
-            // HttpClient для AppUpdater (скачивание обновлений)
-            services.AddHttpClient("AppUpdater", options =>
+        // HttpClient для AppUpdater (скачивание обновлений)
+        services.AddHttpClient("AppUpdater", options =>
+        {
+            options.Timeout = TimeSpan.FromMinutes(10);
+            options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
+        })
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
-                options.Timeout = TimeSpan.FromMinutes(10);
-                options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
-            })
-                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-                {
-                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-                    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
-                    MaxConnectionsPerServer = 10,
-                    AutomaticDecompression = DecompressionMethods.All
-                });
+                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+                MaxConnectionsPerServer = 10,
+                AutomaticDecompression = DecompressionMethods.All
+            });
 
-            // HttpClient для McServerInstaller (скачивание серверов) с retry политикой
-            services.AddHttpClient("McServerInstaller", options =>
+        // HttpClient для McServerInstaller (скачивание серверов) с retry политикой
+        services.AddHttpClient("McServerInstaller", options =>
+        {
+            options.Timeout = TimeSpan.FromMinutes(5);
+            options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
+        })
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
-                options.Timeout = TimeSpan.FromMinutes(5);
-                options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
+                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+                MaxConnectionsPerServer = 10,
+                AutomaticDecompression = DecompressionMethods.All
             })
-                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-                {
-                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-                    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
-                    MaxConnectionsPerServer = 10,
-                    AutomaticDecompression = DecompressionMethods.All
-                })
-                .AddStandardResilienceHandler(options =>
-                {
-                    options.Retry.MaxRetryAttempts = 3;
-                    options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
-                    options.Retry.UseJitter = true;
-                });
+            .AddStandardResilienceHandler(options =>
+            {
+                options.Retry.MaxRetryAttempts = 3;
+                options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
+                options.Retry.UseJitter = true;
+            });
 
-            return services;
-        }
+        return services;
+        // конец ConfigureServices()
     }
 
     /// <summary>

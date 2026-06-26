@@ -50,8 +50,8 @@ public static class PathValidator
             return false;
 
         // Проверяем явные попытки выхода за пределы директории
+        // (не блокируем ~ — это допустимый символ на Windows, напр. C:\Users\ADMINI~1)
         return path.Contains("..") ||
-               path.Contains("~") ||
                path.StartsWith("\\\\") ||
                path.StartsWith("//");
     }

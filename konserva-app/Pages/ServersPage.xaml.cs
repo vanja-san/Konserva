@@ -2,6 +2,7 @@
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
+using Konserva.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui.Controls;
@@ -14,99 +15,70 @@ namespace Konserva.Pages;
 /// </summary>
 public partial class ServersPage : Page, IDisposable
 {
-    private string _searchText = string.Empty;
-    private string _filterType = "All";
-    private string _filterStatus = "All";
-    private readonly HashSet<string> _busyServers = [];
+    private readonly ServersViewModel _viewModel;
     private bool _disposed;
 
     public ServersPage()
     {
         InitializeComponent();
+
+        _viewModel = new ServersViewModel(App.ServerManager);
+
+        // Подписываемся на события ViewModel для UI-действий
+        _viewModel.NavigateToServerRequested += OnNavigateToServer;
+        _viewModel.OpenFolderRequested += OnOpenFolder;
+        _viewModel.ShowErrorRequested += OnShowError;
+
+        DataContext = _viewModel;
+
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        App.ServerManager.OnServersChanged += OnServersChanged;
         App.ServerManager.OnServerStartError += OnServerStartError;
-        RefreshList();
+        _viewModel.RefreshList();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        App.ServerManager.OnServersChanged -= OnServersChanged;
         App.ServerManager.OnServerStartError -= OnServerStartError;
     }
 
-    /// <summary>
-    /// Обработчик ошибки запуска сервера
-    /// </summary>
     private void OnServerStartError(Server server, string errorMessage)
     {
         Logger.Info($"[ServersPage.OnServerStartError] Error for server {server.Name}: {errorMessage}", "ServersPage");
         JavaManagementService.HandleServerStartError(server, errorMessage);
     }
 
-    /// <summary>
-    /// Обработка изменения списка серверов
-    /// </summary>
-    private void OnServersChanged()
+    private void OnNavigateToServer(Server server)
     {
-        // Снимаем блокировку для серверов, которые не запущены
-        var servers = App.ServerManager.GetServers();
-        foreach (var server in servers.Where(s => !s.IsRunning))
-        {
-            _busyServers.Remove(server.Id);
-        }
-
-        RefreshList();
+        App.MainWindow?.NavigateToServer(server.Id);
     }
 
-    private void RefreshList() => ApplyFilters();
-
-    private void ApplyFilters()
+    private void OnOpenFolder(Server server)
     {
-        if (ServersList == null || NoServersPanel == null)
-            return;
-
-        var servers = App.ServerManager.GetServers();
-
-        var filtered = servers.Where(s =>
-        {
-            var matchSearch = string.IsNullOrEmpty(_searchText) ||
-                              s.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
-
-            var matchType = _filterType == "All" ||
-                            s.ModLoader.Type.ToString().Equals(_filterType, StringComparison.OrdinalIgnoreCase);
-
-            var matchStatus = _filterStatus switch
-            {
-                "All" => true,
-                "Running" => s.Status is ServerStatus.Running or ServerStatus.Starting,
-                "Stopped" => s.Status is ServerStatus.Stopped or ServerStatus.Error,
-                _ => true
-            };
-
-            return matchSearch && matchType && matchStatus;
-        }).ToList();
-
-        ServersList.ItemsSource = filtered;
-        NoServersPanel.Visibility = filtered.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        UiHelper.OpenFolder(server.Path);
     }
+
+    private async void OnShowError(Server server, string errorMessage)
+    {
+        await UiHelper.ShowError(errorMessage);
+    }
+
+    // ========== Обработчики UI (поиск, фильтры, навигация) ==========
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        _searchText = SearchBox.Text;
-        SearchPlaceholder.Visibility = (string.IsNullOrEmpty(_searchText) && !SearchBox.IsFocused)
+        _viewModel.SearchText = SearchBox.Text;
+        SearchPlaceholder.Visibility = (string.IsNullOrEmpty(SearchBox.Text) && !SearchBox.IsFocused)
             ? Visibility.Visible
             : Visibility.Collapsed;
-        ApplyFilters();
     }
 
     private void SearchBox_LostFocus(object sender, RoutedEventArgs e) =>
-        SearchPlaceholder.Visibility = string.IsNullOrEmpty(_searchText)
+        SearchPlaceholder.Visibility = string.IsNullOrEmpty(SearchBox.Text)
             ? Visibility.Visible
             : Visibility.Collapsed;
 
@@ -117,8 +89,7 @@ public partial class ServersPage : Page, IDisposable
     {
         if (FilterType.SelectedItem is ComboBoxItem item && item.Tag is string tag)
         {
-            _filterType = tag;
-            ApplyFilters();
+            _viewModel.FilterType = tag;
         }
     }
 
@@ -126,8 +97,7 @@ public partial class ServersPage : Page, IDisposable
     {
         if (FilterStatus.SelectedItem is ComboBoxItem item && item.Tag is string tag)
         {
-            _filterStatus = tag;
-            ApplyFilters();
+            _viewModel.FilterStatus = tag;
         }
     }
 
@@ -137,39 +107,32 @@ public partial class ServersPage : Page, IDisposable
         App.MainWindow?.NavigateToCreateServer();
     }
 
-    private async void Play_Click(object sender, RoutedEventArgs e)
+    private void Play_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not WpfButton btn || btn.Tag is not Server server)
-            return;
-
-        if (_busyServers.Contains(server.Id))
-            return;
-
-        _busyServers.Add(server.Id);
-        try
+        if (sender is WpfButton { Tag: Server server })
         {
-            if (server.IsRunning)
+            if (_viewModel.PlayCommand.CanExecute(server))
+                _viewModel.PlayCommand.Execute(server);
+        }
+    }
+
+    private void OpenFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is WpfButton { Tag: Server server })
+            _viewModel.OpenFolderCommand.Execute(server);
+    }
+
+    private async void Delete_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is WpfButton { Tag: Server server })
+        {
+            var result = await UiHelper.ShowDeleteServerConfirm(server.Name);
+            if (result == ContentDialogResult.Primary)
             {
-                App.ServerManager.StopServer(server.Id);
-            }
-            else
-            {
-                Logger.Info($"Starting server: {server.Name}", "ServersPage");
-                server.ErrorDialogShown = false;
-                App.ServerManager.StartServer(server.Id);
+                if (_viewModel.DeleteCommand.CanExecute(server))
+                    await ((AsyncRelayCommand<Server>)_viewModel.DeleteCommand).ExecuteAsync(server);
             }
         }
-        catch (Exception ex)
-        {
-            Logger.Error($"Play_Click: Error managing server {server.Name}: {ex.Message}", ex, "ServersPage");
-            await UiHelper.ShowError($"Не удалось выполнить операцию: {ex.Message}");
-        }
-        finally
-        {
-            _busyServers.Remove(server.Id);
-        }
-
-        RefreshList();
     }
 
     private void ServerCard_Click(object sender, RoutedEventArgs e)
@@ -180,7 +143,7 @@ public partial class ServersPage : Page, IDisposable
 
         if (sender is CardAction { Tag: Server server } cardAction)
         {
-            App.MainWindow?.NavigateToServer(server.Id);
+            _viewModel.NavigateToServerCommand.Execute(server);
         }
     }
 
@@ -193,43 +156,13 @@ public partial class ServersPage : Page, IDisposable
         }
     }
 
-    private void OpenFolder_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not WpfButton btn || btn.Tag is not Server server)
-            return;
-
-        UiHelper.OpenFolder(server.Path);
-    }
-
-    private async void Delete_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not WpfButton btn || btn.Tag is not Server server)
-            return;
-
-        var result = await UiHelper.ShowDeleteServerConfirm(server.Name);
-
-        if (result != ContentDialogResult.Primary)
-            return;
-
-        try
-        {
-            await App.ServerManager.DeleteServerAsync(server.Id);
-            RefreshList();
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Delete server error: {ex.Message}", ex, "ServersPage");
-            await UiHelper.ShowError($"Ошибка при удалении сервера: {ex.Message}");
-        }
-    }
-
     public void Dispose()
     {
         if (_disposed)
             return;
-
-        App.ServerManager.OnServersChanged -= OnServersChanged;
-        App.ServerManager.OnServerStartError -= OnServerStartError;
         _disposed = true;
+        Loaded -= OnLoaded;
+        Unloaded -= OnUnloaded;
+        App.ServerManager.OnServerStartError -= OnServerStartError;
     }
 }

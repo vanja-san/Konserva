@@ -3,7 +3,6 @@ using Konserva.Models;
 using Konserva.Utilities;
 using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -14,8 +13,7 @@ namespace Konserva.Services;
 /// </summary>
 public partial class McServerProcess(Server server, IConfigService? configService = null, IServerInstaller? installer = null) : IDisposable
 {
-    private readonly IServerInstaller _installer = installer ?? s_defaultInstaller;
-    private static readonly IServerInstaller s_defaultInstaller = new McServerInstaller(new HttpClient());
+    private readonly IServerInstaller _installer = installer ?? new McServerInstaller(null);
     private Process? _process;
     private readonly StringBuilder _logs = new();
     private readonly List<string> _logLines = [];
@@ -328,15 +326,15 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             EnableRaisingEvents = true
         };
 
-        // Подписка на события ДО запуска процесса
-        _process.OutputDataReceived += OnOutput;
-        _process.ErrorDataReceived += OnError;
-
         // Запуск процесса
         if (!_process.Start())
         {
             throw new InvalidOperationException($"Не удалось запустить процесс: {javaPath} {utf8Args}");
         }
+
+        // Подписка на события ПОСЛЕ успешного запуска процесса
+        _process.OutputDataReceived += OnOutput;
+        _process.ErrorDataReceived += OnError;
 
         // Начинаем асинхронное чтение вывода
         _process.BeginOutputReadLine();
@@ -692,7 +690,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     /// Построить аргументы Java
     /// </summary>
     private string BuildJavaArgs(string jarFile, ServerLaunchType launchType, int javaMajorVersion) =>
-        _installer.BuildLaunchArgs(jarFile, Server.Settings, launchType, javaMajorVersion);
+        _installer.BuildLaunchArgs(jarFile, Server.Settings, launchType, javaMajorVersion, Server.Path);
 
     private void OnOutput(object sender, DataReceivedEventArgs e)
     {

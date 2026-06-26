@@ -37,7 +37,7 @@ public class McVersionsApiTests
     public async Task GetMcVersions_ReturnsEmptyArray_OnFailure()
     {
         // Чистим кэш перед тестом для изоляции
-        var cacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Cache");
+        var cacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Servers");
         var cacheFile = Path.Combine(cacheDir, "versions_cache.json");
         if (File.Exists(cacheFile))
             File.Delete(cacheFile);

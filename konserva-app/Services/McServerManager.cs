@@ -13,6 +13,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
 {
     private readonly List<Server> _servers = storage.LoadServers();
     private readonly ConcurrentDictionary<string, McServerProcess> _processes = new();
+    private readonly ConcurrentDictionary<string, Action<ServerStatus>> _statusHandlers = new();
     private readonly ReaderWriterLockSlim _serversLock = new();
 
     public event Action? OnServersChanged;
@@ -88,7 +89,8 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             return;
 
         RemoveStoppedOrErroredProcess(id, existingProcess);
-        StartServerInternal(server);
+        // fire-and-forget для синхронного вызова
+        _ = StartServerCoreAsync(server);
     }
 
     public async Task StartServerAsync(string id, CancellationToken ct = default)
@@ -101,8 +103,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             return;
 
         RemoveStoppedOrErroredProcess(id, existingProcess);
-        StartServerInternal(server);
-        await Task.CompletedTask; // для асинхронного интерфейса
+        await StartServerCoreAsync(server);
     }
 
     /// <summary>
@@ -133,13 +134,55 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
     {
         if (process is { Status: ServerStatus.Stopped or ServerStatus.Error })
         {
-            _processes.TryRemove(id, out _);
+            CleanupProcess(id);
         }
     }
 
-    private void StartServerInternal(Server server)
+    /// <summary>
+    /// Очищает процесс: отписывает обработчики событий, удаляет из словаря
+    /// </summary>
+    private void CleanupProcess(string id)
     {
-        _processes.TryRemove(server.Id, out _);
+        if (_processes.TryRemove(id, out var process))
+        {
+            if (_statusHandlers.TryRemove(id, out var handler))
+            {
+                process.OnStatusChanged -= handler;
+            }
+        }
+        else
+        {
+            // Если процесса уже нет в словаре, всё равно чистим обработчик
+            _statusHandlers.TryRemove(id, out _);
+        }
+    }
+
+    /// <summary>
+    /// Очищает процесс и полностью утилизирует его
+    /// </summary>
+    private void CleanupAndDisposeProcess(string id)
+    {
+        if (_processes.TryRemove(id, out var process))
+        {
+            if (_statusHandlers.TryRemove(id, out var handler))
+            {
+                process.OnStatusChanged -= handler;
+            }
+            process.Dispose();
+        }
+        else
+        {
+            _statusHandlers.TryRemove(id, out _);
+        }
+    }
+
+    /// <summary>
+    /// Запускает сервер в фоне. Возвращает Task, который завершается после попытки запуска.
+    /// </summary>
+    private async Task StartServerCoreAsync(Server server)
+    {
+        // Очищаем предыдущий процесс (если был), чтобы избежать утечки событий
+        CleanupProcess(server.Id);
 
         // Убиваем зависшие Java процессы из папки этого сервера (могут держать session.lock)
         KillZombieProcesses(server.Path);
@@ -155,7 +198,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         // Используем Interlocked для thread-safe флага — race condition между OnStatusChanged и Task.Run
         int errorNotified = 0;
 
-        process.OnStatusChanged += status =>
+        Action<ServerStatus> onStatusChanged = status =>
         {
             server.Status = status;
             if (status is ServerStatus.Running or ServerStatus.Stopped or ServerStatus.Error)
@@ -178,57 +221,56 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             });
         };
 
-        // Запуск сервера в фоне с обработкой исключений
-        _ = Task.Run(async () =>
+        _statusHandlers[server.Id] = onStatusChanged;
+        process.OnStatusChanged += onStatusChanged;
+
+        try
         {
-            try
+            Logger.Info($"[StartServerInternal] Calling process.Start() for {server.Name}", "McServerManager");
+            await Task.Run(() => process.Start());
+
+            // Ждём немного для проверки статуса (ошибка может произойти асинхронно)
+            await Task.Delay(500);
+
+            // Проверяем, не произошла ли ошибка при запуске (thread-safe через Interlocked)
+            if (Interlocked.CompareExchange(ref errorNotified, 1, 0) == 0 && process.Status == ServerStatus.Error && !string.IsNullOrEmpty(process.LastError))
             {
-                Logger.Info($"[StartServerInternal] Calling process.Start() for {server.Name}", "McServerManager");
-                await Task.Run(() => process.Start());
+                Logger.Error($"[StartServerInternal] Server {server.Id} ({server.Name}) failed to start: {process.LastError}", null, "McServerManager");
+                server.Status = ServerStatus.Error;
+                server.InstallStatus = process.LastError;
+                storage.UpdateServer(server);
 
-                // Ждём немного для проверки статуса (ошибка может произойти асинхронно)
-                await Task.Delay(500);
+                // Уведомляем об ошибке запуска
+                OnServerStartError?.Invoke(server, process.LastError);
 
-                // Проверяем, не произошла ли ошибка при запуске (thread-safe через Interlocked)
-                if (Interlocked.CompareExchange(ref errorNotified, 1, 0) == 0 && process.Status == ServerStatus.Error && !string.IsNullOrEmpty(process.LastError))
+                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
                 {
-                    Logger.Error($"[StartServerInternal] Server {server.Id} ({server.Name}) failed to start: {process.LastError}", null, "McServerManager");
-                    server.Status = ServerStatus.Error;
-                    server.InstallStatus = process.LastError;
-                    storage.UpdateServer(server);
-
-                    // Уведомляем об ошибке запуска
-                    OnServerStartError?.Invoke(server, process.LastError);
-
-                    System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
-                    {
-                        OnServersChanged?.Invoke();
-                    });
-                }
-                else
-                {
-                    Logger.Info($"[StartServerInternal] process.Start() completed for {server.Name}", "McServerManager");
-                }
+                    OnServersChanged?.Invoke();
+                });
             }
-            catch (Exception ex)
+            else
             {
-                if (Interlocked.CompareExchange(ref errorNotified, 1, 0) == 0)
-                {
-                    Logger.Error($"[StartServerInternal] Ошибка запуска сервера {server.Id} ({server.Name}): {ex.Message}", ex, "McServerManager");
-                    server.Status = ServerStatus.Error;
-                    server.InstallStatus = ex.Message;
-                    storage.UpdateServer(server);
-
-                    // Уведомляем об ошибке запуска
-                    OnServerStartError?.Invoke(server, ex.Message);
-
-                    System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
-                    {
-                        OnServersChanged?.Invoke();
-                    });
-                }
+                Logger.Info($"[StartServerInternal] process.Start() completed for {server.Name}", "McServerManager");
             }
-        });
+        }
+        catch (Exception ex)
+        {
+            if (Interlocked.CompareExchange(ref errorNotified, 1, 0) == 0)
+            {
+                Logger.Error($"[StartServerInternal] Ошибка запуска сервера {server.Id} ({server.Name}): {ex.Message}", ex, "McServerManager");
+                server.Status = ServerStatus.Error;
+                server.InstallStatus = ex.Message;
+                storage.UpdateServer(server);
+
+                // Уведомляем об ошибке запуска
+                OnServerStartError?.Invoke(server, ex.Message);
+
+                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    OnServersChanged?.Invoke();
+                });
+            }
+        }
 
         storage.UpdateServer(server);
 
@@ -241,8 +283,14 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
 
     public void StopServer(string id)
     {
+        // Сначала отписываем обработчик, чтобы избежать утечки
         if (_processes.TryRemove(id, out var process))
         {
+            if (_statusHandlers.TryRemove(id, out var handler))
+            {
+                process.OnStatusChanged -= handler;
+            }
+
             // останавливаем процесс в фоне, чтобы не блокировать UI
             _ = Task.Run(async () =>
             {
@@ -259,16 +307,29 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
                 }
             });
         }
+        else
+        {
+            _statusHandlers.TryRemove(id, out _);
+        }
     }
 
     public async Task StopServerAsync(string id, CancellationToken ct = default)
     {
         if (_processes.TryRemove(id, out var process))
         {
+            if (_statusHandlers.TryRemove(id, out var handler))
+            {
+                process.OnStatusChanged -= handler;
+            }
+
             using (process)
             {
                 await process.StopAsync();
             }
+        }
+        else
+        {
+            _statusHandlers.TryRemove(id, out _);
         }
     }
 
@@ -318,8 +379,17 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         // останавливаем процесс сервера, если он запущен
         if (_processes.TryRemove(id, out var process))
         {
+            if (_statusHandlers.TryRemove(id, out var handler))
+            {
+                process.OnStatusChanged -= handler;
+            }
+
             await process.StopAsync();
             process.Dispose();
+        }
+        else
+        {
+            _statusHandlers.TryRemove(id, out _);
         }
 
         _serversLock.EnterWriteLock();

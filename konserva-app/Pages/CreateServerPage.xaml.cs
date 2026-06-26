@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Animation;
 using Wpf.Ui.Controls;
 
 namespace Konserva.Pages;
@@ -31,7 +32,6 @@ public partial class CreateServerPage : Page
     private bool _isFindingCompatibleVersion;
     private string[] _allMcVersions = [];
     private HashSet<string> _paperVersions = [];
-    private HashSet<string>? _neoForgeStableMcVersions;
     private HashSet<string>? _quiltSupportedVersions;
     private string? _lastLoadedModLoader;
     private string? _lastLoadedMcVersion;
@@ -69,6 +69,7 @@ public partial class CreateServerPage : Page
 
             ModLoaderBox.SelectionChanged += ModLoaderBox_SelectionChanged;
             McVersionBox.SelectionChanged += McVersionBox_SelectionChanged;
+            LoaderVersionBox.SelectionChanged += (_, _) => UpdateCreateButtonState();
 
             _allMcVersions = await _versionsApi.GetMcVersions();
             Logger.Info($"Loaded {_allMcVersions.Length} Minecraft versions", "CreateServerPage");
@@ -78,6 +79,10 @@ public partial class CreateServerPage : Page
 
             await FilterMcVersionsAsync();
             Logger.Info("FilterMcVersionsAsync completed", "CreateServerPage");
+
+            // Запускаем анимацию волны точек (она скрыта, пока не начнётся установка)
+            if (Resources["WaveDotsAnimation"] is Storyboard waveAnimation)
+                waveAnimation.Begin();
         }
         catch (Exception ex)
         {
@@ -86,11 +91,16 @@ public partial class CreateServerPage : Page
         }
 
         _isInitializing = false;
+        UpdateCreateButtonState();
         Logger.Info("CreateServerPage loaded successfully", "CreateServerPage");
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        // Останавливаем анимацию
+        if (Resources["WaveDotsAnimation"] is Storyboard waveAnimation)
+            waveAnimation.Stop();
+
         // Отменяем установку, если пользователь ушёл со страницы
         if (_isInstalling && _installCts != null)
         {
@@ -143,22 +153,9 @@ public partial class CreateServerPage : Page
 
             HashSet<string> supportedVersions;
 
-            if (selectedModLoader == "NeoForge" && !showSnapshots)
+            if (selectedModLoader == "NeoForge")
             {
-                if (_neoForgeStableMcVersions != null)
-                {
-                    supportedVersions = _neoForgeStableMcVersions.Count > 0
-                        ? _neoForgeStableMcVersions
-                        : [.. _allMcVersions.Where(v => TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
-                }
-                else
-                {
-                    supportedVersions = [.. _allMcVersions.Where(v => TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
-                    _ = LoadNeoForgeStableVersionsAsync();
-                }
-            }
-            else if (selectedModLoader == "NeoForge")
-            {
+                // NeoForge — MC 1.16+ (не поддерживает более старые версии)
                 supportedVersions = [.. _allMcVersions.Where(v =>
                     TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
             }
@@ -229,15 +226,102 @@ public partial class CreateServerPage : Page
             Logger.Info("FilterMcVersionsAsync completed", "CreateServerPage");
         }
 
-        if (!string.IsNullOrEmpty(_currentModLoader) && _currentModLoader is "Forge" or "NeoForge" or "Fabric" or "Quilt")
+        // Если версии загрузчика не загружены или нужна проверка стабильности
+        if (!string.IsNullOrEmpty(_currentModLoader) && _currentModLoader is "Forge" or "NeoForge" or "Fabric" or "Quilt" or "Paper")
         {
             var selectedMcVersion = (McVersionBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
+            var showSnapshots = ShowSnapshotsBox?.IsChecked ?? false;
+
+            // Для Quilt без снапшотов — проверяем, есть ли стабильные версии
+            if (!string.IsNullOrEmpty(selectedMcVersion) &&
+                !showSnapshots && _currentModLoader == "Quilt")
+            {
+                var compatibleVersion = await FindLastCompatibleMcVersionAsync(_currentModLoader, selectedMcVersion, showSnapshots);
+                if (compatibleVersion != null && compatibleVersion != selectedMcVersion)
+                {
+                    Logger.Info($"Switching to compatible MC version for {_currentModLoader}: {compatibleVersion}", "CreateServerPage");
+                    var matchingItem = McVersionBox.Items.Cast<ComboBoxItem>()
+                        .FirstOrDefault(item => item.Content?.ToString() == compatibleVersion);
+                    if (matchingItem != null)
+                    {
+                        McVersionBox.SelectedItem = matchingItem;
+                        selectedMcVersion = compatibleVersion;
+                    }
+                }
+            }
+
             if (!string.IsNullOrEmpty(selectedMcVersion))
             {
+                LoaderVersionBox.Items.Clear();
                 Logger.Info($"Calling LoadLoaderVersions manually: {_currentModLoader} for MC {selectedMcVersion}", "CreateServerPage");
                 _ = LoadLoaderVersions(_currentModLoader, selectedMcVersion);
             }
         }
+    }
+
+    /// <summary>
+    /// Ищет последнюю совместимую версию Minecraft для загрузчика (строгая фильтрация снапшотов)
+    /// </summary>
+    private async Task<string?> FindLastCompatibleMcVersionAsync(string modLoaderType, string currentMcVersion, bool showSnapshots)
+    {
+        // Проверяем сначала текущую версию
+        string[] currentVersions = modLoaderType switch
+        {
+            "Forge" => await _versionsApi.GetForgeVersions(currentMcVersion),
+            "NeoForge" => await _versionsApi.GetNeoForgeVersions(currentMcVersion),
+            "Fabric" => await _versionsApi.GetFabricVersions(currentMcVersion),
+            "Quilt" => await _versionsApi.GetQuiltVersions(currentMcVersion),
+            "Paper" => await _versionsApi.GetPaperVersions(currentMcVersion),
+            _ => []
+        };
+
+        // Строгая фильтрация: только стабильные версии считаются совместимыми
+        if (modLoaderType == "NeoForge" && !showSnapshots)
+            currentVersions = [.. currentVersions.Where(v => !IsNeoForgeSnapshot(v))];
+        else if (modLoaderType == "Quilt" && !showSnapshots)
+            currentVersions = [.. currentVersions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))];
+        else if (modLoaderType == "Paper" && !showSnapshots)
+            currentVersions = [.. currentVersions.Where(v => !v.Contains("(ALPHA)", StringComparison.OrdinalIgnoreCase))];
+
+        if (currentVersions.Length > 0 && currentVersions[0] != "latest")
+            return currentMcVersion;
+
+        // Текущая не подходит — ищем среди последних 10
+        var mcVersions = _allMcVersions
+            .Where(v => showSnapshots || !IsSnapshot(v))
+            .Take(10)
+            .ToList();
+
+        foreach (var version in mcVersions)
+        {
+            if (version == currentMcVersion) continue;
+
+            try
+            {
+                string[] versions = modLoaderType switch
+                {
+                    "Forge" => await _versionsApi.GetForgeVersions(version),
+                    "NeoForge" => await _versionsApi.GetNeoForgeVersions(version),
+                    "Fabric" => await _versionsApi.GetFabricVersions(version),
+                    "Quilt" => await _versionsApi.GetQuiltVersions(version),
+                    "Paper" => await _versionsApi.GetPaperVersions(version),
+                    _ => []
+                };
+
+                if (modLoaderType == "NeoForge" && !showSnapshots)
+                    versions = [.. versions.Where(v => !IsNeoForgeSnapshot(v))];
+                else if (modLoaderType == "Quilt" && !showSnapshots)
+                    versions = [.. versions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))];
+                else if (modLoaderType == "Paper" && !showSnapshots)
+                    versions = [.. versions.Where(v => !v.Contains("(ALPHA)", StringComparison.OrdinalIgnoreCase))];
+
+                if (versions.Length > 0 && versions[0] != "latest")
+                    return version;
+            }
+            catch { /* skip on error */ }
+        }
+
+        return null;
     }
 
     private async Task<HashSet<string>> GetQuiltSupportedVersionsAsync()
@@ -350,6 +434,64 @@ public partial class CreateServerPage : Page
         return "Vanilla";
     }
 
+    /// <summary>
+    /// Проверяет, все ли обязательные поля заполнены и возвращает список ошибок
+    /// </summary>
+    private List<string> GetValidationErrors()
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(ServerNameBox.Text))
+            errors.Add(LocalizationManager.Get("CreateServer_Validation_NoName"));
+
+        if (_currentModLoader is "Forge" or "NeoForge" or "Fabric" or "Quilt" or "Paper")
+        {
+            if (LoaderVersionBox.Items.Count == 0)
+            {
+                errors.Add(LocalizationManager.Get("CreateServer_Validation_NoLoaderVersion"));
+            }
+            else if (LoaderVersionBox.SelectedItem is ComboBoxItem li)
+            {
+                var content = li.Content?.ToString() ?? "";
+                if (string.IsNullOrEmpty(content) || content == LocalizationManager.Get("CreateServer_Not_Found"))
+                    errors.Add(LocalizationManager.Get("CreateServer_Validation_NoLoaderVersion"));
+            }
+            else
+            {
+                errors.Add(LocalizationManager.Get("CreateServer_Validation_NoLoaderVersion"));
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(ServerPathBox.Text))
+            errors.Add(LocalizationManager.Get("CreateServer_Validation_NoFolder"));
+
+        return errors;
+    }
+
+    /// <summary>
+    /// Обновляет состояние кнопки Создать и иконку предупреждения
+    /// </summary>
+    private void UpdateCreateButtonState()
+    {
+        if (_isInstalling)
+            return;
+
+        var errors = GetValidationErrors();
+        var hasErrors = errors.Count > 0;
+
+        ActionOrCancelButton.IsEnabled = !hasErrors;
+        ValidationIcon.Visibility = hasErrors ? Visibility.Visible : Visibility.Collapsed;
+
+        if (hasErrors)
+        {
+            ValidationIcon.ToolTip = string.Join("\n", errors.Select(e => $"• {e}"));
+        }
+        else
+        {
+            ValidationIcon.ToolTip = null;
+        }
+    }
+
     private static bool IsSnapshot(string version)
     {
         var snapshotMarkers = new[] { "w", "-pre", "-rc", "-snapshot", "Pre-Release", " pre", "inf" };
@@ -403,61 +545,7 @@ public partial class CreateServerPage : Page
         return false;
     }
 
-    private static async Task<HashSet<string>> GetNeoForgeStableMcVersionsAsync()
-    {
-        var stableVersions = new HashSet<string>();
 
-        try
-        {
-            var url = NeoForgeMetadata;
-
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-            var response = await httpClient.GetStringAsync(url);
-
-            var matches = NeoForgeVersionRegex().Matches(response);
-
-            foreach (Match match in matches)
-            {
-                var fullVersion = match.Groups[1].Value;
-                var versionPart = fullVersion.Split('-')[0];
-                var parts = versionPart.Split('.');
-
-                if (parts.Length >= 2)
-                {
-                    var mcVersion = $"1.{parts[0]}.{parts[1]}";
-
-                    if (!IsNeoForgeSnapshot(fullVersion))
-                    {
-                        stableVersions.Add(mcVersion);
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // При ошибке возвращаем пустой список
-        }
-
-        return stableVersions;
-    }
-
-    private async Task LoadNeoForgeStableVersionsAsync()
-    {
-        try
-        {
-            var versions = await GetNeoForgeStableMcVersionsAsync();
-            _neoForgeStableMcVersions = versions;
-
-            if (GetSelectedModLoader() == "NeoForge" && !(ShowSnapshotsBox?.IsChecked ?? false))
-            {
-                _ = FilterMcVersionsAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Failed to load NeoForge stable versions: {ex.Message}", "CreateServerPage");
-        }
-    }
 
     private void ShowSnapshotsBox_Changed(object? sender, RoutedEventArgs e)
     {
@@ -480,16 +568,19 @@ public partial class CreateServerPage : Page
 
     private void ServerNameBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        ServerNameError.Visibility = Visibility.Collapsed;
-
-        if (_isInitializing || string.IsNullOrWhiteSpace(ServerNameBox.Text))
+        if (_isInitializing)
             return;
 
-        var invalidChars = Path.GetInvalidFileNameChars();
-        var serverNameClean = new string([.. ServerNameBox.Text.Where(c => !invalidChars.Contains(c))]);
-        var exeDir = AppContext.BaseDirectory;
-        var serversDir = Path.Combine(exeDir, "Servers");
-        ServerPathBox.Text = Path.Combine(serversDir, serverNameClean);
+        if (!string.IsNullOrWhiteSpace(ServerNameBox.Text))
+        {
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var serverNameClean = new string([.. ServerNameBox.Text.Where(c => !invalidChars.Contains(c))]);
+            var exeDir = AppContext.BaseDirectory;
+            var serversDir = Path.Combine(exeDir, "Servers");
+            ServerPathBox.Text = Path.Combine(serversDir, serverNameClean);
+        }
+
+        UpdateCreateButtonState();
     }
 
     private async void ModLoaderBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -533,9 +624,10 @@ public partial class CreateServerPage : Page
 
             _currentModLoader = tag;
 
-            var isEnabled = tag is "Forge" or "NeoForge" or "Fabric" or "Quilt";
+            var isEnabled = tag is "Forge" or "NeoForge" or "Fabric" or "Quilt" or "Paper";
             LoaderVersionBox.IsEnabled = isEnabled;
             LoaderVersionBox.Items.Clear();
+            UpdateCreateButtonState();
 
             await FilterMcVersionsAsync(tag);
         }
@@ -570,6 +662,7 @@ public partial class CreateServerPage : Page
         }
 
         _isLoadingInProgress = true;
+        LoaderProgressRing.Visibility = Visibility.Visible;
 
         try
         {
@@ -579,6 +672,7 @@ public partial class CreateServerPage : Page
                 "NeoForge" => await _versionsApi.GetNeoForgeVersions(mcVersion),
                 "Fabric" => await _versionsApi.GetFabricVersions(mcVersion),
                 "Quilt" => await _versionsApi.GetQuiltVersions(mcVersion),
+                "Paper" => await _versionsApi.GetPaperVersions(mcVersion),
                 _ => []
             };
 
@@ -606,11 +700,29 @@ public partial class CreateServerPage : Page
                 Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerPage");
             }
 
+            // Фильтруем ALPHA-сборки для Paper
+            if (modLoaderType == "Paper" && !showSnapshots)
+            {
+                versions = [.. versions.Where(v => !v.Contains("(ALPHA)", StringComparison.OrdinalIgnoreCase))];
+                Logger.Info($"Filtered Paper versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerPage");
+            }
+
+            LoaderVersionBox.Items.Clear();
+
             if (versions.Length == 0)
             {
                 Logger.Warning($"No {modLoaderType} versions found for MC {mcVersion}", "CreateServerPage");
+                LoaderVersionBox.Items.Add(new ComboBoxItem
+                {
+                    Content = LocalizationManager.Get("CreateServer_Not_Found"),
+                    IsEnabled = false,
+                    IsSelected = true
+                });
+                LoaderVersionBox.IsEnabled = false;
                 return;
             }
+
+            LoaderVersionBox.IsEnabled = true;
 
             var firstVersion = versions[0];
             LoaderVersionBox.Items.Add(new ComboBoxItem
@@ -628,10 +740,20 @@ public partial class CreateServerPage : Page
         catch (Exception ex)
         {
             Logger.Warning($"Error loading {modLoaderType} versions: {ex.Message}", "CreateServerPage");
+            LoaderVersionBox.Items.Clear();
+            LoaderVersionBox.Items.Add(new ComboBoxItem
+            {
+                Content = LocalizationManager.Get("CreateServer_Not_Found"),
+                IsEnabled = false,
+                IsSelected = true
+            });
+            LoaderVersionBox.IsEnabled = false;
         }
         finally
         {
             _isLoadingInProgress = false;
+            LoaderProgressRing.Visibility = Visibility.Collapsed;
+            this.Invoke(() => UpdateCreateButtonState());
         }
     }
 
@@ -650,14 +772,21 @@ public partial class CreateServerPage : Page
             var mcVersion = mcItem.Content?.ToString();
 
             if (!string.IsNullOrEmpty(tag) && !string.IsNullOrEmpty(mcVersion) &&
-                tag is "Forge" or "NeoForge" or "Fabric" or "Quilt")
+                tag is "Forge" or "NeoForge" or "Fabric" or "Quilt" or "Paper")
             {
                 LoaderVersionBox.Items.Clear();
                 Logger.Info($"McVersionBox_SelectionChanged: calling LoadLoaderVersions for {tag}, MC: {mcVersion}", "CreateServerPage");
                 _ = LoadLoaderVersions(tag, mcVersion);
             }
+            else
+            {
+                UpdateCreateButtonState();
+            }
         }
-
+        else
+        {
+            UpdateCreateButtonState();
+        }
     }
 
     // ======================== Путь к серверу ========================
@@ -674,6 +803,7 @@ public partial class CreateServerPage : Page
         {
             ServerPathBox.Text = dialog.FolderName;
             SaveServersPath(dialog.FolderName);
+            UpdateCreateButtonState();
         }
     }
 
@@ -811,7 +941,7 @@ public partial class CreateServerPage : Page
         {
             if (isInstalling)
             {
-                ProgressText.Visibility = Visibility.Visible;
+                ProgressPanel.Visibility = Visibility.Visible;
                 ProgressText.Text = "Подготовка...";
 
                 ActionOrCancelButton.Content = "Отмена";
@@ -823,11 +953,11 @@ public partial class CreateServerPage : Page
             }
             else
             {
-                ProgressText.Visibility = Visibility.Collapsed;
+                ProgressPanel.Visibility = Visibility.Collapsed;
 
                 ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Create") ?? "Создать";
                 ActionOrCancelButton.Appearance = ControlAppearance.Success;
-                ActionOrCancelButton.IsEnabled = true;
+                UpdateCreateButtonState();
 
                 ImportButton.Visibility = Visibility.Visible;
                 ImportButton.IsEnabled = true;
@@ -863,13 +993,8 @@ public partial class CreateServerPage : Page
         {
             if (string.IsNullOrWhiteSpace(ServerNameBox.Text))
             {
-                ServerNameError.Visibility = Visibility.Visible;
                 ServerNameBox.Focus();
                 return;
-            }
-            else
-            {
-                ServerNameError.Visibility = Visibility.Collapsed;
             }
 
             if (string.IsNullOrWhiteSpace(ServerPathBox.Text))
@@ -959,7 +1084,7 @@ public partial class CreateServerPage : Page
         {
             Dispatcher.Invoke(() =>
             {
-                ProgressText.Visibility = Visibility.Visible;
+                ProgressPanel.Visibility = Visibility.Visible;
                 ProgressText.Text = "Подготовка...";
             });
 
@@ -1197,7 +1322,4 @@ public partial class CreateServerPage : Page
             };
         }
     }
-
-    [GeneratedRegex(@"<version>([^<]+)</version>")]
-    private static partial Regex NeoForgeVersionRegex();
 }

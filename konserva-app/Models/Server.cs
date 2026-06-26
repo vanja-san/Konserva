@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using Konserva.Utilities;
 
@@ -19,12 +21,14 @@ public enum ServerStatus
 /// <summary>
 /// Модель сервера Minecraft
 /// </summary>
-public class Server
+public class Server : ObservableObject
 {
     private static int _idCounter;
     private string _name = string.Empty;
     private int _port = 25565;
     private bool _errorDialogShown; // Флаг: показан ли диалог ошибки
+    private ServerStatus _status = ServerStatus.Stopped;
+    private string _installStatus = string.Empty;
 
     /// <summary>
     /// Уникальный идентификатор сервера
@@ -42,7 +46,10 @@ public class Server
         set
         {
             var trimmed = string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
-            _name = trimmed.Length > 100 ? trimmed[..100] : trimmed;
+            if (SetProperty(ref _name, trimmed.Length > 100 ? trimmed[..100] : trimmed))
+            {
+                OnPropertyChanged(nameof(Description));
+            }
         }
     }
 
@@ -92,19 +99,29 @@ public class Server
     public bool AutoStart { get; set; }
 
     /// <summary>
-        /// Номер сборки сервера (для Paper)
+    /// Номер сборки сервера (для Paper)
     /// </summary>
     public int? ServerBuild { get; set; }
 
     // Временные данные (не сохраняются, JsonIgnore)
     [JsonIgnore]
-    public ServerStatus Status { get; set; } = ServerStatus.Stopped;
+    public ServerStatus Status
+    {
+        get => _status;
+        set
+        {
+            if (SetProperty(ref _status, value))
+            {
+                OnPropertyChanged(nameof(IsRunning));
+            }
+        }
+    }
 
     [JsonIgnore]
     public string InstallStatus
     {
-        get => field ?? string.Empty;
-        set => field = value ?? throw new ArgumentNullException(nameof(value));
+        get => _installStatus;
+        set => SetProperty(ref _installStatus, value ?? string.Empty);
     }
 
     private static string GenerateShortId() =>

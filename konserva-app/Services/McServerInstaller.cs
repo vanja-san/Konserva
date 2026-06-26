@@ -20,9 +20,9 @@ public partial class McServerInstaller : IServerInstaller
     private HttpClient _http;
     private IConfigService? _configService;
 
-    public McServerInstaller(HttpClient httpClient, IConfigService? configService = null)
+    public McServerInstaller(HttpClient? httpClient, IConfigService? configService = null)
     {
-        _http = httpClient;
+        _http = httpClient ?? new HttpClient();
         _http.Timeout = TimeSpan.FromMinutes(5);
         _http.DefaultRequestHeaders.Add("User-Agent", "Konserva/1.0");
         _http.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
@@ -230,7 +230,7 @@ public partial class McServerInstaller : IServerInstaller
                 response.EnsureSuccessStatusCode();
 
                 var responseContent = await response.Content.ReadAsStringAsync(ct);
-                Logger.Info($"Fabric API response: {responseContent[..Math.Min(200, responseContent.Length)]}...");
+                Logger.Info($"Fabric API response: {responseContent[..Math.Min(Constants.LogTruncationLength, responseContent.Length)]}...");
 
                 using var doc = JsonDocument.Parse(responseContent);
                 var array = doc.RootElement.EnumerateArray();
@@ -279,29 +279,30 @@ public partial class McServerInstaller : IServerInstaller
             Directory.CreateDirectory(destinationPath);
             Logger.Info($"Created directory: {destinationPath}");
 
-            // 1. Получаем версии Fabric
-            Logger.Info("Getting Fabric versions...");
-            var loaderVersions = await GetFabricLoaderVersions(mcVersion, ct);
-            if (loaderVersions == null || loaderVersions.Length == 0)
+            // Версия загрузчика приходит из UI — используем напрямую
+            var selectedLoaderVersion = loaderVersion;
+            if (string.IsNullOrEmpty(selectedLoaderVersion) || selectedLoaderVersion == "latest")
             {
-                Logger.Error("No Fabric loader versions found");
-                return false;
+                // Если не передали конкретную версию, получаем последнюю
+                Logger.Info("No specific loader version provided, fetching latest...");
+                var loaderVersions = await GetFabricLoaderVersions(mcVersion, ct);
+                if (loaderVersions == null || loaderVersions.Length == 0)
+                {
+                    Logger.Error("No Fabric loader versions found");
+                    return false;
+                }
+                selectedLoaderVersion = loaderVersions[0];
             }
 
-            // Выбираем последнюю версию loader
-            var selectedLoaderVersion = loaderVersion == "latest"
-                ? loaderVersions[0]
-                : loaderVersions.FirstOrDefault(v => v.Contains(loaderVersion)) ?? loaderVersions[0];
+            Logger.Info($"Using Fabric loader version: {selectedLoaderVersion}");
 
-            Logger.Info($"Selected Fabric loader version: {selectedLoaderVersion}");
-
-            // 2. Получаем версию installer с повторными попытками
+            // Получаем версию installer Fabric
+            Logger.Info("Getting Fabric installer version...");
             string? installerVersion = null;
             for (int attempt = 1; attempt <= 3; attempt++)
             {
                 try
                 {
-                    Logger.Info($"Getting Fabric installer version (attempt {attempt}/3)...");
                     installerVersion = await GetFabricInstallerVersion(ct);
                     if (!string.IsNullOrEmpty(installerVersion))
                     {
@@ -311,42 +312,50 @@ public partial class McServerInstaller : IServerInstaller
                 }
                 catch (Exception ex)
                 {
-                    Logger.Warning($"Attempt {attempt} failed: {ex.Message}");
-                    if (attempt < 3)
-                        await Task.Delay(Constants.MsPerSecond * attempt, ct);
+                    Logger.Warning($"Fabric installer version attempt {attempt}/3 failed: {ex.Message}");
                 }
             }
 
-            // Если не получили версию installer, используем известную стабильную версию
+            // Fallback, если не удалось получить версию installer
             if (string.IsNullOrEmpty(installerVersion))
             {
-                Logger.Warning("Failed to get Fabric installer version, using fallback version 0.16.10");
-                installerVersion = "0.16.10";
+                Logger.Warning("Failed to get Fabric installer version, using fallback version 1.1.1");
+                installerVersion = "1.1.1";
             }
 
-            // 3. Скачиваем сервер
-            var serverUrl = $"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}/{selectedLoaderVersion}/{installerVersion}/server/jar";
+            // URL с installer version обязателен — meta.fabricmc.net требует его
+            var primaryUrl = $"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}/{selectedLoaderVersion}/{installerVersion}/server/jar";
+            var fallbackUrl = $"https://bmclapi2.bangbang93.com/fabric-meta/v2/versions/loader/{mcVersion}/{selectedLoaderVersion}/{installerVersion}/server/jar";
 
-            Logger.Info($"Downloading Fabric server from: {serverUrl}");
-            progress?.Report("Скачивание сервера...");
-            var (success, error) = await DownloadFile(serverUrl, destinationPath, "fabric-server-launch.jar", progress, ct);
+            // Пробуем официальный API, при ошибке — BMCLAPI
+            var urlsToTry = new[] { primaryUrl, fallbackUrl };
 
-            if (!success)
+            foreach (var url in urlsToTry)
             {
-                Logger.Error($"Failed to download Fabric server: {error}");
-                return false;
+                Logger.Info($"Downloading Fabric server from: {url}");
+                progress?.Report("Скачивание сервера...");
+
+                var (success, error) = await DownloadFile(url, destinationPath, "fabric-server-launch.jar", progress, ct);
+
+                if (success)
+                {
+                    Logger.Info("Fabric server downloaded successfully");
+
+                    // Создаем eula.txt
+                    progress?.Report("Создание конфигурации...");
+                    CreateEula(destinationPath);
+
+                    Logger.Info("Fabric server installation completed");
+                    progress?.Report("Завершение...");
+                    return true;
+                }
+
+                Logger.Warning($"Primary Fabric URL failed, trying BMCLAPI fallback: {error}");
+                progress?.Report("Смена источника...");
             }
 
-            Logger.Info($"Fabric server downloaded successfully");
-
-            // 4. Создаем eula.txt (server.properties создастся автоматически при запуске)
-            progress?.Report("Создание конфигурации...");
-            CreateEula(destinationPath);
-            // server.properties создаётся автоматически при первом запуске сервера
-
-            Logger.Info("Fabric server installation completed");
-            progress?.Report("Завершение...");
-            return true;
+            Logger.Error("All Fabric download URLs failed");
+            return false;
         }
         catch (Exception ex)
         {
@@ -398,7 +407,7 @@ public partial class McServerInstaller : IServerInstaller
             if (array.MoveNext())
             {
                 var firstItem = array.Current;
-                Logger.Info($"First item JSON: {firstItem.GetRawText()[..Math.Min(200, firstItem.GetRawText().Length)]}...");
+                Logger.Info($"First item JSON: {firstItem.GetRawText()[..Math.Min(Constants.LogTruncationLength, firstItem.GetRawText().Length)]}...");
 
                 // Fabric API возвращает структуру: { "loader": { "version": "x.y.z" }, ... }
                 // Возвращаем все версии
@@ -637,18 +646,36 @@ public partial class McServerInstaller : IServerInstaller
 
                 var waitStartTime = SystemTime.Now;
                 var maxWaitTime = TimeSpan.FromSeconds(60);
+                var minWait = TimeSpan.FromSeconds(3); // Минимум 3 сек, чтобы не завершиться до начала распаковки
+                var hasMinWaitElapsed = false;
 
                 while ((SystemTime.Now - waitStartTime) < maxWaitTime)
                 {
-                    var hasForgeJar = Directory.GetFiles(destinationPath, "forge-*.jar").Any() ||
-                                     Directory.GetFiles(destinationPath, "neoforge-*.jar").Any();
-                    var hasLibraries = Directory.Exists(Path.Combine(destinationPath, "libraries"));
+                    var hasForgeJarInRoot = Directory.GetFiles(destinationPath, "forge-*.jar").Any() ||
+                                           Directory.GetFiles(destinationPath, "neoforge-*.jar").Any();
+                    var librariesPathCheck = Path.Combine(destinationPath, "libraries");
+                    var hasUniversalInLibraries = false;
+                    if (Directory.Exists(librariesPathCheck))
+                    {
+                        hasUniversalInLibraries = Directory.GetFiles(librariesPathCheck, "forge-*-universal.jar", SearchOption.AllDirectories).Any() ||
+                                                  Directory.GetFiles(librariesPathCheck, "neoforge-*-universal.jar", SearchOption.AllDirectories).Any();
+                    }
+                    var hasLibraries = Directory.Exists(librariesPathCheck);
+                    var hasRunBat = File.Exists(Path.Combine(destinationPath, "run.bat"));
 
-                    if (!hasForgeJar || !hasLibraries)
+                    if ((!hasForgeJarInRoot && !hasUniversalInLibraries) || !hasLibraries)
                     {
                         await Task.Delay(500, ct);
                         continue;
                     }
+
+                    // Ждём минимум 3 секунды прежде чем проверять стабильность
+                    if (!hasMinWaitElapsed && (SystemTime.Now - waitStartTime) < minWait)
+                    {
+                        await Task.Delay(500, ct);
+                        continue;
+                    }
+                    hasMinWaitElapsed = true;
 
                     // Проверяем что ключевые файлы не заблокированы
                     var keyFiles = Directory.GetFiles(destinationPath, "*.jar")
@@ -664,14 +691,67 @@ public partial class McServerInstaller : IServerInstaller
 
                     var allUnlocked = keyFiles.All(IsFileUnlocked);
 
-                    if (allUnlocked)
+                    if (allUnlocked && hasRunBat)
                     {
                         await Task.Delay(1000, ct);
-                        Logger.Info($"Forge files unlocked and stable ({keyFiles.Length} checked)", "McServerInstaller");
+                        Logger.Info($"Forge files unlocked and stable ({keyFiles.Length} checked, run.bat present)", "McServerInstaller");
                         break;
+                    }
+                    else if (allUnlocked)
+                    {
+                        // run.bat может не быть для старых версий, но если все файлы разблокированы — ок
+                        Logger.Info($"Forge files unlocked but no run.bat, waiting for more files...", "McServerInstaller");
+                        await Task.Delay(1000, ct);
+                        // Если прошло уже 10+ секунд и всё разблокировано — выходим
+                        if ((SystemTime.Now - waitStartTime) > TimeSpan.FromSeconds(10))
+                        {
+                            Logger.Info("Exiting Forge stability wait (10s elapsed, files unlocked)", "McServerInstaller");
+                            break;
+                        }
                     }
 
                     await Task.Delay(500, ct);
+                }
+
+                // Копируем forge universal jar из libraries в корень (новые версии Forge не создают jar в корне)
+                try
+                {
+                    var librariesPath = Path.Combine(destinationPath, "libraries");
+                    if (Directory.Exists(librariesPath))
+                    {
+                        var forgeJars = Directory.GetFiles(librariesPath, "forge-*-universal.jar", SearchOption.AllDirectories);
+                        if (forgeJars.Length > 0)
+                        {
+                            var srcJar = forgeJars[0];
+                            var jarName = $"forge-{forgeVersion}.jar";
+                            var dstJar = Path.Combine(destinationPath, jarName);
+                            if (!File.Exists(dstJar))
+                            {
+                                File.Copy(srcJar, dstJar);
+                                Logger.Info($"Copied universal jar to {jarName}", "McServerInstaller");
+                            }
+                        }
+                        else
+                        {
+                            // Fallback: ищем любой forge-*.jar
+                            var anyForgeJars = Directory.GetFiles(librariesPath, "forge-*.jar", SearchOption.AllDirectories);
+                            if (anyForgeJars.Length > 0)
+                            {
+                                var srcJar = anyForgeJars[0];
+                                var jarName = $"forge-{forgeVersion}.jar";
+                                var dstJar = Path.Combine(destinationPath, jarName);
+                                if (!File.Exists(dstJar))
+                                {
+                                    File.Copy(srcJar, dstJar);
+                                    Logger.Info($"Copied jar to {jarName} (fallback)", "McServerInstaller");
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning($"Failed to copy Forge universal jar: {ex.Message}", "McServerInstaller");
                 }
 
                 Logger.Info("File operations completed", "McServerInstaller");
@@ -817,66 +897,35 @@ public partial class McServerInstaller : IServerInstaller
             {
                 Logger.Info($"Fetching NeoForge version list for {mcVersion} to resolve '{neoforgeVersion}'", "McServerInstaller");
 
-                try
-                {
-                    // NeoForge promotions API
-                    var manifestUrl = "https://maven.neoforged.net/releases/net/neoforged/forge/promotions_slim.json";
-                    var manifest = await GetHttpClient().GetStringAsync(manifestUrl, ct);
-
-                    using var doc = JsonDocument.Parse(manifest);
-                    var promos = doc.RootElement.GetProperty("promos");
-
-                    // Конвертируем версию Minecraft в формат NeoForge для promoKey
-                    // 1.21.10 -> 21.10, 1.20.4 -> 20.4
-                    var neoforgeMcVersion = ConvertMcVersionToNeoForgeFormat(mcVersion);
-                    var promoKey = $"{neoforgeMcVersion}-{neoforgeVersion}";
-                    if (promos.TryGetProperty(promoKey, out var promoVersion))
-                    {
-                        actualVersion = promoVersion.GetString()!;
-                        Logger.Info($"Resolved '{neoforgeVersion}' to {actualVersion} using key '{promoKey}'", "McServerInstaller");
-                    }
-                    else
-                    {
-                        Logger.Warning($"Promo key '{promoKey}' not found in NeoForge promotions", "McServerInstaller");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warning($"Failed to resolve NeoForge version: {ex.Message}", "McServerInstaller");
-                    // Fallback на известные версии
-                    actualVersion = mcVersion switch
-                    {
-                        "1.21.4" => "21.4.0",
-                        "1.21.3" => "21.3.0",
-                        "1.21.1" => "21.1.0",
-                        "1.21" => "21.0.167",
-                        "1.20.6" => "20.6.106",
-                        "1.20.4" => "20.4.238",
-                        "1.20.1" => "19.0.56",
-                        "1.19.4" => "18.0.0",
-                        "1.19.3" => "17.0.0",
-                        "1.19.2" => "16.0.0",
-                        "1.18.2" => "14.0.0",
-                        _ => neoforgeVersion
-                    };
-                    Logger.Info($"Using fallback NeoForge version: {actualVersion}", "McServerInstaller");
-                }
+                // Пробуем получить последнюю версию из Maven metadata
+                // NeoForge promotions API (promotions_slim.json) был удалён после разделения Forge и NeoForge
+                actualVersion = await GetLatestNeoForgeVersionFromMetadata(mcVersion, ct) ?? neoforgeVersion;
             }
 
             // Формируем URL с версией NeoForge
-            // NeoForge использует формат: https://maven.neoforged.net/releases/net/neoforged/forge/{version}/forge-{version}-installer.jar
+            // Для MC < 1.21 используется neoforged/forge/, для MC >= 1.21 — neoforged/neoforge/
+            var isNewNeoForge = IsNewNeoForgePath(mcVersion);
+            var baseGroup = isNewNeoForge ? "neoforge" : "forge";
+            var prefix = isNewNeoForge ? "neoforge-" : "forge-";
             string mavenPath = actualVersion;
 
             // Проверяем несколько форматов URL
-            var urls = new[]
+            var urls = new List<string>
             {
-                // Формат 1: Maven классический
-                $"https://maven.neoforged.net/releases/net/neoforged/forge/{mavenPath}/forge-{mavenPath}-installer.jar",
+                // Формат 1: Maven классический (новый путь neoforged/neoforge/ или старый neoforged/forge/)
+                $"https://maven.neoforged.net/releases/net/neoforged/{baseGroup}/{mavenPath}/{prefix}{mavenPath}-installer.jar",
                 // Формат 2: Maven с mc версией
-                $"https://maven.neoforged.net/releases/net/neoforged/forge/{mcVersion}-{mavenPath}/forge-{mcVersion}-{mavenPath}-installer.jar",
+                $"https://maven.neoforged.net/releases/net/neoforged/{baseGroup}/{mcVersion}-{mavenPath}/{prefix}{mcVersion}-{mavenPath}-installer.jar",
                 // Формат 3: Прямой download
                 $"https://maven.neoforged.net/api/v1/installer/{mcVersion}-{mavenPath}"
             };
+
+            // Если не уверены в пути, пробуем оба варианта
+            if (!isNewNeoForge)
+            {
+                urls.Insert(0, $"https://maven.neoforged.net/releases/net/neoforged/neoforge/{mavenPath}/neoforge-{mavenPath}-installer.jar");
+                urls.Insert(1, $"https://maven.neoforged.net/releases/net/neoforged/neoforge/{mcVersion}-{mavenPath}/neoforge-{mcVersion}-{mavenPath}-installer.jar");
+            }
 
             foreach (var url in urls)
             {
@@ -903,29 +952,14 @@ public partial class McServerInstaller : IServerInstaller
                 }
             }
 
-            // Если все URL не работали, пробуем получить версию из Maven metadata
-            Logger.Info("Trying to fetch NeoForge version from Maven metadata...", "McServerInstaller");
-
-            try
+            // Если все URL не работали, пробуем получить версию из Maven metadata (fallback)
+            Logger.Info("Trying to fetch NeoForge version from Maven metadata (fallback)...", "McServerInstaller");
+            var fallbackVersion = await GetLatestNeoForgeVersionFromMetadata(mcVersion, ct);
+            if (fallbackVersion != null)
             {
-                var metadataUrl = "https://maven.neoforged.net/releases/net/neoforged/forge/maven-metadata.xml";
-                var metadata = await GetHttpClient().GetStringAsync(metadataUrl, ct);
-
-                // Ищем последнюю версию
-#pragma warning disable SYSLIB1045 // Using inline Regex instead of GeneratedRegexAttribute
-                var versionMatch = Regex.Match(metadata, @"<version>([^<]+)</version>");
-#pragma warning restore SYSLIB1045
-                if (versionMatch.Success)
-                {
-                    var latestVersion = versionMatch.Groups[1].Value;
-                    var fallbackUrl = $"https://maven.neoforged.net/releases/net/neoforged/forge/{latestVersion}/forge-{latestVersion}-installer.jar";
-                    Logger.Info($"Using latest NeoForge version from metadata: {latestVersion}", "McServerInstaller");
-                    return fallbackUrl;
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"Failed to fetch NeoForge metadata: {ex.Message}", "McServerInstaller");
+                var fallbackUrl = $"https://maven.neoforged.net/releases/net/neoforged/{baseGroup}/{fallbackVersion}/{prefix}{fallbackVersion}-installer.jar";
+                Logger.Info($"Using latest NeoForge version from metadata: {fallbackVersion}", "McServerInstaller");
+                return fallbackUrl;
             }
 
             Logger.Error("All NeoForge URLs failed", null, "McServerInstaller");
@@ -934,6 +968,88 @@ public partial class McServerInstaller : IServerInstaller
         catch (Exception ex)
         {
             Logger.Error($"Failed to get NeoForge installer URL: {ex.GetType().Name} - {ex.Message}", ex, "McServerInstaller");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Определить, используется новый путь NeoForge (neoforged/neoforge/) для данной MC версии
+    /// </summary>
+    private static bool IsNewNeoForgePath(string mcVersion)
+    {
+        // NeoForge перешёл на neoforged/neoforge/ начиная с MC 1.21
+        if (Version.TryParse(mcVersion, out var ver))
+        {
+            return ver.Major >= 1 && ver.Minor >= 21;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Получить последнюю версию NeoForge из Maven metadata, соответствующую MC версии
+    /// </summary>
+    private async Task<string?> GetLatestNeoForgeVersionFromMetadata(string mcVersion, CancellationToken ct = default)
+    {
+        try
+        {
+            var neoforgePrefix = ConvertMcVersionToNeoForgeFormat(mcVersion);
+            var metadataUrls = new[]
+            {
+                $"https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml",
+                $"https://maven.neoforged.net/releases/net/neoforged/forge/maven-metadata.xml"
+            };
+
+            foreach (var metadataUrl in metadataUrls)
+            {
+                try
+                {
+                    Logger.Info($"Fetching NeoForge metadata: {metadataUrl}", "McServerInstaller");
+                    var metadata = await GetHttpClient().GetStringAsync(metadataUrl, ct);
+
+                    // Ищем все версии
+                    var versionMatches = Regex.Matches(metadata, @"<version>([^<]+)</version>");
+                    var versions = versionMatches
+                        .Select(m => m.Groups[1].Value)
+                        .Where(v => v.StartsWith(neoforgePrefix) || v.StartsWith($"{mcVersion}-{neoforgePrefix}"))
+                        .ToList();
+
+                    if (versions.Count > 0)
+                    {
+                        // Сортируем по убыванию (последняя версия)
+                        var latest = versions.OrderByDescending(v => v).First();
+                        Logger.Info($"Found NeoForge version {latest} for MC {mcVersion} in {metadataUrl}", "McServerInstaller");
+                        return latest;
+                    }
+
+                    Logger.Warning($"No NeoForge versions matching prefix '{neoforgePrefix}' in {metadataUrl}", "McServerInstaller");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning($"Failed to fetch metadata from {metadataUrl}: {ex.Message}", "McServerInstaller");
+                }
+            }
+
+            // Fallback на известные версии
+            var fallback = mcVersion switch
+            {
+                "1.21.4" => "21.4.0",
+                "1.21.3" => "21.3.0",
+                "1.21.1" => "21.1.0",
+                "1.21" => "21.0.167",
+                "1.20.6" => "20.6.106",
+                "1.20.4" => "20.4.238",
+                "1.20.1" => "19.0.56",
+                "1.19.4" => "18.0.0",
+                "1.19.3" => "17.0.0",
+                "1.19.2" => "16.0.0",
+                "1.18.2" => "14.0.0",
+                _ => null
+            };
+            return fallback;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Failed to get NeoForge version from metadata: {ex.Message}", "McServerInstaller");
             return null;
         }
     }
@@ -990,18 +1106,36 @@ public partial class McServerInstaller : IServerInstaller
                 var waitStartTime = SystemTime.Now;
                 var maxWaitTime = TimeSpan.FromSeconds(60);
                 var librariesPath = Path.Combine(destinationPath, "libraries");
+                var minWait = TimeSpan.FromSeconds(3);
+                var hasMinWaitElapsed = false;
 
                 while ((SystemTime.Now - waitStartTime) < maxWaitTime)
                 {
-                    var hasForgeJar = Directory.GetFiles(destinationPath, "forge-*.jar").Any() ||
-                                     Directory.GetFiles(destinationPath, "neoforge-*.jar").Any();
+                    // Новые NeoForge не создают jar в корне — проверяем и libraries
+                    var hasForgeJarInRoot = Directory.GetFiles(destinationPath, "forge-*.jar").Any() ||
+                                           Directory.GetFiles(destinationPath, "neoforge-*.jar").Any();
+                    var hasUniversalInLibraries = false;
+                    if (Directory.Exists(librariesPath))
+                    {
+                        hasUniversalInLibraries = Directory.GetFiles(librariesPath, "neoforge-*-universal.jar", SearchOption.AllDirectories).Any() ||
+                                                  Directory.GetFiles(librariesPath, "forge-*-universal.jar", SearchOption.AllDirectories).Any();
+                    }
                     var hasLibraries = Directory.Exists(librariesPath);
+                    var hasRunBat = File.Exists(Path.Combine(destinationPath, "run.bat"));
 
-                    if (!hasForgeJar || !hasLibraries)
+                    if ((!hasForgeJarInRoot && !hasUniversalInLibraries) || !hasLibraries)
                     {
                         await Task.Delay(500, ct);
                         continue;
                     }
+
+                    // Ждём минимум 3 секунды
+                    if (!hasMinWaitElapsed && (SystemTime.Now - waitStartTime) < minWait)
+                    {
+                        await Task.Delay(500, ct);
+                        continue;
+                    }
+                    hasMinWaitElapsed = true;
 
                     var keyFiles = Directory.GetFiles(destinationPath, "*.jar")
                         .Concat(Directory.GetFiles(librariesPath, "*.jar", SearchOption.AllDirectories))
@@ -1016,14 +1150,34 @@ public partial class McServerInstaller : IServerInstaller
 
                     var allUnlocked = keyFiles.All(IsFileUnlocked);
 
-                    if (allUnlocked)
+                    if (allUnlocked && hasRunBat)
                     {
                         await Task.Delay(1000, ct);
-                        Logger.Info($"NeoForge files unlocked and stable ({keyFiles.Length} checked)", "McServerInstaller");
+                        Logger.Info($"NeoForge files unlocked and stable ({keyFiles.Length} checked, run.bat present)", "McServerInstaller");
                         break;
+                    }
+                    else if (allUnlocked)
+                    {
+                        Logger.Info($"NeoForge files unlocked but no run.bat yet, waiting...", "McServerInstaller");
+                        await Task.Delay(1000, ct);
+                        if ((SystemTime.Now - waitStartTime) > TimeSpan.FromSeconds(10))
+                        {
+                            Logger.Info("Exiting NeoForge stability wait (10s elapsed, files unlocked)", "McServerInstaller");
+                            break;
+                        }
                     }
 
                     await Task.Delay(500, ct);
+                }
+
+                // Сохраняем конфигурацию запуска NeoForge (classpath + main class)
+                try
+                {
+                    await SaveNeoForgeLaunchConfigAsync(destinationPath, ct);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning($"Failed to save NeoForge launch config: {ex.Message}", "McServerInstaller");
                 }
 
                 Logger.Info("NeoForge server installed successfully");
@@ -1314,7 +1468,7 @@ public partial class McServerInstaller : IServerInstaller
     /// Скачать Paper сервер
     /// </summary>
     public async Task<InstallResult> DownloadPaperServer(string version, string destinationPath,
-        IProgress<string>? progress = null, CancellationToken ct = default)
+        string? loaderVersion = null, IProgress<string>? progress = null, CancellationToken ct = default)
     {
         var result = new InstallResult();
 
@@ -1342,24 +1496,64 @@ public partial class McServerInstaller : IServerInstaller
             // v3 возвращает JSON-массив build'ов в порядке убывания (новейший — первый)
             var builds = doc.RootElement.EnumerateArray().ToArray();
 
-            // Ищем первый STABLE билд
-            var latestBuild = builds.FirstOrDefault(b =>
-                b.TryGetProperty("channel", out var ch) && ch.GetString() == "STABLE");
+            JsonElement selectedBuild = default;
 
-            if (latestBuild.ValueKind == JsonValueKind.Undefined)
+            // Если указан конкретный номер сборки — ищем её
+            if (!string.IsNullOrEmpty(loaderVersion))
             {
-                Logger.Warning($"No stable Paper builds found for {version}", "McServerInstaller");
+                // Парсим номер сборки: если строка содержит " (ALPHA)", отрезаем
+                var buildNumberStr = loaderVersion;
+                var alphaIdx = loaderVersion.IndexOf(" (ALPHA)", StringComparison.OrdinalIgnoreCase);
+                if (alphaIdx > 0)
+                    buildNumberStr = loaderVersion[..alphaIdx];
+
+                if (int.TryParse(buildNumberStr, out var targetBuild))
+                {
+                    selectedBuild = builds.FirstOrDefault(b =>
+                        b.TryGetProperty("id", out var id) && id.GetInt32() == targetBuild);
+
+                    if (selectedBuild.ValueKind != JsonValueKind.Undefined)
+                    {
+                        Logger.Info($"Using specified Paper build #{targetBuild}", "McServerInstaller");
+                    }
+                    else
+                    {
+                        Logger.Warning($"Specified Paper build #{targetBuild} not found, falling back to latest", "McServerInstaller");
+                    }
+                }
+            }
+
+            // Если сборка не найдена или не указана — ищем автоматически
+            if (selectedBuild.ValueKind == JsonValueKind.Undefined)
+            {
+                // Ищем первый STABLE билд, иначе — самый новый (ALPHA)
+                selectedBuild = builds.FirstOrDefault(b =>
+                    b.TryGetProperty("channel", out var ch) && ch.GetString() == "STABLE");
+
+                // Если STABLE нет, берём самый новый билд любого канала
+                if (selectedBuild.ValueKind == JsonValueKind.Undefined && builds.Length > 0)
+                {
+                    selectedBuild = builds[0];
+                    var channel = selectedBuild.GetProperty("channel").GetString();
+                    var buildId = selectedBuild.GetProperty("id").GetInt32();
+                    Logger.Info($"No STABLE Paper build found, using latest {channel} build #{buildId}", "McServerInstaller");
+                }
+            }
+
+            if (selectedBuild.ValueKind == JsonValueKind.Undefined)
+            {
+                Logger.Warning($"No Paper builds found for {version}", "McServerInstaller");
                 result.Success = false;
-                result.Error = "No stable builds found";
+                result.Error = "No builds found";
                 return result;
             }
 
-            var buildNumber = latestBuild.GetProperty("id").GetInt32();
-            var downloadInfo = latestBuild.GetProperty("downloads").GetProperty("server:default");
+            var buildNumber = selectedBuild.GetProperty("id").GetInt32();
+            var downloadInfo = selectedBuild.GetProperty("downloads").GetProperty("server:default");
             var downloadUrl = downloadInfo.GetProperty("url").GetString()!;
             var fileName = downloadInfo.GetProperty("name").GetString()!;
 
-            Logger.Info($"Latest Paper build for {version}: #{buildNumber}", "McServerInstaller");
+            Logger.Info($"Paper build for {version}: #{buildNumber}", "McServerInstaller");
             Logger.Info($"Downloading Paper from: {downloadUrl}", "McServerInstaller");
 
             var (success, error) = await DownloadFile(downloadUrl, destinationPath, "server.jar", progress, ct);
@@ -1530,6 +1724,16 @@ public partial class McServerInstaller : IServerInstaller
         if (neoforgeJars.Length > 0)
             return neoforgeJars[0];
 
+        // NeoForge 21.x+ без jar в корне — ищем в libraries Minecraft server jar
+        if (File.Exists(Path.Combine(serverPath, ".neoforge-launch.json")))
+        {
+            var serverJars = Directory.GetFiles(
+                Path.Combine(serverPath, "libraries", "net", "minecraft", "server"),
+                "server-*.jar", SearchOption.AllDirectories);
+            if (serverJars.Length > 0)
+                return serverJars[0];
+        }
+
         // Любой jar
         return Directory.GetFiles(serverPath, "*.jar").FirstOrDefault() ?? string.Empty;
     }
@@ -1557,8 +1761,47 @@ public partial class McServerInstaller : IServerInstaller
         if (Directory.GetFiles(serverPath, "neoforge-*.jar").Length > 0)
             return ServerLaunchType.NeoForge;
 
-                // Vanilla, Paper используют стандартный запуск
+        // NeoForge 21.x+ может не иметь jar в корне — проверяем маркер конфига запуска
+        if (File.Exists(Path.Combine(serverPath, ".neoforge-launch.json")))
+            return ServerLaunchType.NeoForge;
+
+        // Vanilla, Paper используют стандартный запуск
         return ServerLaunchType.Standard;
+    }
+
+    /// <summary>
+    /// Найти win_args.txt или unix_args.txt в папке версии NeoForge в libraries/.
+    /// </summary>
+    private static string? FindNeoForgeArgsFile(string serverPath)
+    {
+        var librariesDir = Path.Combine(serverPath, "libraries");
+        if (!Directory.Exists(librariesDir))
+            return null;
+
+        try
+        {
+            foreach (var group in new[] { "neoforge", "forge" })
+            {
+                var neoforgeDir = Path.Combine(librariesDir, "net", "neoforged", group);
+                if (!Directory.Exists(neoforgeDir)) continue;
+
+                var versionDirs = Directory.GetDirectories(neoforgeDir);
+                if (versionDirs.Length == 0) continue;
+
+                var versionDir = versionDirs.OrderByDescending(d => d).First();
+                var winArgs = Path.Combine(versionDir, "win_args.txt");
+                if (File.Exists(winArgs)) return winArgs;
+
+                var unixArgs = Path.Combine(versionDir, "unix_args.txt");
+                if (File.Exists(unixArgs)) return unixArgs;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Failed to find NeoForge args file: {ex.Message}", "McServerInstaller");
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -1567,7 +1810,7 @@ public partial class McServerInstaller : IServerInstaller
     /// <param name="jarPath">Путь к jar файлу сервера</param>
     /// <param name="settings">Настройки сервера</param>
     /// <param name="launchType">Тип модлоадера (зарезервировано для future специфичных аргументов)</param>
-    public string BuildLaunchArgs(string jarPath, ServerSettings settings, ServerLaunchType launchType = ServerLaunchType.Standard, int javaMajorVersion = 0)
+    public string BuildLaunchArgs(string jarPath, ServerSettings settings, ServerLaunchType launchType = ServerLaunchType.Standard, int javaMajorVersion = 0, string? serverPath = null)
     {
         var args = new StringBuilder();
 
@@ -1588,13 +1831,146 @@ public partial class McServerInstaller : IServerInstaller
                 args.Append($"{arg} ");
         }
 
+        // NeoForge (21.x+) не использует -jar, нужен classpath/module-path + bootstrap main class
+        if (launchType == ServerLaunchType.NeoForge && !string.IsNullOrEmpty(serverPath))
+        {
+            var launchConfig = LoadNeoForgeLaunchConfig(serverPath);
+            if (launchConfig != null)
+            {
+                if (!string.IsNullOrEmpty(launchConfig.ArgsFile))
+                {
+                    // Есть win_args.txt/unix_args.txt — используем @ файл.
+                    // Файл уже содержит -classpath, main class (net.neoforged.fml.startup.Server),
+                    // --add-opens, --add-exports и аргументы FML (--fml.mcVersion и т.д.)
+                    args.Append($"@{launchConfig.ClassPath} nogui");
+                }
+                else if (FindNeoForgeArgsFile(serverPath) is string argsFile)
+                {
+                    // Миграция: конфиг от старой версии (без ArgsFile), но win_args.txt есть
+                    var relativePath = argsFile.Substring(serverPath.Length)
+                        .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    args.Append($"@{relativePath} nogui");
+                }
+                else
+                {
+                    // Нет args файла — используем classpath из отсканированных jar'ов
+                    args.Append($"-cp \"{launchConfig.ClassPath}\" {launchConfig.MainClass} nogui");
+                }
+                return args.ToString();
+            }
+            // Если конфиг не найден — падаем вниз и пытаемся через -jar
+        }
+
         // Jar файл и nogui
-        args.Append($"-jar \"{Path.GetFileName(jarPath)}\" nogui");
+        // Для jar из папки libraries — используем относительный путь от serverPath,
+        // иначе — только имя файла (jar лежит в корне сервера)
+        string jarName;
+        if (!string.IsNullOrEmpty(serverPath) && jarPath.StartsWith(serverPath, StringComparison.OrdinalIgnoreCase))
+        {
+            // Делаем путь относительным от serverPath
+            jarName = jarPath.Substring(serverPath.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+        else
+        {
+            // Просто имя файла (jar в корне сервера или тесты)
+            jarName = Path.GetFileName(jarPath);
+        }
+        args.Append($"-jar \"{jarName}\" nogui");
 
         return args.ToString();
     }
 
     /// <summary>
+    /// Сохранить конфигурацию запуска NeoForge (classpath + main class).
+    /// Сначала пробует прочитать win_args.txt/unix_args.txt (содержат точный classpath от установщика),
+    /// иначе сканирует libraries/.
+    /// </summary>
+    public async Task SaveNeoForgeLaunchConfigAsync(string serverPath, CancellationToken ct = default)
+    {
+        var librariesDir = Path.Combine(serverPath, "libraries");
+        if (!Directory.Exists(librariesDir))
+        {
+            Logger.Warning("No libraries directory found for NeoForge launch config", "McServerInstaller");
+            return;
+        }
+
+        var mainClass = "net.neoforged.bootstrap.Bootstrap";
+        string? classPath = null;
+        string? argsFilePath = null;
+
+        // Шаг 1: ищем win_args.txt/unix_args.txt через общий helper
+        argsFilePath = FindNeoForgeArgsFile(serverPath);
+        if (argsFilePath != null)
+        {
+            Logger.Info($"Found NeoForge args file: {argsFilePath}", "McServerInstaller");
+            // Делаем путь относительным от serverPath для использования с @ в Java команде
+            classPath = argsFilePath.Substring(serverPath.Length)
+                .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+        else
+        {
+            Logger.Info("No NeoForge args file found, scanning libraries for classpath...", "McServerInstaller");
+
+            // Собираем все jar-файлы из libraries (исключая sources, javadoc)
+            var allJars = Directory.GetFiles(librariesDir, "*.jar", SearchOption.AllDirectories)
+                .Where(j => !j.EndsWith("-sources.jar", StringComparison.OrdinalIgnoreCase) &&
+                            !j.EndsWith("-javadoc.jar", StringComparison.OrdinalIgnoreCase))
+                .Order()
+                .ToList();
+
+            if (allJars.Count == 0)
+            {
+                Logger.Warning("No jars found in libraries for NeoForge", "McServerInstaller");
+                return;
+            }
+
+            var classPathParts = new List<string>();
+            foreach (var jar in allJars)
+            {
+                var relativePath = jar.Substring(serverPath.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                classPathParts.Add(relativePath);
+            }
+            classPath = string.Join(";", classPathParts);
+
+            Logger.Info($"Built classpath from {allJars.Count} jars", "McServerInstaller");
+        }
+
+        // Сохраняем конфиг
+        var config = new NeoForgeLaunchConfig
+        {
+            ClassPath = classPath,
+            MainClass = mainClass,
+            ArgsFile = argsFilePath != null ? Path.GetFileName(argsFilePath) : null,
+            SavedAt = SystemTime.UtcNow
+        };
+
+        var json = System.Text.Json.JsonSerializer.Serialize(config);
+        await File.WriteAllTextAsync(Path.Combine(serverPath, ".neoforge-launch.json"), json, ct);
+
+        Logger.Info($"Saved NeoForge launch config: cp={classPath.Length} chars, main={mainClass}, hasArgsFile={argsFilePath != null}", "McServerInstaller");
+    }
+
+    /// <summary>
+    /// Загрузить конфигурацию запуска NeoForge
+    /// </summary>
+    public NeoForgeLaunchConfig? LoadNeoForgeLaunchConfig(string serverPath)
+    {
+        var configPath = Path.Combine(serverPath, ".neoforge-launch.json");
+        if (!File.Exists(configPath))
+            return null;
+
+        try
+        {
+            var json = File.ReadAllText(configPath);
+            return System.Text.Json.JsonSerializer.Deserialize<NeoForgeLaunchConfig>(json);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Failed to load NeoForge launch config: {ex.Message}", "McServerInstaller");
+            return null;
+        }
+    }
+
     /// <summary>
     /// Полная установка сервера
     /// </summary>
@@ -1620,7 +1996,7 @@ public partial class McServerInstaller : IServerInstaller
             InstallResult installResult;
             if (modLoaderType == ModLoaderType.Paper)
             {
-                installResult = await DownloadPaperServer(mcVersion, serverPath, progress, ct);
+                installResult = await DownloadPaperServer(mcVersion, serverPath, loaderVersion, progress, ct);
             }
             else
             {
@@ -1696,6 +2072,17 @@ public partial class McServerInstaller : IServerInstaller
         Configuring,
         Completed,
         Failed
+    }
+
+    /// <summary>
+    /// Конфигурация запуска NeoForge (classpath + main class вместо -jar)
+    /// </summary>
+    public class NeoForgeLaunchConfig
+    {
+        public string ClassPath { get; set; } = "";
+        public string MainClass { get; set; } = "net.neoforged.bootstrap.Bootstrap";
+        public string? ArgsFile { get; set; }
+        public DateTime SavedAt { get; set; }
     }
 
     /// <summary>

@@ -61,6 +61,11 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         if (!LanguageComboBox.SelectItemByTag(language))
             LanguageComboBox.SelectedIndex = 0;
 
+        // Загрузка источника загрузки
+        var downloadSource = config.DownloadSource ?? "VanillaApi";
+        if (!DownloadSourceComboBox.SelectItemByTag(downloadSource))
+            DownloadSourceComboBox.SelectedIndex = 0;
+
         _isLoading = false; // Разрешаем сохранение после загрузки
 
         // Скрываем InfoBar при загрузке
@@ -92,6 +97,12 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
             var languageChanged = false;
 
             config.CheckUpdates = CheckUpdatesBox.IsChecked ?? false;
+
+            // Сохранение источника загрузки
+            if (DownloadSourceComboBox.SelectedItem is ComboBoxItem downloadItem)
+            {
+                config.DownloadSource = (string)downloadItem.Tag;
+            }
 
             // Сохранение темы
             if (ThemeComboBox.SelectedItem is ComboBoxItem themeItem)
@@ -329,6 +340,13 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     }
 
     private void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoading) return;
+
+        AutoSaveSettings();
+    }
+
+    private void DownloadSourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isLoading) return;
 

@@ -15,17 +15,19 @@ public partial class MainWindow : FluentWindow, IDisposable
 {
     private readonly IConfigService _config;
     private readonly IServerManager _serverManager;
+    private readonly IJavaManagementService _javaService;
     private IContentDialogService? _contentDialogService;
     private bool _disposed;
     private bool _isUpdatingStatusBar;
     private CancellationTokenSource? _statusBarCts;
 
-    public MainWindow(IConfigService configService, IServerManager serverManager)
+    public MainWindow(IConfigService configService, IServerManager serverManager, IJavaManagementService javaService)
     {
         InitializeComponent();
 
         _config = configService;
         _serverManager = serverManager;
+        _javaService = javaService;
 
         _serverManager.OnServersChanged += UpdateStatusBar;
 
@@ -124,7 +126,8 @@ public partial class MainWindow : FluentWindow, IDisposable
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
             while (await timer.WaitForNextTickAsync(ct))
             {
-                UpdateStatusBar();
+                // Dispatch to UI thread — PeriodicTimer callback runs on threadpool
+                await Dispatcher.InvokeAsync(UpdateStatusBar);
             }
         }
         catch (OperationCanceledException)
@@ -143,8 +146,7 @@ public partial class MainWindow : FluentWindow, IDisposable
         if (config.JavaInstallations.Count > 0)
             return;
 
-        var javaService = new JavaManagementService(_config);
-        var foundJava = javaService.FindInstalledJava();
+        var foundJava = _javaService.FindInstalledJava();
         foreach (var java in foundJava)
         {
             config.JavaInstallations.Add(java);
@@ -287,23 +289,6 @@ public partial class MainWindow : FluentWindow, IDisposable
             ) is int value && value == 0;
 
             Wpf.Ui.Appearance.ApplicationThemeManager.Apply(isSystemDark ? Wpf.Ui.Appearance.ApplicationTheme.Dark : Wpf.Ui.Appearance.ApplicationTheme.Light);
-        }
-    }
-
-    private async void CreateServer_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var dialog = new Dialogs.CreateServerDialog { Owner = this };
-            if (dialog.ShowDialog() == true)
-            {
-                UpdateStatusBar();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Create server dialog error: {ex.Message}", ex, "MainWindow");
-            await UiHelper.ShowError($"{LocalizationManager.Get("MainWindow_Error")}: {ex.Message}");
         }
     }
 

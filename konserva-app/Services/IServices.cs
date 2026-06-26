@@ -62,6 +62,7 @@ public interface IMcVersionsApi
     Task<string[]> GetFabricVersions(string mcVersion, CancellationToken ct = default);
     Task<string[]> GetNeoForgeVersions(string mcVersion, CancellationToken ct = default);
     Task<string[]> GetQuiltVersions(string mcVersion, CancellationToken ct = default);
+    Task<string[]> GetPaperVersions(string mcVersion, CancellationToken ct = default);
     Task<string> GetStringWithDecompressionAsync(string url, CancellationToken ct = default);
 }
 
@@ -72,7 +73,7 @@ public interface IServerInstaller
 {
     Task<McServerInstaller.InstallResult> InstallServer(ModLoaderType modLoaderType, string mcVersion, string loaderVersion, string serverPath, int port, int ramMin, int ramMax, IProgress<string>? progress = null, CancellationToken ct = default);
     string FindServerJar(string path);
-    string BuildLaunchArgs(string jarPath, ServerSettings settings, ServerLaunchType launchType = ServerLaunchType.Standard, int javaMajorVersion = 0);
+    string BuildLaunchArgs(string jarPath, ServerSettings settings, ServerLaunchType launchType = ServerLaunchType.Standard, int javaMajorVersion = 0, string? serverPath = null);
     ServerLaunchType GetServerLaunchType(string path);
 }
 

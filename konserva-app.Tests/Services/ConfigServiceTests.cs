@@ -19,12 +19,7 @@ public class ConfigServiceTests : IDisposable
     {
         // Создаём временный файл конфигурации
         _testConfigPath = Path.Combine(Path.GetTempPath(), $"konserva_test_{Guid.NewGuid()}.json");
-        _configService = new ConfigService();
-
-        // Подменяем путь к конфигу через рефлексию (для тестов)
-        var field = typeof(ConfigService).GetField("_configPath",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        field?.SetValue(_configService, _testConfigPath);
+        _configService = new ConfigService(_testConfigPath);
     }
 
     #region GetConfig Tests
@@ -79,7 +74,7 @@ public class ConfigServiceTests : IDisposable
     {
         // Arrange
         var config1 = _configService.GetConfig();
-        
+
         // Act
         var config2 = _configService.GetConfig();
 

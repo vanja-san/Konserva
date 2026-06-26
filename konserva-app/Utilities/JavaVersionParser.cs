@@ -18,7 +18,7 @@ public static partial class JavaVersionParser
     [GeneratedRegex(@"require(?:s|d)? at least (\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex RequireAtLeastRegex();
 
-    [GeneratedRegex(@"Java (\d+)")]
+    [GeneratedRegex(@"Java (\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex JavaVersionFallbackRegex();
 
     [GeneratedRegex(@"versions up to (\d+)")]
@@ -121,7 +121,12 @@ public static partial class JavaVersionParser
 
         // Формат 4: "Java X" (общий fallback)
         var fallbackMatch = JavaVersionFallbackRegex().Match(msg);
-        return fallbackMatch.Success ? int.Parse(fallbackMatch.Groups[1].Value) : 0;
+        if (fallbackMatch.Success)
+            return int.Parse(fallbackMatch.Groups[1].Value);
+
+        // Ни один формат не подошёл — это не ошибка несовместимости Java
+        // Возвращаем 0, чтобы вызывающий код мог отличить "не удалось распарсить"
+        return 0;
     }
 
     /// <summary>

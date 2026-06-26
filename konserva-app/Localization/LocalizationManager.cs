@@ -81,7 +81,11 @@ public static class LocalizationManager
     {
         value = key;
 
-        if (_translations.TryGetValue(CurrentCulture.Name, out var translations) && translations.TryGetValue(key, out var translatedValue))
+        // Используем TwoLetterISOLanguageName ("ru", "en") вместо Name ("ru-RU", "en-US"),
+        // чтобы корректно работать с региональными вариантами
+        var cultureKey = CurrentCulture.TwoLetterISOLanguageName;
+
+        if (_translations.TryGetValue(cultureKey, out var translations) && translations.TryGetValue(key, out var translatedValue))
         {
             value = translatedValue;
             return true;
@@ -103,7 +107,8 @@ public static class LocalizationManager
             return value;
         }
 
-        var defaultTranslations = GetDefaultTranslationsForCulture(CurrentCulture.Name);
+        var cultureKey = CurrentCulture.TwoLetterISOLanguageName;
+        var defaultTranslations = GetDefaultTranslationsForCulture(cultureKey);
         if (defaultTranslations != null && defaultTranslations.TryGetValue(key, out var defaultValue))
         {
             return defaultValue;

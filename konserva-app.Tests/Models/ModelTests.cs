@@ -17,7 +17,7 @@ public class ServerSettingsTests
         settings.CpuCores.Should().BeGreaterThan(0);
         settings.JavaAutoSelect.Should().BeTrue();
         settings.JavaId.Should().BeNull();
-        settings.JavaArgs.Should().BeEmpty();
+        settings.JavaArgs.Should().Contain("-XX:+UseG1GC");
         settings.AutoRestart.Should().BeFalse();
         settings.AutoRestartDelay.Should().Be(5);
     }

@@ -41,6 +41,11 @@ public class AppConfig
     public bool CheckUpdates { get; set; } = true;
 
     /// <summary>
+    /// Источник загрузки: VanillaApi (официальный) или BMCLAPI (зеркало)
+    /// </summary>
+    public string DownloadSource { get; set; } = "VanillaApi";
+
+    /// <summary>
     /// Последняя проверка обновлений (UTC).
     /// </summary>
     public DateTime? LastUpdateCheck { get; set; }

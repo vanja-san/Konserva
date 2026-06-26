@@ -16,28 +16,32 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     /// </summary>
     public static void HandleServerStartError(Server server, string errorMessage, IConfigService? configService = null)
     {
-        bool isJavaError = errorMessage.Contains("Java", StringComparison.OrdinalIgnoreCase) ||
-                          errorMessage.Contains("java", StringComparison.OrdinalIgnoreCase) ||
-                          errorMessage.Contains("Требуется Java", StringComparison.OrdinalIgnoreCase);
-
-        if (!isJavaError)
-        {
-            // Не Java-ошибка — делегируем стандартному обработчику
-            _ = UiHelper.ShowError(errorMessage);
-            return;
-        }
-
         var requiredVersion = JavaVersionParser.ParseRequiredJavaVersion(errorMessage);
         var foundVersion = JavaVersionParser.ParseFoundJavaVersion(errorMessage);
 
-        // Получаем все установленные Java
-        var cfg = configService ?? App.ConfigService;
-        var allJava = cfg?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
+        // Считаем ошибкой Java-совместимости, только если удалось извлечь требуемую версию
+        // или сообщение содержит явный паттерн несовместимости
+        bool isJavaVersionError = requiredVersion > 0 ||
+                                  errorMessage.Contains("Требуется Java", StringComparison.OrdinalIgnoreCase) ||
+                                  errorMessage.Contains("class file version", StringComparison.OrdinalIgnoreCase) ||
+                                  errorMessage.Contains("Unsupported class file major version", StringComparison.OrdinalIgnoreCase);
 
-        App.MainWindow?.Dispatcher.Invoke(() =>
+        if (isJavaVersionError)
         {
-            App.MainWindow?.ShowJavaErrorSnackbar(server, errorMessage, requiredVersion, foundVersion, allJava);
-        });
+            // Получаем все установленные Java
+            var cfg = configService ?? App.ConfigService;
+            var allJava = cfg?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
+
+            App.MainWindow?.Dispatcher.Invoke(() =>
+            {
+                App.MainWindow?.ShowJavaErrorSnackbar(server, errorMessage, requiredVersion, foundVersion, allJava);
+            });
+        }
+        else
+        {
+            // Не Java-ошибка (или неизвестный формат) — делегируем стандартному обработчику
+            _ = UiHelper.ShowError(errorMessage);
+        }
     }
 
     /// <summary>
@@ -229,7 +233,8 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
                     MaxRecursionDepth = 4,
                     IgnoreInaccessible = true
                 })
-                .Where(d => {
+                .Where(d =>
+                {
                     var name = Path.GetFileName(d).ToLowerInvariant();
                     return keywords.Any(k => name.Contains(k));
                 });

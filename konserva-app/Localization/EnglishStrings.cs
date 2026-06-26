@@ -80,6 +80,7 @@ public static class EnglishStrings
         { "CreateServer_Browse", "Browse" },
         { "CreateServer_Cancel", "Cancel" },
         { "CreateServer_Filter_Stable", "Show pre-releases" },
+        { "CreateServer_Not_Found", "Not found" },
         { "CreateServer_Import", "Import" },
         { "CreateServer_Error_DialogLoad", "Error loading dialog" },
         { "CreateServer_Import_Duplicate", "A server from this folder is already imported:\n{0}" },
@@ -90,6 +91,9 @@ public static class EnglishStrings
         { "CreateServer_Error_NoName", "Enter a server name" },
         { "CreateServer_Error_NoFolder", "Select a folder for the server" },
         { "CreateServer_Error_NoServerManager", "ServerManager is not initialized!" },
+        { "CreateServer_Validation_NoName", "Enter a server name" },
+        { "CreateServer_Validation_NoLoaderVersion", "Select a mod loader version" },
+        { "CreateServer_Validation_NoFolder", "Select a server folder" },
         { "CreateServer_Error_DuplicateName", "A server named \"{0}\" already exists. Please choose a different name." },
         { "CreateServer_Error_CreateFailed", "Error creating server" },
         { "CreateServer_Error_InstallFailed", "Failed to install server" },
@@ -504,6 +508,12 @@ public static class EnglishStrings
         { "App_StartupError", "Application initialization error" },
         { "App_StartupErrorDetail", "Check logs in %AppData%\\Konserva\\Logs" },
         { "App_UnhandledError", "Unhandled exception" },
-        { "App_UnhandledErrorDetail", "Application will be closed." }
+        { "App_UnhandledErrorDetail", "Application will be closed." },
+
+        { "Settings_Download", "Downloads" },
+        { "Settings_DownloadSource", "Download Source" },
+        { "Settings_DownloadSource_Desc", "Where to download modloader and game files" },
+        { "Settings_DownloadSource_VanillaApi", "Official Minecraft API" },
+        { "Settings_DownloadSource_BMCLAPI", "BMCLAPI (mirror, faster in China/Russia)" }
     };
 }

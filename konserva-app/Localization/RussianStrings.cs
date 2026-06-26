@@ -80,6 +80,7 @@ public static class RussianStrings
         { "CreateServer_Browse", "Обзор" },
         { "CreateServer_Cancel", "Отмена" },
         { "CreateServer_Filter_Stable", "Показывать тестовые версии" },
+        { "CreateServer_Not_Found", "Не найдено" },
         { "CreateServer_Import", "Импортировать" },
         { "CreateServer_Error_DialogLoad", "Ошибка загрузки диалога" },
         { "CreateServer_Import_Duplicate", "Сервер из этой папки уже импортирован:\n{0}" },
@@ -90,6 +91,9 @@ public static class RussianStrings
         { "CreateServer_Error_NoName", "Введите имя сервера" },
         { "CreateServer_Error_NoFolder", "Выберите папку для сервера" },
         { "CreateServer_Error_NoServerManager", "ServerManager не инициализирован!" },
+        { "CreateServer_Validation_NoName", "Введите название сервера" },
+        { "CreateServer_Validation_NoLoaderVersion", "Выберите версию модлоадера" },
+        { "CreateServer_Validation_NoFolder", "Выберите папку сервера" },
         { "CreateServer_Error_DuplicateName", "Сервер с именем \"{0}\" уже существует. Пожалуйста, выберите другое имя." },
         { "CreateServer_Error_CreateFailed", "Ошибка при создании сервера" },
         { "CreateServer_Error_InstallFailed", "Не удалось установить сервер" },
@@ -504,6 +508,12 @@ public static class RussianStrings
         { "App_StartupError", "Ошибка инициализации приложения" },
         { "App_StartupErrorDetail", "Проверьте логи в %AppData%\\Konserva\\Logs" },
         { "App_UnhandledError", "Необработанное исключение" },
-        { "App_UnhandledErrorDetail", "Приложение будет закрыто." }
+        { "App_UnhandledErrorDetail", "Приложение будет закрыто." },
+
+        { "Settings_Download", "Загрузки" },
+        { "Settings_DownloadSource", "Источник загрузки" },
+        { "Settings_DownloadSource_Desc", "Откуда загружать файлы модлоадеров и игры" },
+        { "Settings_DownloadSource_VanillaApi", "Официальный API Minecraft" },
+        { "Settings_DownloadSource_BMCLAPI", "BMCLAPI (зеркало, быстрее в Китае/России)" }
     };
 }

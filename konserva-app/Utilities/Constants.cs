@@ -48,6 +48,11 @@ public static class Constants
     public const int ServerStatusCheckDelayMs = 1000;
 
     /// <summary>
+    /// Длина усечения для логов (символов)
+    /// </summary>
+    public const int LogTruncationLength = 200;
+
+    /// <summary>
     /// Таймаут ожидания установки сервера (5 сек)
     /// </summary>
     public const int ServerInstallCheckTimeoutMs = 5000;

@@ -5,9 +5,11 @@
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="">
-    <Grid Margin="16" RowDefinitions="Auto,*">
+    <Grid Margin="16"
+            RowDefinitions="Auto,*">
         <!--  Поиск и фильтры  -->
-        <Border Grid.Row="0" Margin="0,0,0,8">
+        <Border Grid.Row="0"
+                Margin="0,0,0,8">
             <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                 <!--  Поиск с watermark  -->
                 <Grid
@@ -18,7 +20,7 @@
                         x:Name="SearchBox"
                         GotFocus="SearchBox_GotFocus"
                         LostFocus="SearchBox_LostFocus"
-                        TextChanged="SearchBox_TextChanged" />
+                        TextChanged="SearchBox_TextChanged"/>
                     <ui:TextBlock
                         x:Name="SearchPlaceholder"
                         Margin="12,0,0,0"
@@ -28,7 +30,7 @@
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         IsHitTestVisible="False"
                         Text="{loc:Loc ServersPage_Search}"
-                        Visibility="Visible" />
+                        Visibility="Visible"/>
                 </Grid>
 
                 <!--  Фильтр по типу  -->
@@ -44,16 +46,21 @@
                     <ComboBoxItem
                         Content="{loc:Loc ServersPage_Filter_All}"
                         IsSelected="True"
-                        Tag="All" />
-                    <ComboBoxItem Content="Vanilla" Tag="Vanilla" />
-                    <ComboBoxItem Content="Forge" Tag="Forge" />
-                    <ComboBoxItem Content="NeoForge" Tag="NeoForge" />
-                    <ComboBoxItem Content="Fabric" Tag="Fabric" />
-                    <ComboBoxItem Content="Paper" Tag="Paper" />
+                        Tag="All"/>
+                    <ComboBoxItem Content="Vanilla"
+                            Tag="Vanilla"/>
+                    <ComboBoxItem Content="Forge"
+                            Tag="Forge"/>
+                    <ComboBoxItem Content="NeoForge"
+                            Tag="NeoForge"/>
+                    <ComboBoxItem Content="Fabric"
+                            Tag="Fabric"/>
+                    <ComboBoxItem Content="Paper"
+                            Tag="Paper"/>
                     <ComboBoxItem
                         Content="Quilt"
                         IsEnabled="False"
-                        Tag="Quilt" />
+                        Tag="Quilt"/>
                 </ComboBox>
 
                 <!--  Фильтр по статусу  -->
@@ -68,9 +75,11 @@
                     <ComboBoxItem
                         Content="{loc:Loc ServersPage_Filter_AllServers}"
                         IsSelected="True"
-                        Tag="All" />
-                    <ComboBoxItem Content="{loc:Loc ServersPage_Filter_Running}" Tag="Running" />
-                    <ComboBoxItem Content="{loc:Loc ServersPage_Filter_Stopped}" Tag="Stopped" />
+                        Tag="All"/>
+                    <ComboBoxItem Content="{loc:Loc ServersPage_Filter_Running}"
+                            Tag="Running"/>
+                    <ComboBoxItem Content="{loc:Loc ServersPage_Filter_Stopped}"
+                            Tag="Stopped"/>
                 </ComboBox>
                 <!--  Кнопка создать сервер  -->
                 <ui:Button
@@ -80,21 +89,24 @@
                     Padding="0"
                     Click="CreateServer_Click"
                     ToolTip="{loc:Loc ServersPage_Create}">
-                    <ui:SymbolIcon FontSize="13" Symbol="Add32" />
+                    <ui:SymbolIcon FontSize="13"
+                            Symbol="Add32"/>
                 </ui:Button>
             </Grid>
         </Border>
         <!--  Список серверов  -->
         <Border Grid.Row="1">
             <Grid>
-                <ScrollViewer CanContentScroll="True" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer CanContentScroll="True"
+                        VerticalScrollBarVisibility="Auto">
                     <ItemsControl
                         x:Name="ServersList"
+                        ItemsSource="{Binding FilteredServers}"
                         VirtualizingStackPanel.IsVirtualizing="True"
                         VirtualizingStackPanel.VirtualizationMode="Recycling">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <VirtualizingStackPanel />
+                                <VirtualizingStackPanel/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
@@ -112,38 +124,42 @@
                                             Filled="True"
                                             FontSize="20"
                                             Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                            Symbol="ServerSurface16" />
+                                            Symbol="ServerSurface16"/>
                                     </ui:CardAction.Icon>
                                     <Grid ColumnDefinitions="*,Auto">
                                         <!--  Название и информация  -->
-                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <StackPanel Grid.Column="0"
+                                                VerticalAlignment="Center">
                                             <ui:TextBlock
                                                 FontSize="14"
                                                 FontWeight="SemiBold"
-                                                Text="{Binding Name}" />
-                                            <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
+                                                Text="{Binding Name}"/>
+                                            <StackPanel Margin="0,4,0,0"
+                                                    Orientation="Horizontal">
                                                 <ui:TextBlock
                                                     VerticalAlignment="Center"
                                                     FontSize="12"
                                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
-                                                    <Run Text="{Binding McVersion}" />
+                                                    <Run Text="{Binding McVersion}"/>
                                                 </ui:TextBlock>
                                                 <ui:TextBlock
                                                     VerticalAlignment="Center"
                                                     FontSize="8"
                                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                    Text="  •  " />
-                                                <ui:TextBlock FontSize="12" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
-                                                    <Run Text="{Binding ModLoader.Type}" />
+                                                    Text="  •  "/>
+                                                <ui:TextBlock FontSize="12"
+                                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
+                                                    <Run Text="{Binding ModLoader.Type}"/>
                                                 </ui:TextBlock>
                                                 <ui:TextBlock
                                                     VerticalAlignment="Center"
                                                     FontSize="8"
                                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                    Text="  •  " />
-                                                <ui:TextBlock FontSize="12" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
-                                                    <Run Text="{loc:Loc ServersPage_Port}" />
-                                                    <Run Text="{Binding Port}" />
+                                                    Text="  •  "/>
+                                                <ui:TextBlock FontSize="12"
+                                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
+                                                    <Run Text="{loc:Loc ServersPage_Port}"/>
+                                                    <Run Text="{Binding Port}"/>
                                                 </ui:TextBlock>
                                             </StackPanel>
                                         </StackPanel>
@@ -159,15 +175,19 @@
                                                 Margin="0,0,8,0"
                                                 Padding="4"
                                                 AutomationProperties.Name="Play or Stop"
-                                                Click="Play_Click"
+                                                Command="{Binding RelativeSource={RelativeSource AncestorType=Page}, Path=DataContext.PlayCommand}"
+                                                CommandParameter="{Binding}"
                                                 Tag="{Binding}">
                                                 <ui:SymbolIcon FontSize="20">
                                                     <ui:SymbolIcon.Style>
                                                         <Style TargetType="ui:SymbolIcon">
-                                                            <Setter Property="Symbol" Value="Play20" />
+                                                            <Setter Property="Symbol"
+                                                                    Value="Play20"/>
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                                                    <Setter Property="Symbol" Value="Stop20" />
+                                                                <DataTrigger Binding="{Binding IsRunning}"
+                                                                        Value="True">
+                                                                    <Setter Property="Symbol"
+                                                                            Value="Stop20"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -178,19 +198,23 @@
                                                 Margin="0,0,8,0"
                                                 Padding="4"
                                                 AutomationProperties.Name="Open folder"
-                                                Click="OpenFolder_Click"
+                                                Command="{Binding RelativeSource={RelativeSource AncestorType=Page}, Path=DataContext.OpenFolderCommand}"
+                                                CommandParameter="{Binding}"
                                                 Tag="{Binding}"
                                                 ToolTip="{loc:Loc ServersPage_OpenFolder}">
-                                                <ui:SymbolIcon FontSize="20" Symbol="Folder20" />
+                                                <ui:SymbolIcon FontSize="20"
+                                                        Symbol="Folder20"/>
                                             </ui:Button>
                                             <ui:Button
                                                 Margin="0,0,12,0"
                                                 Padding="4"
                                                 AutomationProperties.Name="Delete server"
-                                                Click="Delete_Click"
+                                                Command="{Binding RelativeSource={RelativeSource AncestorType=Page}, Path=DataContext.DeleteCommand}"
+                                                CommandParameter="{Binding}"
                                                 Tag="{Binding}"
                                                 ToolTip="{loc:Loc ServersPage_Delete}">
-                                                <ui:SymbolIcon FontSize="20" Symbol="Delete20" />
+                                                <ui:SymbolIcon FontSize="20"
+                                                        Symbol="Delete20"/>
                                             </ui:Button>
                                         </StackPanel>
                                     </Grid>
@@ -210,14 +234,14 @@
                         FontSize="16"
                         FontTypography="BodyStrong"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        Text="{loc:Loc ServersPage_NoServers}" />
+                        Text="{loc:Loc ServersPage_NoServers}"/>
                     <ui:TextBlock
                         Margin="0,4,0,0"
                         HorizontalAlignment="Center"
                         FontSize="13"
                         FontTypography="Body"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        Text="{loc:Loc ServersPage_NoServers_Description}" />
+                        Text="{loc:Loc ServersPage_NoServers_Description}"/>
                 </StackPanel>
             </Grid>
         </Border>
