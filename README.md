@@ -92,6 +92,7 @@
 
 **MIT License** — see [LICENSE.txt](LICENSE.txt).
 
+> [!NOTE]
 > Konserva is an unofficial, community-built tool. It is not affiliated with, endorsed by, or connected to Mojang Studios or Microsoft. Use at your own risk. Always backup your worlds.
 
 <br>
