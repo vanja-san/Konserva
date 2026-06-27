@@ -27,7 +27,9 @@ public class FileBasedStore<T> where T : class
     {
       WriteIndented = true,
       Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-      PropertyNameCaseInsensitive = true
+      PropertyNameCaseInsensitive = true,
+      AllowDuplicateProperties = false,
+      RespectNullableAnnotations = true
     };
   }
 

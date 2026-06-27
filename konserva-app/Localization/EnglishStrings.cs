@@ -52,6 +52,7 @@ public static class EnglishStrings
         { "Settings_App", "Application" },
         { "Settings_CheckUpdates", "Check for Updates" },
         { "Settings_CheckUpdates_Desc", "Automatically check for updates" },
+        { "Settings_Appearance", "Appearance" },
         { "Settings_Theme", "Theme" },
         { "Settings_Theme_Desc", "Select application theme" },
         { "Settings_Theme_System", "System Default" },

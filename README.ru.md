@@ -6,7 +6,7 @@
     через удобный графический интерфейс. Никакой командной строки.
   </p>
   <p>
-    <a href="../../releases"><img src="https://img.shields.io/badge/версия-1.8.0-blue?style=flat-square" alt="Версия"></a>
+    <a href="../../releases"><img src="https://img.shields.io/badge/версия-1.9.0-blue?style=flat-square" alt="Версия"></a>
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D6?style=flat-square&logo=windows" alt="Windows">
     <img src="https://img.shields.io/badge/лицензия-MIT-green?style=flat-square" alt="Лицензия">
   </p>

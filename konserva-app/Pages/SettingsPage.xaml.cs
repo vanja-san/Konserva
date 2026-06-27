@@ -288,7 +288,10 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         try
         {
             CheckUpdatesButton.IsEnabled = false;
-            CheckUpdatesButton.Content = "...";
+
+            // Показываем анимацию точек рядом с текстом
+            UpdateWaveDots.Visibility = Visibility.Visible;
+            UpdateWaveDots.Start();
 
             var mainWindow = Application.Current.MainWindow as MainWindow;
             if (mainWindow == null)
@@ -296,13 +299,26 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
             var updateInfo = await mainWindow.ForceCheckForUpdatesAsync();
 
-            CheckUpdatesButton.Content = !updateInfo.IsAvailable
-                ? LocalizationManager.Get("Settings_UpToDate_Button")
-                : LocalizationManager.Get("Settings_UpdateAvailable_Button", $"v{updateInfo.NewVersion}");
+            // Останавливаем анимацию, убираем точки, обновляем текст
+            UpdateWaveDots.Stop();
+            UpdateWaveDots.Visibility = Visibility.Collapsed;
+
+            if (!updateInfo.IsAvailable)
+            {
+                UpToDateIcon.Visibility = Visibility.Visible;
+                CheckUpdatesButtonText.Text = LocalizationManager.Get("Settings_UpToDate_Button");
+            }
+            else
+            {
+                UpToDateIcon.Visibility = Visibility.Collapsed;
+                CheckUpdatesButtonText.Text = LocalizationManager.Get("Settings_UpdateAvailable_Button", $"v{updateInfo.NewVersion}");
+            }
         }
         catch (Exception ex)
         {
-            CheckUpdatesButton.Content = $"{LocalizationManager.Get("Settings_CheckForUpdates")} — {LocalizationManager.Get("Settings_UpdateCheckError")}";
+            UpdateWaveDots.Stop();
+            UpdateWaveDots.Visibility = Visibility.Collapsed;
+            CheckUpdatesButtonText.Text = $"{LocalizationManager.Get("Settings_CheckForUpdates")} — {LocalizationManager.Get("Settings_UpdateCheckError")}";
             Logger.Error($"Update check error in button: {ex.Message}", ex, "SettingsPage");
         }
         finally
@@ -320,7 +336,8 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
             Dispatcher.Invoke(() =>
             {
                 CheckUpdatesButton.IsEnabled = true;
-                CheckUpdatesButton.Content = LocalizationManager.Get("Settings_CheckForUpdates");
+                UpToDateIcon.Visibility = Visibility.Collapsed;
+                CheckUpdatesButtonText.Text = LocalizationManager.Get("Settings_CheckForUpdates");
             });
         }
         catch (Exception ex)

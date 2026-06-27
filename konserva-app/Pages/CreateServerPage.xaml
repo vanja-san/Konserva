@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:controls="clr-namespace:Konserva.Controls"
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -21,31 +22,6 @@
                     Value="0,0,0,6"/>
         </Style>
 
-        <!-- Анимация волны точек для индикации процесса установки -->
-        <Storyboard x:Key="WaveDotsAnimation"
-                    RepeatBehavior="Forever">
-            <DoubleAnimation Storyboard.TargetName="WaveDot1"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0.2"
-                    To="1.0"
-                             Duration="0:0:0.6"
-                             AutoReverse="True"
-                             BeginTime="0:0:0.0"/>
-            <DoubleAnimation Storyboard.TargetName="WaveDot2"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0.2"
-                    To="1.0"
-                             Duration="0:0:0.6"
-                             AutoReverse="True"
-                             BeginTime="0:0:0.2"/>
-            <DoubleAnimation Storyboard.TargetName="WaveDot3"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0.2"
-                    To="1.0"
-                             Duration="0:0:0.6"
-                             AutoReverse="True"
-                             BeginTime="0:0:0.4"/>
-        </Storyboard>
     </Page.Resources>
 
     <Grid RowDefinitions="*,Auto">
@@ -232,27 +208,7 @@
                     VerticalAlignment="Center"
                     Orientation="Horizontal"
                     Visibility="Collapsed">
-                    <Ellipse x:Name="WaveDot1"
-                             Width="5"
-                            Height="5"
-                             Margin="0,0,3,0"
-                             VerticalAlignment="Center"
-                             Fill="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                             Opacity="0.2"/>
-                    <Ellipse x:Name="WaveDot2"
-                             Width="5"
-                            Height="5"
-                             Margin="0,0,3,0"
-                             VerticalAlignment="Center"
-                             Fill="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                             Opacity="0.2"/>
-                    <Ellipse x:Name="WaveDot3"
-                             Width="5"
-                            Height="5"
-                             Margin="0,0,6,0"
-                             VerticalAlignment="Center"
-                             Fill="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                             Opacity="0.2"/>
+                    <controls:WaveDotsIndicator x:Name="ProgressDots"/>
                     <ui:TextBlock
                         x:Name="ProgressText"
                         FontSize="12"

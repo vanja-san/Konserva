@@ -153,60 +153,22 @@ public static class UiHelper
                         FontSize = 14,
                         FontWeight = FontWeights.SemiBold,
                         TextWrapping = TextWrapping.Wrap,
-                        Margin = new Thickness(0, 0, 0, 8)
+                        Margin = new Thickness(0, 0, 0, 12)
                     },
-                    new Border
+                    new StackPanel
                     {
-                        Padding = new Thickness(16, 0, 16, 0),
-                        Child = new StackPanel
+                        Orientation = Orientation.Horizontal,
+                        Children =
                         {
-                            Children =
+                            new SymbolIcon(SymbolRegular.Warning24)
                             {
-                                new TextBlock
-                                {
-                                    Text = LocalizationManager.Get("MsgDel_WillBeDeleted") ?? "The following will be deleted:",
-                                    FontWeight = FontWeights.SemiBold,
-                                    Opacity = 0.5,
-                                    Margin = new Thickness(0, 0, 0, 4)
-                                },
-                                new TextBlock
-                                {
-                                    Text = "• " + (LocalizationManager.Get("MsgDel_ServerFiles") ?? "All server files"),
-                                    Margin = new Thickness(0, 0, 0, 2)
-                                },
-                                new TextBlock
-                                {
-                                    Text = "• " + (LocalizationManager.Get("MsgDel_ConfigFiles") ?? "Configuration files"),
-                                    Margin = new Thickness(0, 0, 0, 2)
-                                },
-                                new TextBlock
-                                {
-                                    Text = "• " + (LocalizationManager.Get("MsgDel_WorldSaves") ?? "World and saves"),
-                                    Margin = new Thickness(0, 0, 0, 2)
-                                },
-                                new TextBlock
-                                {
-                                    Text = "• " + (LocalizationManager.Get("MsgDel_LogsBackups") ?? "Logs and backups"),
-                                    Margin = new Thickness(0, 0, 0, 8)
-                                },
-                                new StackPanel
-                                {
-                                    Orientation = Orientation.Horizontal,
-                                    Margin = new Thickness(0, 0, 0, 8),
-                                    Children =
-                                    {
-                                        new SymbolIcon(SymbolRegular.Warning24)
-                                        {
-                                            FontSize = 20,
-                                            Margin = new Thickness(0, 0, 8, 0)
-                                        },
-                                        new TextBlock
-                                        {
-                                            Text = LocalizationManager.Get("MsgDel_Irreversible") ?? "This action is irreversible!",
-                                            FontWeight = FontWeights.Bold
-                                        }
-                                    }
-                                }
+                                FontSize = 20,
+                                Margin = new Thickness(0, 0, 8, 0)
+                            },
+                            new TextBlock
+                            {
+                                Text = LocalizationManager.Get("MsgDel_Irreversible") ?? "This action is irreversible!",
+                                FontWeight = FontWeights.Bold
                             }
                         }
                     }

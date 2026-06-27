@@ -19,8 +19,8 @@ public class JavaInstallation
     /// Отображаемое имя
     /// </summary>
     public string DisplayName => string.IsNullOrEmpty(Name)
-        ? $"Java {MajorVersion} ({Version})"
-        : $"{Name} (Java {MajorVersion})";
+        ? $"Java {Version}"
+        : $"{Name} {Version}";
 
     /// <summary>
     /// Проверка: существует ли файл Java

@@ -94,6 +94,13 @@ public partial class MainWindow : FluentWindow, IDisposable
         WindowTitleText.Text = e.Content is System.Windows.Controls.Page page && !string.IsNullOrEmpty(page.Title?.ToString())
             ? $"{mainTitle} — {page.Title}"
             : mainTitle;
+
+        // Анимация появления страницы
+        if (e.Content is FrameworkElement pageContent)
+        {
+            Wpf.Ui.Animations.TransitionAnimationProvider.ApplyTransition(
+                pageContent, Wpf.Ui.Animations.Transition.FadeIn, 250);
+        }
     }
 
     /// <summary>

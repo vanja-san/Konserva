@@ -10,20 +10,19 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ui:ThemesDictionary Theme="Dark" />
-                <ui:ControlsDictionary />
+                <ui:ThemesDictionary Theme="Dark"/>
+                <ui:ControlsDictionary/>
             </ResourceDictionary.MergedDictionaries>
 
-            <!--  Конвертеры  -->
-            <converters:BoolToVisibilityConverter x:Key="BoolToVisibility" />
-            <converters:BoolToGreenBrushConverter x:Key="BoolToGreenBrush" />
-            <converters:StringIsEmptyConverter x:Key="StringIsEmptyConverter" />
-            <converters:StringToPlaceholderConverter x:Key="StringToPlaceholder" />
-            <converters:EmptyToVisibilityConverter x:Key="EmptyToVisibility" />
-            <converters:StatusToBrushConverter x:Key="StatusToBrush" />
-            <converters:FileSizeConverter x:Key="FileSizeConverter" />
-            <converters:PercentToWidthConverter x:Key="PercentToWidth" />
-            <converters:ScrollBarPaddingConverter x:Key="ScrollBarPadding" />
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
+            <converters:BoolToGreenBrushConverter x:Key="BoolToGreenBrush"/>
+            <converters:StringIsEmptyConverter x:Key="StringIsEmptyConverter"/>
+            <converters:StringToPlaceholderConverter x:Key="StringToPlaceholder"/>
+            <converters:EmptyToVisibilityConverter x:Key="EmptyToVisibility"/>
+            <converters:StatusToBrushConverter x:Key="StatusToBrush"/>
+            <converters:FileSizeConverter x:Key="FileSizeConverter"/>
+            <converters:PercentToWidthConverter x:Key="PercentToWidth"/>
+            <converters:ScrollBarPaddingConverter x:Key="ScrollBarPadding"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

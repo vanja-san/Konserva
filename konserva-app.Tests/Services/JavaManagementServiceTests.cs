@@ -77,10 +77,10 @@ public class JavaManagementServiceTests : IDisposable
     {
         // Arrange - этот тест требует реальную Java, поэтому проверяем только логику
         // Для unit-теста используем mock
-        
+
         // Проверяем, что SaveConfig вызывается при успешном добавлении
         // В реальном тесте нужен путь к существующей Java
-        
+
         // Act & Assert - проверяем, что метод существует и не падает
         _javaService.Should().NotBeNull();
     }
@@ -126,7 +126,7 @@ public class JavaManagementServiceTests : IDisposable
         // Act - AddJava требует реальный файл, поэтому тестируем логику через mock
         // В реальном коде AddJava вызывает GetJavaInfo, который вернёт null для несуществующего файла
         // Поэтому тестируем, что дубликат не добавляется при прямом добавлении в конфиг
-        
+
         // Проверяем, что Java уже есть в конфиге
         var found = _testConfig.JavaInstallations.FirstOrDefault(j => j.Path == existingJava.Path);
 
@@ -369,7 +369,7 @@ public class JavaManagementServiceTests : IDisposable
         };
 
         // Assert
-        java.DisplayName.Should().Be("Java 17 (Java 17)");
+        java.DisplayName.Should().Be("Java 17 17.0.1");
     }
 
     [Fact]
@@ -384,7 +384,7 @@ public class JavaManagementServiceTests : IDisposable
         };
 
         // Assert
-        java.DisplayName.Should().Be("Java 17 (17.0.1)");
+        java.DisplayName.Should().Be("Java 17.0.1");
     }
 
     [Fact]

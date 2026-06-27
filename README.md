@@ -6,7 +6,7 @@
     No command line, no manual config editing.
   </p>
   <p>
-    <a href="../../releases"><img src="https://img.shields.io/badge/version-1.8.0-blue?style=flat-square" alt="Version"></a>
+    <a href="../../releases"><img src="https://img.shields.io/badge/version-1.9.0-blue?style=flat-square" alt="Version"></a>
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D6?style=flat-square&logo=windows" alt="Windows">
     <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License">
   </p>

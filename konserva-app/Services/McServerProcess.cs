@@ -23,6 +23,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     private CancellationTokenSource? _stopCts;
     private int _playersOnline;
     private string? _pendingErrorOutput;
+    private string? _lastJavaDisplayName;
     private volatile bool _isStarting;
     private volatile bool _serverReady;
     private bool _disposed;
@@ -133,9 +134,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         try
         {
             LogHeader(string.Format(LocalizationManager.Get("Log_ServerStarting"), Server.Name));
-            AppendLog($" {string.Format(LocalizationManager.Get("Log_ServerId"), Server.Id)}");
-            AppendLog($" {string.Format(LocalizationManager.Get("Log_ModLoader"), Server.ModLoader.Type, Server.ModLoader.LoaderVersion ?? "")}");
-            AppendLog($" {string.Format(LocalizationManager.Get("Log_MinecraftVersion"), Server.McVersion)}");
+            AppendLog($" ID: {Server.Id} · {Server.ModLoader.Type} {Server.ModLoader.LoaderVersion ?? ""} · Minecraft {Server.McVersion}");
             AppendLog("========================================");
 
             Logger.Info($"[StartInternalAsync] Checking directory for {Server.Path}", "McServerProcess");
@@ -143,7 +142,6 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             if (!Directory.Exists(Server.Path))
                 throw new DirectoryNotFoundException($"Папка сервера не найдена: {Server.Path}");
-            AppendLog($" {string.Format(LocalizationManager.Get("Log_ServerFolder"), Server.Path)}");
 
             ClearOldServerLogs();
             ValidateEula();
@@ -151,7 +149,6 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             ct.ThrowIfCancellationRequested();
 
             var launchType = _installer.GetServerLaunchType(Server.Path);
-            AppendLog($" {string.Format(LocalizationManager.Get("Log_LaunchType"), launchType)}");
 
             var jarFile = FindServerJar(Server.Path);
             if (string.IsNullOrEmpty(jarFile))
@@ -161,7 +158,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                     : "папка пуста";
                 throw new FileNotFoundException($"Не найден jar файл сервера. Файлы в папке: {fileList}");
             }
-            AppendLog($" {string.Format(LocalizationManager.Get("Log_JarFile"), Path.GetFileName(jarFile), new FileInfo(jarFile).Length / 1024 / 1024)}");
+            AppendLog($" {string.Format(LocalizationManager.Get("Log_JarFile"), Path.GetFileName(jarFile), Math.Max(1, new FileInfo(jarFile).Length / (1024 * 1024)))}");
 
             ct.ThrowIfCancellationRequested();
 
@@ -178,8 +175,13 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 throw new FileNotFoundException($"Java не найдена или не работает: {javaPath}. {javaCheckResult.Error}");
             }
 
-            AppendLog($" {string.Format(LocalizationManager.Get("Log_JavaVersion"), javaCheckResult.Version)}");
-            AppendLog($" {string.Format(LocalizationManager.Get("Log_JavaPath_Info"), javaCheckResult.JavaPath)}");
+            var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, launchType);
+            if (_lastJavaDisplayName != null)
+            {
+                AppendLog($" Java: {_lastJavaDisplayName} ({requiredJavaVersion}+)");
+            }
+            else
+                AppendLog($" Java: {javaCheckResult.Version}");
 
             ct.ThrowIfCancellationRequested();
 
@@ -187,10 +189,14 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             var javaArgs = BuildJavaArgs(jarFile, launchType, javaCheckResult.MajorVersion);
             AppendLog($" {string.Format(LocalizationManager.Get("Log_JavaArgs"), javaArgs)}");
-            AppendLog($" {string.Format(LocalizationManager.Get("Log_WorkingDirectory"), Server.Path)}");
             AppendLog($" {LocalizationManager.Get("Log_LaunchingProcess")}");
 
             ct.ThrowIfCancellationRequested();
+
+            // Создаём пустой server.properties, если его нет — иначе Minecraft сервер пишет ERROR в лог
+            var serverPropsPath = Path.Combine(Server.Path, "server.properties");
+            if (!File.Exists(serverPropsPath))
+                File.Create(serverPropsPath).Dispose();
 
             // Запуск процесса
             StartProcess(javaCheckResult.JavaPath, javaArgs);
@@ -257,7 +263,6 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 $"Требуется Java {requiredJavaVersion}+ для Minecraft {Server.McVersion}, но найдена Java {javaCheckResult.MajorVersion} ({javaCheckResult.Version})");
         }
 
-        AppendLog($" {string.Format(LocalizationManager.Get("Log_JavaVersionCompatible"), requiredJavaVersion)}");
     }
 
     /// <summary>
@@ -317,7 +322,8 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             // чтобы Java весь вывод (включая JVM ошибки) выдавала в UTF-8, а не в системной OEM кодировке
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8,
-            CreateNoWindow = true
+            CreateNoWindow = true,
+            CreateNewProcessGroup = true
         };
 
         _process = new Process
@@ -987,7 +993,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             {
                 if (java.Exists)
                 {
-                    AppendLog($" {string.Format(LocalizationManager.Get("Log_UsingServerJava"), java.DisplayName)}");
+                    _lastJavaDisplayName = java.DisplayName;
                     return java.Path;
                 }
                 AppendLog($"[WARN] {LocalizationManager.Get("Log_JavaFromSettingsNotFound", java.Path)}");
@@ -998,8 +1004,6 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         if (Server.Settings.JavaAutoSelect)
         {
             var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, _installer.GetServerLaunchType(Server.Path));
-            AppendLog($" {string.Format(LocalizationManager.Get("Log_AutoSelectJava"), requiredJavaVersion, Server.McVersion)}");
-
             // Ищем подходящую Java среди установленных
             var suitableJava = config.JavaInstallations
                 .Where(j => j.Exists && j.MajorVersion >= requiredJavaVersion)
@@ -1008,7 +1012,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             if (suitableJava != null)
             {
-                AppendLog($" {string.Format(LocalizationManager.Get("Log_JavaSelected"), suitableJava.DisplayName)}");
+                _lastJavaDisplayName = suitableJava.DisplayName;
                 return suitableJava.Path;
             }
 
@@ -1021,13 +1025,13 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         {
             if (defaultJava.Exists)
             {
-                AppendLog($" {string.Format(LocalizationManager.Get("Log_UsingJava"), defaultJava.DisplayName)}");
+                _lastJavaDisplayName = defaultJava.DisplayName;
                 return defaultJava.Path;
             }
             AppendLog($"[WARN] {LocalizationManager.Get("Log_JavaDefaultNotFound", defaultJava.Path)}");
         }
 
-        AppendLog($" {LocalizationManager.Get("Log_UsingJavaFromPATH")}");
+        _lastJavaDisplayName = "PATH";
         return "java";
     }
 

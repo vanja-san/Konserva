@@ -6,7 +6,7 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="">
     <Grid Margin="16"
-            RowDefinitions="Auto,*">
+          RowDefinitions="Auto,*">
         <!--  Поиск и фильтры  -->
         <Border Grid.Row="0"
                 Margin="0,0,0,8">
@@ -48,15 +48,15 @@
                         IsSelected="True"
                         Tag="All"/>
                     <ComboBoxItem Content="Vanilla"
-                            Tag="Vanilla"/>
+                                  Tag="Vanilla"/>
                     <ComboBoxItem Content="Forge"
-                            Tag="Forge"/>
+                                  Tag="Forge"/>
                     <ComboBoxItem Content="NeoForge"
-                            Tag="NeoForge"/>
+                                  Tag="NeoForge"/>
                     <ComboBoxItem Content="Fabric"
-                            Tag="Fabric"/>
+                                  Tag="Fabric"/>
                     <ComboBoxItem Content="Paper"
-                            Tag="Paper"/>
+                                  Tag="Paper"/>
                     <ComboBoxItem
                         Content="Quilt"
                         IsEnabled="False"
@@ -77,9 +77,9 @@
                         IsSelected="True"
                         Tag="All"/>
                     <ComboBoxItem Content="{loc:Loc ServersPage_Filter_Running}"
-                            Tag="Running"/>
+                                  Tag="Running"/>
                     <ComboBoxItem Content="{loc:Loc ServersPage_Filter_Stopped}"
-                            Tag="Stopped"/>
+                                  Tag="Stopped"/>
                 </ComboBox>
                 <!--  Кнопка создать сервер  -->
                 <ui:Button
@@ -90,7 +90,7 @@
                     Click="CreateServer_Click"
                     ToolTip="{loc:Loc ServersPage_Create}">
                     <ui:SymbolIcon FontSize="13"
-                            Symbol="Add32"/>
+                                   Symbol="Add32"/>
                 </ui:Button>
             </Grid>
         </Border>
@@ -98,7 +98,7 @@
         <Border Grid.Row="1">
             <Grid>
                 <ScrollViewer CanContentScroll="True"
-                        VerticalScrollBarVisibility="Auto">
+                              VerticalScrollBarVisibility="Auto">
                     <ItemsControl
                         x:Name="ServersList"
                         ItemsSource="{Binding FilteredServers}"
@@ -129,13 +129,13 @@
                                     <Grid ColumnDefinitions="*,Auto">
                                         <!--  Название и информация  -->
                                         <StackPanel Grid.Column="0"
-                                                VerticalAlignment="Center">
+                                                    VerticalAlignment="Center">
                                             <ui:TextBlock
                                                 FontSize="14"
                                                 FontWeight="SemiBold"
                                                 Text="{Binding Name}"/>
                                             <StackPanel Margin="0,4,0,0"
-                                                    Orientation="Horizontal">
+                                                        Orientation="Horizontal">
                                                 <ui:TextBlock
                                                     VerticalAlignment="Center"
                                                     FontSize="12"
@@ -148,7 +148,7 @@
                                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                     Text="  •  "/>
                                                 <ui:TextBlock FontSize="12"
-                                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
+                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
                                                     <Run Text="{Binding ModLoader.Type}"/>
                                                 </ui:TextBlock>
                                                 <ui:TextBlock
@@ -157,7 +157,7 @@
                                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                     Text="  •  "/>
                                                 <ui:TextBlock FontSize="12"
-                                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
+                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
                                                     <Run Text="{loc:Loc ServersPage_Port}"/>
                                                     <Run Text="{Binding Port}"/>
                                                 </ui:TextBlock>
@@ -185,7 +185,7 @@
                                                                     Value="Play20"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsRunning}"
-                                                                        Value="True">
+                                                                             Value="True">
                                                                     <Setter Property="Symbol"
                                                                             Value="Stop20"/>
                                                                 </DataTrigger>
@@ -203,18 +203,17 @@
                                                 Tag="{Binding}"
                                                 ToolTip="{loc:Loc ServersPage_OpenFolder}">
                                                 <ui:SymbolIcon FontSize="20"
-                                                        Symbol="Folder20"/>
+                                                               Symbol="Folder20"/>
                                             </ui:Button>
                                             <ui:Button
                                                 Margin="0,0,12,0"
                                                 Padding="4"
                                                 AutomationProperties.Name="Delete server"
-                                                Command="{Binding RelativeSource={RelativeSource AncestorType=Page}, Path=DataContext.DeleteCommand}"
-                                                CommandParameter="{Binding}"
+                                                Click="Delete_Click"
                                                 Tag="{Binding}"
                                                 ToolTip="{loc:Loc ServersPage_Delete}">
                                                 <ui:SymbolIcon FontSize="20"
-                                                        Symbol="Delete20"/>
+                                                               Symbol="Delete20"/>
                                             </ui:Button>
                                         </StackPanel>
                                     </Grid>
@@ -227,6 +226,7 @@
                 <!--  Нет серверов  -->
                 <StackPanel
                     x:Name="NoServersPanel"
+                    Visibility="{Binding HasNoServers, Converter={StaticResource BoolToVisibility}}"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
                     <ui:TextBlock

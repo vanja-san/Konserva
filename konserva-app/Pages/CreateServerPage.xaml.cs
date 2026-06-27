@@ -9,7 +9,6 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Animation;
 using Wpf.Ui.Controls;
 
 namespace Konserva.Pages;
@@ -81,8 +80,7 @@ public partial class CreateServerPage : Page
             Logger.Info("FilterMcVersionsAsync completed", "CreateServerPage");
 
             // Запускаем анимацию волны точек (она скрыта, пока не начнётся установка)
-            if (Resources["WaveDotsAnimation"] is Storyboard waveAnimation)
-                waveAnimation.Begin();
+            ProgressDots.Start();
         }
         catch (Exception ex)
         {
@@ -98,8 +96,7 @@ public partial class CreateServerPage : Page
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         // Останавливаем анимацию
-        if (Resources["WaveDotsAnimation"] is Storyboard waveAnimation)
-            waveAnimation.Stop();
+        ProgressDots.Stop();
 
         // Отменяем установку, если пользователь ушёл со страницы
         if (_isInstalling && _installCts != null)

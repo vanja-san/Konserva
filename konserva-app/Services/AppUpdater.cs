@@ -63,7 +63,7 @@ namespace Konserva.Services
                 UpdateLog("Extracting archive...");
 
                 var extractDir = Path.Combine(tempDir, "extracted");
-                ZipFile.ExtractToDirectory(zipPath, extractDir);
+                await ZipFile.ExtractToDirectoryAsync(zipPath, extractDir, CancellationToken.None);
 
                 // Шаг 4: Создание батника
                 UpdateLog("Creating update script...");

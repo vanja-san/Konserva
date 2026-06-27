@@ -24,11 +24,6 @@ public enum ServerStatus
 public class Server : ObservableObject
 {
     private static int _idCounter;
-    private string _name = string.Empty;
-    private int _port = 25565;
-    private bool _errorDialogShown; // Флаг: показан ли диалог ошибки
-    private ServerStatus _status = ServerStatus.Stopped;
-    private string _installStatus = string.Empty;
 
     /// <summary>
     /// Уникальный идентификатор сервера
@@ -42,11 +37,11 @@ public class Server : ObservableObject
     [StringLength(100, MinimumLength = 1)]
     public string Name
     {
-        get => _name;
+        get => field ?? string.Empty;
         set
         {
             var trimmed = string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
-            if (SetProperty(ref _name, trimmed.Length > 100 ? trimmed[..100] : trimmed))
+            if (SetProperty(ref field, trimmed.Length > 100 ? trimmed[..100] : trimmed))
             {
                 OnPropertyChanged(nameof(Description));
             }
@@ -89,8 +84,8 @@ public class Server : ObservableObject
     [Range(1, 65535)]
     public int Port
     {
-        get => _port;
-        set => _port = Math.Clamp(value, 1, 65535);
+        get;
+        set => field = Math.Clamp(value, 1, 65535);
     }
 
     /// <summary>
@@ -107,10 +102,10 @@ public class Server : ObservableObject
     [JsonIgnore]
     public ServerStatus Status
     {
-        get => _status;
+        get;
         set
         {
-            if (SetProperty(ref _status, value))
+            if (SetProperty(ref field, value))
             {
                 OnPropertyChanged(nameof(IsRunning));
             }
@@ -120,8 +115,8 @@ public class Server : ObservableObject
     [JsonIgnore]
     public string InstallStatus
     {
-        get => _installStatus;
-        set => SetProperty(ref _installStatus, value ?? string.Empty);
+        get => field ?? string.Empty;
+        set => SetProperty(ref field, value ?? string.Empty);
     }
 
     private static string GenerateShortId() =>
@@ -167,16 +162,12 @@ public class Server : ObservableObject
     /// <summary>
     /// Флаг: показан ли диалог ошибки запуска
     /// </summary>
-    public bool ErrorDialogShown
-    {
-        get => _errorDialogShown;
-        set => _errorDialogShown = value;
-    }
+    public bool ErrorDialogShown { get; set; }
 
     /// <summary>
     /// Сбросить флаг ошибки
     /// </summary>
-    public void ResetErrorDialog() => _errorDialogShown = false;
+    public void ResetErrorDialog() => ErrorDialogShown = false;
 
     /// <summary>
     /// Клонирование сервера

@@ -317,66 +317,66 @@ public partial class ServerDetailPage : Page, IDisposable
     {
         try
         {
-        // Если сервер успешно запущен — сбрасываем флаг ошибки
-        if (status == ServerStatus.Running && _server != null)
-        {
-            _server.ResetErrorDialog();
-        }
-
-        // Если статус изменился на запущенный или останавливается и процесс не актуален - переподключаемся
-        if (status is ServerStatus.Starting or ServerStatus.Running or ServerStatus.Stopping)
-        {
-            // При переходе в рабочие состояния проверяем актуальность процесса и подписываемся
-            if (_process == null || _process.Status == ServerStatus.Stopped || _process.Status == ServerStatus.Error)
+            // Если сервер успешно запущен — сбрасываем флаг ошибки
+            if (status == ServerStatus.Running && _server != null)
             {
-                // Отписываемся от старого процесса
-                UnsubscribeFromProcess();
-                _process = null;
-
-                // Получаем свежий процесс
-                _process = App.ServerManager.GetProcess(_serverId!);
-
-                // Загружаем существующие логи и подписываемся на события
-                if (_process == null) return;
-
-                LoadExistingLogs();
-
-                // Подписываемся на события
-                _process.OnLog += UpdateLog;
-                _process.OnStatusChanged += UpdateStatus;
-                _process.OnPlayersChanged += UpdatePlayers;
+                _server.ResetErrorDialog();
             }
-        }
 
-        // Для остановленных или ошибочных снимаем флаг занятости
-        if (status is ServerStatus.Stopped or ServerStatus.Error)
-        {
-            _isBusy = false;
-            // Не удаляем _process здесь, чтобы можно было перезапустить
-            // Потом при следующем запуске переподключимся
-        }
-
-        await this.InvokeAsync(() =>
-        {
-            // Обновляем иконку и ToolTip кнопки старт/стоп
-            StartStopIcon.Symbol = status switch
+            // Если статус изменился на запущенный или останавливается и процесс не актуален - переподключаемся
+            if (status is ServerStatus.Starting or ServerStatus.Running or ServerStatus.Stopping)
             {
-                ServerStatus.Running => Wpf.Ui.Controls.SymbolRegular.Stop20,
-                ServerStatus.Starting => Wpf.Ui.Controls.SymbolRegular.Stop20,
-                ServerStatus.Stopping => Wpf.Ui.Controls.SymbolRegular.Stop20,
-                _ => Wpf.Ui.Controls.SymbolRegular.Play20
-            };
+                // При переходе в рабочие состояния проверяем актуальность процесса и подписываемся
+                if (_process == null || _process.Status == ServerStatus.Stopped || _process.Status == ServerStatus.Error)
+                {
+                    // Отписываемся от старого процесса
+                    UnsubscribeFromProcess();
+                    _process = null;
 
-            StartStopButton.ToolTip = status switch
+                    // Получаем свежий процесс
+                    _process = App.ServerManager.GetProcess(_serverId!);
+
+                    // Загружаем существующие логи и подписываемся на события
+                    if (_process == null) return;
+
+                    LoadExistingLogs();
+
+                    // Подписываемся на события
+                    _process.OnLog += UpdateLog;
+                    _process.OnStatusChanged += UpdateStatus;
+                    _process.OnPlayersChanged += UpdatePlayers;
+                }
+            }
+
+            // Для остановленных или ошибочных снимаем флаг занятости
+            if (status is ServerStatus.Stopped or ServerStatus.Error)
             {
-                ServerStatus.Running => LocalizationManager.Get("ServerDetail_Stop"),
-                ServerStatus.Starting => LocalizationManager.Get("ServerDetail_Starting"),
-                ServerStatus.Stopping => LocalizationManager.Get("ServerDetail_Stopping"),
-                _ => LocalizationManager.Get("ServerDetail_Start")
-            };
+                _isBusy = false;
+                // Не удаляем _process здесь, чтобы можно было перезапустить
+                // Потом при следующем запуске переподключимся
+            }
 
-            StartStopButton.IsEnabled = status is not (ServerStatus.Starting or ServerStatus.Stopping);
-        });
+            await this.InvokeAsync(() =>
+            {
+                // Обновляем иконку и ToolTip кнопки старт/стоп
+                StartStopIcon.Symbol = status switch
+                {
+                    ServerStatus.Running => Wpf.Ui.Controls.SymbolRegular.Stop20,
+                    ServerStatus.Starting => Wpf.Ui.Controls.SymbolRegular.Stop20,
+                    ServerStatus.Stopping => Wpf.Ui.Controls.SymbolRegular.Stop20,
+                    _ => Wpf.Ui.Controls.SymbolRegular.Play20
+                };
+
+                StartStopButton.ToolTip = status switch
+                {
+                    ServerStatus.Running => LocalizationManager.Get("ServerDetail_Stop"),
+                    ServerStatus.Starting => LocalizationManager.Get("ServerDetail_Starting"),
+                    ServerStatus.Stopping => LocalizationManager.Get("ServerDetail_Stopping"),
+                    _ => LocalizationManager.Get("ServerDetail_Start")
+                };
+
+                StartStopButton.IsEnabled = status is not (ServerStatus.Starting or ServerStatus.Stopping);
+            });
         }
         catch (Exception ex)
         {
