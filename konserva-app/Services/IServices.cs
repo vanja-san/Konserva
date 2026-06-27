@@ -47,6 +47,8 @@ public interface IServerManager
     void UpdateServer(Server server);
     (int total, int running, int stopped) GetStats();
     long GetTotalMemoryUsage();
+    double GetTotalCpuUsage();
+    void MoveServer(string serverId, int newIndex);
     Task StartServerAsync(string id, CancellationToken ct = default);
     Task StopServerAsync(string id, CancellationToken ct = default);
     Task DeleteServerAsync(string id, CancellationToken ct = default);

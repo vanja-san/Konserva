@@ -157,6 +157,91 @@ public partial class ServersPage : Page, IDisposable
         }
     }
 
+    // ===== Drag & Drop =====
+
+    private Server? _dragSourceServer;
+    private Point _dragStartPoint;
+
+    private void ServerCard_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        _dragStartPoint = e.GetPosition(null);
+        _dragSourceServer = GetServerFromElement(sender);
+    }
+
+    private void ServerCard_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (_dragSourceServer == null)
+            return;
+
+        var position = e.GetPosition(null);
+        if (Math.Abs(position.X - _dragStartPoint.X) <= SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(position.Y - _dragStartPoint.Y) <= SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        DragDrop.DoDragDrop(
+            (DependencyObject)sender,
+            new DataObject(DataFormats.Serializable, _dragSourceServer.Id),
+            DragDropEffects.Move);
+
+        _dragSourceServer = null;
+    }
+
+    private void ServersList_DragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.Serializable))
+        {
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
+        }
+    }
+
+    private void ServersList_PreviewDrop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.Serializable))
+            return;
+
+        var serverId = e.Data.GetData(DataFormats.Serializable) as string;
+        if (string.IsNullOrEmpty(serverId))
+            return;
+
+        // Определяем индекс, куда бросили
+        var dropIndex = GetDropIndex(e.GetPosition(ServersList));
+        if (dropIndex < 0)
+            return;
+
+        App.ServerManager.MoveServer(serverId, dropIndex);
+        _dragSourceServer = null;
+        e.Handled = true;
+    }
+
+    private Server? GetServerFromElement(object sender)
+    {
+        if (sender is ContentPresenter presenter)
+            return presenter.Content as Server;
+        return null;
+    }
+
+    private int GetDropIndex(Point dropPosition)
+    {
+        double accumulatedHeight = 0;
+        for (int i = 0; i < ServersList.Items.Count; i++)
+        {
+            var container = ServersList.ItemContainerGenerator.ContainerFromIndex(i) as ContentPresenter;
+            if (container == null)
+                continue;
+
+            var itemHeight = container.ActualHeight;
+            var itemCenter = accumulatedHeight + itemHeight / 2;
+
+            if (dropPosition.Y < itemCenter)
+                return i;
+
+            accumulatedHeight += itemHeight;
+        }
+
+        return ServersList.Items.Count; // В конец списка
+    }
+
     public void Dispose()
     {
         if (_disposed)

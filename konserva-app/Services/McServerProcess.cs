@@ -26,6 +26,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     private string? _lastJavaDisplayName;
     private volatile bool _isStarting;
     private volatile bool _serverReady;
+    private volatile bool _intentionalStop;
     private bool _disposed;
 
     public Server Server { get; } = server;
@@ -125,6 +126,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     {
         Logger.Info($"[StartInternalAsync] Beginning for {Server.Name}", "McServerProcess");
 
+        _intentionalStop = false;  // Сбрасываем флаг намеренной остановки
         _stopCts = new CancellationTokenSource();
         _pendingErrorOutput = null;
         _serverReady = false;  // Сбрасываем флаг готовности
@@ -348,9 +350,8 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
         AppendLog($" {string.Format(LocalizationManager.Get("Log_ProcessStarted"), _process.Id)}");
 
-        // Устанавливаем статус Running после успешного запуска
-        Status = ServerStatus.Running;
-        OnStatusChanged?.Invoke(Status);
+        // Статус остаётся Starting — переключится на Running когда сервер реально готов
+        // (см. ParseOutput при появлении "Done!")
     }
 
     /// <summary>
@@ -534,6 +535,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                 _process = null;
                 Status = ServerStatus.Stopped;
                 OnStatusChanged?.Invoke(Status);
+                _intentionalStop = true;
                 AppendLog($" {LocalizationManager.Get("Log_LaunchForceCancelled")}");
                 return;
             }
@@ -544,17 +546,20 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         {
             Status = ServerStatus.Stopped;
             OnStatusChanged?.Invoke(Status);
+            _intentionalStop = true;
             return;
         }
 
         // Если сервер ещё не загрузился — принудительная остановка
         if (!isReady)
         {
+            _intentionalStop = true;
             await ForceKillProcessAsync();
             return;
         }
 
         // Сервер запущен и готов — graceful остановка
+        _intentionalStop = true;
         await GracefulStopAsync();
     }
 
@@ -811,12 +816,14 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             _process?.Dispose();
             _process = null;
 
-            // Авто-рестарт
-            if (Server.Settings.AutoRestart)
+            // Авто-рестарт только при краше, а не при намеренной остановке
+            if (Server.Settings.AutoRestart && !_intentionalStop)
             {
                 AppendLog($" {LocalizationManager.Get("Log_AutoRestart")} {Server.Settings.AutoRestartDelay} {LocalizationManager.Get("Log_Seconds")}...");
                 await Task.Delay(Server.Settings.AutoRestartDelay * Constants.MsPerSecond);
-                Start();
+                // Повторная проверка — пользователь мог нажать «Стоп» во время задержки
+                if (!_intentionalStop)
+                    Start();
             }
         }
         catch (OperationCanceledException)
@@ -920,30 +927,28 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             if (line.Contains("Done ("))
             {
                 _serverReady = true;
-                AppendLog($"[SUCCESS] {LocalizationManager.Get("Log_ServerStarted")}");
             }
             // Fabric/Quilt
             else if (line.Contains("Done!"))
             {
                 _serverReady = true;
-                AppendLog($"[SUCCESS] {LocalizationManager.Get("Log_ServerStarted")}");
             }
             // Paper
             else if (line.Contains("Done (") || line.Contains("For help, type"))
             {
                 _serverReady = true;
-                AppendLog($"[SUCCESS] {LocalizationManager.Get("Log_ServerStarted")}");
-            }
-            // Universal fallback - "Starting minecraft server version"
-            else if (line.Contains("Starting minecraft server version") || line.Contains("Loading properties"))
-            {
-                // Это раннее сообщение, не считаем готовым
             }
             // Дополнительно для NeoForge
             else if (line.Contains("NEOFORGE") && line.Contains("Loaded"))
             {
                 _serverReady = true;
+            }
+
+            if (_serverReady)
+            {
                 AppendLog($"[SUCCESS] {LocalizationManager.Get("Log_ServerStarted")}");
+                Status = ServerStatus.Running;
+                OnStatusChanged?.Invoke(Status);
             }
         }
 

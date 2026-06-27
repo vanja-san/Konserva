@@ -65,6 +65,9 @@ public partial class ServerDetailPage : Page, IDisposable
 
         StartStatusTimer();
         LoadServer();
+
+        // Синхронизируем порт с моделью сервера при сохранении свойств
+        PropertiesEditor.PropertiesSaved += OnPropertiesSaved;
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -72,8 +75,22 @@ public partial class ServerDetailPage : Page, IDisposable
         // Отписываемся от события ошибки запуска
         App.ServerManager.OnServerStartError -= OnServerStartError;
         LogBox.SizeChanged -= LogBox_SizeChanged;
+        PropertiesEditor.PropertiesSaved -= OnPropertiesSaved;
         StopStatusTimer();
         Dispose();
+    }
+
+    private void OnPropertiesSaved(object? sender, EventArgs e)
+    {
+        if (_server == null)
+            return;
+
+        var newPort = PropertiesEditor.CurrentPort;
+        if (_server.Port != newPort)
+        {
+            _server.Port = newPort;
+            App.ServerManager.UpdateServer(_server);
+        }
     }
 
     private double _maxContentWidth = 0;

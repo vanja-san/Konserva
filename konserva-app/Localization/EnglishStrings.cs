@@ -52,6 +52,8 @@ public static class EnglishStrings
         { "Settings_App", "Application" },
         { "Settings_CheckUpdates", "Check for Updates" },
         { "Settings_CheckUpdates_Desc", "Automatically check for updates" },
+        { "Settings_CheckUpdates_Interval", "Check interval (hours)" },
+        { "Settings_CheckUpdates_Interval_Desc", "How often to check for updates (1–168 hours)" },
         { "Settings_Appearance", "Appearance" },
         { "Settings_Theme", "Theme" },
         { "Settings_Theme_Desc", "Select application theme" },

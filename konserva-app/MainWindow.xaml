@@ -22,7 +22,8 @@
 
     <Grid RowDefinitions="Auto,*,Auto">
         <!--  Title Bar  -->
-        <ui:TitleBar Grid.Row="0" Height="32">
+        <ui:TitleBar Grid.Row="0"
+                     Height="32">
             <ui:TitleBar.Header>
                 <Grid ColumnDefinitions="Auto,Auto">
                     <!--  Кнопка "Назад"  -->
@@ -35,7 +36,8 @@
                         Click="BackButton_Click"
                         CornerRadius="0"
                         Visibility="Collapsed">
-                        <ui:SymbolIcon FontSize="13" Symbol="ArrowLeft32" />
+                        <ui:SymbolIcon FontSize="13"
+                                       Symbol="ArrowLeft32"/>
                     </ui:Button>
                     <!--  Иконка и заголовок (прозрачны для мыши)  -->
                     <StackPanel
@@ -47,13 +49,13 @@
                             Width="16"
                             Height="16"
                             RenderOptions.BitmapScalingMode="HighQuality"
-                            Source="pack://application:,,,/Assets/app-icon.ico" />
+                            Source="pack://application:,,,/Assets/app-icon.ico"/>
                         <ui:TextBlock
                             x:Name="WindowTitleText"
                             Margin="8,0,0,0"
                             VerticalAlignment="Center"
                             FontSize="12"
-                            Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}" />
+                            Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"/>
                     </StackPanel>
                 </Grid>
             </ui:TitleBar.Header>
@@ -67,7 +69,8 @@
                         Click="NavButton_Click"
                         CornerRadius="0"
                         ToolTip="{loc:Loc MainWindow_Settings}">
-                        <ui:SymbolIcon FontSize="18" Symbol="Settings20" />
+                        <ui:SymbolIcon FontSize="18"
+                                       Symbol="Settings20"/>
                     </ui:Button>
                 </StackPanel>
             </ui:TitleBar.TrailingContent>
@@ -78,7 +81,7 @@
             x:Name="ContentFrame"
             Grid.Row="1"
             JournalOwnership="OwnsJournal"
-            NavigationUIVisibility="Hidden" />
+            NavigationUIVisibility="Hidden"/>
 
         <!--  Status Bar  -->
         <Border
@@ -88,7 +91,7 @@
             Background="{ui:ThemeResource LayerFillColorDefaultBrush}"
             BorderBrush="{ui:ThemeResource ControlStrokeColorDefaultBrush}"
             BorderThickness="0,1,0,0">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
                 <!--  Total Servers  -->
                 <StackPanel
                     Grid.Column="0"
@@ -100,14 +103,14 @@
                         Margin="0,0,6,0"
                         FontSize="16"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                        Symbol="Server24" />
+                        Symbol="Server24"/>
                     <ui:TextBlock
                         x:Name="StatusTotalServers"
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                         LineHeight="16"
                         Text="0"
-                        ToolTip="{loc:Loc StatusBar_TotalServers}" />
+                        ToolTip="{loc:Loc StatusBar_TotalServers}"/>
                 </StackPanel>
 
                 <!--  Running  -->
@@ -121,19 +124,40 @@
                         Margin="0,0,6,0"
                         FontSize="14"
                         Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
-                        Symbol="CheckmarkCircle24" />
+                        Symbol="CheckmarkCircle24"/>
                     <ui:TextBlock
                         x:Name="StatusRunningServers"
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                         LineHeight="16"
                         Text="0"
-                        ToolTip="{loc:Loc StatusBar_Running}" />
+                        ToolTip="{loc:Loc StatusBar_Running}"/>
+                </StackPanel>
+
+                <!--  CPU  -->
+                <StackPanel
+                    Grid.Column="2"
+                    Margin="0,0,12,0"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal"
+                    ToolTip="CPU">
+                    <ui:SymbolIcon
+                        Margin="0,0,6,0"
+                        FontSize="16"
+                        Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                        Symbol="Clock24"/>
+                    <ui:TextBlock
+                        x:Name="StatusCpuUsage"
+                        FontSize="12"
+                        Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                        LineHeight="16"
+                        Text="0%"
+                        ToolTip="CPU"/>
                 </StackPanel>
 
                 <!--  Memory  -->
                 <StackPanel
-                    Grid.Column="2"
+                    Grid.Column="3"
                     Margin="0,0,12,0"
                     VerticalAlignment="Center"
                     Orientation="Horizontal"
@@ -142,19 +166,19 @@
                         Margin="0,0,6,0"
                         FontSize="16"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                        Symbol="Storage24" />
+                        Symbol="Storage24"/>
                     <ui:TextBlock
                         x:Name="StatusMemoryUsage"
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                         LineHeight="16"
                         Text="0 MB"
-                        ToolTip="{loc:Loc StatusBar_Memory}" />
+                        ToolTip="{loc:Loc StatusBar_Memory}"/>
                 </StackPanel>
 
                 <!--  Java  -->
                 <StackPanel
-                    Grid.Column="3"
+                    Grid.Column="4"
                     Margin="0,0,12,0"
                     VerticalAlignment="Center"
                     Orientation="Horizontal">
@@ -163,7 +187,7 @@
                         FontSize="14"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                         Symbol="Braces24"
-                        ToolTip="{x:Null}" />
+                        ToolTip="{x:Null}"/>
                     <ui:TextBlock
                         x:Name="StatusJava"
                         FontSize="12"
@@ -171,14 +195,14 @@
                         LineHeight="16"
                         Text="{loc:Loc StatusBar_Java_NotConfigured}">
                         <ui:TextBlock.ToolTip>
-                            <ToolTip Content="{loc:Loc StatusBar_Java_NotConfigured}" />
+                            <ToolTip Content="{loc:Loc StatusBar_Java_NotConfigured}"/>
                         </ui:TextBlock.ToolTip>
                     </ui:TextBlock>
                 </StackPanel>
 
                 <!--  Version / Update Notification  -->
                 <StackPanel
-                    Grid.Column="4"
+                    Grid.Column="5"
                     VerticalAlignment="Center"
                     Orientation="Horizontal">
                     <ui:TextBlock
@@ -187,8 +211,8 @@
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         LineHeight="16"
-                        Text="{utils:AppVersion Prefix=v}" />
-                    <controls:UpdateNotification x:Name="UpdateNotificationControl" />
+                        Text="{utils:AppVersion Prefix=v}"/>
+                    <controls:UpdateNotification x:Name="UpdateNotificationControl"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -201,13 +225,13 @@
             Margin="0,0,0,20"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Bottom"
-            Panel.ZIndex="100" />
+            Panel.ZIndex="100"/>
 
         <!--  ContentDialog Host — для модальных диалогов  -->
         <ui:ContentDialogHost
             x:Name="ContentDialogPresenter"
             Grid.Row="0"
             Grid.RowSpan="3"
-            Panel.ZIndex="200" />
+            Panel.ZIndex="200"/>
     </Grid>
 </ui:FluentWindow>

@@ -16,6 +16,9 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
     private readonly ConcurrentDictionary<string, Action<ServerStatus>> _statusHandlers = new();
     private readonly ReaderWriterLockSlim _serversLock = new();
 
+    // CPU tracking
+    private readonly ConcurrentDictionary<int, (DateTime time, TimeSpan cpu)> _cpuSamples = new();
+
     public event Action? OnServersChanged;
     public event Action<Server, string>? OnServerStartError;  // Событие об ошибке запуска
 
@@ -283,27 +286,27 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
 
     public void StopServer(string id)
     {
-        // Сначала отписываем обработчик, чтобы избежать утечки
         if (_processes.TryRemove(id, out var process))
         {
-            if (_statusHandlers.TryRemove(id, out var handler))
-            {
-                process.OnStatusChanged -= handler;
-            }
-
             // останавливаем процесс в фоне, чтобы не блокировать UI
             _ = Task.Run(async () =>
             {
-                using (process)
+                try
                 {
-                    try
+                    await process.StopAsync();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"[StopServer] Ошибка остановки: {ex.Message}", ex, "McServerManager");
+                }
+                finally
+                {
+                    // Отписываем обработчик ТОЛЬКО после полной остановки
+                    if (_statusHandlers.TryRemove(id, out var handler))
                     {
-                        await process.StopAsync();
+                        process.OnStatusChanged -= handler;
                     }
-                    catch (Exception ex)
-                    {
-                        Logger.Error($"[StopServer] Ошибка остановки: {ex.Message}", ex, "McServerManager");
-                    }
+                    process.Dispose();
                 }
             });
         }
@@ -317,14 +320,17 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
     {
         if (_processes.TryRemove(id, out var process))
         {
-            if (_statusHandlers.TryRemove(id, out var handler))
-            {
-                process.OnStatusChanged -= handler;
-            }
-
-            using (process)
+            try
             {
                 await process.StopAsync();
+            }
+            finally
+            {
+                if (_statusHandlers.TryRemove(id, out var handler))
+                {
+                    process.OnStatusChanged -= handler;
+                }
+                process.Dispose();
             }
         }
         else
@@ -369,6 +375,30 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         }
 
         // Уведомляем UI после выхода из блокировки
+        OnServersChanged?.Invoke();
+    }
+
+    public void MoveServer(string serverId, int newIndex)
+    {
+        _serversLock.EnterWriteLock();
+        try
+        {
+            var oldIndex = _servers.FindIndex(s => s.Id == serverId);
+            if (oldIndex < 0)
+                return;
+
+            var server = _servers[oldIndex];
+            _servers.RemoveAt(oldIndex);
+
+            var adjustedIndex = Math.Clamp(newIndex, 0, _servers.Count);
+            _servers.Insert(adjustedIndex, server);
+            storage.SaveServers(_servers);
+        }
+        finally
+        {
+            _serversLock.ExitWriteLock();
+        }
+
         OnServersChanged?.Invoke();
     }
 
@@ -454,6 +484,59 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
                     return 0;
                 }
             });
+
+    public double GetTotalCpuUsage()
+    {
+        var now = DateTime.UtcNow;
+        double totalCpuPercent = 0;
+        var processorCount = Environment.ProcessorCount;
+        var activeIds = new HashSet<int>();
+
+        foreach (var (_, process) in _processes)
+        {
+            if (process.Status != ServerStatus.Running)
+                continue;
+
+            var proc = process.Process;
+            if (proc == null || proc.HasExited)
+                continue;
+
+            try
+            {
+                _ = proc.Id; // throws if process died
+                var currentCpu = proc.TotalProcessorTime;
+                var processId = proc.Id;
+                activeIds.Add(processId);
+
+                if (_cpuSamples.TryGetValue(processId, out var prev))
+                {
+                    var cpuDelta = (currentCpu - prev.cpu).TotalSeconds;
+                    var timeDelta = (now - prev.time).TotalSeconds;
+
+                    if (timeDelta > 0.5)
+                    {
+                        var percent = (cpuDelta / (processorCount * timeDelta)) * 100.0;
+                        totalCpuPercent += Math.Max(0, percent);
+                    }
+                }
+
+                _cpuSamples[processId] = (now, currentCpu);
+            }
+            catch
+            {
+                // Process exited between checks
+            }
+        }
+
+        // Clean up stale entries
+        foreach (var key in _cpuSamples.Keys)
+        {
+            if (!activeIds.Contains(key))
+                _cpuSamples.TryRemove(key, out _);
+        }
+
+        return Math.Round(Math.Min(totalCpuPercent, 100.0), 1);
+    }
 
     /// <summary>
     /// Убивает zombie Java процессы, которые могут держать блокировки файлов сервера

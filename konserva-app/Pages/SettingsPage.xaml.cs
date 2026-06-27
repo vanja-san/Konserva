@@ -50,6 +50,9 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         UpdateJavaEmptyVisibility();
 
         CheckUpdatesBox.IsChecked = config.CheckUpdates;
+        UpdateIntervalSeparator.Visibility = config.CheckUpdates ? Visibility.Visible : Visibility.Collapsed;
+        UpdateIntervalCard.Visibility = config.CheckUpdates ? Visibility.Visible : Visibility.Collapsed;
+        UpdateIntervalBox.Value = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
 
         // Загрузка темы
         var theme = config.Theme ?? "System";
@@ -97,6 +100,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
             var languageChanged = false;
 
             config.CheckUpdates = CheckUpdatesBox.IsChecked ?? false;
+            config.UpdateCheckIntervalHours = (int)Math.Clamp(UpdateIntervalBox.Value ?? 24, 1.0, 168.0);
 
             // Сохранение источника загрузки
             if (DownloadSourceComboBox.SelectedItem is ComboBoxItem downloadItem)
@@ -275,10 +279,19 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
     private void CheckUpdatesBox_Checked(object sender, RoutedEventArgs e)
     {
+        UpdateIntervalSeparator.Visibility = Visibility.Visible;
+        UpdateIntervalCard.Visibility = Visibility.Visible;
         AutoSaveSettings();
     }
 
     private void CheckUpdatesBox_Unchecked(object sender, RoutedEventArgs e)
+    {
+        UpdateIntervalSeparator.Visibility = Visibility.Collapsed;
+        UpdateIntervalCard.Visibility = Visibility.Collapsed;
+        AutoSaveSettings();
+    }
+
+    private void UpdateIntervalBox_ValueChanged(object? sender, RoutedEventArgs e)
     {
         AutoSaveSettings();
     }

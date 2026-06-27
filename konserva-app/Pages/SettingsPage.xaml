@@ -123,13 +123,13 @@
                         <Rectangle Height="1"
                                    Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
 
-                        <!--  Карточка: Проверка обновлений (нижняя — скругление снизу)  -->
+                        <!--  Карточка: Проверка обновлений (середина)  -->
                         <Border
                             Padding="16,12"
                             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
                             BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
-                            BorderThickness="1,0,1,1"
-                            CornerRadius="0,0,8,8">
+                            BorderThickness="1,0,1,0"
+                            CornerRadius="0">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0"
                                             VerticalAlignment="Center">
@@ -144,6 +144,39 @@
                                     VerticalAlignment="Center"
                                     Checked="CheckUpdatesBox_Checked"
                                     Unchecked="CheckUpdatesBox_Unchecked"/>
+                            </Grid>
+                        </Border>
+
+                        <!--  Разделитель (показан, когда чекбокс включён)  -->
+                        <Rectangle x:Name="UpdateIntervalSeparator"
+                                   Height="1"
+                                   Fill="{ui:ThemeResource ControlElevationBorderBrush}"
+                                   Visibility="Collapsed"/>
+
+                        <!--  Карточка: Интервал проверки (нижняя — скругление снизу)  -->
+                        <Border x:Name="UpdateIntervalCard"
+                                Padding="16,12"
+                                Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                                BorderThickness="1,0,1,1"
+                                CornerRadius="0,0,8,8"
+                                Visibility="Collapsed">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0"
+                                            VerticalAlignment="Center">
+                                    <ui:TextBlock Style="{StaticResource SettingTitle}"
+                                                  Text="{loc:Loc Settings_CheckUpdates_Interval}"/>
+                                    <ui:TextBlock Style="{StaticResource SettingDescription}"
+                                                  Text="{loc:Loc Settings_CheckUpdates_Interval_Desc}"/>
+                                </StackPanel>
+                                <ui:NumberBox
+                                    x:Name="UpdateIntervalBox"
+                                    Grid.Column="1"
+                                    Width="100"
+                                    Minimum="1"
+                                    Maximum="168"
+                                    SmallChange="1"
+                                    ValueChanged="UpdateIntervalBox_ValueChanged"/>
                             </Grid>
                         </Border>
                     </StackPanel>

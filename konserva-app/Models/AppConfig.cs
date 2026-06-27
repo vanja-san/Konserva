@@ -38,7 +38,12 @@ public class AppConfig
 
     public int DefaultRamMin { get; set; } = 1024;
     public int DefaultRamMax { get; set; } = 4096;
-    public bool CheckUpdates { get; set; } = true;
+    public bool CheckUpdates { get; set; } = false;
+
+    /// <summary>
+    /// Интервал проверки обновлений в часах (1–168, по умолчанию 24).
+    /// </summary>
+    public int UpdateCheckIntervalHours { get; set; } = 24;
 
     /// <summary>
     /// Источник загрузки: VanillaApi (официальный) или BMCLAPI (зеркало)

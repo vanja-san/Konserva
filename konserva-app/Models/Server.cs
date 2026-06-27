@@ -84,9 +84,9 @@ public class Server : ObservableObject
     [Range(1, 65535)]
     public int Port
     {
-        get;
+        get => field;
         set => field = Math.Clamp(value, 1, 65535);
-    }
+    } = Constants.DefaultServerPort;
 
     /// <summary>
     /// Автозапуск сервера

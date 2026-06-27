@@ -52,6 +52,8 @@ public static class RussianStrings
         { "Settings_App", "Приложение" },
         { "Settings_CheckUpdates", "Проверка обновлений" },
         { "Settings_CheckUpdates_Desc", "Автоматически проверять обновления" },
+        { "Settings_CheckUpdates_Interval", "Интервал проверки (часы)" },
+        { "Settings_CheckUpdates_Interval_Desc", "Как часто проверять обновления (1–168 часов)" },
         { "Settings_Appearance", "Внешний вид" },
         { "Settings_Theme", "Тема" },
         { "Settings_Theme_Desc", "Выберите тему приложения" },

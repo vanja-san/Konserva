@@ -19,6 +19,11 @@ public partial class ServerPropertiesEditor : UserControl
 
     public event EventHandler? PropertiesSaved;
 
+    /// <summary>
+    /// Текущий порт сервера из загруженных свойств
+    /// </summary>
+    public int CurrentPort => _properties?.ServerPort ?? Constants.DefaultServerPort;
+
     public ServerPropertiesEditor()
     {
         InitializeComponent();

@@ -102,13 +102,24 @@
                     <ItemsControl
                         x:Name="ServersList"
                         ItemsSource="{Binding FilteredServers}"
-                        VirtualizingStackPanel.IsVirtualizing="True"
-                        VirtualizingStackPanel.VirtualizationMode="Recycling">
+                        AllowDrop="True"
+                        PreviewDrop="ServersList_PreviewDrop"
+                        DragOver="ServersList_DragOver">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <VirtualizingStackPanel/>
+                                <StackPanel/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="AllowDrop"
+                                        Value="True"/>
+                                <EventSetter Event="PreviewMouseLeftButtonDown"
+                                        Handler="ServerCard_PreviewMouseLeftButtonDown"/>
+                                <EventSetter Event="PreviewMouseMove"
+                                        Handler="ServerCard_PreviewMouseMove"/>
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <ui:CardAction
@@ -170,6 +181,12 @@
                                             Margin="16,0,0,0"
                                             VerticalAlignment="Center"
                                             Orientation="Horizontal">
+                                            <Ellipse
+                                                Width="10"
+                                                Height="10"
+                                                Margin="0,0,8,0"
+                                                VerticalAlignment="Center"
+                                                Fill="{Binding Status, Converter={StaticResource StatusToBrush}}"/>
                                             <ui:Button
                                                 x:Name="PlayButton"
                                                 Margin="0,0,8,0"

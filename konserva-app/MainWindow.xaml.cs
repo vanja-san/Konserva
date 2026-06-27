@@ -3,8 +3,12 @@ using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Tray.Controls;
+using MenuItem = System.Windows.Controls.MenuItem;
 
 namespace Konserva;
 
@@ -21,6 +25,11 @@ public partial class MainWindow : FluentWindow, IDisposable
     private bool _isUpdatingStatusBar;
     private CancellationTokenSource? _statusBarCts;
 
+    // Tray
+    private NotifyIcon? _trayIcon;
+    private MenuItem? _trayStatusMenuItem;
+    private bool _isExiting;
+
     public MainWindow(IConfigService configService, IServerManager serverManager, IJavaManagementService javaService)
     {
         InitializeComponent();
@@ -30,9 +39,76 @@ public partial class MainWindow : FluentWindow, IDisposable
         _javaService = javaService;
 
         _serverManager.OnServersChanged += UpdateStatusBar;
+        _serverManager.OnServersChanged += UpdateTrayStatus;
 
         Loaded += MainWindow_Loaded;
+        Closing += MainWindow_Closing;
         Closed += MainWindow_Closed;
+
+        // Инициализация трея (после InitializeComponent)
+        InitTray();
+    }
+
+    /// <summary>
+    /// Инициализация событий трея.
+    /// </summary>
+    private void InitTray()
+    {
+        try
+        {
+            var showItem = new MenuItem { Header = "Открыть Konserva" };
+            _trayStatusMenuItem = new MenuItem
+            {
+                Header = "Серверы: 0 | Запущено: 0",
+                IsEnabled = false
+            };
+            var exitItem = new MenuItem { Header = "Выход" };
+
+            showItem.Click += (_, _) =>
+            {
+                Show();
+                Activate();
+                WindowState = WindowState.Normal;
+            };
+
+            exitItem.Click += (_, _) =>
+            {
+                _isExiting = true;
+                Close();
+            };
+
+            var contextMenu = new ContextMenu();
+            contextMenu.Items.Add(showItem);
+            contextMenu.Items.Add(new Separator());
+            contextMenu.Items.Add(_trayStatusMenuItem);
+            contextMenu.Items.Add(new Separator());
+            contextMenu.Items.Add(exitItem);
+
+            _trayIcon = new NotifyIcon
+            {
+                Icon = new System.Windows.Media.Imaging.BitmapImage(
+                    new Uri("pack://application:,,,/Assets/app-icon.ico")),
+                TooltipText = "Konserva — Minecraft Server Manager",
+                MenuOnRightClick = true,
+                FocusOnLeftClick = true,
+                Menu = contextMenu
+            };
+
+#pragma warning disable CS8622 // Nullability mismatch due to external assembly annotations
+            _trayIcon.LeftClick += OnTrayLeftClick;
+#pragma warning restore CS8622
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"InitTray error: {ex.Message}", "MainWindow");
+        }
+    }
+
+    private void OnTrayLeftClick(NotifyIcon sender, RoutedEventArgs e)
+    {
+        Show();
+        Activate();
+        WindowState = WindowState.Normal;
     }
 
     /// <summary>
@@ -62,6 +138,7 @@ public partial class MainWindow : FluentWindow, IDisposable
 
         AutoDetectJava();
         StartStatusBarTimer();
+        StartUpdateCheckLoop();
 
         // Начальный заголовок (до первой навигации)
         WindowTitleText.Text = LocalizationManager.Get("MainWindow_Header");
@@ -74,9 +151,6 @@ public partial class MainWindow : FluentWindow, IDisposable
 
         // Инициализируем SnackbarService (визуальное дерево уже загружено)
         _ = SnackbarService;
-
-        // Проверяем обновления
-        CheckForUpdatesAsync().FireAndForget();
     }
 
     /// <summary>
@@ -208,6 +282,13 @@ public partial class MainWindow : FluentWindow, IDisposable
             StatusTotalServers.Text = $"{total}";
             StatusRunningServers.Text = $"{running}";
 
+            // CPU
+            var cpuUsage = _serverManager.GetTotalCpuUsage();
+            StatusCpuUsage.Text = cpuUsage >= 10
+                ? $"{cpuUsage:F0}%"
+                : $"{cpuUsage:F1}%";
+
+            // RAM
             var totalRamBytes = _serverManager.GetTotalMemoryUsage();
             var totalRamMB = totalRamBytes / (1024 * 1024);
             StatusMemoryUsage.Text = totalRamMB >= 1024
@@ -228,6 +309,48 @@ public partial class MainWindow : FluentWindow, IDisposable
         finally
         {
             _isUpdatingStatusBar = false;
+        }
+    }
+
+    // ===== Tray =====
+
+    /// <summary>
+    /// При закрытии окна сворачиваем в трей вместо выхода.
+    /// </summary>
+    private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        // Если приложение действительно завершается (из Exit меню), не отменяем
+        if (_isExiting)
+            return;
+
+        // Сворачиваем в трей
+        e.Cancel = true;
+        Hide();
+    }
+
+    /// <summary>
+    /// Обновляет статус в трее (количество серверов, подсказка).
+    /// </summary>
+    private void UpdateTrayStatus()
+    {
+        if (_trayIcon == null || _trayStatusMenuItem == null)
+            return;
+
+        try
+        {
+            var (total, running, _) = _serverManager.GetStats();
+
+            Func<string, string> localize = LocalizationManager.Get;
+            var statusText = $"{localize("StatusBar_TotalServers")}: {total} | {localize("StatusBar_Running")}: {running}";
+            _trayStatusMenuItem.Header = statusText;
+
+            _trayIcon.TooltipText = running > 0
+                ? $"Konserva — {running}/{total} {localize("StatusBar_Running").ToLowerInvariant()}"
+                : "Konserva — Minecraft Server Manager";
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"UpdateTrayStatus error: {ex.Message}", "MainWindow");
         }
     }
 
@@ -305,7 +428,12 @@ public partial class MainWindow : FluentWindow, IDisposable
             return;
 
         StopStatusBarTimer();
+        StopUpdateCheckLoop();
         _serverManager.OnServersChanged -= UpdateStatusBar;
+        _serverManager.OnServersChanged -= UpdateTrayStatus;
+
+        // Удаляем иконку из трея
+        try { _trayIcon?.Dispose(); } catch { /* ignored */ }
 
         // Dispose CTS
         _statusBarCts?.Cancel();
@@ -317,10 +445,10 @@ public partial class MainWindow : FluentWindow, IDisposable
 
     // ===== Update checking =====
 
-    private static readonly TimeSpan UpdateCheckInterval = TimeSpan.FromHours(24);
+    private CancellationTokenSource? _updateCheckCts;
 
     /// <summary>
-    /// Проверяет наличие обновлений (с учётом интервала 24ч).
+    /// Проверяет наличие обновлений (с учётом интервала из конфига).
     /// </summary>
     private async Task CheckForUpdatesAsync()
     {
@@ -334,7 +462,8 @@ public partial class MainWindow : FluentWindow, IDisposable
             if (config.LastUpdateCheck.HasValue)
             {
                 var elapsed = SystemTime.UtcNow - config.LastUpdateCheck.Value;
-                if (elapsed < UpdateCheckInterval)
+                var interval = TimeSpan.FromHours(Math.Clamp(config.UpdateCheckIntervalHours, 1, 168));
+                if (elapsed < interval)
                     return;
             }
 
@@ -351,6 +480,51 @@ public partial class MainWindow : FluentWindow, IDisposable
         catch (Exception ex)
         {
             Logger.Error($"Update check failed: {ex.Message}", ex, "MainWindow");
+        }
+    }
+
+    /// <summary>
+    /// Запускает фоновый цикл авто-проверки обновлений с интервалом из конфига.
+    /// </summary>
+    private void StartUpdateCheckLoop()
+    {
+        _updateCheckCts?.Cancel();
+        _updateCheckCts = new CancellationTokenSource();
+        _ = UpdateCheckLoopAsync(_updateCheckCts.Token);
+    }
+
+    private void StopUpdateCheckLoop()
+    {
+        _updateCheckCts?.Cancel();
+        _updateCheckCts?.Dispose();
+        _updateCheckCts = null;
+    }
+
+    /// <summary>
+    /// Фоновый цикл: проверяет обновления при старте, затем каждые N часов.
+    /// </summary>
+    private async Task UpdateCheckLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            // Первая проверка при старте (с учётом интервала)
+            await CheckForUpdatesAsync();
+
+            while (!ct.IsCancellationRequested)
+            {
+                var config = _config.GetConfig();
+                var intervalHours = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
+                using var timer = new PeriodicTimer(TimeSpan.FromHours(intervalHours));
+
+                if (await timer.WaitForNextTickAsync(ct))
+                {
+                    await CheckForUpdatesAsync();
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ожидаемая отмена
         }
     }
 
