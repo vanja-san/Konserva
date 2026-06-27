@@ -17,6 +17,7 @@ public class ServersViewModel : ObservableObject
   private string _filterType = "All";
   private string _filterStatus = "All";
   private readonly HashSet<string> _busyServers = [];
+  private bool _isVisible = true;
 
   public ServersViewModel(IServerManager serverManager)
   {
@@ -203,12 +204,45 @@ public class ServersViewModel : ObservableObject
     OnPropertyChanged(nameof(HasNoServers));
   }
 
+  /// <summary>
+  /// Флаг видимости страницы. Когда страница скрыта (навигация на другую страницу),
+  /// OnServersChanged не перестраивает FilteredServers, а только обновляет статусы.
+  /// </summary>
+  public bool IsVisible
+  {
+    get => _isVisible;
+    set
+    {
+      if (_isVisible == value) return;
+      _isVisible = value;
+
+      if (_isVisible)
+      {
+        // При возврате на страницу перестраиваем список с актуальным порядком
+        RefreshList();
+      }
+    }
+  }
+
   private void OnServersChanged()
   {
     // Снимаем блокировку для серверов, которые не запущены
     foreach (var server in _serverManager.GetServers().Where(s => !s.IsRunning))
     {
       _busyServers.Remove(server.Id);
+    }
+
+    if (!_isVisible)
+    {
+      // Если страница скрыта — только обновляем статусы, не сбрасывая порядок
+      var currentServers = _serverManager.GetServers();
+      foreach (var server in currentServers)
+      {
+        var existing = FilteredServers.FirstOrDefault(s => s.Id == server.Id);
+        if (existing != null)
+          existing.Status = server.Status;
+      }
+      return;
     }
 
     ApplyFilters();

@@ -39,12 +39,13 @@ public partial class ServersPage : Page, IDisposable
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         App.ServerManager.OnServerStartError += OnServerStartError;
-        _viewModel.RefreshList();
+        _viewModel.IsVisible = true;
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         App.ServerManager.OnServerStartError -= OnServerStartError;
+        _viewModel.IsVisible = false;
     }
 
     private void OnServerStartError(Server server, string errorMessage)

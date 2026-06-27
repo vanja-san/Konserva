@@ -11,7 +11,10 @@ namespace Konserva.Services;
 /// </summary>
 public class McServerManager(IServerStorageService storage, IConfigService configService) : IServerManager
 {
-    private readonly List<Server> _servers = storage.LoadServers();
+    // Создаём отдельную копию списка, чтобы _servers не был привязан к
+    // внутреннему кэшу FileBasedStore (_cached). Это предотвращает возможные
+    // расхождения порядка при перезагрузках кэша.
+    private readonly List<Server> _servers = [.. storage.LoadServers()];
     private readonly ConcurrentDictionary<string, McServerProcess> _processes = new();
     private readonly ConcurrentDictionary<string, Action<ServerStatus>> _statusHandlers = new();
     private readonly ReaderWriterLockSlim _serversLock = new();
