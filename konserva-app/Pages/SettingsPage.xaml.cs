@@ -52,7 +52,11 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         CheckUpdatesBox.IsChecked = config.CheckUpdates;
         UpdateIntervalSeparator.Visibility = config.CheckUpdates ? Visibility.Visible : Visibility.Collapsed;
         UpdateIntervalCard.Visibility = config.CheckUpdates ? Visibility.Visible : Visibility.Collapsed;
+        UpdateIntervalBottomSeparator.Visibility = config.CheckUpdates ? Visibility.Visible : Visibility.Collapsed;
         UpdateIntervalBox.Value = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
+
+        MinimizeToTrayBox.IsChecked = config.MinimizeToTray;
+        ShowTrayIconBox.IsChecked = config.ShowTrayIconAlways;
 
         // Загрузка темы
         var theme = config.Theme ?? "System";
@@ -101,6 +105,8 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
             config.CheckUpdates = CheckUpdatesBox.IsChecked ?? false;
             config.UpdateCheckIntervalHours = (int)Math.Clamp(UpdateIntervalBox.Value ?? 24, 1.0, 168.0);
+            config.MinimizeToTray = MinimizeToTrayBox.IsChecked ?? true;
+            config.ShowTrayIconAlways = ShowTrayIconBox.IsChecked ?? false;
 
             // Сохранение источника загрузки
             if (DownloadSourceComboBox.SelectedItem is ComboBoxItem downloadItem)
@@ -281,6 +287,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     {
         UpdateIntervalSeparator.Visibility = Visibility.Visible;
         UpdateIntervalCard.Visibility = Visibility.Visible;
+        UpdateIntervalBottomSeparator.Visibility = Visibility.Visible;
         AutoSaveSettings();
     }
 
@@ -288,7 +295,30 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     {
         UpdateIntervalSeparator.Visibility = Visibility.Collapsed;
         UpdateIntervalCard.Visibility = Visibility.Collapsed;
+        UpdateIntervalBottomSeparator.Visibility = Visibility.Collapsed;
         AutoSaveSettings();
+    }
+
+    private void MinimizeToTrayBox_Checked(object sender, RoutedEventArgs e)
+    {
+        AutoSaveSettings();
+    }
+
+    private void MinimizeToTrayBox_Unchecked(object sender, RoutedEventArgs e)
+    {
+        AutoSaveSettings();
+    }
+
+    private void ShowTrayIconBox_Checked(object sender, RoutedEventArgs e)
+    {
+        AutoSaveSettings();
+        App.MainWindow?.UpdateTrayIconVisibility();
+    }
+
+    private void ShowTrayIconBox_Unchecked(object sender, RoutedEventArgs e)
+    {
+        AutoSaveSettings();
+        App.MainWindow?.UpdateTrayIconVisibility();
     }
 
     private void UpdateIntervalBox_ValueChanged(object? sender, RoutedEventArgs e)

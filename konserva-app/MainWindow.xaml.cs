@@ -44,6 +44,8 @@ public partial class MainWindow : FluentWindow, IDisposable
         Loaded += MainWindow_Loaded;
         Closing += MainWindow_Closing;
         Closed += MainWindow_Closed;
+        StateChanged += MainWindow_StateChanged;
+        IsVisibleChanged += (_, _) => UpdateTrayIconVisibility();
 
         // Инициализация трея (после InitializeComponent)
         InitTray();
@@ -84,9 +86,11 @@ public partial class MainWindow : FluentWindow, IDisposable
             contextMenu.Items.Add(new Separator());
             contextMenu.Items.Add(exitItem);
 
+            // Создаём NotifyIcon в коде — без XAML, чтобы OnRender не вызвал
+            // автоматическую регистрацию в трее. Управляем Register/Unregister сами.
             _trayIcon = new NotifyIcon
             {
-                Icon = new System.Windows.Media.Imaging.BitmapImage(
+                Icon = new BitmapImage(
                     new Uri("pack://application:,,,/Assets/app-icon.ico")),
                 TooltipText = "Konserva — Minecraft Server Manager",
                 MenuOnRightClick = true,
@@ -94,9 +98,12 @@ public partial class MainWindow : FluentWindow, IDisposable
                 Menu = contextMenu
             };
 
-#pragma warning disable CS8622 // Nullability mismatch due to external assembly annotations
+#pragma warning disable CS8622
             _trayIcon.LeftClick += OnTrayLeftClick;
 #pragma warning restore CS8622
+
+            // Применяем начальную видимость иконки в трее
+            UpdateTrayIconVisibility();
         }
         catch (Exception ex)
         {
@@ -317,15 +324,65 @@ public partial class MainWindow : FluentWindow, IDisposable
     /// <summary>
     /// При закрытии окна сворачиваем в трей вместо выхода.
     /// </summary>
+    private void MainWindow_StateChanged(object? sender, EventArgs e)
+    {
+        UpdateTrayIconVisibility();
+    }
+
+    /// <summary>
+    /// Обновляет видимость иконки в трее в зависимости от настроек и состояния окна.
+    /// </summary>
+    public void UpdateTrayIconVisibility()
+    {
+        if (_trayIcon == null)
+            return;
+
+        try
+        {
+            var config = _config.GetConfig();
+
+            if (config.ShowTrayIconAlways)
+            {
+                // Всегда показываем иконку
+                if (!_trayIcon.IsRegistered)
+                    _trayIcon.Register();
+            }
+            else
+            {
+                // Иконка только когда окно свёрнуто или скрыто
+                if (WindowState == WindowState.Minimized || !IsVisible)
+                {
+                    if (!_trayIcon.IsRegistered)
+                        _trayIcon.Register();
+                }
+                else
+                {
+                    if (_trayIcon.IsRegistered)
+                        _trayIcon.Unregister();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"UpdateTrayIconVisibility error: {ex.Message}", "MainWindow");
+        }
+    }
+
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         // Если приложение действительно завершается (из Exit меню), не отменяем
         if (_isExiting)
             return;
 
-        // Сворачиваем в трей
-        e.Cancel = true;
-        Hide();
+        // Сворачиваем в трей только если настройка включена
+        var config = _config.GetConfig();
+        if (config.MinimizeToTray)
+        {
+            e.Cancel = true;
+            Hide();
+            // После Hide обновляем видимость иконки
+            UpdateTrayIconVisibility();
+        }
     }
 
     /// <summary>

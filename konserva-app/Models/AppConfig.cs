@@ -46,6 +46,16 @@ public class AppConfig
     public int UpdateCheckIntervalHours { get; set; } = 24;
 
     /// <summary>
+    /// Сворачивать в трей при закрытии окна
+    /// </summary>
+    public bool MinimizeToTray { get; set; } = true;
+
+    /// <summary>
+    /// Показывать иконку в трее всегда (даже когда окно развёрнуто)
+    /// </summary>
+    public bool ShowTrayIconAlways { get; set; } = false;
+
+    /// <summary>
     /// Источник загрузки: VanillaApi (официальный) или BMCLAPI (зеркало)
     /// </summary>
     public string DownloadSource { get; set; } = "VanillaApi";

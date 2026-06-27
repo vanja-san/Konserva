@@ -61,6 +61,8 @@
                     Value="12"/>
             <Setter Property="Foreground"
                     Value="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
+            <Setter Property="TextWrapping"
+                    Value="Wrap"/>
         </Style>
 
         <!--  Конвертер для позиционирования в группе слитных карточек  -->
@@ -153,13 +155,13 @@
                                    Fill="{ui:ThemeResource ControlElevationBorderBrush}"
                                    Visibility="Collapsed"/>
 
-                        <!--  Карточка: Интервал проверки (нижняя — скругление снизу)  -->
+                        <!--  Карточка: Интервал проверки (середина)  -->
                         <Border x:Name="UpdateIntervalCard"
                                 Padding="16,12"
                                 Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
                                 BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
-                                BorderThickness="1,0,1,1"
-                                CornerRadius="0,0,8,8"
+                                BorderThickness="1,0,1,0"
+                                CornerRadius="0"
                                 Visibility="Collapsed">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0"
@@ -177,6 +179,64 @@
                                     Maximum="168"
                                     SmallChange="1"
                                     ValueChanged="UpdateIntervalBox_ValueChanged"/>
+                            </Grid>
+                        </Border>
+
+                        <!--  Разделитель (показан, когда интервал виден)  -->
+                        <Rectangle x:Name="UpdateIntervalBottomSeparator"
+                                   Height="1"
+                                   Fill="{ui:ThemeResource ControlElevationBorderBrush}"
+                                   Visibility="Collapsed"/>
+
+                        <!--  Карточка: Сворачивать в трей (середина)  -->
+                        <Border
+                            Padding="16,12"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                            BorderThickness="1,0,1,0"
+                            CornerRadius="0">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0"
+                                            VerticalAlignment="Center">
+                                    <ui:TextBlock Style="{StaticResource SettingTitle}"
+                                                  Text="{loc:Loc Settings_MinimizeToTray}"/>
+                                    <ui:TextBlock Style="{StaticResource SettingDescription}"
+                                                  Text="{loc:Loc Settings_MinimizeToTray_Desc}"/>
+                                </StackPanel>
+                                <CheckBox
+                                    x:Name="MinimizeToTrayBox"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Checked="MinimizeToTrayBox_Checked"
+                                    Unchecked="MinimizeToTrayBox_Unchecked"/>
+                            </Grid>
+                        </Border>
+
+                        <!--  Разделитель  -->
+                        <Rectangle Height="1"
+                                   Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
+
+                        <!--  Карточка: Иконка в трее всегда (нижняя — скругление снизу)  -->
+                        <Border
+                            Padding="16,12"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                            BorderThickness="1,0,1,1"
+                            CornerRadius="0,0,8,8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0"
+                                            VerticalAlignment="Center">
+                                    <ui:TextBlock Style="{StaticResource SettingTitle}"
+                                                  Text="{loc:Loc Settings_ShowTrayIcon}"/>
+                                    <ui:TextBlock Style="{StaticResource SettingDescription}"
+                                                  Text="{loc:Loc Settings_ShowTrayIcon_Desc}"/>
+                                </StackPanel>
+                                <CheckBox
+                                    x:Name="ShowTrayIconBox"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Checked="ShowTrayIconBox_Checked"
+                                    Unchecked="ShowTrayIconBox_Unchecked"/>
                             </Grid>
                         </Border>
                     </StackPanel>
