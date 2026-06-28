@@ -12,6 +12,8 @@ public class FakeServerStorageService : IServerStorageService
 {
     private readonly List<Server> _servers = [];
 
+    public string ServersPath => Path.Combine(Path.GetTempPath(), "konserva_test_servers");
+
     public List<Server> LoadServers() => [.. _servers];
     public void SaveServers(List<Server> servers)
     {

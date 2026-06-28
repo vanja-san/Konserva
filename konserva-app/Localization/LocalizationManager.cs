@@ -155,7 +155,7 @@ public static class LocalizationManager
 
     public static bool HasKey(string key)
     {
-        if (_translations.TryGetValue(CurrentCulture.Name, out var translations))
+        if (_translations.TryGetValue(CurrentCulture.TwoLetterISOLanguageName, out var translations))
         {
             return translations.ContainsKey(key);
         }
@@ -164,7 +164,7 @@ public static class LocalizationManager
 
     public static IEnumerable<string> GetAllKeys()
     {
-        if (_translations.TryGetValue(CurrentCulture.Name, out var translations))
+        if (_translations.TryGetValue(CurrentCulture.TwoLetterISOLanguageName, out var translations))
         {
             return translations.Keys;
         }
@@ -223,7 +223,7 @@ public class LocExtension : MarkupExtension
             return value;
         }
 
-        var defaultTranslations = LocalizationManager.GetDefaultTranslationsForCulture(LocalizationManager.CurrentCulture.Name);
+        var defaultTranslations = LocalizationManager.GetDefaultTranslationsForCulture(LocalizationManager.CurrentCulture.TwoLetterISOLanguageName);
         if (defaultTranslations != null && defaultTranslations.TryGetValue(Key, out var defaultValue))
         {
             return defaultValue;

@@ -20,6 +20,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     private readonly JavaManagementService _javaService = new(configService ?? App.ConfigService);
     private bool _isUpdating; // Флаг для предотвращения рекурсивного сохранения
     private bool _isLoading = true; // Флаг загрузки страницы
+    private int _updateIntervalHours = 24; // Текущий интервал проверки обновлений (часы)
 
     public SettingsPage() : this(null)
     {
@@ -49,11 +50,14 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         JavaItemsControl.ItemsSource = config.JavaInstallations;
         UpdateJavaEmptyVisibility();
 
-        CheckUpdatesBox.IsChecked = config.CheckUpdates;
-        UpdateIntervalSeparator.Visibility = config.CheckUpdates ? Visibility.Visible : Visibility.Collapsed;
-        UpdateIntervalCard.Visibility = config.CheckUpdates ? Visibility.Visible : Visibility.Collapsed;
-        UpdateIntervalBottomSeparator.Visibility = config.CheckUpdates ? Visibility.Visible : Visibility.Collapsed;
-        UpdateIntervalBox.Value = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
+        CheckUpdatesOnLaunchItem.IsChecked = !config.CheckUpdates;
+        CheckUpdatesScheduledItem.IsChecked = config.CheckUpdates;
+        CheckUpdatesModeButton.Content = config.CheckUpdates
+            ? LocalizationManager.Get("Settings_CheckUpdates_Scheduled")
+            : LocalizationManager.Get("Settings_CheckUpdates_OnLaunch");
+        UpdateCheckModeVisibility(config.CheckUpdates);
+        _updateIntervalHours = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
+        UpdateIntervalButton.Content = FormatInterval(_updateIntervalHours);
 
         MinimizeToTrayBox.IsChecked = config.MinimizeToTray;
         ShowTrayIconBox.IsChecked = config.ShowTrayIconAlways;
@@ -103,8 +107,8 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
             var config = _configService.GetConfig();
             var languageChanged = false;
 
-            config.CheckUpdates = CheckUpdatesBox.IsChecked ?? false;
-            config.UpdateCheckIntervalHours = (int)Math.Clamp(UpdateIntervalBox.Value ?? 24, 1.0, 168.0);
+            config.CheckUpdates = CheckUpdatesScheduledItem.IsChecked;
+            config.UpdateCheckIntervalHours = _updateIntervalHours;
             config.MinimizeToTray = MinimizeToTrayBox.IsChecked ?? true;
             config.ShowTrayIconAlways = ShowTrayIconBox.IsChecked ?? false;
 
@@ -158,15 +162,11 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     }
 
     /// <summary>
-    /// Показ уведомления об успешном сохранении (через Snackbar)
+    /// Показ уведомления об успешном сохранении (через бадж справа сверху)
     /// </summary>
     private void ShowSaveNotification()
     {
-        App.MainWindow?.ShowSnackbar(
-            LocalizationManager.Get("Message_SettingsSaved"),
-            string.Empty,
-            ControlAppearance.Success,
-            2);
+        App.MainWindow?.ShowSaveBadge();
     }
 
     /// <summary>
@@ -283,20 +283,36 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         AutoSaveSettings();
     }
 
-    private void CheckUpdatesBox_Checked(object sender, RoutedEventArgs e)
+    private void CheckUpdatesModeMenuItem_Click(object sender, RoutedEventArgs e)
     {
-        UpdateIntervalSeparator.Visibility = Visibility.Visible;
-        UpdateIntervalCard.Visibility = Visibility.Visible;
-        UpdateIntervalBottomSeparator.Visibility = Visibility.Visible;
-        AutoSaveSettings();
+        if (sender is System.Windows.Controls.MenuItem item && item.Tag is string tag)
+        {
+            var isScheduled = tag == "Scheduled";
+
+            // Обновляем checked-состояние пунктов меню
+            CheckUpdatesOnLaunchItem.IsChecked = !isScheduled;
+            CheckUpdatesScheduledItem.IsChecked = isScheduled;
+
+            // Обновляем текст на кнопке
+            CheckUpdatesModeButton.Content = isScheduled
+                ? LocalizationManager.Get("Settings_CheckUpdates_Scheduled")
+                : LocalizationManager.Get("Settings_CheckUpdates_OnLaunch");
+
+            // Показываем/скрываем настройку интервала
+            UpdateCheckModeVisibility(isScheduled);
+
+            AutoSaveSettings();
+        }
     }
 
-    private void CheckUpdatesBox_Unchecked(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Показывает или скрывает карточку выбора интервала в зависимости от режима.
+    /// </summary>
+    private void UpdateCheckModeVisibility(bool isScheduled)
     {
-        UpdateIntervalSeparator.Visibility = Visibility.Collapsed;
-        UpdateIntervalCard.Visibility = Visibility.Collapsed;
-        UpdateIntervalBottomSeparator.Visibility = Visibility.Collapsed;
-        AutoSaveSettings();
+        var visibility = isScheduled ? Visibility.Visible : Visibility.Collapsed;
+        UpdateIntervalSeparator.Visibility = visibility;
+        UpdateIntervalCard.Visibility = visibility;
     }
 
     private void MinimizeToTrayBox_Checked(object sender, RoutedEventArgs e)
@@ -321,9 +337,22 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         App.MainWindow?.UpdateTrayIconVisibility();
     }
 
-    private void UpdateIntervalBox_ValueChanged(object? sender, RoutedEventArgs e)
+    private void UpdateIntervalMenuItem_Click(object sender, RoutedEventArgs e)
     {
-        AutoSaveSettings();
+        if (sender is System.Windows.Controls.MenuItem item && item.Tag is string tag && int.TryParse(tag, out var hours))
+        {
+            _updateIntervalHours = hours;
+            UpdateIntervalButton.Content = FormatInterval(hours);
+            AutoSaveSettings();
+        }
+    }
+
+    private static string FormatInterval(int hours)
+    {
+        if (hours <= 24)
+            return $"{hours} ч";
+        else
+            return $"{hours / 24} д";
     }
 
     private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)

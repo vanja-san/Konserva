@@ -7,15 +7,17 @@ namespace Konserva.Services;
 public class ServerStorageService : IServerStorageService, IDisposable
 {
     private readonly FileBasedStore<List<Server>> _store;
+    private readonly string _serversPath;
     private readonly string _serversIndexPath;
     private bool _disposed;
 
-    public ServerStorageService()
+    public string ServersPath => _serversPath;
+
+    public ServerStorageService(IConfigService configService)
     {
-        var exeDir = AppContext.BaseDirectory;
-        var serversDir = Path.Combine(exeDir, "Servers");
-        Directory.CreateDirectory(serversDir);
-        _serversIndexPath = Path.Combine(serversDir, "servers.json");
+        _serversPath = configService.GetConfig().ServersDirectory;
+        Directory.CreateDirectory(_serversPath);
+        _serversIndexPath = Path.Combine(_serversPath, "servers.json");
         _store = new FileBasedStore<List<Server>>(_serversIndexPath);
     }
 
@@ -70,7 +72,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
         servers.Remove(serverToDelete);
         _store.Save(servers);
 
-        TryDeleteServerFolder(serverToDelete);
+        TryDeleteServerFolder(serverToDelete, _serversPath);
     }
 
     private static List<Server> PostProcessServers(List<Server> servers)
@@ -85,12 +87,12 @@ public class ServerStorageService : IServerStorageService, IDisposable
         return servers;
     }
 
-    private static void TryDeleteServerFolder(Server? server)
+    private static void TryDeleteServerFolder(Server? server, string serversPath)
     {
         if (server == null) return;
 
         // Fire-and-forget с обработкой необработанных исключений
-        _ = TryDeleteServerFolderAsync(server).ContinueWith(t =>
+        _ = TryDeleteServerFolderAsync(server, serversPath).ContinueWith(t =>
         {
             if (t.IsFaulted && t.Exception != null)
             {
@@ -99,7 +101,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
         }, TaskScheduler.Default);
     }
 
-    private static async Task TryDeleteServerFolderAsync(Server server)
+    private static async Task TryDeleteServerFolderAsync(Server server, string serversPath)
     {
         if (string.IsNullOrWhiteSpace(server.Path))
         {
@@ -115,7 +117,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
         }
 
         // Проверяем что путь находится внутри директории Servers
-        if (!PathValidator.IsPathSafe(server.Path, Constants.ServersPath))
+        if (!PathValidator.IsPathSafe(server.Path, serversPath))
         {
             Logger.Warning($"Server path is outside allowed directory: {server.Path}", "ServerStorageService");
             return;

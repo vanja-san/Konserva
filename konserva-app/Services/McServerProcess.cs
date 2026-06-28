@@ -66,26 +66,22 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     /// </summary>
     public void Start()
     {
-        _ = Task.Run(async () =>
-        {
-            try
+        Task.Run(() => StartAsync(CancellationToken.None))
+            .ContinueWith(t =>
             {
-                await StartAsync();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"[Start] Unhandled exception: {ex.Message}", ex, "McServerProcess");
-            }
-        });
+                if (t.Exception?.InnerException is { } ex)
+                    Logger.Error($"[Start] Unhandled exception: {ex.Message}", ex, "McServerProcess");
+            }, TaskContinuationOptions.OnlyOnFaulted);
     }
 
     /// <summary>
     /// Запустить сервер
     /// </summary>
-    public async Task StartAsync()
+    public async Task StartAsync(CancellationToken ct = default)
     {
         Logger.Info($"[StartAsync] Starting for server {Server.Name}", "McServerProcess");
 
+        CancellationToken linkedCt;
         lock (_startStopLock)
         {
             // Если уже запускается или запущен — выходим
@@ -98,12 +94,17 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             _isStarting = true;
             _startCts?.Cancel();
             _startCts = new CancellationTokenSource();
+
+            // Объединяем внешний токен с внутренним
+            linkedCt = ct == CancellationToken.None
+                ? _startCts.Token
+                : CancellationTokenSource.CreateLinkedTokenSource(ct, _startCts.Token).Token;
         }
 
         try
         {
             Logger.Info($"[StartAsync] Calling StartInternalAsync for {Server.Name}", "McServerProcess");
-            await StartInternalAsync(_startCts.Token);
+            await StartInternalAsync(linkedCt);
         }
         catch (Exception ex)
         {
@@ -430,7 +431,11 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                     return new JavaCheckResult { Success = false, Error = "Не удалось запустить процесс java" };
 
                 versionOutput = process.StandardError.ReadToEnd();
-                process.WaitForExit(Constants.JavaCheckTimeoutMs);
+                if (!process.WaitForExit(Constants.JavaCheckTimeoutMs))
+                {
+                    try { process.Kill(); } catch { /* ignore */ }
+                    return new JavaCheckResult { Success = false, Error = "Проверка Java зависла (таймаут)" };
+                }
 
                 if (process.ExitCode != 0)
                     return new JavaCheckResult { Success = false, Error = $"java вернула код ошибки {process.ExitCode}" };
@@ -483,7 +488,11 @@ public partial class McServerProcess(Server server, IConfigService? configServic
                     return new JavaCheckResult { Success = false, Error = "Не удалось запустить процесс" };
 
                 versionOutput = process.StandardError.ReadToEnd();
-                process.WaitForExit(Constants.JavaCheckTimeoutMs);
+                if (!process.WaitForExit(Constants.JavaCheckTimeoutMs))
+                {
+                    try { process.Kill(); } catch { /* ignore */ }
+                    return new JavaCheckResult { Success = false, Error = "Проверка Java зависла (таймаут)" };
+                }
 
                 if (process.ExitCode != 0)
                     return new JavaCheckResult { Success = false, Error = $"Java вернула код ошибки {process.ExitCode}" };

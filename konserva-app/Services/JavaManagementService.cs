@@ -300,7 +300,12 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
             }
 
             var versionOutput = process.StandardError.ReadToEnd();
-            process.WaitForExit(Constants.JavaCheckTimeoutMs);
+            if (!process.WaitForExit(Constants.JavaCheckTimeoutMs))
+            {
+                try { process.Kill(); } catch { /* ignore */ }
+                Logger.Warning("Java version check timed out, process killed", "JavaManagementService");
+                return null;
+            }
 
             if (process.ExitCode != 0)
             {

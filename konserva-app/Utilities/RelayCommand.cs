@@ -104,6 +104,10 @@ public class AsyncRelayCommand : ICommand
     {
       await _execute(parameter);
     }
+    catch (Exception ex)
+    {
+      Logger.Error($"AsyncRelayCommand failed: {ex.Message}", ex, "RelayCommand");
+    }
     finally
     {
       _isExecuting = false;
@@ -152,6 +156,10 @@ public class AsyncRelayCommand<T> : ICommand
     try
     {
       await _execute(parameter is T t ? t : default);
+    }
+    catch (Exception ex)
+    {
+      Logger.Error($"AsyncRelayCommand<{typeof(T).Name}> failed: {ex.Message}", ex, "RelayCommand");
     }
     finally
     {

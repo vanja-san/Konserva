@@ -96,7 +96,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
 
         RemoveStoppedOrErroredProcess(id, existingProcess);
         // fire-and-forget для синхронного вызова
-        _ = StartServerCoreAsync(server);
+        _ = StartServerCoreAsync(server, CancellationToken.None);
     }
 
     public async Task StartServerAsync(string id, CancellationToken ct = default)
@@ -109,7 +109,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             return;
 
         RemoveStoppedOrErroredProcess(id, existingProcess);
-        await StartServerCoreAsync(server);
+        await StartServerCoreAsync(server, ct);
     }
 
     /// <summary>
@@ -185,7 +185,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
     /// <summary>
     /// Запускает сервер в фоне. Возвращает Task, который завершается после попытки запуска.
     /// </summary>
-    private async Task StartServerCoreAsync(Server server)
+    private async Task StartServerCoreAsync(Server server, CancellationToken ct)
     {
         // Очищаем предыдущий процесс (если был), чтобы избежать утечки событий
         CleanupProcess(server.Id);
@@ -232,8 +232,8 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
 
         try
         {
-            Logger.Info($"[StartServerInternal] Calling process.Start() for {server.Name}", "McServerManager");
-            await Task.Run(() => process.Start());
+            Logger.Info($"[StartServerInternal] Calling process.StartAsync() for {server.Name}", "McServerManager");
+            await process.StartAsync(ct);
 
             // Ждём немного для проверки статуса (ошибка может произойти асинхронно)
             await Task.Delay(500);
@@ -419,7 +419,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         // удаляем папку сервера
         if (!string.IsNullOrWhiteSpace(server.Path) &&
             !PathValidator.ContainsTraversalSequences(server.Path) &&
-            PathValidator.IsPathSafe(server.Path, Constants.ServersPath) &&
+            PathValidator.IsPathSafe(server.Path, storage.ServersPath) &&
             Directory.Exists(server.Path))
         {
             try
@@ -533,7 +533,12 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
                     if (proc.Id == Environment.ProcessId) continue;
 
                     // MainModule работает корректно с кириллицей в путях (в отличие от wmic)
-                    if (proc.MainModule?.FileName?.Contains(normalizedPath, StringComparison.OrdinalIgnoreCase) == true)
+                    // Используем StartsWith вместо Contains, чтобы избежать ложных срабатываний
+                    // когда имя папки сервера является подстрокой другой папки
+                    var fileName = proc.MainModule?.FileName;
+                    if (fileName != null &&
+                        (fileName.StartsWith(normalizedPath + "\\", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(fileName, normalizedPath, StringComparison.OrdinalIgnoreCase)))
                     {
                         Logger.Info($"[KillZombieProcesses] Killing zombie PID={proc.Id} for {serverPath}", "McServerManager");
                         proc.Kill(entireProcessTree: true);

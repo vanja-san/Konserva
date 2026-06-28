@@ -406,9 +406,11 @@ public partial class ServerDetailPage : Page, IDisposable
     {
         try
         {
+            Logger.Info($"Players online: {players}", "ServerDetailPage");
+
             await this.InvokeAsync(() =>
             {
-                // Здесь обновляем UI с количеством игроков
+                // TODO: Обновлять UI элемент с количеством игроков, когда он будет добавлен
             });
         }
         catch (Exception ex)

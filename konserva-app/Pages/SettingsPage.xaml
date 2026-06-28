@@ -12,7 +12,7 @@
     <Page.Resources>
         <!--  Стиль заголовка группы карточек  -->
         <Style x:Key="CardGroupHeader"
-               TargetType="ui:TextBlock">
+                TargetType="ui:TextBlock">
             <Setter Property="FontSize"
                     Value="14"/>
             <Setter Property="FontWeight"
@@ -23,7 +23,7 @@
 
         <!--  Стиль заголовка настройки  -->
         <Style x:Key="SettingTitle"
-               TargetType="ui:TextBlock">
+                TargetType="ui:TextBlock">
             <Setter Property="FontSize"
                     Value="14"/>
         </Style>
@@ -32,31 +32,34 @@
 
         <!--  Анимация волны точек для кнопки проверки обновлений  -->
         <Storyboard x:Key="UpdateWaveDotsAnimation"
-                    RepeatBehavior="Forever">
-            <DoubleAnimation Storyboard.TargetName="UpdateDot1"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0.2"
-                             To="1.0"
-                             Duration="0:0:0.6"
-                             AutoReverse="True"
-                             BeginTime="0:0:0.0"/>
-            <DoubleAnimation Storyboard.TargetName="UpdateDot2"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0.2"
-                             To="1.0"
-                             Duration="0:0:0.6"
-                             AutoReverse="True"
-                             BeginTime="0:0:0.2"/>
-            <DoubleAnimation Storyboard.TargetName="UpdateDot3"
-                             Storyboard.TargetProperty="Opacity"
-                             From="0.2"
-                             To="1.0"
-                             Duration="0:0:0.6"
-                             AutoReverse="True"
-                             BeginTime="0:0:0.4"/>
+                RepeatBehavior="Forever">
+            <DoubleAnimation
+                AutoReverse="True"
+                BeginTime="0:0:0.0"
+                Storyboard.TargetName="UpdateDot1"
+                Storyboard.TargetProperty="Opacity"
+                From="0.2"
+                To="1.0"
+                Duration="0:0:0.6"/>
+            <DoubleAnimation
+                AutoReverse="True"
+                BeginTime="0:0:0.2"
+                Storyboard.TargetName="UpdateDot2"
+                Storyboard.TargetProperty="Opacity"
+                From="0.2"
+                To="1.0"
+                Duration="0:0:0.6"/>
+            <DoubleAnimation
+                AutoReverse="True"
+                BeginTime="0:0:0.4"
+                Storyboard.TargetName="UpdateDot3"
+                Storyboard.TargetProperty="Opacity"
+                From="0.2"
+                To="1.0"
+                Duration="0:0:0.6"/>
         </Storyboard>
         <Style x:Key="SettingDescription"
-               TargetType="ui:TextBlock">
+                TargetType="ui:TextBlock">
             <Setter Property="FontSize"
                     Value="12"/>
             <Setter Property="Foreground"
@@ -70,7 +73,7 @@
     </Page.Resources>
 
     <Grid Margin="16,12,0,16"
-          RowDefinitions="*,Auto">
+            RowDefinitions="*,Auto">
         <ScrollViewer
             Grid.Row="0"
             Padding="{Binding ComputedVerticalScrollBarVisibility, RelativeSource={RelativeSource Self}, Converter={StaticResource ScrollBarPadding}, ConverterParameter=16}"
@@ -82,7 +85,7 @@
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <ui:TextBlock Style="{StaticResource CardGroupHeader}"
-                                  Text="{loc:Loc Settings_Servers}"/>
+                            Text="{loc:Loc Settings_Servers}"/>
 
                     <StackPanel>
                         <!--  Карточка: Папка серверов (верхняя — скругление сверху)  -->
@@ -94,11 +97,11 @@
                             CornerRadius="8,8,0,0">
                             <Grid ColumnDefinitions="200,*,Auto">
                                 <StackPanel Grid.Column="0"
-                                            VerticalAlignment="Center">
+                                        VerticalAlignment="Center">
                                     <ui:TextBlock Style="{StaticResource SettingTitle}"
-                                                  Text="{loc:Loc Settings_Servers_Dir}"/>
+                                            Text="{loc:Loc Settings_Servers_Dir}"/>
                                     <ui:TextBlock Style="{StaticResource SettingDescription}"
-                                                  Text="{loc:Loc Settings_Servers_DirDesc}"/>
+                                            Text="{loc:Loc Settings_Servers_DirDesc}"/>
                                 </StackPanel>
                                 <ui:TextBlock
                                     x:Name="ServersFolderPath"
@@ -116,14 +119,14 @@
                                     Click="ChangeServersPath_Click"
                                     ToolTip="{loc:Loc Settings_Servers_Browse}">
                                     <ui:SymbolIcon FontSize="20"
-                                                   Symbol="FolderOpen20"/>
+                                            Symbol="FolderOpen20"/>
                                 </ui:Button>
                             </Grid>
                         </Border>
 
                         <!--  Разделитель  -->
                         <Rectangle Height="1"
-                                   Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
+                                Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
 
                         <!--  Карточка: Проверка обновлений (середина)  -->
                         <Border
@@ -134,59 +137,106 @@
                             CornerRadius="0">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0"
-                                            VerticalAlignment="Center">
+                                        VerticalAlignment="Center">
                                     <ui:TextBlock Style="{StaticResource SettingTitle}"
-                                                  Text="{loc:Loc Settings_CheckUpdates}"/>
+                                            Text="{loc:Loc Settings_CheckUpdates}"/>
                                     <ui:TextBlock Style="{StaticResource SettingDescription}"
-                                                  Text="{loc:Loc Settings_CheckUpdates_Desc}"/>
+                                            Text="{loc:Loc Settings_CheckUpdates_Desc}"/>
                                 </StackPanel>
-                                <CheckBox
-                                    x:Name="CheckUpdatesBox"
+                                <ui:DropDownButton
+                                    x:Name="CheckUpdatesModeButton"
                                     Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Checked="CheckUpdatesBox_Checked"
-                                    Unchecked="CheckUpdatesBox_Unchecked"/>
+                                    Content="{loc:Loc Settings_CheckUpdates_OnLaunch}">
+                                    <ui:DropDownButton.Flyout>
+                                        <ContextMenu>
+                                            <MenuItem
+                                                x:Name="CheckUpdatesOnLaunchItem"
+                                                Click="CheckUpdatesModeMenuItem_Click"
+                                                Header="{loc:Loc Settings_CheckUpdates_OnLaunch}"
+                                                Tag="OnLaunch"/>
+                                            <MenuItem
+                                                x:Name="CheckUpdatesScheduledItem"
+                                                Click="CheckUpdatesModeMenuItem_Click"
+                                                Header="{loc:Loc Settings_CheckUpdates_Scheduled}"
+                                                Tag="Scheduled"/>
+                                        </ContextMenu>
+                                    </ui:DropDownButton.Flyout>
+                                </ui:DropDownButton>
                             </Grid>
                         </Border>
 
                         <!--  Разделитель (показан, когда чекбокс включён)  -->
-                        <Rectangle x:Name="UpdateIntervalSeparator"
-                                   Height="1"
-                                   Fill="{ui:ThemeResource ControlElevationBorderBrush}"
-                                   Visibility="Collapsed"/>
+                        <Rectangle
+                            x:Name="UpdateIntervalSeparator"
+                            Height="1"
+                            Fill="{ui:ThemeResource ControlElevationBorderBrush}"
+                            Visibility="Collapsed"/>
 
                         <!--  Карточка: Интервал проверки (середина)  -->
-                        <Border x:Name="UpdateIntervalCard"
-                                Padding="16,12"
-                                Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
-                                BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
-                                BorderThickness="1,0,1,0"
-                                CornerRadius="0"
-                                Visibility="Collapsed">
+                        <Border
+                            x:Name="UpdateIntervalCard"
+                            Padding="16,12"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                            BorderThickness="1,0,1,0"
+                            CornerRadius="0"
+                            Visibility="Collapsed">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0"
-                                            VerticalAlignment="Center">
+                                        VerticalAlignment="Center">
                                     <ui:TextBlock Style="{StaticResource SettingTitle}"
-                                                  Text="{loc:Loc Settings_CheckUpdates_Interval}"/>
+                                            Text="{loc:Loc Settings_CheckUpdates_Interval}"/>
                                     <ui:TextBlock Style="{StaticResource SettingDescription}"
-                                                  Text="{loc:Loc Settings_CheckUpdates_Interval_Desc}"/>
+                                            Text="{loc:Loc Settings_CheckUpdates_Interval_Desc}"/>
                                 </StackPanel>
-                                <ui:NumberBox
-                                    x:Name="UpdateIntervalBox"
+                                <ui:DropDownButton
+                                    x:Name="UpdateIntervalButton"
                                     Grid.Column="1"
-                                    Width="100"
-                                    Minimum="1"
-                                    Maximum="168"
-                                    SmallChange="1"
-                                    ValueChanged="UpdateIntervalBox_ValueChanged"/>
+                                    Content="24 ч">
+                                    <ui:DropDownButton.Flyout>
+                                        <ContextMenu>
+                                            <MenuItem
+                                                Click="UpdateIntervalMenuItem_Click"
+                                                Header="1 ч"
+                                                Tag="1"/>
+                                            <MenuItem
+                                                Click="UpdateIntervalMenuItem_Click"
+                                                Header="2 ч"
+                                                Tag="2"/>
+                                            <MenuItem
+                                                Click="UpdateIntervalMenuItem_Click"
+                                                Header="6 ч"
+                                                Tag="6"/>
+                                            <MenuItem
+                                                Click="UpdateIntervalMenuItem_Click"
+                                                Header="12 ч"
+                                                Tag="12"/>
+                                            <MenuItem
+                                                Click="UpdateIntervalMenuItem_Click"
+                                                Header="24 ч"
+                                                Tag="24"/>
+                                            <MenuItem
+                                                Click="UpdateIntervalMenuItem_Click"
+                                                Header="2 д"
+                                                Tag="48"/>
+                                            <MenuItem
+                                                Click="UpdateIntervalMenuItem_Click"
+                                                Header="3 д"
+                                                Tag="72"/>
+                                            <MenuItem
+                                                Click="UpdateIntervalMenuItem_Click"
+                                                Header="7 д"
+                                                Tag="168"/>
+                                        </ContextMenu>
+                                    </ui:DropDownButton.Flyout>
+                                </ui:DropDownButton>
                             </Grid>
                         </Border>
 
-                        <!--  Разделитель (показан, когда интервал виден)  -->
-                        <Rectangle x:Name="UpdateIntervalBottomSeparator"
-                                   Height="1"
-                                   Fill="{ui:ThemeResource ControlElevationBorderBrush}"
-                                   Visibility="Collapsed"/>
+                        <!--  Разделитель между секцией проверки обновлений и треем  -->
+                        <Rectangle
+                            Height="1"
+                            Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
 
                         <!--  Карточка: Сворачивать в трей (середина)  -->
                         <Border
@@ -197,11 +247,11 @@
                             CornerRadius="0">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0"
-                                            VerticalAlignment="Center">
+                                        VerticalAlignment="Center">
                                     <ui:TextBlock Style="{StaticResource SettingTitle}"
-                                                  Text="{loc:Loc Settings_MinimizeToTray}"/>
+                                            Text="{loc:Loc Settings_MinimizeToTray}"/>
                                     <ui:TextBlock Style="{StaticResource SettingDescription}"
-                                                  Text="{loc:Loc Settings_MinimizeToTray_Desc}"/>
+                                            Text="{loc:Loc Settings_MinimizeToTray_Desc}"/>
                                 </StackPanel>
                                 <CheckBox
                                     x:Name="MinimizeToTrayBox"
@@ -214,7 +264,7 @@
 
                         <!--  Разделитель  -->
                         <Rectangle Height="1"
-                                   Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
+                                Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
 
                         <!--  Карточка: Иконка в трее всегда (нижняя — скругление снизу)  -->
                         <Border
@@ -225,11 +275,11 @@
                             CornerRadius="0,0,8,8">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0"
-                                            VerticalAlignment="Center">
+                                        VerticalAlignment="Center">
                                     <ui:TextBlock Style="{StaticResource SettingTitle}"
-                                                  Text="{loc:Loc Settings_ShowTrayIcon}"/>
+                                            Text="{loc:Loc Settings_ShowTrayIcon}"/>
                                     <ui:TextBlock Style="{StaticResource SettingDescription}"
-                                                  Text="{loc:Loc Settings_ShowTrayIcon_Desc}"/>
+                                            Text="{loc:Loc Settings_ShowTrayIcon_Desc}"/>
                                 </StackPanel>
                                 <CheckBox
                                     x:Name="ShowTrayIconBox"
@@ -247,7 +297,7 @@
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <Grid Margin="0,0,0,8"
-                          ColumnDefinitions="*,Auto">
+                            ColumnDefinitions="*,Auto">
                         <ui:TextBlock
                             Grid.Column="0"
                             VerticalAlignment="Center"
@@ -270,7 +320,7 @@
                     <!--  Список Java — слитные карточки как в остальных группах  -->
                     <StackPanel>
                         <ItemsControl x:Name="JavaItemsControl"
-                                      AlternationCount="9999">
+                                AlternationCount="9999">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel>
@@ -281,25 +331,25 @@
                                             Tag="{Binding}">
                                             <Border.CornerRadius>
                                                 <MultiBinding Converter="{StaticResource CardGroupPositionConverter}"
-                                                              ConverterParameter="cornerRadius">
+                                                        ConverterParameter="cornerRadius">
                                                     <Binding Path="(ItemsControl.AlternationIndex)"
-                                                             RelativeSource="{RelativeSource AncestorType=ContentPresenter}"/>
+                                                            RelativeSource="{RelativeSource AncestorType=ContentPresenter}"/>
                                                     <Binding Path="Items.Count"
-                                                             RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                            RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
                                                 </MultiBinding>
                                             </Border.CornerRadius>
                                             <Border.BorderThickness>
                                                 <MultiBinding Converter="{StaticResource CardGroupPositionConverter}"
-                                                              ConverterParameter="borderThickness">
+                                                        ConverterParameter="borderThickness">
                                                     <Binding Path="(ItemsControl.AlternationIndex)"
-                                                             RelativeSource="{RelativeSource AncestorType=ContentPresenter}"/>
+                                                            RelativeSource="{RelativeSource AncestorType=ContentPresenter}"/>
                                                     <Binding Path="Items.Count"
-                                                             RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                            RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
                                                 </MultiBinding>
                                             </Border.BorderThickness>
                                             <Grid ColumnDefinitions="*,Auto">
                                                 <StackPanel Grid.Column="0"
-                                                            VerticalAlignment="Center">
+                                                        VerticalAlignment="Center">
                                                     <ui:TextBlock
                                                         FontSize="13"
                                                         FontWeight="Medium"
@@ -334,14 +384,14 @@
 
                                         <!--  Разделитель между карточками (скрыт у последней)  -->
                                         <Rectangle Height="1"
-                                                   Fill="{ui:ThemeResource ControlElevationBorderBrush}">
+                                                Fill="{ui:ThemeResource ControlElevationBorderBrush}">
                                             <Rectangle.Visibility>
                                                 <MultiBinding Converter="{StaticResource CardGroupPositionConverter}"
-                                                              ConverterParameter="separator">
+                                                        ConverterParameter="separator">
                                                     <Binding Path="(ItemsControl.AlternationIndex)"
-                                                             RelativeSource="{RelativeSource AncestorType=ContentPresenter}"/>
+                                                            RelativeSource="{RelativeSource AncestorType=ContentPresenter}"/>
                                                     <Binding Path="Items.Count"
-                                                             RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                            RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
                                                 </MultiBinding>
                                             </Rectangle.Visibility>
                                         </Rectangle>
@@ -365,7 +415,7 @@
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <ui:TextBlock Style="{StaticResource CardGroupHeader}"
-                                  Text="{loc:Loc Settings_Appearance}"/>
+                            Text="{loc:Loc Settings_Appearance}"/>
 
                     <StackPanel>
                         <!--  Карточка: Тема (верхняя — скругление сверху)  -->
@@ -377,11 +427,11 @@
                             CornerRadius="8,8,0,0">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0"
-                                            VerticalAlignment="Center">
+                                        VerticalAlignment="Center">
                                     <ui:TextBlock Style="{StaticResource SettingTitle}"
-                                                  Text="{loc:Loc Settings_Theme}"/>
+                                            Text="{loc:Loc Settings_Theme}"/>
                                     <ui:TextBlock Style="{StaticResource SettingDescription}"
-                                                  Text="{loc:Loc Settings_Theme_Desc}"/>
+                                            Text="{loc:Loc Settings_Theme_Desc}"/>
                                 </StackPanel>
                                 <ComboBox
                                     x:Name="ThemeComboBox"
@@ -391,18 +441,18 @@
                                     ContextMenu="{x:Null}"
                                     SelectionChanged="ThemeComboBox_SelectionChanged">
                                     <ComboBoxItem Content="{loc:Loc Settings_Theme_System}"
-                                                  Tag="System"/>
+                                            Tag="System"/>
                                     <ComboBoxItem Content="{loc:Loc Settings_Theme_Dark}"
-                                                  Tag="Dark"/>
+                                            Tag="Dark"/>
                                     <ComboBoxItem Content="{loc:Loc Settings_Theme_Light}"
-                                                  Tag="Light"/>
+                                            Tag="Light"/>
                                 </ComboBox>
                             </Grid>
                         </Border>
 
                         <!--  Разделитель  -->
                         <Rectangle Height="1"
-                                   Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
+                                Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
 
                         <!--  Карточка: Язык (нижняя — скругление снизу)  -->
                         <Border
@@ -413,11 +463,11 @@
                             CornerRadius="0,0,8,8">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0"
-                                            VerticalAlignment="Center">
+                                        VerticalAlignment="Center">
                                     <ui:TextBlock Style="{StaticResource SettingTitle}"
-                                                  Text="{loc:Loc Settings_Language}"/>
+                                            Text="{loc:Loc Settings_Language}"/>
                                     <ui:TextBlock Style="{StaticResource SettingDescription}"
-                                                  Text="{loc:Loc Settings_Language_Desc}"/>
+                                            Text="{loc:Loc Settings_Language_Desc}"/>
                                 </StackPanel>
                                 <ComboBox
                                     x:Name="LanguageComboBox"
@@ -426,11 +476,11 @@
                                     ContextMenu="{x:Null}"
                                     SelectionChanged="LanguageComboBox_SelectionChanged">
                                     <ComboBoxItem Content="{loc:Loc Settings_Language_System}"
-                                                  Tag="System"/>
+                                            Tag="System"/>
                                     <ComboBoxItem Content="{loc:Loc Settings_Language_English}"
-                                                  Tag="en"/>
+                                            Tag="en"/>
                                     <ComboBoxItem Content="{loc:Loc Settings_Language_Russian}"
-                                                  Tag="ru"/>
+                                            Tag="ru"/>
                                 </ComboBox>
                             </Grid>
                         </Border>
@@ -442,7 +492,7 @@
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <ui:TextBlock Style="{StaticResource CardGroupHeader}"
-                                  Text="{loc:Loc Settings_Download}"/>
+                            Text="{loc:Loc Settings_Download}"/>
 
                     <StackPanel>
                         <!--  Карточка: Источник загрузки (единственная)  -->
@@ -454,11 +504,11 @@
                             CornerRadius="8">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0"
-                                            VerticalAlignment="Center">
+                                        VerticalAlignment="Center">
                                     <ui:TextBlock Style="{StaticResource SettingTitle}"
-                                                  Text="{loc:Loc Settings_DownloadSource}"/>
+                                            Text="{loc:Loc Settings_DownloadSource}"/>
                                     <ui:TextBlock Style="{StaticResource SettingDescription}"
-                                                  Text="{loc:Loc Settings_DownloadSource_Desc}"/>
+                                            Text="{loc:Loc Settings_DownloadSource_Desc}"/>
                                 </StackPanel>
                                 <ComboBox
                                     x:Name="DownloadSourceComboBox"
@@ -467,9 +517,9 @@
                                     ContextMenu="{x:Null}"
                                     SelectionChanged="DownloadSourceComboBox_SelectionChanged">
                                     <ComboBoxItem Content="{loc:Loc Settings_DownloadSource_VanillaApi}"
-                                                  Tag="VanillaApi"/>
+                                            Tag="VanillaApi"/>
                                     <ComboBoxItem Content="{loc:Loc Settings_DownloadSource_BMCLAPI}"
-                                                  Tag="BMCLAPI"/>
+                                            Tag="BMCLAPI"/>
                                 </ComboBox>
                             </Grid>
                         </Border>
@@ -481,7 +531,7 @@
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <ui:TextBlock Style="{StaticResource CardGroupHeader}"
-                                  Text="{loc:Loc Settings_About}"/>
+                            Text="{loc:Loc Settings_About}"/>
 
                     <StackPanel>
                         <!--  Карточка: Информация о приложении (верхняя) + проверка обновлений  -->
@@ -492,10 +542,11 @@
                             BorderThickness="1,1,1,0"
                             CornerRadius="8,8,0,0">
                             <Grid ColumnDefinitions="*,Auto"
-                                  RowDefinitions="Auto,Auto">
-                                <StackPanel Grid.Column="0"
-                                            Grid.RowSpan="2"
-                                            VerticalAlignment="Center">
+                                    RowDefinitions="Auto,Auto">
+                                <StackPanel
+                                    Grid.RowSpan="2"
+                                    Grid.Column="0"
+                                    VerticalAlignment="Center">
                                     <ui:TextBlock
                                         FontSize="24"
                                         FontWeight="Bold"
@@ -507,8 +558,8 @@
                                 </StackPanel>
                                 <Button
                                     x:Name="CheckUpdatesButton"
-                                    Grid.Column="1"
                                     Grid.RowSpan="2"
+                                    Grid.Column="1"
                                     Padding="12,6"
                                     VerticalAlignment="Center"
                                     Click="CheckUpdatesButton_Click">
@@ -516,19 +567,18 @@
                                         <ui:SymbolIcon
                                             x:Name="UpToDateIcon"
                                             Margin="0,0,6,0"
+                                            VerticalAlignment="Center"
                                             FontSize="16"
-                                            Visibility="Collapsed"
                                             Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
                                             Symbol="CheckmarkCircle24"
-                                            VerticalAlignment="Center"/>
-                                        <ui:TextBlock
-                                            x:Name="CheckUpdatesButtonText"
-                                            Text="{loc:Loc Settings_CheckForUpdates}"/>
+                                            Visibility="Collapsed"/>
+                                        <ui:TextBlock x:Name="CheckUpdatesButtonText"
+                                                Text="{loc:Loc Settings_CheckForUpdates}"/>
                                         <controls:WaveDotsIndicator
                                             x:Name="UpdateWaveDots"
                                             Margin="4,0,0,0"
-                                            Visibility="Collapsed"
-                                            VerticalAlignment="Center"/>
+                                            VerticalAlignment="Center"
+                                            Visibility="Collapsed"/>
                                     </StackPanel>
                                 </Button>
                             </Grid>
@@ -536,7 +586,7 @@
 
                         <!--  Разделитель  -->
                         <Rectangle Height="1"
-                                   Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
+                                Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
 
                         <!--  Карточка: Модлоадеры (нижняя)  -->
                         <Border

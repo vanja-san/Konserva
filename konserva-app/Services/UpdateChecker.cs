@@ -37,9 +37,13 @@ namespace Konserva.Services
 
             try
             {
-                var client = _client ?? new HttpClient();
-                client.DefaultRequestHeaders.UserAgent.ParseAdd($"Konserva/{currentVersion}");
-                client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
+                var client = _client;
+                if (client == null)
+                {
+                    client = new HttpClient();
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd($"Konserva/{currentVersion}");
+                    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
+                }
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
                 var response = await client.GetAsync(GitHubReleasesLatest, cts.Token);

@@ -729,11 +729,51 @@ public partial class MainWindow : FluentWindow, IDisposable
                 Icon = new SymbolIcon(symbol) { FontSize = 20 },
                 Timeout = TimeSpan.FromSeconds(timeoutSeconds),
                 Appearance = appearance,
-                Padding = new Thickness(12, 8, 12, 8),
-                Height = 32
+                Padding = new Thickness(12, 10, 12, 10),
+                MinHeight = 44,
+                VerticalContentAlignment = VerticalAlignment.Center
             };
 
             SnackbarPresenter.AddToQue(snackbar);
+        });
+    }
+
+    /// <summary>
+    /// Показывает минималистичный бадж «Настройки сохранены» справа сверху.
+    /// </summary>
+    public void ShowSaveBadge()
+    {
+        Dispatcher.Invoke(async () =>
+        {
+            if (SaveNotificationBadge == null) return;
+
+            // Сначала скрываем, если уже показан (перезапускаем анимацию)
+            SaveNotificationBadge.Visibility = Visibility.Visible;
+            SaveNotificationBadge.Opacity = 0;
+
+            // Плавное появление
+            var fadeIn = new System.Windows.Media.Animation.DoubleAnimation
+            {
+                From = 0,
+                To = 1,
+                Duration = TimeSpan.FromMilliseconds(200),
+                EasingFunction = new System.Windows.Media.Animation.QuadraticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+            };
+            SaveNotificationBadge.BeginAnimation(OpacityProperty, fadeIn);
+
+            // Ждём 2 секунды
+            await Task.Delay(2000);
+
+            // Плавное исчезновение
+            var fadeOut = new System.Windows.Media.Animation.DoubleAnimation
+            {
+                From = 1,
+                To = 0,
+                Duration = TimeSpan.FromMilliseconds(300),
+                EasingFunction = new System.Windows.Media.Animation.QuadraticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn }
+            };
+            fadeOut.Completed += (_, _) => SaveNotificationBadge.Visibility = Visibility.Collapsed;
+            SaveNotificationBadge.BeginAnimation(OpacityProperty, fadeOut);
         });
     }
 }

@@ -12,35 +12,30 @@ namespace Konserva.Tests.Services;
 public class ServerStorageServiceTests : IDisposable
 {
     private readonly ServerStorageService _service;
+    private readonly string _testServersPath;
+    private readonly string _serversIndexPath;
 
     public ServerStorageServiceTests()
     {
-        // Сервис использует AppContext.BaseDirectory/Servers/servers.json
-        // Удаляем старый файл чтобы тесты были изолированы
-        var serversIndexPath = Path.Combine(AppContext.BaseDirectory, "Servers", "servers.json");
-        if (File.Exists(serversIndexPath))
-        {
-            // Retry на случай блокировки файла другим тестом
-            for (int i = 0; i < 5; i++)
-            {
-                try
-                {
-                    File.Delete(serversIndexPath);
-                    break;
-                }
-                catch (IOException) when (i < 4)
-                {
-                    Thread.Sleep(100);
-                }
-            }
-        }
+        _testServersPath = Path.Combine(Path.GetTempPath(), $"konserva_srv_test_{Guid.NewGuid()}");
+        Directory.CreateDirectory(_testServersPath);
+        _serversIndexPath = Path.Combine(_testServersPath, "servers.json");
 
-        _service = new ServerStorageService();
+        var configMock = new Mock<IConfigService>();
+        var config = new AppConfig { ServersDirectory = _testServersPath };
+        configMock.Setup(c => c.GetConfig()).Returns(config);
+
+        _service = new ServerStorageService(configMock.Object);
     }
 
     public void Dispose()
     {
         _service.Dispose();
+        if (Directory.Exists(_testServersPath))
+        {
+            try { Directory.Delete(_testServersPath, true); }
+            catch { /* ignore */ }
+        }
     }
 
     [Fact]

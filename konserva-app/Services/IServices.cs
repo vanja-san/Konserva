@@ -19,6 +19,11 @@ public interface IConfigService
 /// </summary>
 public interface IServerStorageService
 {
+    /// <summary>
+    /// Путь к директории хранения серверов (берётся из конфига).
+    /// </summary>
+    string ServersPath { get; }
+
     List<Server> LoadServers();
     void SaveServers(List<Server> servers);
     void AddServer(Server server);

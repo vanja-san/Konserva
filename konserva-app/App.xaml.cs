@@ -275,12 +275,16 @@ public partial class App : Application
     {
         Logger.Critical("Startup error", ex, "App");
 
-        MessageBox.Show(
-            $"{LocalizationManager.Get("App_StartupError")}:\n{ex.Message}\n\n" +
-            LocalizationManager.Get("App_StartupErrorDetail"),
-            LocalizationManager.Get("MsgTitle_Error"),
-            MessageBoxButton.OK,
-            MessageBoxImage.Error);
+        // MessageBox должен быть на UI потоке (StartupAsync выполняется в фоне)
+        await Current.Dispatcher.InvokeAsync(() =>
+        {
+            MessageBox.Show(
+                $"{LocalizationManager.Get("App_StartupError")}:\n{ex.Message}\n\n" +
+                LocalizationManager.Get("App_StartupErrorDetail"),
+                LocalizationManager.Get("MsgTitle_Error"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        });
 
         await ShutdownStaticAsync(1);
     }
@@ -366,7 +370,7 @@ public partial class App : Application
     private static async Task ShutdownStaticAsync(int exitCode)
     {
         await CleanupAsync();
-        Current.Shutdown(exitCode);
+        await Current.Dispatcher.InvokeAsync(() => Current.Shutdown(exitCode));
     }
 
     private void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
