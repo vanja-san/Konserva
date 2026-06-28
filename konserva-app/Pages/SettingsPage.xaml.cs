@@ -302,6 +302,9 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
             UpdateCheckModeVisibility(isScheduled);
 
             AutoSaveSettings();
+
+            // Перезапускаем фоновый цикл проверки обновлений, чтобы новое расписание применилось сразу
+            App.MainWindow?.StartUpdateCheckLoop();
         }
     }
 

@@ -505,15 +505,14 @@ public partial class MainWindow : FluentWindow, IDisposable
     private CancellationTokenSource? _updateCheckCts;
 
     /// <summary>
-    /// Проверяет наличие обновлений (с учётом интервала из конфига).
+    /// Проверяет наличие обновлений через GitHub API (без учёта режима).
+    /// Учитывает интервал последней проверки, чтобы не дудосить API.
     /// </summary>
     private async Task CheckForUpdatesAsync()
     {
         try
         {
             var config = _config.GetConfig();
-            if (!config.CheckUpdates)
-                return;
 
             // Проверяем интервал
             if (config.LastUpdateCheck.HasValue)
@@ -541,11 +540,12 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Запускает фоновый цикл авто-проверки обновлений с интервалом из конфига.
+    /// Запускает фоновый цикл авто-проверки обновлений.
     /// </summary>
-    private void StartUpdateCheckLoop()
+    public void StartUpdateCheckLoop()
     {
         _updateCheckCts?.Cancel();
+        _updateCheckCts?.Dispose();
         _updateCheckCts = new CancellationTokenSource();
         _ = UpdateCheckLoopAsync(_updateCheckCts.Token);
     }
@@ -558,18 +558,30 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Фоновый цикл: проверяет обновления при старте, затем каждые N часов.
+    /// Фоновый цикл: проверяет обновления при старте (всегда).
+    /// В режиме «Заданное время» — повторяет каждые N часов.
+    /// В режиме «При запуске» — ждёт и проверяет, не изменился ли режим.
     /// </summary>
     private async Task UpdateCheckLoopAsync(CancellationToken ct)
     {
         try
         {
-            // Первая проверка при старте (с учётом интервала)
+            // Первая проверка при старте (всегда, в любом режиме)
             await CheckForUpdatesAsync();
 
             while (!ct.IsCancellationRequested)
             {
                 var config = _config.GetConfig();
+
+                if (!config.CheckUpdates)
+                {
+                    // Режим «При запуске» — не проверяем периодически.
+                    // Ждём немного и проверяем, не переключили ли на «Заданное время».
+                    await Task.Delay(TimeSpan.FromMinutes(1), ct);
+                    continue;
+                }
+
+                // Режим «Заданное время» — ждём интервал и проверяем
                 var intervalHours = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
                 using var timer = new PeriodicTimer(TimeSpan.FromHours(intervalHours));
 
@@ -587,6 +599,7 @@ public partial class MainWindow : FluentWindow, IDisposable
 
     /// <summary>
     /// Принудительная проверка обновлений (вызывается из SettingsPage).
+    /// Обновляет время последней проверки, чтобы не дублировать следующую.
     /// </summary>
     public async Task<UpdateInfo> ForceCheckForUpdatesAsync()
     {
@@ -596,6 +609,9 @@ public partial class MainWindow : FluentWindow, IDisposable
         {
             Dispatcher.Invoke(() => UpdateNotificationControl.Show(updateInfo));
         }
+
+        // Обновляем время последней проверки, чтобы Scheduled-цикл не дёргал API повторно
+        _config.UpdateConfig(c => c.LastUpdateCheck = SystemTime.UtcNow);
 
         return updateInfo;
     }
