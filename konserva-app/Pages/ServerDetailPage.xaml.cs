@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Wpf.Ui.Controls;
 using WpfButton = Wpf.Ui.Controls.Button;
+using WpfMenuItem = Wpf.Ui.Controls.MenuItem;
 
 namespace Konserva.Pages;
 
@@ -797,26 +798,33 @@ public partial class ServerDetailPage : Page, IDisposable
             {
                 ModsList.ItemsSource = Array.Empty<ModItem>();
                 ModsCountBadge.Visibility = Visibility.Collapsed;
+                UpdateToggleAllModsButton();
                 return;
             }
 
-            var mods = Directory.GetFiles(modsDir, "*.jar")
-                .Select(path =>
+            // Сканируем как .jar так и .jar.disabled
+            var mods = new List<ModItem>();
+            foreach (var pattern in new[] { "*.jar", "*.jar.disabled" })
+            {
+                foreach (var path in Directory.GetFiles(modsDir, pattern))
                 {
                     var fileName = Path.GetFileName(path);
-                    var version = ParseModVersion(fileName);
-                    return new ModItem
+                    var isDisabled = fileName.EndsWith(".disabled");
+                    var cleanName = isDisabled ? fileName.Replace(".jar.disabled", ".jar") : fileName;
+                    var version = ParseModVersion(cleanName);
+                    mods.Add(new ModItem
                     {
-                        Name = Path.GetFileNameWithoutExtension(fileName),
+                        Name = Path.GetFileNameWithoutExtension(cleanName),
                         Version = version,
-                        FileName = fileName,
+                        FileName = cleanName,
                         FilePath = path,
-                        FileSize = new FileInfo(path).Length
-                    };
-                })
-                .OrderBy(m => m.Name)
-                .ToList();
+                        FileSize = new FileInfo(path).Length,
+                        Enabled = !isDisabled
+                    });
+                }
+            }
 
+            mods = mods.OrderBy(m => m.Name).ToList();
             ModsList.ItemsSource = mods;
 
             // Обновляем бейдж
@@ -829,6 +837,8 @@ public partial class ServerDetailPage : Page, IDisposable
             {
                 ModsCountBadge.Visibility = Visibility.Collapsed;
             }
+
+            UpdateToggleAllModsButton();
         }
         catch (Exception ex)
         {
@@ -849,26 +859,33 @@ public partial class ServerDetailPage : Page, IDisposable
             {
                 PluginsList.ItemsSource = Array.Empty<PluginItem>();
                 PluginsCountBadge.Visibility = Visibility.Collapsed;
+                UpdateToggleAllPluginsButton();
                 return;
             }
 
-            var plugins = Directory.GetFiles(pluginsDir, "*.jar")
-                .Select(path =>
+            // Сканируем как .jar так и .jar.disabled
+            var plugins = new List<PluginItem>();
+            foreach (var pattern in new[] { "*.jar", "*.jar.disabled" })
+            {
+                foreach (var path in Directory.GetFiles(pluginsDir, pattern))
                 {
                     var fileName = Path.GetFileName(path);
-                    var version = ParsePluginVersion(fileName);
-                    return new PluginItem
+                    var isDisabled = fileName.EndsWith(".disabled");
+                    var cleanName = isDisabled ? fileName.Replace(".jar.disabled", ".jar") : fileName;
+                    var version = ParsePluginVersion(cleanName);
+                    plugins.Add(new PluginItem
                     {
-                        Name = Path.GetFileNameWithoutExtension(fileName),
+                        Name = Path.GetFileNameWithoutExtension(cleanName),
                         Version = version,
-                        FileName = fileName,
+                        FileName = cleanName,
                         FilePath = path,
-                        FileSize = new FileInfo(path).Length
-                    };
-                })
-                .OrderBy(p => p.Name)
-                .ToList();
+                        FileSize = new FileInfo(path).Length,
+                        Enabled = !isDisabled
+                    });
+                }
+            }
 
+            plugins = plugins.OrderBy(p => p.Name).ToList();
             PluginsList.ItemsSource = plugins;
 
             // Обновляем бейдж
@@ -881,6 +898,8 @@ public partial class ServerDetailPage : Page, IDisposable
             {
                 PluginsCountBadge.Visibility = Visibility.Collapsed;
             }
+
+            UpdateToggleAllPluginsButton();
         }
         catch (Exception ex)
         {
@@ -905,6 +924,54 @@ public partial class ServerDetailPage : Page, IDisposable
 
     private void RefreshMods_Click(object sender, RoutedEventArgs e) => LoadMods();
     private void RefreshPlugins_Click(object sender, RoutedEventArgs e) => LoadPlugins();
+
+    /// <summary>
+    /// Обновить состояние кнопки «Отключить/Включить все моды»
+    /// </summary>
+    private void UpdateToggleAllModsButton()
+    {
+        if (ModsList.ItemsSource is not IList<ModItem> mods || mods.Count == 0)
+        {
+            ToggleAllModsBtn.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        ToggleAllModsBtn.Visibility = Visibility.Visible;
+        var allDisabled = mods.All(m => !m.Enabled);
+        if (allDisabled)
+        {
+            // Все выключены — кнопка «Включить все»
+            ToggleAllModsBtn.Content = LocalizationManager.Get("ServerDetail_Mods_ToggleAll_Enable");
+        }
+        else
+        {
+            // Есть включённые (все или часть) — кнопка «Отключить все»
+            ToggleAllModsBtn.Content = LocalizationManager.Get("ServerDetail_Mods_ToggleAll_Disable");
+        }
+    }
+
+    /// <summary>
+    /// Обновить состояние кнопки «Отключить/Включить все плагины»
+    /// </summary>
+    private void UpdateToggleAllPluginsButton()
+    {
+        if (PluginsList.ItemsSource is not IList<PluginItem> plugins || plugins.Count == 0)
+        {
+            ToggleAllPluginsBtn.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        ToggleAllPluginsBtn.Visibility = Visibility.Visible;
+        var allDisabled = plugins.All(p => !p.Enabled);
+        if (allDisabled)
+        {
+            ToggleAllPluginsBtn.Content = LocalizationManager.Get("ServerDetail_Plugins_ToggleAll_Enable");
+        }
+        else
+        {
+            ToggleAllPluginsBtn.Content = LocalizationManager.Get("ServerDetail_Plugins_ToggleAll_Disable");
+        }
+    }
 
     private void OpenModsFolder_Click(object sender, RoutedEventArgs e)
     {
@@ -938,10 +1005,381 @@ public partial class ServerDetailPage : Page, IDisposable
         }
     }
 
+    /// <summary>
+    /// Открыть контекстное меню мода (три точки)
+    /// </summary>
+    private void ModMoreMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not WpfButton btn || btn.Tag is not ModItem mod)
+            return;
+
+        var contextMenu = new ContextMenu
+        {
+            PlacementTarget = btn,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            MinWidth = btn.ActualWidth
+        };
+
+        BuildModToggleMenuItem(contextMenu, mod);
+        contextMenu.Items.Add(new Separator());
+        BuildDeleteModMenuItem(contextMenu, mod);
+
+        contextMenu.IsOpen = true;
+    }
+
+    /// <summary>
+    /// Открыть контекстное меню плагина (три точки)
+    /// </summary>
+    private void PluginMoreMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not WpfButton btn || btn.Tag is not PluginItem plugin)
+            return;
+
+        var contextMenu = new ContextMenu
+        {
+            PlacementTarget = btn,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            MinWidth = btn.ActualWidth
+        };
+
+        BuildPluginToggleMenuItem(contextMenu, plugin);
+        contextMenu.Items.Add(new Separator());
+        BuildDeletePluginMenuItem(contextMenu, plugin);
+
+        contextMenu.IsOpen = true;
+    }
+
+    /// <summary>
+    /// Динамическое построение контекстного меню мода (правый клик)
+    /// </summary>
+    private void ModCard_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (sender is not CardControl card || card.DataContext is not ModItem mod)
+            return;
+
+        // Перестраиваем контекстное меню динамически
+        card.ContextMenu = new ContextMenu();
+        BuildModToggleMenuItem(card.ContextMenu, mod);
+        card.ContextMenu.Items.Add(new Separator());
+        BuildDeleteModMenuItem(card.ContextMenu, mod);
+    }
+
+    /// <summary>
+    /// Динамическое построение контекстного меню плагина (правый клик)
+    /// </summary>
+    private void PluginCard_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (sender is not CardControl card || card.DataContext is not PluginItem plugin)
+            return;
+
+        // Перестраиваем контекстное меню динамически
+        card.ContextMenu = new ContextMenu();
+        BuildPluginToggleMenuItem(card.ContextMenu, plugin);
+        card.ContextMenu.Items.Add(new Separator());
+        BuildDeletePluginMenuItem(card.ContextMenu, plugin);
+    }
+
+    /// <summary>
+    /// Создаёт пункт меню переключения мода и добавляет его в указанное меню
+    /// </summary>
+    private void BuildModToggleMenuItem(ItemsControl menu, ModItem mod)
+    {
+        var isEnabled = mod.Enabled;
+        var toggleItem = new System.Windows.Controls.MenuItem
+        {
+            Header = LocalizationManager.Get(isEnabled ? "ServerDetail_Mods_Disable" : "ServerDetail_Mods_Enable"),
+            Tag = mod
+        };
+        var toggleIcon = new SymbolIcon
+        {
+            FontSize = 16,
+            Symbol = isEnabled ? SymbolRegular.CheckboxChecked20 : SymbolRegular.CheckboxUnchecked20
+        };
+        if (isEnabled)
+        {
+            toggleIcon.Foreground = (Brush)FindResource("SystemFillColorCriticalBrush");
+        }
+        toggleItem.Icon = toggleIcon;
+        toggleItem.Click += ToggleMod_Click;
+        menu.Items.Add(toggleItem);
+    }
+
+    /// <summary>
+    /// Создаёт пункт меню удаления мода и добавляет его в указанное меню
+    /// </summary>
+    private void BuildDeleteModMenuItem(ItemsControl menu, ModItem mod)
+    {
+        var deleteItem = new System.Windows.Controls.MenuItem
+        {
+            Header = LocalizationManager.Get("ServerDetail_Mods_Delete"),
+            Tag = mod
+        };
+        deleteItem.Icon = new SymbolIcon
+        {
+            Symbol = SymbolRegular.Delete20,
+            Foreground = (Brush)FindResource("SystemFillColorCriticalBrush")
+        };
+        deleteItem.Click += DeleteMod_Click;
+        menu.Items.Add(deleteItem);
+    }
+
+    /// <summary>
+    /// Создаёт пункт меню переключения плагина и добавляет его в указанное меню
+    /// </summary>
+    private void BuildPluginToggleMenuItem(ItemsControl menu, PluginItem plugin)
+    {
+        var isEnabled = plugin.Enabled;
+        var toggleItem = new System.Windows.Controls.MenuItem
+        {
+            Header = LocalizationManager.Get(isEnabled ? "ServerDetail_Plugins_Disable" : "ServerDetail_Plugins_Enable"),
+            Tag = plugin
+        };
+        var toggleIcon = new SymbolIcon
+        {
+            Symbol = isEnabled ? SymbolRegular.CheckboxChecked20 : SymbolRegular.CheckboxUnchecked20
+        };
+        if (isEnabled)
+        {
+            toggleIcon.Foreground = (Brush)FindResource("SystemFillColorCriticalBrush");
+        }
+        toggleItem.Icon = toggleIcon;
+        toggleItem.Click += TogglePlugin_Click;
+        menu.Items.Add(toggleItem);
+    }
+
+    /// <summary>
+    /// Создаёт пункт меню удаления плагина и добавляет его в указанное меню
+    /// </summary>
+    private void BuildDeletePluginMenuItem(ItemsControl menu, PluginItem plugin)
+    {
+        var deleteItem = new System.Windows.Controls.MenuItem
+        {
+            Header = LocalizationManager.Get("ServerDetail_Plugins_Delete"),
+            Tag = plugin
+        };
+        deleteItem.Icon = new SymbolIcon
+        {
+            FontSize = 16,
+            Foreground = (Brush)FindResource("SystemFillColorCriticalBrush")
+        };
+        deleteItem.Click += DeletePlugin_Click;
+        menu.Items.Add(deleteItem);
+    }
+
+    /// <summary>
+    /// Переключить состояние одного мода (вкл/выкл) через переименование файла
+    /// </summary>
+    private async void ToggleMod_Click(object sender, RoutedEventArgs e)
+    {
+        if (_server == null)
+            return;
+
+        ModItem? mod = null;
+        if (sender is WpfButton btn && btn.Tag is ModItem bt)
+            mod = bt;
+        else if (sender is System.Windows.Controls.MenuItem mi && mi.Tag is ModItem mt)
+            mod = mt;
+
+        if (mod == null) return;
+
+        await ToggleModItem(mod);
+    }
+
+    /// <summary>
+    /// Переключить состояние одного плагина (вкл/выкл) через переименование файла
+    /// </summary>
+    private async void TogglePlugin_Click(object sender, RoutedEventArgs e)
+    {
+        if (_server == null)
+            return;
+
+        PluginItem? plugin = null;
+        if (sender is WpfButton btn && btn.Tag is PluginItem bt)
+            plugin = bt;
+        else if (sender is System.Windows.Controls.MenuItem mi && mi.Tag is PluginItem mt)
+            plugin = mt;
+
+        if (plugin == null) return;
+
+        await TogglePluginItem(plugin);
+    }
+
+    private async Task ToggleModItem(ModItem mod)
+    {
+        try
+        {
+            var disabledPath = mod.FilePath + ".disabled";
+            if (mod.Enabled)
+            {
+                // Disable: .jar → .jar.disabled
+                if (File.Exists(mod.FilePath))
+                {
+                    File.Move(mod.FilePath, disabledPath);
+                    mod.FilePath = disabledPath;
+                    mod.Enabled = false;
+                }
+            }
+            else
+            {
+                // Enable: .jar.disabled → .jar
+                if (File.Exists(mod.FilePath))
+                {
+                    var enabledPath = mod.FilePath.Replace(".jar.disabled", ".jar");
+                    File.Move(mod.FilePath, enabledPath);
+                    mod.FilePath = enabledPath;
+                    mod.Enabled = true;
+                }
+            }
+            LoadMods();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Toggle mod error: {ex.Message}", ex, "ServerDetailPage");
+            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_ModToggleError")}: {ex.Message}");
+        }
+    }
+
+    private async Task TogglePluginItem(PluginItem plugin)
+    {
+        try
+        {
+            if (plugin.Enabled)
+            {
+                // Disable: .jar → .jar.disabled
+                var disabledPath = plugin.FilePath + ".disabled";
+                if (File.Exists(plugin.FilePath))
+                {
+                    File.Move(plugin.FilePath, disabledPath);
+                    plugin.FilePath = disabledPath;
+                    plugin.Enabled = false;
+                }
+            }
+            else
+            {
+                // Enable: .jar.disabled → .jar
+                if (File.Exists(plugin.FilePath))
+                {
+                    var enabledPath = plugin.FilePath.Replace(".jar.disabled", ".jar");
+                    File.Move(plugin.FilePath, enabledPath);
+                    plugin.FilePath = enabledPath;
+                    plugin.Enabled = true;
+                }
+            }
+            LoadPlugins();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Toggle plugin error: {ex.Message}", ex, "ServerDetailPage");
+            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_PluginToggleError")}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Включить/отключить все моды
+    /// </summary>
+    private async void ToggleAllMods_Click(object sender, RoutedEventArgs e)
+    {
+        if (_server == null || ModsList.ItemsSource is not IList<ModItem> mods || mods.Count == 0)
+            return;
+
+        var anyEnabled = mods.Any(m => m.Enabled);
+        var targetEnabled = !anyEnabled; // если хоть один включён — выключаем все, иначе включаем
+
+        foreach (var mod in mods)
+        {
+            if (mod.Enabled == targetEnabled)
+                continue;
+            try
+            {
+                if (targetEnabled)
+                {
+                    var enabledPath = mod.FilePath.Replace(".jar.disabled", ".jar");
+                    if (File.Exists(mod.FilePath))
+                    {
+                        File.Move(mod.FilePath, enabledPath);
+                        mod.FilePath = enabledPath;
+                        mod.Enabled = true;
+                    }
+                }
+                else
+                {
+                    var disabledPath = mod.FilePath + ".disabled";
+                    if (File.Exists(mod.FilePath))
+                    {
+                        File.Move(mod.FilePath, disabledPath);
+                        mod.FilePath = disabledPath;
+                        mod.Enabled = false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Toggle all mods error: {ex.Message}", ex, "ServerDetailPage");
+            }
+        }
+
+        LoadMods();
+    }
+
+    /// <summary>
+    /// Включить/отключить все плагины
+    /// </summary>
+    private async void ToggleAllPlugins_Click(object sender, RoutedEventArgs e)
+    {
+        if (_server == null || PluginsList.ItemsSource is not IList<PluginItem> plugins || plugins.Count == 0)
+            return;
+
+        var anyEnabled = plugins.Any(p => p.Enabled);
+        var targetEnabled = !anyEnabled;
+
+        foreach (var plugin in plugins)
+        {
+            if (plugin.Enabled == targetEnabled)
+                continue;
+            try
+            {
+                if (targetEnabled)
+                {
+                    var enabledPath = plugin.FilePath.Replace(".jar.disabled", ".jar");
+                    if (File.Exists(plugin.FilePath))
+                    {
+                        File.Move(plugin.FilePath, enabledPath);
+                        plugin.FilePath = enabledPath;
+                        plugin.Enabled = true;
+                    }
+                }
+                else
+                {
+                    var disabledPath = plugin.FilePath + ".disabled";
+                    if (File.Exists(plugin.FilePath))
+                    {
+                        File.Move(plugin.FilePath, disabledPath);
+                        plugin.FilePath = disabledPath;
+                        plugin.Enabled = false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Toggle all plugins error: {ex.Message}", ex, "ServerDetailPage");
+            }
+        }
+
+        LoadPlugins();
+    }
+
     private async void DeleteMod_Click(object sender, RoutedEventArgs e)
     {
-        if (_server == null || sender is not WpfButton btn || btn.Tag is not ModItem mod)
+        if (_server == null)
             return;
+
+        ModItem? mod = null;
+        if (sender is WpfButton btn && btn.Tag is ModItem bt)
+            mod = bt;
+        else if (sender is System.Windows.Controls.MenuItem mi && mi.Tag is ModItem mt)
+            mod = mt;
+
+        if (mod == null) return;
 
         var result = await UiHelper.ShowConfirm(
             string.Format(LocalizationManager.Get("ServerDetail_DeleteModConfirm"), mod.Name, mod.FileName),
@@ -967,8 +1405,16 @@ public partial class ServerDetailPage : Page, IDisposable
 
     private async void DeletePlugin_Click(object sender, RoutedEventArgs e)
     {
-        if (_server == null || sender is not WpfButton btn || btn.Tag is not PluginItem plugin)
+        if (_server == null)
             return;
+
+        PluginItem? plugin = null;
+        if (sender is WpfButton btn && btn.Tag is PluginItem bt)
+            plugin = bt;
+        else if (sender is System.Windows.Controls.MenuItem mi && mi.Tag is PluginItem mt)
+            plugin = mt;
+
+        if (plugin == null) return;
 
         var result = await UiHelper.ShowConfirm(
             string.Format(LocalizationManager.Get("ServerDetail_DeletePluginConfirm"), plugin.Name, plugin.FileName),

@@ -23,6 +23,7 @@
             <converters:FileSizeConverter x:Key="FileSizeConverter"/>
             <converters:PercentToWidthConverter x:Key="PercentToWidth"/>
             <converters:ScrollBarPaddingConverter x:Key="ScrollBarPadding"/>
+            <converters:BoolToOpacityConverter x:Key="BoolToOpacity"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

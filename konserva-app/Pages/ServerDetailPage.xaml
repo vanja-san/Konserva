@@ -23,7 +23,7 @@
                         x:Name="ServerInfoText"
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorDisabledBrush}"
-                        Text="1.20.4 • Fabric" />
+                        Text="X.X.X • Modloader Name" />
                 </StackPanel>
 
                 <!--  Кнопки управления  -->
@@ -278,10 +278,18 @@
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
                                 <ui:Button
+                                    x:Name="ToggleAllModsBtn"
+                                    Height="32"
+                                    Padding="8,0,8,0"
+                                    Click="ToggleAllMods_Click"
+                                    ToolTip="{loc:Loc ServerDetail_Mods_ToggleAll}">
+                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Mods_ToggleAll_Enable}" />
+                                </ui:Button>
+                                <ui:Button
                                     x:Name="OpenModsFolderBtn"
                                     Width="32"
                                     Height="32"
-                                    Margin="0,0,8,0"
+                                    Margin="8,0,8,0"
                                     Padding="0"
                                     Click="OpenModsFolder_Click"
                                     ToolTip="{loc:Loc ServerDetail_Mods_OpenFolder}">
@@ -303,18 +311,22 @@
                     <!--  Список модов  -->
                     <Border
                         Grid.Row="1"
-                        Padding="12"
                         Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
                         BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1,0,1,1"
                         CornerRadius="0,0,4,4">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ScrollViewer
+                            Margin="12,12,0,12"
+                            Padding="0,0,12,0"
+                            VerticalScrollBarVisibility="Auto">
                             <ItemsControl x:Name="ModsList">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <ui:CardControl
                                             Margin="0,0,0,8"
                                             Padding="12,8,8,8"
+                                            ContextMenuOpening="ModCard_ContextMenuOpening"
+                                            Opacity="{Binding Enabled, Converter={StaticResource BoolToOpacity}}"
                                             Tag="{Binding}">
                                             <ui:CardControl.Icon>
                                                 <ui:SymbolIcon
@@ -329,20 +341,27 @@
                                                     Text="{Binding Name}"
                                                     TextTrimming="CharacterEllipsis" />
                                             </ui:CardControl.Header>
+                                            <ui:CardControl.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem
+                                                        Click="DeleteMod_Click"
+                                                        Header="{loc:Loc ServerDetail_Mods_Delete}"
+                                                        Tag="{Binding}">
+                                                        <MenuItem.Icon>
+                                                            <ui:SymbolIcon Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}" Symbol="Delete20" />
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                </ContextMenu>
+                                            </ui:CardControl.ContextMenu>
                                             <ui:Button
-                                                Width="24"
-                                                Height="24"
+                                                Width="28"
+                                                Height="28"
                                                 Padding="0"
                                                 Background="Transparent"
                                                 BorderThickness="0"
-                                                Click="DeleteMod_Click"
-                                                Tag="{Binding}"
-                                                ToolTip="{loc:Loc ServerDetail_Mods_Delete}">
-                                                <ui:SymbolIcon
-                                                    Filled="True"
-                                                    FontSize="16"
-                                                    Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}"
-                                                    Symbol="Delete20" />
+                                                Click="ModMoreMenu_Click"
+                                                Tag="{Binding}">
+                                                <ui:SymbolIcon FontSize="16" Symbol="MoreHorizontal20" />
                                             </ui:Button>
                                         </ui:CardControl>
                                     </DataTemplate>
@@ -389,10 +408,18 @@
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
                                 <ui:Button
+                                    x:Name="ToggleAllPluginsBtn"
+                                    Height="32"
+                                    Padding="8,0,8,0"
+                                    Click="ToggleAllPlugins_Click"
+                                    ToolTip="{loc:Loc ServerDetail_Plugins_ToggleAll}">
+                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Plugins_ToggleAll_Enable}" />
+                                </ui:Button>
+                                <ui:Button
                                     x:Name="OpenPluginsFolderBtn"
                                     Width="32"
                                     Height="32"
-                                    Margin="0,0,8,0"
+                                    Margin="8,0,8,0"
                                     Padding="0"
                                     Click="OpenPluginsFolder_Click"
                                     ToolTip="{loc:Loc ServerDetail_Plugins_OpenFolder}">
@@ -414,18 +441,22 @@
                     <!--  Список плагинов  -->
                     <Border
                         Grid.Row="1"
-                        Padding="12"
                         Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
                         BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1,0,1,1"
                         CornerRadius="0,0,4,4">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ScrollViewer
+                            Margin="12,12,0,12"
+                            Padding="0,0,12,0"
+                            VerticalScrollBarVisibility="Auto">
                             <ItemsControl x:Name="PluginsList">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <ui:CardControl
                                             Margin="0,0,0,8"
                                             Padding="12,8,8,8"
+                                            ContextMenuOpening="PluginCard_ContextMenuOpening"
+                                            Opacity="{Binding Enabled, Converter={StaticResource BoolToOpacity}}"
                                             Tag="{Binding}">
                                             <ui:CardControl.Icon>
                                                 <ui:SymbolIcon
@@ -440,20 +471,27 @@
                                                     Text="{Binding Name}"
                                                     TextTrimming="CharacterEllipsis" />
                                             </ui:CardControl.Header>
+                                            <ui:CardControl.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem
+                                                        Click="DeletePlugin_Click"
+                                                        Header="{loc:Loc ServerDetail_Plugins_Delete}"
+                                                        Tag="{Binding}">
+                                                        <MenuItem.Icon>
+                                                            <ui:SymbolIcon Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}" Symbol="Delete20" />
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                </ContextMenu>
+                                            </ui:CardControl.ContextMenu>
                                             <ui:Button
-                                                Width="24"
-                                                Height="24"
+                                                Width="28"
+                                                Height="28"
                                                 Padding="0"
                                                 Background="Transparent"
                                                 BorderThickness="0"
-                                                Click="DeletePlugin_Click"
-                                                Tag="{Binding}"
-                                                ToolTip="{loc:Loc ServerDetail_Plugins_Delete}">
-                                                <ui:SymbolIcon
-                                                    Filled="True"
-                                                    FontSize="16"
-                                                    Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}"
-                                                    Symbol="Delete20" />
+                                                Click="PluginMoreMenu_Click"
+                                                Tag="{Binding}">
+                                                <ui:SymbolIcon FontSize="16" Symbol="MoreHorizontal20" />
                                             </ui:Button>
                                         </ui:CardControl>
                                     </DataTemplate>
@@ -485,8 +523,7 @@
                                         Symbol="TaskListSquaresettings20" />
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
-                                    <ui:TextBlock
-                                        Text="{loc:Loc ServerProperties_General}" />
+                                    <ui:TextBlock Text="{loc:Loc ServerProperties_General}" />
                                 </ui:CardExpander.Header>
                                 <Grid Margin="8,0" RowDefinitions="Auto">
                                     <Grid
@@ -527,8 +564,7 @@
                                         Symbol="Storage20" />
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
-                                    <ui:TextBlock
-                                        Text="{loc:Loc ServerDetail_Settings_RAM}" />
+                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Settings_RAM}" />
                                 </ui:CardExpander.Header>
                                 <Grid Margin="8,0" RowDefinitions="Auto,Auto">
                                     <Grid
@@ -595,8 +631,7 @@
                                         Symbol="Power20" />
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
-                                    <ui:TextBlock
-                                        Text="{loc:Loc ServerDetail_Settings_AutoRestart}" />
+                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Settings_AutoRestart}" />
                                 </ui:CardExpander.Header>
                                 <Grid Margin="8,0" RowDefinitions="Auto,Auto">
                                     <Grid
@@ -653,8 +688,7 @@
                                         Symbol="SquareHintApps20" />
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
-                                    <ui:TextBlock
-                                        Text="{loc:Loc ServerDetail_Java}" />
+                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Java}" />
                                 </ui:CardExpander.Header>
                                 <Grid Margin="8,0" RowDefinitions="Auto,Auto,Auto">
                                     <Grid
@@ -707,10 +741,10 @@
                                                 Grid.Row="1"
                                                 MinHeight="100"
                                                 AcceptsReturn="True"
-                                                TextWrapping="NoWrap"
                                                 FontFamily="Consolas"
                                                 FontSize="12"
-                                                LostFocus="SettingJvmArgs_LostFocus" />
+                                                LostFocus="SettingJvmArgs_LostFocus"
+                                                TextWrapping="NoWrap" />
                                         </Grid>
                                     </Grid>
                                 </Grid>
