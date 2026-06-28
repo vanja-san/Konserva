@@ -16,6 +16,8 @@ public class ServersViewModel : ObservableObject
   private string _searchText = string.Empty;
   private string _filterType = "All";
   private string _filterStatus = "All";
+  private string _sortField = "Name";
+  private bool _sortAscending = true;
   private readonly HashSet<string> _busyServers = [];
   private bool _isVisible = true;
 
@@ -80,6 +82,32 @@ public class ServersViewModel : ObservableObject
     set
     {
       if (SetProperty(ref _filterStatus, value))
+        ApplyFilters();
+    }
+  }
+
+  /// <summary>
+  /// Поле сортировки (Name, Status, Type, Version)
+  /// </summary>
+  public string SortField
+  {
+    get => _sortField;
+    set
+    {
+      if (SetProperty(ref _sortField, value))
+        ApplyFilters();
+    }
+  }
+
+  /// <summary>
+  /// Направление сортировки (true — по возрастанию)
+  /// </summary>
+  public bool SortAscending
+  {
+    get => _sortAscending;
+    set
+    {
+      if (SetProperty(ref _sortAscending, value))
         ApplyFilters();
     }
   }
@@ -193,7 +221,24 @@ public class ServersViewModel : ObservableObject
                             (_filterStatus == "Stopped" && !s.IsRunning);
 
       return matchSearch && matchType && matchStatus;
-    }).ToList();
+    });
+
+    // Сортировка
+    filtered = _sortField switch
+    {
+      "Status" => _sortAscending
+          ? filtered.OrderBy(s => s.IsRunning ? 0 : 1)
+          : filtered.OrderBy(s => s.IsRunning ? 1 : 0),
+      "Type" => _sortAscending
+          ? filtered.OrderBy(s => s.ModLoader.Type.ToString())
+          : filtered.OrderByDescending(s => s.ModLoader.Type.ToString()),
+      "Version" => _sortAscending
+          ? filtered.OrderBy(s => s.McVersion)
+          : filtered.OrderByDescending(s => s.McVersion),
+      _ => _sortAscending
+          ? filtered.OrderBy(s => s.Name)
+          : filtered.OrderByDescending(s => s.Name),
+    };
 
     FilteredServers.Clear();
     foreach (var server in filtered)

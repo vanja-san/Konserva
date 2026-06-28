@@ -381,30 +381,6 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         OnServersChanged?.Invoke();
     }
 
-    public void MoveServer(string serverId, int newIndex)
-    {
-        _serversLock.EnterWriteLock();
-        try
-        {
-            var oldIndex = _servers.FindIndex(s => s.Id == serverId);
-            if (oldIndex < 0)
-                return;
-
-            var server = _servers[oldIndex];
-            _servers.RemoveAt(oldIndex);
-
-            var adjustedIndex = Math.Clamp(newIndex, 0, _servers.Count);
-            _servers.Insert(adjustedIndex, server);
-            storage.SaveServers(_servers);
-        }
-        finally
-        {
-            _serversLock.ExitWriteLock();
-        }
-
-        OnServersChanged?.Invoke();
-    }
-
     public async Task DeleteServerAsync(string id, CancellationToken ct = default)
     {
         Server? server;

@@ -5,12 +5,22 @@
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="">
+    <Page.Resources>
+        <!--  Без переопределения — чекбоксы используют тему по умолчанию  -->
+    </Page.Resources>
     <Grid Margin="16"
           RowDefinitions="Auto,*">
         <!--  Поиск и фильтры  -->
         <Border Grid.Row="0"
                 Margin="0,0,0,8">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
                 <!--  Поиск с watermark  -->
                 <Grid
                     Grid.Column="0"
@@ -33,55 +43,130 @@
                         Visibility="Visible"/>
                 </Grid>
 
-                <!--  Фильтр по типу  -->
-                <ComboBox
-                    x:Name="FilterType"
+                <!--  Sort DropDownButton  -->
+                <ui:DropDownButton
+                    x:Name="SortButton"
                     Grid.Column="1"
-                    Width="110"
+                    Width="50"
+                    Height="33"
                     Margin="0,0,8,0"
-                    Padding="8,6"
-                    VerticalAlignment="Center"
-                    ContextMenu="{x:Null}"
-                    SelectionChanged="FilterType_SelectionChanged">
-                    <ComboBoxItem
-                        Content="{loc:Loc ServersPage_Filter_All}"
-                        IsSelected="True"
-                        Tag="All"/>
-                    <ComboBoxItem Content="Vanilla"
-                                  Tag="Vanilla"/>
-                    <ComboBoxItem Content="Forge"
-                                  Tag="Forge"/>
-                    <ComboBoxItem Content="NeoForge"
-                                  Tag="NeoForge"/>
-                    <ComboBoxItem Content="Fabric"
-                                  Tag="Fabric"/>
-                    <ComboBoxItem Content="Paper"
-                                  Tag="Paper"/>
-                    <ComboBoxItem
-                        Content="Quilt"
-                        IsEnabled="False"
-                        Tag="Quilt"/>
-                </ComboBox>
+                    Padding="0"
+                    ToolTip="{loc:Loc ServersPage_SortBy}">
+                    <ui:DropDownButton.Flyout>
+                        <ContextMenu>
+                            <MenuItem
+                                FontWeight="SemiBold"
+                                Header="{loc:Loc ServersPage_Sort_Header}"
+                                IsEnabled="False"/>
+                            <MenuItem
+                                x:Name="SortNameItem"
+                                Click="SortMenuItem_Click"
+                                Header="{loc:Loc ServersPage_Sort_Name}"
+                                IsCheckable="True"
+                                IsChecked="True"
+                                Tag="Name"/>
+                            <MenuItem
+                                x:Name="SortStatusItem"
+                                Click="SortMenuItem_Click"
+                                Header="{loc:Loc ServersPage_Sort_Status}"
+                                IsCheckable="True"
+                                Tag="Status"/>
+                            <MenuItem
+                                x:Name="SortTypeItem"
+                                Click="SortMenuItem_Click"
+                                Header="{loc:Loc ServersPage_Sort_Type}"
+                                IsCheckable="True"
+                                Tag="Type"/>
+                            <MenuItem
+                                x:Name="SortVersionItem"
+                                Click="SortMenuItem_Click"
+                                Header="{loc:Loc ServersPage_Sort_Version}"
+                                IsCheckable="True"
+                                Tag="Version"/>
+                        </ContextMenu>
+                    </ui:DropDownButton.Flyout>
+                    <ui:SymbolIcon FontSize="16"
+                                   Symbol="ArrowSort24"/>
+                </ui:DropDownButton>
 
-                <!--  Фильтр по статусу  -->
-                <ComboBox
-                    x:Name="FilterStatus"
+                <!--  Filter DropDownButton  -->
+                <ui:DropDownButton
+                    x:Name="FilterButton"
                     Grid.Column="2"
-                    Width="130"
+                    Width="50"
+                    Height="33"
                     Margin="0,0,8,0"
-                    Padding="8,6"
-                    ContextMenu="{x:Null}"
-                    SelectionChanged="FilterStatus_SelectionChanged">
-                    <ComboBoxItem
-                        Content="{loc:Loc ServersPage_Filter_AllServers}"
-                        IsSelected="True"
-                        Tag="All"/>
-                    <ComboBoxItem Content="{loc:Loc ServersPage_Filter_Running}"
-                                  Tag="Running"/>
-                    <ComboBoxItem Content="{loc:Loc ServersPage_Filter_Stopped}"
-                                  Tag="Stopped"/>
-                </ComboBox>
-                <!--  Кнопка создать сервер  -->
+                    Padding="0"
+                    ToolTip="{loc:Loc ServersPage_Filter_All}">
+                    <ui:DropDownButton.Flyout>
+                        <ContextMenu>
+                            <!--  Type filter  -->
+                            <MenuItem
+                                FontWeight="SemiBold"
+                                Header="{loc:Loc ServersPage_Filter_All}"
+                                IsEnabled="False"/>
+                            <MenuItem
+                                x:Name="TypeAllItem"
+                                Click="TypeMenuItem_Click"
+                                Header="{loc:Loc ServersPage_Filter_All}"
+                                IsCheckable="True"
+                                IsChecked="True"
+                                Tag="All"/>
+                            <MenuItem
+                                Click="TypeMenuItem_Click"
+                                Header="Vanilla"
+                                IsCheckable="True"
+                                Tag="Vanilla"/>
+                            <MenuItem
+                                Click="TypeMenuItem_Click"
+                                Header="Forge"
+                                IsCheckable="True"
+                                Tag="Forge"/>
+                            <MenuItem
+                                Click="TypeMenuItem_Click"
+                                Header="NeoForge"
+                                IsCheckable="True"
+                                Tag="NeoForge"/>
+                            <MenuItem
+                                Click="TypeMenuItem_Click"
+                                Header="Fabric"
+                                IsCheckable="True"
+                                Tag="Fabric"/>
+                            <MenuItem
+                                Click="TypeMenuItem_Click"
+                                Header="Paper"
+                                IsCheckable="True"
+                                Tag="Paper"/>
+                            <Separator/>
+                            <!--  Status filter  -->
+                            <MenuItem
+                                FontWeight="SemiBold"
+                                Header="{loc:Loc ServersPage_Filter_Status}"
+                                IsEnabled="False"/>
+                            <MenuItem
+                                x:Name="StatusAllItem"
+                                Click="StatusMenuItem_Click"
+                                Header="{loc:Loc ServersPage_Filter_AllServers}"
+                                IsCheckable="True"
+                                IsChecked="True"
+                                Tag="All"/>
+                            <MenuItem
+                                Click="StatusMenuItem_Click"
+                                Header="{loc:Loc ServersPage_Filter_Running}"
+                                IsCheckable="True"
+                                Tag="Running"/>
+                            <MenuItem
+                                Click="StatusMenuItem_Click"
+                                Header="{loc:Loc ServersPage_Filter_Stopped}"
+                                IsCheckable="True"
+                                Tag="Stopped"/>
+                        </ContextMenu>
+                    </ui:DropDownButton.Flyout>
+                    <ui:SymbolIcon FontSize="16"
+                                   Symbol="Filter12"/>
+                </ui:DropDownButton>
+
+                <!--  Create Server Button  -->
                 <ui:Button
                     Grid.Column="3"
                     Width="33"
@@ -94,32 +179,19 @@
                 </ui:Button>
             </Grid>
         </Border>
+
         <!--  Список серверов  -->
         <Border Grid.Row="1">
             <Grid>
                 <ScrollViewer CanContentScroll="True"
                               VerticalScrollBarVisibility="Auto">
-                    <ItemsControl
-                        x:Name="ServersList"
-                        ItemsSource="{Binding FilteredServers}"
-                        AllowDrop="True"
-                        PreviewDrop="ServersList_PreviewDrop"
-                        DragOver="ServersList_DragOver">
+                    <ItemsControl x:Name="ServersList"
+                                  ItemsSource="{Binding FilteredServers}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemContainerStyle>
-                            <Style TargetType="ContentPresenter">
-                                <Setter Property="AllowDrop"
-                                        Value="True"/>
-                                <EventSetter Event="PreviewMouseLeftButtonDown"
-                                        Handler="ServerCard_PreviewMouseLeftButtonDown"/>
-                                <EventSetter Event="PreviewMouseMove"
-                                        Handler="ServerCard_PreviewMouseMove"/>
-                            </Style>
-                        </ItemsControl.ItemContainerStyle>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <ui:CardAction
@@ -243,9 +315,9 @@
                 <!--  Нет серверов  -->
                 <StackPanel
                     x:Name="NoServersPanel"
-                    Visibility="{Binding HasNoServers, Converter={StaticResource BoolToVisibility}}"
                     HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
+                    VerticalAlignment="Center"
+                    Visibility="{Binding HasNoServers, Converter={StaticResource BoolToVisibility}}">
                     <ui:TextBlock
                         HorizontalAlignment="Center"
                         FontSize="16"

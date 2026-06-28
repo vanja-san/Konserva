@@ -2,6 +2,7 @@
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using Konserva.ViewModels;
 using System.Windows;
@@ -87,22 +88,6 @@ public partial class ServersPage : Page, IDisposable
     private void SearchBox_GotFocus(object sender, RoutedEventArgs e) =>
         SearchPlaceholder.Visibility = Visibility.Collapsed;
 
-    private void FilterType_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (FilterType.SelectedItem is ComboBoxItem item && item.Tag is string tag)
-        {
-            _viewModel.FilterType = tag;
-        }
-    }
-
-    private void FilterStatus_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (FilterStatus.SelectedItem is ComboBoxItem item && item.Tag is string tag)
-        {
-            _viewModel.FilterStatus = tag;
-        }
-    }
-
     private void CreateServer_Click(object sender, RoutedEventArgs e)
     {
         Logger.Info("Navigating to CreateServerPage", "ServersPage");
@@ -158,89 +143,73 @@ public partial class ServersPage : Page, IDisposable
         }
     }
 
-    // ===== Drag & Drop =====
+    // ===== Sort & Filter UI (DropDownButton + ContextMenu) =====
 
-    private Server? _dragSourceServer;
-    private Point _dragStartPoint;
-
-    private void ServerCard_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void SortMenuItem_Click(object sender, RoutedEventArgs e)
     {
-        _dragStartPoint = e.GetPosition(null);
-        _dragSourceServer = GetServerFromElement(sender);
-    }
+        if (_viewModel is null) return;
 
-    private void ServerCard_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (_dragSourceServer == null)
-            return;
-
-        var position = e.GetPosition(null);
-        if (Math.Abs(position.X - _dragStartPoint.X) <= SystemParameters.MinimumHorizontalDragDistance &&
-            Math.Abs(position.Y - _dragStartPoint.Y) <= SystemParameters.MinimumVerticalDragDistance)
-            return;
-
-        DragDrop.DoDragDrop(
-            (DependencyObject)sender,
-            new DataObject(DataFormats.Serializable, _dragSourceServer.Id),
-            DragDropEffects.Move);
-
-        _dragSourceServer = null;
-    }
-
-    private void ServersList_DragOver(object sender, DragEventArgs e)
-    {
-        if (e.Data.GetDataPresent(DataFormats.Serializable))
+        if (sender is System.Windows.Controls.MenuItem { Tag: string field })
         {
-            e.Effects = DragDropEffects.Move;
-            e.Handled = true;
+            // Uncheck all sort items, then check the clicked one
+            var menu = SortButton.Flyout as System.Windows.Controls.ContextMenu;
+            if (menu?.Items is not null)
+            {
+                foreach (var child in menu.Items.OfType<System.Windows.Controls.MenuItem>())
+                    child.IsChecked = child.Tag as string == field;
+            }
+
+            _viewModel.SortField = field;
+
+            // Toggle direction on re-click of same field
+            if (_lastSortField == _viewModel.SortField)
+                _viewModel.SortAscending = !_viewModel.SortAscending;
+            _lastSortField = _viewModel.SortField;
+        }
+    }
+    private string? _lastSortField;
+
+    private void TypeMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.MenuItem { Tag: string tag })
+        {
+            _viewModel.FilterType = tag;
+            // Update checked state
+            var menu = FilterButton.Flyout as System.Windows.Controls.ContextMenu;
+            if (menu?.Items is not null)
+            {
+                foreach (var child in menu.Items.OfType<System.Windows.Controls.MenuItem>())
+                {
+                    if (child.Tag is string childTag &&
+                        (childTag == "All" || childTag == "Vanilla" || childTag == "Forge" ||
+                         childTag == "NeoForge" || childTag == "Fabric" || childTag == "Paper"))
+                    {
+                        child.IsChecked = childTag == tag;
+                    }
+                }
+            }
         }
     }
 
-    private void ServersList_PreviewDrop(object sender, DragEventArgs e)
+    private void StatusMenuItem_Click(object sender, RoutedEventArgs e)
     {
-        if (!e.Data.GetDataPresent(DataFormats.Serializable))
-            return;
-
-        var serverId = e.Data.GetData(DataFormats.Serializable) as string;
-        if (string.IsNullOrEmpty(serverId))
-            return;
-
-        // Определяем индекс, куда бросили
-        var dropIndex = GetDropIndex(e.GetPosition(ServersList));
-        if (dropIndex < 0)
-            return;
-
-        App.ServerManager.MoveServer(serverId, dropIndex);
-        _dragSourceServer = null;
-        e.Handled = true;
-    }
-
-    private Server? GetServerFromElement(object sender)
-    {
-        if (sender is ContentPresenter presenter)
-            return presenter.Content as Server;
-        return null;
-    }
-
-    private int GetDropIndex(Point dropPosition)
-    {
-        double accumulatedHeight = 0;
-        for (int i = 0; i < ServersList.Items.Count; i++)
+        if (sender is System.Windows.Controls.MenuItem { Tag: string tag })
         {
-            var container = ServersList.ItemContainerGenerator.ContainerFromIndex(i) as ContentPresenter;
-            if (container == null)
-                continue;
-
-            var itemHeight = container.ActualHeight;
-            var itemCenter = accumulatedHeight + itemHeight / 2;
-
-            if (dropPosition.Y < itemCenter)
-                return i;
-
-            accumulatedHeight += itemHeight;
+            _viewModel.FilterStatus = tag;
+            // Update checked state
+            var menu = FilterButton.Flyout as System.Windows.Controls.ContextMenu;
+            if (menu?.Items is not null)
+            {
+                foreach (var child in menu.Items.OfType<System.Windows.Controls.MenuItem>())
+                {
+                    if (child.Tag is string childTag &&
+                        (childTag == "All" || childTag == "Running" || childTag == "Stopped"))
+                    {
+                        child.IsChecked = childTag == tag;
+                    }
+                }
+            }
         }
-
-        return ServersList.Items.Count; // В конец списка
     }
 
     public void Dispose()
