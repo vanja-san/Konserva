@@ -187,11 +187,13 @@
         <!--  Кнопки и прогресс (фиксировано внизу)  -->
         <Border
             Grid.Row="1"
-            Padding="0"
-            Background="{ui:ThemeResource LayerFillColorDefaultBrush}"
-            BorderBrush="{ui:ThemeResource ControlStrokeColorDefaultBrush}"
-            BorderThickness="0,1,0,0">
-            <Grid Margin="12,8"
+            Margin="16,0,16,16"
+            Padding="12,8"
+            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+            BorderThickness="1,1,1,1"
+            CornerRadius="8">
+            <Grid Margin="0"
                   ColumnDefinitions="Auto,*,Auto">
                 <!--  Кнопка Импорт  -->
                 <ui:Button
@@ -209,7 +211,7 @@
                     Orientation="Horizontal"
                     Visibility="Collapsed">
                     <controls:WaveDotsIndicator x:Name="ProgressDots"
-                            Margin="0,0,6,0"/>
+                                                Margin="0,0,6,0"/>
                     <ui:TextBlock
                         x:Name="ProgressText"
                         FontSize="12"

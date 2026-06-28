@@ -8,26 +8,26 @@
 
     <UserControl.Resources>
         <Style x:Key="ExpanderHeaderStyle"
-                TargetType="TextBlock"/>
+               TargetType="TextBlock"/>
 
         <!--  Единые отступы для элементов формы  -->
         <Style TargetType="ui:TextBox"
-                BasedOn="{StaticResource {x:Type ui:TextBox}}">
+               BasedOn="{StaticResource {x:Type ui:TextBox}}">
             <Setter Property="Margin"
                     Value="12,8,0,8"/>
         </Style>
         <Style TargetType="ComboBox"
-                BasedOn="{StaticResource {x:Type ComboBox}}">
+               BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="Margin"
                     Value="12,8,0,8"/>
         </Style>
         <Style TargetType="PasswordBox"
-                BasedOn="{StaticResource {x:Type PasswordBox}}">
+               BasedOn="{StaticResource {x:Type PasswordBox}}">
             <Setter Property="Margin"
                     Value="12,8,0,8"/>
         </Style>
         <Style TargetType="CheckBox"
-                BasedOn="{StaticResource {x:Type CheckBox}}">
+               BasedOn="{StaticResource {x:Type CheckBox}}">
             <Setter Property="Margin"
                     Value="12,8,0,8"/>
         </Style>
@@ -81,7 +81,7 @@
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}"
-                                Text="{loc:Loc ServerProperties_General}"/>
+                                      Text="{loc:Loc ServerProperties_General}"/>
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -206,7 +206,7 @@
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}"
-                                Text="{loc:Loc ServerProperties_Gamemode}"/>
+                                      Text="{loc:Loc ServerProperties_Gamemode}"/>
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -229,13 +229,13 @@
                             Grid.Column="1"
                             ContextMenu="{x:Null}">
                             <ComboBoxItem Content="{loc:Loc ServerProperties_Gamemode_Survival}"
-                                    Tag="survival"/>
+                                          Tag="survival"/>
                             <ComboBoxItem Content="{loc:Loc ServerProperties_Gamemode_Creative}"
-                                    Tag="creative"/>
+                                          Tag="creative"/>
                             <ComboBoxItem Content="{loc:Loc ServerProperties_Gamemode_Adventure}"
-                                    Tag="adventure"/>
+                                          Tag="adventure"/>
                             <ComboBoxItem Content="{loc:Loc ServerProperties_Gamemode_Spectator}"
-                                    Tag="spectator"/>
+                                          Tag="spectator"/>
                         </ComboBox>
 
                         <StackPanel
@@ -272,13 +272,13 @@
                             Grid.Column="1"
                             ContextMenu="{x:Null}">
                             <ComboBoxItem Content="{loc:Loc ServerProperties_Difficulty_Peaceful}"
-                                    Tag="peaceful"/>
+                                          Tag="peaceful"/>
                             <ComboBoxItem Content="{loc:Loc ServerProperties_Difficulty_Easy}"
-                                    Tag="easy"/>
+                                          Tag="easy"/>
                             <ComboBoxItem Content="{loc:Loc ServerProperties_Difficulty_Normal}"
-                                    Tag="normal"/>
+                                          Tag="normal"/>
                             <ComboBoxItem Content="{loc:Loc ServerProperties_Difficulty_Hard}"
-                                    Tag="hard"/>
+                                          Tag="hard"/>
                         </ComboBox>
 
                         <StackPanel
@@ -418,7 +418,7 @@
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}"
-                                Text="{loc:Loc ServerProperties_World}"/>
+                                      Text="{loc:Loc ServerProperties_World}"/>
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -473,15 +473,15 @@
                             Grid.Column="1"
                             ContextMenu="{x:Null}">
                             <ComboBoxItem Content="{loc:Loc ServerProperties_LevelType_Normal}"
-                                    Tag="minecraft:normal"/>
+                                          Tag="minecraft:normal"/>
                             <ComboBoxItem Content="{loc:Loc ServerProperties_LevelType_Flat}"
-                                    Tag="minecraft:flat"/>
+                                          Tag="minecraft:flat"/>
                             <ComboBoxItem Content="{loc:Loc ServerProperties_LevelType_LargeBiomes}"
-                                    Tag="minecraft:large_biomes"/>
+                                          Tag="minecraft:large_biomes"/>
                             <ComboBoxItem Content="{loc:Loc ServerProperties_LevelType_Amplified}"
-                                    Tag="minecraft:amplified"/>
+                                          Tag="minecraft:amplified"/>
                             <ComboBoxItem Content="{loc:Loc ServerProperties_LevelType_SingleBiome}"
-                                    Tag="minecraft:single_biome_surface"/>
+                                          Tag="minecraft:single_biome_surface"/>
                         </ComboBox>
 
                         <StackPanel
@@ -587,7 +587,7 @@
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}"
-                                Text="{loc:Loc ServerProperties_Network}"/>
+                                      Text="{loc:Loc ServerProperties_Network}"/>
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -763,7 +763,7 @@
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}"
-                                Text="{loc:Loc ServerProperties_WhitelistSection}"/>
+                                      Text="{loc:Loc ServerProperties_WhitelistSection}"/>
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -837,7 +837,7 @@
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}"
-                                Text="{loc:Loc ServerProperties_RCON}"/>
+                                      Text="{loc:Loc ServerProperties_RCON}"/>
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -910,7 +910,7 @@
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}"
-                                Text="{loc:Loc ServerProperties_Query}"/>
+                                      Text="{loc:Loc ServerProperties_Query}"/>
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -967,7 +967,7 @@
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}"
-                                Text="{loc:Loc ServerProperties_Permissions}"/>
+                                      Text="{loc:Loc ServerProperties_Permissions}"/>
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -1070,7 +1070,7 @@
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}"
-                                Text="{loc:Loc ServerProperties_ManagementServer}"/>
+                                      Text="{loc:Loc ServerProperties_ManagementServer}"/>
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -1225,7 +1225,7 @@
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}"
-                                Text="{loc:Loc ServerProperties_ResourcePack}"/>
+                                      Text="{loc:Loc ServerProperties_ResourcePack}"/>
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -1329,7 +1329,7 @@
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}"
-                                Text="{loc:Loc ServerProperties_Performance}"/>
+                                      Text="{loc:Loc ServerProperties_Performance}"/>
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -1420,9 +1420,9 @@
                             Grid.Column="1"
                             ContextMenu="{x:Null}">
                             <ComboBoxItem Content="{loc:Loc ServerProperties_RegionFileCompression_Deflate}"
-                                    Tag="deflate"/>
+                                          Tag="deflate"/>
                             <ComboBoxItem Content="{loc:Loc ServerProperties_RegionFileCompression_Lz4}"
-                                    Tag="lz4"/>
+                                          Tag="lz4"/>
                         </ComboBox>
                     </Grid>
                 </ui:CardExpander>
@@ -1442,7 +1442,7 @@
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <ui:TextBlock Style="{StaticResource ExpanderHeaderStyle}"
-                                Text="{loc:Loc ServerProperties_Logging}"/>
+                                      Text="{loc:Loc ServerProperties_Logging}"/>
                     </ui:CardExpander.Header>
                     <Grid
                         Margin="8,0"
@@ -1587,7 +1587,12 @@
         </ScrollViewer>
         <!--  Нижняя панель (кнопки действий)  -->
         <Border Grid.Row="1"
-                Margin="0,16,0,0">
+                Margin="0,16,0,0"
+                Padding="12,8"
+                Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                BorderThickness="1,1,1,1"
+                CornerRadius="8">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <ui:TextBlock
                     x:Name="StatusMessage"
@@ -1596,7 +1601,7 @@
                     VerticalAlignment="Center"
                     FontStyle="Italic"/>
                 <StackPanel Grid.Column="2"
-                        Orientation="Horizontal">
+                            Orientation="Horizontal">
                     <ui:Button
                         x:Name="ResetButton"
                         Width="32"
@@ -1605,7 +1610,7 @@
                         Click="Reset_Click"
                         ToolTip="{loc:Loc ServerProperties_Reset}">
                         <ui:SymbolIcon FontSize="20"
-                                Symbol="ArrowReset20"/>
+                                       Symbol="ArrowReset20"/>
                     </ui:Button>
                     <ui:Button
                         x:Name="LoadButton"
@@ -1616,7 +1621,7 @@
                         Click="Load_Click"
                         ToolTip="{loc:Loc ServerProperties_Refresh}">
                         <ui:SymbolIcon FontSize="20"
-                                Symbol="ArrowSyncCircle20"/>
+                                       Symbol="ArrowSyncCircle20"/>
                     </ui:Button>
                     <ui:Button
                         x:Name="SaveButton"
@@ -1630,7 +1635,7 @@
                                 FontSize="20"
                                 Symbol="Save20"/>
                             <ui:TextBlock VerticalAlignment="Top"
-                                    Text="{loc:Loc ServerProperties_Save}"/>
+                                          Text="{loc:Loc ServerProperties_Save}"/>
                         </StackPanel>
                     </ui:Button>
                 </StackPanel>
