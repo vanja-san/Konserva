@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Resilience;
 using Polly;
+using System.IO;
+using System.IO.Pipes;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -17,6 +19,12 @@ namespace Konserva;
 /// </summary>
 public partial class App : Application
 {
+    // Single-instance
+    private const string MutexName = "Global\\KonservaApp-9E7A4F5B-2D3C-4A1E-8B6F-9C0D1E2F3A4B";
+    private const string PipeName = "KonservaApp-Pipe-9E7A4F5B";
+    private static Mutex? _instanceMutex;
+    private static CancellationTokenSource? _pipeCts;
+
     private static IServiceProvider? _serviceProvider;
 
     /// <summary>
@@ -47,6 +55,16 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Single-instance проверка
+        _instanceMutex = new Mutex(true, MutexName, out bool createdNew);
+        if (!createdNew)
+        {
+            _instanceMutex = null;
+            BringExistingInstanceToFront();
+            Environment.Exit(0);
+            return;
+        }
+
         // 1. Сначала инициализируем логгер
         Logger.Initialize();
 
@@ -132,6 +150,9 @@ public partial class App : Application
             // Показываем главное окно (создаётся через DI)
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
+
+            // Запускаем pipe-сервер для single-instance IPC
+            StartPipeServer();
 
             Logger.Info("Application started successfully", "App");
         }
@@ -290,8 +311,87 @@ public partial class App : Application
         await ShutdownStaticAsync(1);
     }
 
+    private static void BringExistingInstanceToFront()
+    {
+        try
+        {
+            // Отправляем сигнал через named pipe — первый экземпляр поднимет окно
+            using var pipeClient = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
+            pipeClient.Connect(1000);
+            var data = "bringtofront"u8.ToArray();
+            pipeClient.Write(data, 0, data.Length);
+            pipeClient.Flush();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"BringExistingInstanceToFront error: {ex.Message}", "App");
+        }
+    }
+
+    private static void StartPipeServer()
+    {
+        _pipeCts = new CancellationTokenSource();
+        var token = _pipeCts.Token;
+
+        Task.Run(async () =>
+        {
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    using var pipeServer = new NamedPipeServerStream(
+                        PipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+
+                    await pipeServer.WaitForConnectionAsync(token);
+
+                    using var reader = new StreamReader(pipeServer);
+                    var command = await reader.ReadLineAsync(token);
+
+                    if (command == "bringtofront")
+                    {
+                        // Переключаемся на UI-поток и поднимаем окно
+                        await Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            var window = Current.MainWindow;
+                            if (window == null) return;
+
+                            if (window.WindowState == WindowState.Minimized)
+                                window.WindowState = WindowState.Normal;
+
+                            window.Show();
+                            window.Activate();
+
+                            // Topmost toggle — гарантирует вывод на передний план
+                            window.Topmost = true;
+                            window.Topmost = false;
+
+                            _ = window.Focus();
+                        });
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning($"PipeServer error: {ex.Message}", "App");
+                }
+            }
+        }, token);
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
+        // Останавливаем pipe-сервер
+        _pipeCts?.Cancel();
+        _pipeCts?.Dispose();
+        _pipeCts = null;
+
+        // Освобождаем mutex
+        _instanceMutex?.ReleaseMutex();
+        _instanceMutex?.Dispose();
+        _instanceMutex = null;
         // Дожидаемся остановки серверов (иначе Java процессы останутся в фоне и заблокируют порт)
         try
         {
