@@ -128,6 +128,7 @@ public static class EnglishStrings
         { "ServersPage_NoServers_Description", "Create your first server to get started" },
         { "ServersPage_Error_AppNotInitialized", "Error: Application not initialized" },
         { "Common_Cancel", "Cancel" },
+        { "Common_Copied", "Copied!" },
         { "Common_OK", "OK" },
         { "Common_Yes", "Yes" },
         { "Common_No", "No" },
@@ -545,6 +546,24 @@ public static class EnglishStrings
         { "Settings_DownloadSource", "Download Source" },
         { "Settings_DownloadSource_Desc", "Where to download modloader and game files" },
         { "Settings_DownloadSource_VanillaApi", "Official Minecraft API" },
-        { "Settings_DownloadSource_BMCLAPI", "BMCLAPI (mirror, faster in China/Russia)" }
+        { "Settings_DownloadSource_BMCLAPI", "BMCLAPI (mirror, faster in China/Russia)" },
+
+        { "ServerDetail_Upnp", "UPnP Port Forwarding" },
+        { "ServerDetail_Upnp_Enable", "Auto Forward Port (UPnP)" },
+        { "ServerDetail_Upnp_Enable_Desc", "Automatically open server port via UPnP when starting" },
+        { "ServerDetail_Upnp_Check", "Check UPnP" },
+        { "ServerDetail_Upnp_Checking", "Checking..." },
+        { "ServerDetail_Upnp_Available", "UPnP is available ✓" },
+        { "ServerDetail_Upnp_NotAvailable", "UPnP not available (disabled on router?)" },
+        { "ServerDetail_Upnp_Error", "UPnP check failed" },
+        { "ServerDetail_Upnp_Created", "Port {0} forwarded via UPnP" },
+        { "ServerDetail_Upnp_Deleted", "Port {0} closed via UPnP" },
+        { "ServerDetail_Upnp_Failed", "UPnP port forward failed" },
+        { "ServerDetail_Upnp_CheckPort", "Check Port" },
+        { "ServerDetail_Upnp_Port_Open", "Port Open" },
+        { "ServerDetail_Upnp_Port_Closed", "Port Closed" },
+        { "ServerDetail_Upnp_ExternalIp", "External IP: {0}" },
+        { "ServerDetail_Upnp_Check_Desc", "Check UPnP availability on your router and verify the server port is forwarded. The server must be running with UPnP enabled." },
+        { "ServerDetail_Upnp_CopyAddress", "Copy" },
     };
 }

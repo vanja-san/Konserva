@@ -9,7 +9,7 @@ namespace Konserva.Services;
 /// <summary>
 /// Сервис управления серверами Minecraft
 /// </summary>
-public class McServerManager(IServerStorageService storage, IConfigService configService) : IServerManager
+public class McServerManager(IServerStorageService storage, IConfigService configService, IPortForwardingService? portForwarding = null) : IServerManager
 {
     // Создаём отдельную копию списка, чтобы _servers не был привязан к
     // внутреннему кэшу FileBasedStore (_cached). Это предотвращает возможные
@@ -18,6 +18,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
     private readonly ConcurrentDictionary<string, McServerProcess> _processes = new();
     private readonly ConcurrentDictionary<string, Action<ServerStatus>> _statusHandlers = new();
     private readonly ReaderWriterLockSlim _serversLock = new();
+    private readonly IPortForwardingService? _portForwarding = portForwarding;
 
     // CPU tracking
     private readonly ConcurrentDictionary<int, (DateTime time, TimeSpan cpu)> _cpuSamples = new();
@@ -257,6 +258,13 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             else
             {
                 Logger.Info($"[StartServerInternal] process.Start() completed for {server.Name}", "McServerManager");
+
+                // UPnP: автоматический проброс порта, если включено
+                if (_portForwarding != null && server.Settings.EnableUpnp)
+                {
+                    var port = server.Port;
+                    _ = TryCreateUpnpMappingAsync(port, server.Name, server.Id);
+                }
             }
         }
         catch (Exception ex)
@@ -289,6 +297,9 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
 
     public void StopServer(string id)
     {
+        // UPnP: удаляем проброс порта при остановке (если включено)
+        TryDeleteUpnpMappingForServer(id);
+
         if (_processes.TryRemove(id, out var process))
         {
             // останавливаем процесс в фоне, чтобы не блокировать UI
@@ -321,6 +332,9 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
 
     public async Task StopServerAsync(string id, CancellationToken ct = default)
     {
+        // UPnP: удаляем проброс порта при остановке (если включено)
+        await TryDeleteUpnpMappingForServerAsync(id);
+
         if (_processes.TryRemove(id, out var process))
         {
             try
@@ -558,6 +572,102 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         catch (Exception ex)
         {
             Logger.Warning($"[KillZombieProcesses] Failed: {ex.Message}", "McServerManager");
+        }
+    }
+
+    // ===== UPnP helpers =====
+
+    /// <summary>
+    /// Fire-and-forget: создаёт UPnP проброс порта для сервера.
+    /// </summary>
+    private async Task TryCreateUpnpMappingAsync(int port, string serverName, string serverId)
+    {
+        try
+        {
+            if (_portForwarding == null)
+                return;
+
+            var description = $"Konserva - {serverName}";
+            var result = await _portForwarding.CreateMappingAsync(port, description);
+
+            if (result)
+            {
+                Logger.Info($"UPnP: Port {port} forwarded for server {serverName} ({serverId})", "McServerManager");
+            }
+            else
+            {
+                Logger.Warning($"UPnP: Failed to forward port {port} for server {serverName}", "McServerManager");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"UPnP create mapping error for {serverName}: {ex.Message}", ex, "McServerManager");
+        }
+    }
+
+    /// <summary>
+    /// Удаляет UPnP проброс порта для сервера (синхронный вызов).
+    /// </summary>
+    private void TryDeleteUpnpMappingForServer(string id)
+    {
+        if (_portForwarding == null)
+            return;
+
+        try
+        {
+            var server = GetServer(id);
+            if (server == null || !server.Settings.EnableUpnp)
+                return;
+
+            _ = TryDeleteUpnpMappingAsync(server.Port);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"UPnP delete mapping error (sync): {ex.Message}", "McServerManager");
+        }
+    }
+
+    /// <summary>
+    /// Удаляет UPnP проброс порта для сервера (асинхронный вызов).
+    /// </summary>
+    private async Task TryDeleteUpnpMappingForServerAsync(string id)
+    {
+        if (_portForwarding == null)
+            return;
+
+        try
+        {
+            var server = GetServer(id);
+            if (server == null || !server.Settings.EnableUpnp)
+                return;
+
+            await TryDeleteUpnpMappingAsync(server.Port);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"UPnP delete mapping error (async): {ex.Message}", "McServerManager");
+        }
+    }
+
+    /// <summary>
+    /// Удаляет проброс порта по номеру порта.
+    /// </summary>
+    private async Task TryDeleteUpnpMappingAsync(int port)
+    {
+        try
+        {
+            if (_portForwarding == null)
+                return;
+
+            var result = await _portForwarding.DeleteMappingAsync(port);
+            if (result)
+            {
+                Logger.Info($"UPnP: Port {port} unforwarded", "McServerManager");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"UPnP delete mapping error for port {port}: {ex.Message}", "McServerManager");
         }
     }
 }

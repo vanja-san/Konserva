@@ -14,10 +14,10 @@
     <AssemblyCopyright>Copyright (c) 2026 vanja-san</AssemblyCopyright>
     <AssemblyCompany>vanja-san</AssemblyCompany>
     <AssemblyProduct>Konserva</AssemblyProduct>
-    <AssemblyVersion>1.9.6.0</AssemblyVersion>
-    <FileVersion>1.9.6.0</FileVersion>
-    <InformationalVersion>1.9.6</InformationalVersion>
-    <Version>1.9.6</Version>
+    <AssemblyVersion>1.9.7.0</AssemblyVersion>
+    <FileVersion>1.9.7.0</FileVersion>
+    <InformationalVersion>1.9.7</InformationalVersion>
+    <Version>1.9.7</Version>
     <NeutralLanguage>ru-RU</NeutralLanguage>
     <Copyright>Copyright (c) 2026 vanja-san</Copyright>
 	  
@@ -31,6 +31,7 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+    <PackageReference Include="SharpOpenNat" Version="4.0.17" />
     <PackageReference Include="WPF-UI" Version="4.3.0" />
     <PackageReference Include="WPF-UI.Tray" Version="4.3.0" />
   </ItemGroup>

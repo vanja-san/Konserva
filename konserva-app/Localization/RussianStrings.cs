@@ -128,6 +128,7 @@ public static class RussianStrings
         { "ServersPage_NoServers_Description", "Создайте первый сервер для управления" },
         { "ServersPage_Error_AppNotInitialized", "Ошибка: приложение не инициализировано" },
         { "Common_Cancel", "Отмена" },
+        { "Common_Copied", "Скопировано!" },
         { "Common_OK", "ОК" },
         { "Common_Yes", "Да" },
         { "Common_No", "Нет" },
@@ -545,6 +546,24 @@ public static class RussianStrings
         { "Settings_DownloadSource", "Источник скачивания" },
         { "Settings_DownloadSource_Desc", "Откуда скачивать файлы модлоадеров и игры" },
         { "Settings_DownloadSource_VanillaApi", "Официальный API Minecraft" },
-        { "Settings_DownloadSource_BMCLAPI", "BMCLAPI (зеркало, быстрее в Китае/России)" }
+        { "Settings_DownloadSource_BMCLAPI", "BMCLAPI (зеркало, быстрее в Китае/России)" },
+
+        { "ServerDetail_Upnp", "UPnP Проброс порта" },
+        { "ServerDetail_Upnp_Enable", "Авто-проброс порта (UPnP)" },
+        { "ServerDetail_Upnp_Enable_Desc", "Автоматически открывать порт сервера через UPnP при запуске" },
+        { "ServerDetail_Upnp_Check", "Проверить UPnP" },
+        { "ServerDetail_Upnp_Checking", "Проверка..." },
+        { "ServerDetail_Upnp_Available", "UPnP доступен ✓" },
+        { "ServerDetail_Upnp_NotAvailable", "UPnP недоступен (отключён на роутере?)" },
+        { "ServerDetail_Upnp_Error", "Ошибка проверки UPnP" },
+        { "ServerDetail_Upnp_Created", "Порт {0} открыт через UPnP" },
+        { "ServerDetail_Upnp_Deleted", "Порт {0} закрыт через UPnP" },
+        { "ServerDetail_Upnp_Failed", "Не удалось открыть порт через UPnP" },
+        { "ServerDetail_Upnp_CheckPort", "Проверить порт" },
+        { "ServerDetail_Upnp_Port_Open", "Порт открыт" },
+        { "ServerDetail_Upnp_Port_Closed", "Порт закрыт" },
+        { "ServerDetail_Upnp_ExternalIp", "Внешний IP: {0}" },
+        { "ServerDetail_Upnp_Check_Desc", "Проверяет UPnP на роутере и открыт ли порт сервера. Для проверки порта сервер должен быть запущен с UPnP." },
+        { "ServerDetail_Upnp_CopyAddress", "Копировать" },
     };
 }

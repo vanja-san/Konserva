@@ -231,6 +231,10 @@ public partial class ServerDetailPage : Page, IDisposable
         LoadJavaComboBox();
         UpdateJavaComboBoxVisibility();
 
+        // UPnP настройки
+        SettingEnableUpnp.IsChecked = _server.Settings.EnableUpnp;
+        UpdateServerAddressDisplay();
+
         // JVM аргументы
         SettingJvmArgs.Text = _server.Settings.JvmArgsText;
 
@@ -753,6 +757,207 @@ public partial class ServerDetailPage : Page, IDisposable
             return;
 
         UpdateJavaComboBoxVisibility();
+    }
+
+    /// <summary>
+    /// Обработка изменения чекбокса UPnP
+    /// </summary>
+    private void SettingEnableUpnp_Click(object sender, RoutedEventArgs e)
+    {
+        if (_server == null)
+            return;
+
+        var enable = SettingEnableUpnp.IsChecked ?? false;
+        if (enable != _server.Settings.EnableUpnp)
+        {
+            _server.Settings.EnableUpnp = enable;
+            App.ServerManager.UpdateServer(_server);
+        }
+    }
+
+    /// <summary>
+    /// Обновляет отображение адреса сервера (IP:Port).
+    /// </summary>
+    private void UpdateServerAddressDisplay()
+    {
+        if (_server == null)
+            return;
+
+        var port = _server.Port;
+        var upnpService = App.ServiceProvider?.GetService(typeof(IPortForwardingService)) as IPortForwardingService;
+        var externalIp = upnpService?.TryGetCachedExternalIp();
+
+        if (externalIp != null)
+        {
+            UpnpAddressText.Text = $"{externalIp}:{port}";
+            UpnpAddressText.Visibility = Visibility.Visible;
+            CopyAddressButton.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            UpnpAddressText.Visibility = Visibility.Collapsed;
+            CopyAddressButton.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    /// <summary>
+    /// Копирует адрес сервера (IP:Port) в буфер обмена.
+    /// </summary>
+    private void CopyAddressButton_Click(object sender, RoutedEventArgs e)
+    {
+        var address = UpnpAddressText.Text;
+        if (string.IsNullOrEmpty(address))
+            return;
+
+        try
+        {
+            Clipboard.SetText(address);
+            CopyAddressButton.Content = LocalizationManager.Get("Common_Copied");
+
+            // Возвращаем текст кнопки через 2 секунды
+            var dispatcher = Dispatcher;
+            Task.Delay(2000).ContinueWith(_ =>
+            {
+                dispatcher.Invoke(() =>
+                {
+                    CopyAddressButton.Content = LocalizationManager.Get("ServerDetail_Upnp_CopyAddress");
+                });
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Failed to copy address: {ex.Message}", "ServerDetailPage");
+        }
+    }
+
+    /// <summary>
+    /// Проверка UPnP доступности
+    /// </summary>
+    private async void CheckUpnpButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            CheckUpnpButton.IsEnabled = false;
+            CheckUpnpButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Checking");
+
+            var upnpService = App.ServiceProvider?.GetService(typeof(IPortForwardingService)) as IPortForwardingService;
+            if (upnpService == null)
+            {
+                CheckUpnpButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Error");
+                return;
+            }
+
+            var isAvailable = await upnpService.IsAvailableAsync();
+            CheckUpnpButton.Content = isAvailable
+                ? LocalizationManager.Get("ServerDetail_Upnp_Available")
+                : LocalizationManager.Get("ServerDetail_Upnp_NotAvailable");
+
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"UPnP check error: {ex.Message}", ex, "ServerDetailPage");
+            CheckUpnpButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Error");
+        }
+        finally
+        {
+            _ = ResetCheckUpnpButtonAsync();
+        }
+    }
+
+    /// <summary>
+    /// Сбрасывает кнопку UPnP через 5 секунд.
+    /// </summary>
+    private async Task ResetCheckUpnpButtonAsync()
+    {
+        try
+        {
+            await Task.Delay(5000);
+            Dispatcher.Invoke(() =>
+            {
+                CheckUpnpButton.IsEnabled = true;
+                CheckUpnpButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Check");
+            });
+        }
+        catch
+        {
+            // Ignore
+        }
+    }
+
+    /// <summary>
+    /// Проверка проброса порта через UPnP. Результат показывается прямо на кнопке.
+    /// </summary>
+    private async void CheckPortButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_server == null)
+            return;
+
+        try
+        {
+            CheckPortButton.IsEnabled = false;
+            CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Checking");
+
+            var upnpService = App.ServiceProvider?.GetService(typeof(IPortForwardingService)) as IPortForwardingService;
+            if (upnpService == null)
+            {
+                CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Error");
+                return;
+            }
+
+            var port = _server.Port;
+
+            // Проверяем, существует ли проброс порта
+            var isForwarded = await upnpService.CheckMappingAsync(port);
+
+            if (isForwarded)
+            {
+                CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Port_Open");
+                CheckPortButton.Appearance = ControlAppearance.Success;
+
+                // Показываем внешний IP:Port
+                var externalIp = await upnpService.GetExternalIpAsync();
+                UpdateServerAddressDisplay();
+            }
+            else
+            {
+                CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Port_Closed");
+                CheckPortButton.Appearance = ControlAppearance.Caution;
+
+                // Скрываем адрес, если порт закрыт
+                UpnpAddressText.Visibility = Visibility.Collapsed;
+                CopyAddressButton.Visibility = Visibility.Collapsed;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"UPnP port check error: {ex.Message}", ex, "ServerDetailPage");
+            CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Error");
+        }
+        finally
+        {
+            _ = ResetCheckPortButtonAsync();
+        }
+    }
+
+    /// <summary>
+    /// Сбрасывает кнопку проверки порта через 5 секунд.
+    /// </summary>
+    private async Task ResetCheckPortButtonAsync()
+    {
+        try
+        {
+            await Task.Delay(5000);
+            Dispatcher.Invoke(() =>
+            {
+                CheckPortButton.IsEnabled = true;
+                CheckPortButton.Appearance = ControlAppearance.Primary;
+                CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_CheckPort");
+            });
+        }
+        catch
+        {
+            // Ignore
+        }
     }
 
     /// <summary>

@@ -108,6 +108,11 @@ public class ServerSettings
     public int AutoRestartDelay { get; set; } = 5;
 
     /// <summary>
+    /// Автоматический проброс порта через UPnP при запуске сервера.
+    /// </summary>
+    public bool EnableUpnp { get; set; }
+
+    /// <summary>
     /// Копирование настроек
     /// </summary>
     public ServerSettings Clone() => new()
@@ -119,7 +124,8 @@ public class ServerSettings
         JavaAutoSelect = JavaAutoSelect,
         JavaArgs = [.. JavaArgs],
         AutoRestart = AutoRestart,
-        AutoRestartDelay = AutoRestartDelay
+        AutoRestartDelay = AutoRestartDelay,
+        EnableUpnp = EnableUpnp
     };
 
     /// <summary>

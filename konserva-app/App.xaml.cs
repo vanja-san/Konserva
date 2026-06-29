@@ -152,6 +152,7 @@ public partial class App : Application
         services.AddSingleton<IConfigService, ConfigService>();
         services.AddSingleton<IServerStorageService, ServerStorageService>();
         services.AddSingleton<IServerManager, McServerManager>();
+        services.AddSingleton<IPortForwardingService, PortForwardingService>();
         services.AddSingleton<IJavaManagementService, JavaManagementService>();
         services.AddSingleton<IServerInstaller>(sp =>
         {
