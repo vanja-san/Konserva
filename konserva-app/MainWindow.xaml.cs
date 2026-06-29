@@ -505,24 +505,13 @@ public partial class MainWindow : FluentWindow, IDisposable
     private CancellationTokenSource? _updateCheckCts;
 
     /// <summary>
-    /// Проверяет наличие обновлений через GitHub API (без учёта режима).
-    /// Учитывает интервал последней проверки, чтобы не дудосить API.
+    /// Проверяет наличие обновлений через GitHub API.
+    /// Вызывается при старте и по таймеру в Scheduled-режиме.
     /// </summary>
     private async Task CheckForUpdatesAsync()
     {
         try
         {
-            var config = _config.GetConfig();
-
-            // Проверяем интервал
-            if (config.LastUpdateCheck.HasValue)
-            {
-                var elapsed = SystemTime.UtcNow - config.LastUpdateCheck.Value;
-                var interval = TimeSpan.FromHours(Math.Clamp(config.UpdateCheckIntervalHours, 1, 168));
-                if (elapsed < interval)
-                    return;
-            }
-
             var updateInfo = await UpdateChecker.CheckAsync();
 
             // Обновляем время проверки
