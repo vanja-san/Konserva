@@ -66,14 +66,16 @@ public static class LocalizationManager
     public static void LoadCulture(string culture)
     {
         var filePath = Path.Combine(_i18nPath, $"{culture}.json");
-        if (File.Exists(filePath))
+        if (!File.Exists(filePath))
         {
-            var json = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
-            var translations = JsonSerializer.Deserialize<Dictionary<string, string>>(json, _jsonOptions);
-            if (translations != null)
-            {
-                _translations[culture] = translations;
-            }
+            CreateDefaultLocalizationFile(filePath, culture);
+        }
+
+        var json = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
+        var translations = JsonSerializer.Deserialize<Dictionary<string, string>>(json, _jsonOptions);
+        if (translations != null)
+        {
+            _translations[culture] = translations;
         }
     }
 
