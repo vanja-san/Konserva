@@ -65,6 +65,9 @@ public static class LocalizationManager
 
     public static void LoadCulture(string culture)
     {
+        if (!Directory.Exists(_i18nPath))
+            Directory.CreateDirectory(_i18nPath);
+
         var filePath = Path.Combine(_i18nPath, $"{culture}.json");
         if (!File.Exists(filePath))
         {
