@@ -2,67 +2,39 @@ name: "CodeQL Analysis"
 
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main", "develop" ]
+    branches: [ "master" ]
   workflow_dispatch:
 
 permissions:
   contents: read
   security-events: write
-  actions: write
 
 jobs:
   analyze:
-    name: Analyze
+    name: Analyze (C#)
     runs-on: windows-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'csharp' ]
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Setup .NET 10
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@v5.4.0
       with:
         dotnet-version: '10.0.x'
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
       with:
-        languages: ${{ matrix.language }}
+        languages: csharp
         queries: security-extended,security-and-quality
 
-    - name: Restore dependencies
-      run: dotnet restore konserva-app/konserva-app.csproj
-
     - name: Build
-      run: dotnet build konserva-app/konserva-app.csproj --configuration Release --no-restore
+      run: |
+        dotnet restore konserva-app/konserva-app.csproj
+        dotnet build konserva-app/konserva-app.csproj --configuration Release --no-restore
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
-      with:
-        category: "/language:${{matrix.language}}"
-        output: sarif-results
-        upload: false
-
-    - name: Upload SARIF results
-      uses: github/codeql-action/upload-sarif@v4
-      if: always()
-      with:
-        sarif_file: sarif-results/csharp.sarif
-        category: "/language:${{matrix.language}}"
-
-    - name: Upload SARIF artifact
-      if: always()
-      uses: actions/upload-artifact@v6
-      with:
-        name: codeql-sarif-csharp
-        path: sarif-results/csharp.sarif
-        retention-days: 30
