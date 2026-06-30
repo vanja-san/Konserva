@@ -29,8 +29,24 @@ jobs:
       uses: github/codeql-action/init@v4
       with:
         languages: csharp
-        queries: security-extended
-        config-file: ./.github/codeql/codeql-config.yml
+        config: |
+          name: "Konserva CodeQL Config"
+          queries:
+            - uses: security-extended
+          paths-ignore:
+            - '**/bin/**'
+            - '**/obj/**'
+            - '**/publish/**'
+            - '**/TestResults/**'
+          query-filters:
+            - exclude:
+                id: cs/incorrect-string-format
+            - exclude:
+                id: cs/not-a-function-pointer
+            - exclude:
+                id: cs/build-artifact-actions-artifact
+            - exclude:
+                id: cs/clear-text-logging-sensitive-data
 
     - name: Build
       run: |
