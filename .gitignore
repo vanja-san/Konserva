@@ -36,6 +36,9 @@ coverage*.xml
 # GitHub Actions temp files
 CHANGELOG_RELEASE.md
 
+# Cached build data
+paper_builds.json
+
 # OS files
 Thumbs.db
 Desktop.ini
