@@ -1,6 +1,9 @@
-﻿using Konserva.Localization;
+﻿using CommunityToolkit.Mvvm.DependencyInjection;
+using Konserva.Localization;
 using Konserva.Models;
+using Konserva.Services;
 using Konserva.Utilities;
+using Konserva.ViewModels;
 using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,22 +12,26 @@ using Button = Wpf.Ui.Controls.Button;
 
 namespace Konserva.Pages;
 
-using Konserva.Services;
-
 /// <summary>
 /// Страница настроек приложения
 /// </summary>
-public partial class SettingsPage(IConfigService? configService = null) : Page
+public partial class SettingsPage : Page
 {
-    private readonly IConfigService _configService = configService ?? App.ConfigService;
-    private readonly JavaManagementService _javaService = new(configService ?? App.ConfigService);
+    private readonly SettingsViewModel _viewModel;
     private bool _isUpdating; // Флаг для предотвращения рекурсивного сохранения
     private bool _isLoading = true; // Флаг загрузки страницы
-    private int _updateIntervalHours = 24; // Текущий интервал проверки обновлений (часы)
 
-    public SettingsPage() : this(null)
+    public SettingsPage()
     {
         InitializeComponent();
+
+        _viewModel = Ioc.Default.GetService<SettingsViewModel>()
+            ?? new SettingsViewModel(
+                Ioc.Default.GetService<IConfigService>()!,
+                Ioc.Default.GetService<IJavaManagementService>()
+                    ?? new JavaManagementService(Ioc.Default.GetService<IConfigService>()!),
+                Ioc.Default.GetService<IUpdateService>()
+                    ?? new UpdateService(Ioc.Default.GetService<IConfigService>()!));
 
         Title = LocalizationManager.Get("Settings_Title");
         Loaded += OnLoaded;
@@ -32,54 +39,44 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        LoadSettings();
+        _viewModel.LoadSettings();
+        RefreshUI();
 
         // Скрываем InfoBar при загрузке
         LanguageChangeInfoBar.IsOpen = false;
     }
 
-    private void LoadSettings()
+    /// <summary>
+    /// Обновляет UI из ViewModel
+    /// </summary>
+    private void RefreshUI()
     {
-        _isLoading = true; // Блокируем сохранение во время загрузки
-
-        var config = _configService.GetConfig();
-
-        ServersFolderPath.Text = config.ServersDirectory;
-
-        // Загрузка Java в ItemsControl
-        JavaItemsControl.ItemsSource = config.JavaInstallations;
+        ServersFolderPath.Text = _viewModel.ServersDirectory;
+        JavaItemsControl.ItemsSource = _viewModel.JavaInstallations;
         UpdateJavaEmptyVisibility();
 
-        CheckUpdatesOnLaunchItem.IsChecked = !config.CheckUpdates;
-        CheckUpdatesScheduledItem.IsChecked = config.CheckUpdates;
-        CheckUpdatesModeButton.Content = config.CheckUpdates
-            ? LocalizationManager.Get("Settings_CheckUpdates_Scheduled")
-            : LocalizationManager.Get("Settings_CheckUpdates_OnLaunch");
-        UpdateCheckModeVisibility(config.CheckUpdates);
-        _updateIntervalHours = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
-        UpdateIntervalButton.Content = FormatInterval(_updateIntervalHours);
+        CheckUpdatesOnLaunchItem.IsChecked = !_viewModel.CheckUpdatesScheduled;
+        CheckUpdatesScheduledItem.IsChecked = _viewModel.CheckUpdatesScheduled;
+        CheckUpdatesModeButton.Content = _viewModel.CheckUpdatesModeText;
+        UpdateCheckModeVisibility(_viewModel.CheckUpdatesScheduled);
+        UpdateIntervalButton.Content = _viewModel.UpdateIntervalText;
 
-        MinimizeToTrayBox.IsChecked = config.MinimizeToTray;
-        ShowTrayIconBox.IsChecked = config.ShowTrayIconAlways;
+        MinimizeToTrayBox.IsChecked = _viewModel.MinimizeToTray;
+        ShowTrayIconBox.IsChecked = _viewModel.ShowTrayIconAlways;
 
         // Загрузка темы
-        var theme = config.Theme ?? "System";
-        if (!ThemeComboBox.SelectItemByTag(theme))
+        if (!ThemeComboBox.SelectItemByTag(_viewModel.Theme))
             ThemeComboBox.SelectedIndex = 0;
 
-        // Загрузка языка - принудительно выбираем элемент
-        var language = config.Language ?? "System";
-        if (!LanguageComboBox.SelectItemByTag(language))
+        // Загрузка языка
+        if (!LanguageComboBox.SelectItemByTag(_viewModel.Language))
             LanguageComboBox.SelectedIndex = 0;
 
         // Загрузка источника загрузки
-        var downloadSource = config.DownloadSource ?? "VanillaApi";
-        if (!DownloadSourceComboBox.SelectItemByTag(downloadSource))
+        if (!DownloadSourceComboBox.SelectItemByTag(_viewModel.DownloadSource))
             DownloadSourceComboBox.SelectedIndex = 0;
 
-        _isLoading = false; // Разрешаем сохранение после загрузки
-
-        // Скрываем InfoBar при загрузке
+        _isLoading = false;
         LanguageChangeInfoBar.IsOpen = false;
     }
 
@@ -88,7 +85,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     /// </summary>
     private void UpdateJavaEmptyVisibility()
     {
-        JavaEmptyText.Visibility = JavaItemsControl.Items.Count == 0
+        JavaEmptyText.Visibility = _viewModel.IsJavaEmpty
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
@@ -104,47 +101,33 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         {
             _isUpdating = true;
 
-            var config = _configService.GetConfig();
-            var languageChanged = false;
+            // Синхронизируем UI → ViewModel перед сохранением
+            _viewModel.CheckUpdatesScheduled = CheckUpdatesScheduledItem.IsChecked;
+            _viewModel.UpdateIntervalHours = ParseIntervalFromButton();
+            _viewModel.MinimizeToTray = MinimizeToTrayBox.IsChecked ?? true;
+            _viewModel.ShowTrayIconAlways = ShowTrayIconBox.IsChecked ?? false;
 
-            config.CheckUpdates = CheckUpdatesScheduledItem.IsChecked;
-            config.UpdateCheckIntervalHours = _updateIntervalHours;
-            config.MinimizeToTray = MinimizeToTrayBox.IsChecked ?? true;
-            config.ShowTrayIconAlways = ShowTrayIconBox.IsChecked ?? false;
-
-            // Сохранение источника загрузки
             if (DownloadSourceComboBox.SelectedItem is ComboBoxItem downloadItem)
-            {
-                config.DownloadSource = (string)downloadItem.Tag;
-            }
+                _viewModel.DownloadSource = (string)downloadItem.Tag;
 
-            // Сохранение темы
             if (ThemeComboBox.SelectedItem is ComboBoxItem themeItem)
             {
                 var newTheme = (string)themeItem.Tag;
-                if (config.Theme != newTheme)
+                if (_viewModel.Theme != newTheme)
                 {
-                    config.Theme = newTheme;
+                    _viewModel.Theme = newTheme;
                     // Применяем тему сразу
                     var mainWindow = Application.Current.MainWindow as MainWindow;
                     mainWindow?.ApplyTheme(newTheme);
                 }
             }
 
-            // Сохранение языка
             if (LanguageComboBox.SelectedItem is ComboBoxItem languageItem)
             {
-                var selectedLanguage = (string)languageItem.Tag;
-
-                // Проверяем, изменился ли язык
-                if (config.Language != selectedLanguage)
-                {
-                    config.Language = selectedLanguage;
-                    languageChanged = true;
-                }
+                _viewModel.Language = (string)languageItem.Tag;
             }
 
-            _configService.SaveConfig(config);
+            var languageChanged = _viewModel.SaveSettings();
 
             // Показываем InfoBar только если язык изменился
             if (languageChanged)
@@ -162,11 +145,28 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     }
 
     /// <summary>
+    /// Парсит интервал из текста кнопки
+    /// </summary>
+    private int ParseIntervalFromButton()
+    {
+        var text = UpdateIntervalButton.Content?.ToString();
+        if (string.IsNullOrEmpty(text)) return 24;
+
+        // Пример: "24 ч" или "2 д"
+        if (text.EndsWith(" ч") && int.TryParse(text[..^2], out var hours))
+            return hours;
+        if (text.EndsWith(" д") && int.TryParse(text[..^2], out var days))
+            return days * 24;
+
+        return 24;
+    }
+
+    /// <summary>
     /// Показ уведомления об успешном сохранении (через бадж справа сверху)
     /// </summary>
     private void ShowSaveNotification()
     {
-        App.MainWindow?.ShowSaveBadge();
+        Ioc.Default.GetService<MainWindow>()?.ShowSaveBadge();
     }
 
     /// <summary>
@@ -190,14 +190,12 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         var dialog = new OpenFolderDialog
         {
             Title = LocalizationManager.Get("Settings_SelectServerFolder"),
-            InitialDirectory = _configService.GetConfig().ServersDirectory
+            InitialDirectory = _viewModel.ServersDirectory
         };
 
         if (dialog.ShowDialog() == true)
         {
-            var config = _configService.GetConfig();
-            config.ServersDirectory = dialog.FolderName;
-            _configService.SaveConfig(config);
+            _viewModel.SetServersDirectory(dialog.FolderName);
             ServersFolderPath.Text = dialog.FolderName;
             ShowSaveNotification();
         }
@@ -216,12 +214,12 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
             if (dialog.ShowDialog() == true)
             {
-                var java = _javaService.AddJava(dialog.FileName);
+                var java = _viewModel.AddJava(dialog.FileName);
 
                 if (java != null)
                 {
                     // Обновляем список Java
-                    LoadSettings();
+                    RefreshUI();
 
                     // Показываем InfoBar об успешной установке
                     JavaSuccessInfoBar.Title = LocalizationManager.Get("Settings_JavaAdded");
@@ -255,10 +253,10 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
 
                 if (result == ContentDialogResult.Primary)
                 {
-                    var removed = _javaService.RemoveJava(java.Id);
+                    var removed = _viewModel.RemoveJava(java.Id);
                     if (removed)
                     {
-                        LoadSettings();
+                        RefreshUI();
                     }
                     else
                     {
@@ -289,22 +287,18 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         {
             var isScheduled = tag == "Scheduled";
 
-            // Обновляем checked-состояние пунктов меню
+            _viewModel.SetCheckUpdatesMode(isScheduled);
+
+            // Обновляем UI
             CheckUpdatesOnLaunchItem.IsChecked = !isScheduled;
             CheckUpdatesScheduledItem.IsChecked = isScheduled;
-
-            // Обновляем текст на кнопке
-            CheckUpdatesModeButton.Content = isScheduled
-                ? LocalizationManager.Get("Settings_CheckUpdates_Scheduled")
-                : LocalizationManager.Get("Settings_CheckUpdates_OnLaunch");
-
-            // Показываем/скрываем настройку интервала
+            CheckUpdatesModeButton.Content = _viewModel.CheckUpdatesModeText;
             UpdateCheckModeVisibility(isScheduled);
 
             AutoSaveSettings();
 
-            // Перезапускаем фоновый цикл проверки обновлений, чтобы новое расписание применилось сразу
-            App.MainWindow?.StartUpdateCheckLoop();
+            // Перезапускаем фоновый цикл проверки обновлений
+            Ioc.Default.GetService<MainWindow>()?.StartUpdateCheckLoop();
         }
     }
 
@@ -331,31 +325,23 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
     private void ShowTrayIconBox_Checked(object sender, RoutedEventArgs e)
     {
         AutoSaveSettings();
-        App.MainWindow?.UpdateTrayIconVisibility();
+        Ioc.Default.GetService<MainWindow>()?.UpdateTrayIconVisibility();
     }
 
     private void ShowTrayIconBox_Unchecked(object sender, RoutedEventArgs e)
     {
         AutoSaveSettings();
-        App.MainWindow?.UpdateTrayIconVisibility();
+        Ioc.Default.GetService<MainWindow>()?.UpdateTrayIconVisibility();
     }
 
     private void UpdateIntervalMenuItem_Click(object sender, RoutedEventArgs e)
     {
         if (sender is System.Windows.Controls.MenuItem item && item.Tag is string tag && int.TryParse(tag, out var hours))
         {
-            _updateIntervalHours = hours;
-            UpdateIntervalButton.Content = FormatInterval(hours);
+            _viewModel.SetUpdateInterval(hours);
+            UpdateIntervalButton.Content = _viewModel.UpdateIntervalText;
             AutoSaveSettings();
         }
-    }
-
-    private static string FormatInterval(int hours)
-    {
-        if (hours <= 24)
-            return $"{hours} ч";
-        else
-            return $"{hours / 24} д";
     }
 
     private async void CheckUpdatesButton_Click(object sender, RoutedEventArgs e)
@@ -368,11 +354,7 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
             UpdateWaveDots.Visibility = Visibility.Visible;
             UpdateWaveDots.Start();
 
-            var mainWindow = Application.Current.MainWindow as MainWindow;
-            if (mainWindow == null)
-                return;
-
-            var updateInfo = await mainWindow.ForceCheckForUpdatesAsync();
+            var updateInfo = await _viewModel.ForceCheckUpdatesAsync();
 
             // Останавливаем анимацию, убираем точки, обновляем текст
             UpdateWaveDots.Stop();
@@ -443,14 +425,5 @@ public partial class SettingsPage(IConfigService? configService = null) : Page
         if (_isLoading) return;
 
         AutoSaveSettings();
-    }
-
-    /// <summary>
-    /// Применение темы
-    /// </summary>
-    private void ApplyTheme(string theme)
-    {
-        var mainWindow = Application.Current.MainWindow as MainWindow;
-        mainWindow?.ApplyTheme(theme);
     }
 }

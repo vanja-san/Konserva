@@ -2,6 +2,8 @@ using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
+using CommunityToolkit.Mvvm.DependencyInjection;
+using Konserva.ViewModels;
 using static Konserva.Models.ApiUrls;
 using Microsoft.Win32;
 using System.IO;
@@ -18,6 +20,7 @@ namespace Konserva.Pages;
 /// </summary>
 public partial class CreateServerPage : Page
 {
+    private readonly CreateServerViewModel _viewModel;
     private readonly IConfigService? _configService;
     private readonly IMcVersionsApi _versionsApi;
     private readonly IServerInstaller _installer;
@@ -37,18 +40,23 @@ public partial class CreateServerPage : Page
     private bool _isLoadingInProgress;
     private string? _currentModLoader;
     private CancellationTokenSource? _loaderLoadingCts;
+    private readonly SelectionChangedEventHandler _loaderVersionChangedHandler; // for clean unsubscribe
 
-    public CreateServerPage(IConfigService? configService = null, IMcVersionsApi? versionsApi = null, IServerInstaller? installer = null)
+    public CreateServerPage()
     {
-        _configService = configService;
-        _versionsApi = versionsApi
-            ?? (App.ServiceProvider?.GetService(typeof(IMcVersionsApi)) as IMcVersionsApi)
-            ?? throw new InvalidOperationException("IMcVersionsApi not available");
-        _installer = installer
-            ?? (App.ServiceProvider?.GetService(typeof(IServerInstaller)) as IServerInstaller)
-            ?? new McServerInstaller(new HttpClient());
+        _viewModel = Ioc.Default.GetService<CreateServerViewModel>()
+            ?? new CreateServerViewModel(
+                Ioc.Default.GetService<IConfigService>()!,
+                Ioc.Default.GetService<IMcVersionsApi>()!,
+                Ioc.Default.GetService<IServerInstaller>() ?? new McServerInstaller(new HttpClient()),
+                Ioc.Default.GetService<IServerManager>()!);
+        _configService = Ioc.Default.GetService<IConfigService>();
+        _versionsApi = Ioc.Default.GetService<IMcVersionsApi>()!;
+        _installer = Ioc.Default.GetService<IServerInstaller>() ?? new McServerInstaller(new HttpClient());
 
         InitializeComponent();
+
+        _loaderVersionChangedHandler = (_, _) => UpdateCreateButtonState();
 
         Title = LocalizationManager.Get("CreateServer_Title");
         Loaded += OnLoaded;
@@ -68,12 +76,16 @@ public partial class CreateServerPage : Page
 
             ModLoaderBox.SelectionChanged += ModLoaderBox_SelectionChanged;
             McVersionBox.SelectionChanged += McVersionBox_SelectionChanged;
-            LoaderVersionBox.SelectionChanged += (_, _) => UpdateCreateButtonState();
+            LoaderVersionBox.SelectionChanged += _loaderVersionChangedHandler;
 
+            // Инициализируем ViewModel
+            await _viewModel.InitializeAsync();
+
+            // Загружаем все версии Minecraft для UI
             _allMcVersions = await _versionsApi.GetMcVersions();
             Logger.Info($"Loaded {_allMcVersions.Length} Minecraft versions", "CreateServerPage");
 
-            ServerPathBox.Text = GetDefaultServerPath();
+            ServerPathBox.Text = _viewModel.GetDefaultServerPath();
             Logger.Info($"Server path: {ServerPathBox.Text}", "CreateServerPage");
 
             await FilterMcVersionsAsync();
@@ -95,6 +107,13 @@ public partial class CreateServerPage : Page
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        // Отписываемся от событий UI
+        ShowSnapshotsBox.Checked -= ShowSnapshotsBox_Changed;
+        ShowSnapshotsBox.Unchecked -= ShowSnapshotsBox_Changed;
+        ModLoaderBox.SelectionChanged -= ModLoaderBox_SelectionChanged;
+        McVersionBox.SelectionChanged -= McVersionBox_SelectionChanged;
+        LoaderVersionBox.SelectionChanged -= _loaderVersionChangedHandler;
+
         // Останавливаем анимацию
         ProgressDots.Stop();
 
@@ -114,13 +133,14 @@ public partial class CreateServerPage : Page
     /// </summary>
     private void NavigateBackToServers()
     {
-        if (App.MainWindow?.ContentFrame.CanGoBack == true)
+        var mainWindow = Ioc.Default.GetService<MainWindow>();
+        if (mainWindow?.ContentFrame.CanGoBack == true)
         {
-            App.MainWindow.ContentFrame.GoBack();
+            mainWindow.ContentFrame.GoBack();
         }
         else
         {
-            App.MainWindow?.ContentFrame.Navigate(new ServersPage());
+            mainWindow?.ContentFrame.Navigate(new ServersPage());
         }
     }
 
@@ -402,28 +422,6 @@ public partial class CreateServerPage : Page
         return false;
     }
 
-    private string GetDefaultServerPath()
-    {
-        try
-        {
-            var config = _configService?.GetConfig();
-            if (config != null && !string.IsNullOrEmpty(config.ServersDirectory))
-            {
-                Directory.CreateDirectory(config.ServersDirectory);
-                return config.ServersDirectory;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Failed to get config for default server path: {ex.Message}", "CreateServerPage");
-        }
-
-        var exeDir = AppContext.BaseDirectory;
-        var serversDir = Path.Combine(exeDir, "Servers");
-        Directory.CreateDirectory(serversDir);
-        return serversDir;
-    }
-
     private string GetSelectedModLoader()
     {
         if (ModLoaderBox.SelectedItem is ComboBoxItem item)
@@ -436,33 +434,11 @@ public partial class CreateServerPage : Page
     /// </summary>
     private List<string> GetValidationErrors()
     {
-        var errors = new List<string>();
+        // Синхронизируем данные с ViewModel
+        _viewModel.ServerName = ServerNameBox.Text;
+        _viewModel.ServerPath = ServerPathBox.Text;
 
-        if (string.IsNullOrWhiteSpace(ServerNameBox.Text))
-            errors.Add(LocalizationManager.Get("CreateServer_Validation_NoName"));
-
-        if (_currentModLoader is "Forge" or "NeoForge" or "Fabric" or "Quilt" or "Paper")
-        {
-            if (LoaderVersionBox.Items.Count == 0)
-            {
-                errors.Add(LocalizationManager.Get("CreateServer_Validation_NoLoaderVersion"));
-            }
-            else if (LoaderVersionBox.SelectedItem is ComboBoxItem li)
-            {
-                var content = li.Content?.ToString() ?? "";
-                if (string.IsNullOrEmpty(content) || content == LocalizationManager.Get("CreateServer_Not_Found"))
-                    errors.Add(LocalizationManager.Get("CreateServer_Validation_NoLoaderVersion"));
-            }
-            else
-            {
-                errors.Add(LocalizationManager.Get("CreateServer_Validation_NoLoaderVersion"));
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(ServerPathBox.Text))
-            errors.Add(LocalizationManager.Get("CreateServer_Validation_NoFolder"));
-
-        return errors;
+        return _viewModel.GetValidationErrors();
     }
 
     /// <summary>
@@ -792,7 +768,7 @@ public partial class CreateServerPage : Page
     {
         var dialog = new OpenFolderDialog
         {
-            Title = "Выберите папку для сервера",
+            Title = LocalizationManager.Get("CreateServer_Browse_Title"),
             InitialDirectory = GetDefaultFolderPath()
         };
 
@@ -850,7 +826,7 @@ public partial class CreateServerPage : Page
         {
             var dialog = new OpenFolderDialog
             {
-                Title = "Выберите папку с сервером",
+                Title = LocalizationManager.Get("CreateServer_Import_Title"),
                 InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
             };
 
@@ -858,7 +834,7 @@ public partial class CreateServerPage : Page
             {
                 var serverPath = dialog.FolderName;
 
-                var existingServer = App.ServerManager.GetServers()
+                var existingServer = Ioc.Default.GetService<IServerManager>()!.GetServers()
                     .FirstOrDefault(s => s.Path.Equals(serverPath, StringComparison.OrdinalIgnoreCase));
 
                 if (existingServer != null)
@@ -885,7 +861,7 @@ public partial class CreateServerPage : Page
                     _ => new ModLoader { Type = ModLoaderType.Vanilla }
                 };
 
-                var mcVersion = "Неизвестно";
+                var mcVersion = LocalizationManager.Get("Common_Unknown");
                 var versionFile = Path.Combine(serverPath, "version.json");
                 if (File.Exists(versionFile))
                 {
@@ -905,10 +881,10 @@ public partial class CreateServerPage : Page
                 }
 
                 var serverName = Path.GetFileName(serverPath);
-                _ = App.ServerManager.CreateServer(serverName, mcVersion, modLoader, serverPath);
+                _ = Ioc.Default.GetService<IServerManager>()!.CreateServer(serverName, mcVersion, modLoader, serverPath);
 
-                App.MainWindow?.ShowSnackbar(
-                    LocalizationManager.Get("CreateServer_Import_Success_Title") ?? "Импорт завершён",
+                Ioc.Default.GetService<MainWindow>()?.ShowSnackbar(
+                    LocalizationManager.Get("CreateServer_Import_Success_Title"),
                     string.Format(LocalizationManager.Get("CreateServer_Import_Success"), serverName),
                     Wpf.Ui.Controls.ControlAppearance.Success);
 
@@ -939,9 +915,9 @@ public partial class CreateServerPage : Page
             if (isInstalling)
             {
                 ProgressPanel.Visibility = Visibility.Visible;
-                ProgressText.Text = "Подготовка...";
+                ProgressText.Text = LocalizationManager.Get("CreateServer_Installing_Preparing");
 
-                ActionOrCancelButton.Content = "Отмена";
+                ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Cancel");
                 ActionOrCancelButton.Appearance = ControlAppearance.Danger;
                 ActionOrCancelButton.IsEnabled = true;
 
@@ -952,7 +928,7 @@ public partial class CreateServerPage : Page
             {
                 ProgressPanel.Visibility = Visibility.Collapsed;
 
-                ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Create") ?? "Создать";
+                ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Create");
                 ActionOrCancelButton.Appearance = ControlAppearance.Success;
                 UpdateCreateButtonState();
 
@@ -1000,7 +976,7 @@ public partial class CreateServerPage : Page
                 return;
             }
 
-            if (App.ServerManager == null)
+            if (Ioc.Default.GetService<IServerManager>() == null)
             {
                 await UiHelper.ShowError(LocalizationManager.Get("CreateServer_Error_NoServerManager"));
                 return;
@@ -1008,7 +984,7 @@ public partial class CreateServerPage : Page
 
             var serverName = ServerNameBox.Text.Trim();
 
-            var existingServers = App.ServerManager.GetServers();
+            var existingServers = Ioc.Default.GetService<IServerManager>()!.GetServers();
             if (existingServers.Any(s => s.Name.Equals(serverName, StringComparison.OrdinalIgnoreCase)))
             {
                 await UiHelper.ShowWarning(string.Format(LocalizationManager.Get("CreateServer_Error_DuplicateName"), serverName));
@@ -1017,7 +993,7 @@ public partial class CreateServerPage : Page
             }
 
             var serverPath = ServerPathBox.Text.Trim();
-            var pathValidationResult = ValidateServerPath(serverPath);
+            var pathValidationResult = _viewModel.ValidateServerPath(serverPath);
             if (!pathValidationResult.IsValid)
             {
                 await UiHelper.ShowWarning(pathValidationResult.ErrorMessage);
@@ -1049,7 +1025,7 @@ public partial class CreateServerPage : Page
                 LoaderVersion = loaderVersion
             };
 
-            var server = App.ServerManager.CreateServer(serverName, mcVersion, modLoader, serverPath);
+            var server = Ioc.Default.GetService<IServerManager>()!.CreateServer(serverName, mcVersion, modLoader, serverPath);
 
             SetInstallingState(true);
 
@@ -1082,17 +1058,17 @@ public partial class CreateServerPage : Page
             Dispatcher.Invoke(() =>
             {
                 ProgressPanel.Visibility = Visibility.Visible;
-                ProgressText.Text = "Подготовка...";
+                ProgressText.Text = LocalizationManager.Get("CreateServer_Installing_Preparing");
             });
 
-            server.InstallStatus = $"Установка {server.Name}...";
-            App.ServerManager.UpdateServer(server);
+            server.InstallStatus = string.Format(LocalizationManager.Get("CreateServer_Installing_Progress"), server.Name);
+            Ioc.Default.GetService<IServerManager>()!.UpdateServer(server);
 
             var progress = new Progress<string>(statusText =>
             {
                 UpdateStatus(statusText);
                 server.InstallStatus = statusText;
-                App.ServerManager.UpdateServer(server);
+                Ioc.Default.GetService<IServerManager>()!.UpdateServer(server);
             });
 
             var installResult = await _installer.InstallServer(
@@ -1110,7 +1086,7 @@ public partial class CreateServerPage : Page
             {
                 if (!_wasCancelled)
                 {
-                    server.InstallStatus = $"Ошибка: {installResult.Error}";
+                    server.InstallStatus = string.Format(LocalizationManager.Get("CreateServer_Install_Error"), installResult.Error);
                     server.Status = ServerStatus.Error;
                     Logger.Error($"Server install failed: {installResult.Error}");
 
@@ -1122,7 +1098,7 @@ public partial class CreateServerPage : Page
                 }
                 else
                 {
-                    server.InstallStatus = "Отменено";
+                    server.InstallStatus = LocalizationManager.Get("CreateServer_Install_Cancelled");
                     server.Status = ServerStatus.Stopped;
                     Logger.Info("Server install cancelled by user");
 
@@ -1142,13 +1118,13 @@ public partial class CreateServerPage : Page
                     await Dispatcher.InvokeAsync(async () =>
                     {
                         SetInstallingState(false);
-                        await App.ServerManager.DeleteServerAsync(server.Id);
+                        await Ioc.Default.GetService<IServerManager>()!.DeleteServerAsync(server.Id);
                     });
                 }
             }
             else
             {
-                server.InstallStatus = "Готов";
+                server.InstallStatus = LocalizationManager.Get("CreateServer_Install_Ready");
                 server.Status = ServerStatus.Stopped;
                 Logger.Info($"Server install completed: {server.Name}");
 
@@ -1166,7 +1142,7 @@ public partial class CreateServerPage : Page
         }
         catch (OperationCanceledException)
         {
-            server.InstallStatus = "Отменено";
+            server.InstallStatus = LocalizationManager.Get("CreateServer_Install_Cancelled");
             server.Status = ServerStatus.Error;
             Logger.Info("Server install cancelled");
 
@@ -1177,7 +1153,7 @@ public partial class CreateServerPage : Page
         }
         catch (Exception ex)
         {
-            server.InstallStatus = $"Ошибка: {ex.Message}";
+            server.InstallStatus = string.Format(LocalizationManager.Get("CreateServer_Install_Error"), ex.Message);
             server.Status = ServerStatus.Error;
             Logger.Error($"Server install exception: {ex}");
 
@@ -1193,130 +1169,7 @@ public partial class CreateServerPage : Page
             _installCts = null;
         }
 
-        App.ServerManager.UpdateServer(server);
+        Ioc.Default.GetService<IServerManager>()!.UpdateServer(server);
     }
 
-    // ======================== Валидация пути ========================
-
-    private sealed class PathValidationResult
-    {
-        public bool IsValid { get; set; }
-        public string ErrorMessage { get; set; } = string.Empty;
-    }
-
-    private static PathValidationResult ValidateServerPath(string path)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return new PathValidationResult
-                {
-                    IsValid = false,
-                    ErrorMessage = "Путь к серверу не может быть пустым"
-                };
-            }
-
-            var invalidPathChars = Path.GetInvalidPathChars();
-            if (path.IndexOfAny(invalidPathChars) >= 0)
-            {
-                return new PathValidationResult
-                {
-                    IsValid = false,
-                    ErrorMessage = "Путь содержит недопустимые символы"
-                };
-            }
-
-            if (path.Length > 260)
-            {
-                return new PathValidationResult
-                {
-                    IsValid = false,
-                    ErrorMessage = "Путь слишком длинный (максимум 260 символов)"
-                };
-            }
-
-            if (File.Exists(path))
-            {
-                return new PathValidationResult
-                {
-                    IsValid = false,
-                    ErrorMessage = "Указанный путь является файлом, а не папкой"
-                };
-            }
-
-            if (Directory.Exists(path))
-            {
-                var normalizedPath = Path.GetFullPath(path).ToLowerInvariant();
-
-                var systemPaths = new[]
-                {
-                    Environment.GetFolderPath(Environment.SpecialFolder.Windows).ToLowerInvariant(),
-                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles).ToLowerInvariant(),
-                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)?.ToLowerInvariant() ?? ""
-                };
-
-                if (systemPaths.Any(sysPath => !string.IsNullOrEmpty(sysPath) && normalizedPath.StartsWith(sysPath)))
-                {
-                    return new PathValidationResult
-                    {
-                        IsValid = false,
-                        ErrorMessage = "Нельзя создавать серверы в системных папках Windows"
-                    };
-                }
-
-                var files = Directory.GetFiles(path);
-                if (files.Length > 0)
-                {
-                    return new PathValidationResult
-                    {
-                        IsValid = true,
-                        ErrorMessage = $"Папка не пуста ({files.Length} файлов). Убедитесь, что это правильное место для сервера."
-                    };
-                }
-            }
-            else
-            {
-                var parentDir = Path.GetDirectoryName(path);
-                if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
-                {
-                    return new PathValidationResult
-                    {
-                        IsValid = false,
-                        ErrorMessage = "Родительская папка не существует"
-                    };
-                }
-
-                try
-                {
-                    var tempPath = Path.Combine(path, ".konserva_test");
-                    Directory.CreateDirectory(tempPath);
-                    Directory.Delete(tempPath);
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    return new PathValidationResult
-                    {
-                        IsValid = false,
-                        ErrorMessage = "Недостаточно прав для создания папки"
-                    };
-                }
-            }
-
-            return new PathValidationResult
-            {
-                IsValid = true,
-                ErrorMessage = string.Empty
-            };
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Path validation error: {ex.Message}", ex, "CreateServerPage");
-            return new PathValidationResult
-            {
-                IsValid = false,
-                ErrorMessage = $"Ошибка валидации пути: {ex.Message}"
-            };
-        }
-    }
 }

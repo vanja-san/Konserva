@@ -1,4 +1,5 @@
-﻿using Konserva.Localization;
+﻿using CommunityToolkit.Mvvm.DependencyInjection;
+using Konserva.Localization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -38,7 +39,7 @@ public static class UiHelper
     /// </summary>
     private static IContentDialogService? GetDialogService()
     {
-        return App.MainWindow.ContentDialogService;
+        return Ioc.Default.GetService<MainWindow>()?.ContentDialogService;
     }
 
     /// <summary>

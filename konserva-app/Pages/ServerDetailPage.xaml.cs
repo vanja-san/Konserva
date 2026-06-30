@@ -1,7 +1,9 @@
-﻿using Konserva.Localization;
+﻿using CommunityToolkit.Mvvm.DependencyInjection;
+using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
+using Konserva.ViewModels;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,7 +20,7 @@ namespace Konserva.Pages;
 /// </summary>
 public partial class ServerDetailPage : Page, IDisposable
 {
-    private readonly IConfigService? _configService;
+    private readonly ServerDetailViewModel _viewModel;
     private string? _serverId;
     private Server? _server;
     private McServerProcess? _process;
@@ -29,9 +31,14 @@ public partial class ServerDetailPage : Page, IDisposable
     /// <summary>
     /// Конструктор для навигации через NavigationView (с параметром serverId)
     /// </summary>
-    public ServerDetailPage(IConfigService? configService = null)
+    public ServerDetailPage()
     {
-        _configService = configService;
+        _viewModel = Ioc.Default.GetService<ServerDetailViewModel>()
+            ?? new ServerDetailViewModel(
+                Ioc.Default.GetService<IServerManager>()!,
+                Ioc.Default.GetService<IConfigService>()!,
+                Ioc.Default.GetService<IPortForwardingService>());
+
         InitializeComponent();
 
         // Подписываемся после InitializeComponent чтобы избежать NullReferenceException
@@ -58,8 +65,11 @@ public partial class ServerDetailPage : Page, IDisposable
             _serverId = dataContextId;
         }
 
+        // Передаём serverId в ViewModel
+        _viewModel.ServerId = _serverId;
+
         // Подписываемся на событие ошибки запуска
-        App.ServerManager.OnServerStartError += OnServerStartError;
+        Ioc.Default.GetService<IServerManager>()!.OnServerStartError += OnServerStartError;
 
         // Обновляем PageWidth лога при изменении размера
         LogBox.SizeChanged += LogBox_SizeChanged;
@@ -74,7 +84,7 @@ public partial class ServerDetailPage : Page, IDisposable
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         // Отписываемся от события ошибки запуска
-        App.ServerManager.OnServerStartError -= OnServerStartError;
+        Ioc.Default.GetService<IServerManager>()!.OnServerStartError -= OnServerStartError;
         LogBox.SizeChanged -= LogBox_SizeChanged;
         PropertiesEditor.PropertiesSaved -= OnPropertiesSaved;
         StopStatusTimer();
@@ -87,11 +97,7 @@ public partial class ServerDetailPage : Page, IDisposable
             return;
 
         var newPort = PropertiesEditor.CurrentPort;
-        if (_server.Port != newPort)
-        {
-            _server.Port = newPort;
-            App.ServerManager.UpdateServer(_server);
-        }
+        _viewModel.SavePort(newPort);
     }
 
     private double _maxContentWidth = 0;
@@ -194,8 +200,10 @@ public partial class ServerDetailPage : Page, IDisposable
         if (_serverId == null)
             return;
 
-        _server = App.ServerManager.GetServer(_serverId!);
-        _process = App.ServerManager.GetProcess(_serverId!);
+        // Загружаем данные через ViewModel
+        _viewModel.ServerId = _serverId;
+        _server = _viewModel.Server;
+        _process = _viewModel.Process;
 
         if (_server == null)
             return;
@@ -216,27 +224,27 @@ public partial class ServerDetailPage : Page, IDisposable
         }
 
         // Заполняем UI
-        ServerNameText.Text = _server.Name;
-        ServerInfoText.Text = _server.Description;
+        ServerNameText.Text = _viewModel.ServerName;
+        ServerInfoText.Text = _viewModel.ServerInfo;
 
         // Настройки
-        SettingName.Text = _server.Name;
-        SettingRamMin.Text = _server.Settings.RamMin.ToString();
-        SettingRamMax.Text = _server.Settings.RamMax.ToString();
-        SettingAutoRestart.IsChecked = _server.Settings.AutoRestart;
-        SettingAutoRestartDelay.Text = _server.Settings.AutoRestartDelay.ToString();
+        SettingName.Text = _viewModel.SettingsName;
+        SettingRamMin.Text = _viewModel.SettingsRamMin.ToString();
+        SettingRamMax.Text = _viewModel.SettingsRamMax.ToString();
+        SettingAutoRestart.IsChecked = _viewModel.SettingsAutoRestart;
+        SettingAutoRestartDelay.Text = _viewModel.SettingsAutoRestartDelay.ToString();
 
         // Настройки Java
-        SettingJavaAutoSelect.IsChecked = _server.Settings.JavaAutoSelect;
+        SettingJavaAutoSelect.IsChecked = _viewModel.SettingsJavaAutoSelect;
         LoadJavaComboBox();
         UpdateJavaComboBoxVisibility();
 
         // UPnP настройки
-        SettingEnableUpnp.IsChecked = _server.Settings.EnableUpnp;
+        SettingEnableUpnp.IsChecked = _viewModel.SettingsEnableUpnp;
         UpdateServerAddressDisplay();
 
         // JVM аргументы
-        SettingJvmArgs.Text = _server.Settings.JvmArgsText;
+        SettingJvmArgs.Text = _viewModel.SettingsJvmArgs;
 
         UpdateStatus(_server.Status);
 
@@ -295,7 +303,8 @@ public partial class ServerDetailPage : Page, IDisposable
             run.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 100, 100));
             run.FontWeight = System.Windows.FontWeights.Bold;
         }
-        else if (line.Contains("[SUCCESS]"))
+        else if (line.Contains(LocalizationManager.Get("Log_ServerStarted")) ||
+                 line.Contains(LocalizationManager.Get("Log_ServerStoppedSuccessfully")))
         {
             run.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(80, 200, 80));
             run.FontWeight = System.Windows.FontWeights.Bold;
@@ -356,7 +365,7 @@ public partial class ServerDetailPage : Page, IDisposable
                     _process = null;
 
                     // Получаем свежий процесс
-                    _process = App.ServerManager.GetProcess(_serverId!);
+                    _process = Ioc.Default.GetService<IServerManager>()!.GetProcess(_serverId!);
 
                     // Загружаем существующие логи и подписываемся на события
                     if (_process == null) return;
@@ -444,7 +453,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
         else
         {
-            App.MainWindow?.ContentFrame?.Navigate(new Pages.ServersPage());
+            Ioc.Default.GetService<MainWindow>()?.ContentFrame?.Navigate(new Pages.ServersPage());
         }
     }
 
@@ -472,16 +481,7 @@ public partial class ServerDetailPage : Page, IDisposable
         _isBusy = true;
         try
         {
-            if (_server.IsRunning)
-            {
-                App.ServerManager.StopServer(_serverId!);
-            }
-            else
-            {
-                // Сбрасываем флаг ошибки перед новым запуском
-                _server.ErrorDialogShown = false;
-                App.ServerManager.StartServer(_serverId!);
-            }
+            await _viewModel.StartStopCommand.ExecuteAsync(null);
         }
         catch (Exception ex)
         {
@@ -492,8 +492,6 @@ public partial class ServerDetailPage : Page, IDisposable
         {
             _isBusy = false;
         }
-
-        // Статус обновится через событие OnStatusChanged в McServerManager
     }
 
     private void OpenFolder_Click(object sender, RoutedEventArgs e)
@@ -592,7 +590,7 @@ public partial class ServerDetailPage : Page, IDisposable
         if (string.IsNullOrEmpty(CommandBox.Text))
             return;
 
-        App.ServerManager.SendCommand(_serverId!, CommandBox.Text);
+        Ioc.Default.GetService<IServerManager>()!.SendCommand(_serverId!, CommandBox.Text);
         CommandBox.Clear();
     }
 
@@ -617,41 +615,32 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private void LoadJavaComboBox()
     {
-        var config = _configService?.GetConfig() ?? App.ConfigService.GetConfig();
+        var javaList = _viewModel.GetJavaList();
 
         SettingJavaComboBox.Items.Clear();
 
-        // Добавляем пункт "По умолчанию"
-        var defaultJava = config.GetDefaultJava();
-        SettingJavaComboBox.Items.Add(new ComboBoxItem
-        {
-            Content = $"{LocalizationManager.Get("ServerDetail_JavaDefault")} ({(defaultJava != null ? defaultJava.DisplayName : LocalizationManager.Get("ServerDetail_JavaNotSelected"))})",
-            Tag = null
-        });
-
-        // Добавляем все установленные Java
-        foreach (var java in config.JavaInstallations.Where(j => j.Exists))
+        foreach (var (id, display) in javaList)
         {
             SettingJavaComboBox.Items.Add(new ComboBoxItem
             {
-                Content = java.DisplayName,
-                Tag = java.Id
+                Content = display,
+                Tag = id
             });
         }
 
-        // Выбираем сохранённую Java сервера
-        if (!string.IsNullOrEmpty(_server?.Settings.JavaId))
+        var selectedJavaId = _viewModel.GetSelectedJavaId();
+        if (!string.IsNullOrEmpty(selectedJavaId))
         {
             var selectedItem = SettingJavaComboBox.Items
                 .Cast<ComboBoxItem>()
-                .FirstOrDefault(item => (string?)item.Tag == _server.Settings.JavaId);
+                .FirstOrDefault(item => (string?)item.Tag == selectedJavaId);
 
             if (selectedItem != null)
                 SettingJavaComboBox.SelectedItem = selectedItem;
         }
         else
         {
-            SettingJavaComboBox.SelectedIndex = 0; // "По умолчанию"
+            SettingJavaComboBox.SelectedIndex = 0;
         }
     }
 
@@ -679,65 +668,26 @@ public partial class ServerDetailPage : Page, IDisposable
         if (_server == null)
             return;
 
-        // Сохраняем название
         var newName = SettingName.Text.Trim();
-        if (!string.IsNullOrEmpty(newName) && newName != _server.Name)
+        var ramMinStr = SettingRamMin.Text;
+        var ramMaxStr = SettingRamMax.Text;
+        var autoRestart = SettingAutoRestart.IsChecked;
+        var autoRestartDelayStr = SettingAutoRestartDelay.Text;
+        var javaAutoSelect = SettingJavaAutoSelect.IsChecked ?? true;
+        var javaId = SettingJavaComboBox.SelectedItem is ComboBoxItem selectedItem
+            ? selectedItem.Tag as string
+            : null;
+        var jvmArgs = SettingJvmArgs.Text;
+
+        _viewModel.SaveSettings(newName, ramMinStr, ramMaxStr, autoRestart, autoRestartDelayStr,
+            javaAutoSelect, javaId, jvmArgs);
+
+        // Обновляем UI если имя изменилось
+        if (!string.IsNullOrEmpty(newName) && newName != ServerNameText.Text)
         {
-            _server.Name = newName;
             ServerNameText.Text = newName;
         }
-
-        // Сохраняем RAM
-        if (int.TryParse(SettingRamMin.Text, out var ramMin) && ramMin >= Constants.MinRamMb && ramMin != _server.Settings.RamMin)
-        {
-            _server.Settings.RamMin = ramMin;
-        }
-
-        if (int.TryParse(SettingRamMax.Text, out var ramMax) && ramMax >= ramMin && ramMax != _server.Settings.RamMax)
-        {
-            _server.Settings.RamMax = ramMax;
-        }
-
-        // Сохраняем авто-рестарт
-        var autoRestart = SettingAutoRestart.IsChecked ?? false;
-        if (autoRestart != _server.Settings.AutoRestart)
-        {
-            _server.Settings.AutoRestart = autoRestart;
-        }
-
-        // Сохраняем задержку авто-рестарта
-        if (int.TryParse(SettingAutoRestartDelay.Text, out var delay) && delay >= 0 && delay != _server.Settings.AutoRestartDelay)
-        {
-            _server.Settings.AutoRestartDelay = delay;
-        }
-
-        // Сохраняем настройки Java
-        var javaAutoSelect = SettingJavaAutoSelect.IsChecked ?? true;
-        if (javaAutoSelect != _server.Settings.JavaAutoSelect)
-        {
-            _server.Settings.JavaAutoSelect = javaAutoSelect;
-        }
-
-        if (!javaAutoSelect && SettingJavaComboBox.SelectedItem is ComboBoxItem selectedItem)
-        {
-            var javaId = selectedItem.Tag as string;
-            if (javaId != _server.Settings.JavaId)
-            {
-                _server.Settings.JavaId = javaId;
-            }
-        }
-        else if (javaAutoSelect && _server.Settings.JavaId != null)
-        {
-            _server.Settings.JavaId = null;
-        }
-
-        // Сохраняем JVM аргументы
-        _server.Settings.JvmArgsText = SettingJvmArgs.Text;
-
-        // Обновляем сервер в хранилище
-        App.ServerManager.UpdateServer(_server);
     }
-
     /// <summary>
     /// Обновление видимости ComboBox Java
     /// </summary>
@@ -768,11 +718,7 @@ public partial class ServerDetailPage : Page, IDisposable
             return;
 
         var enable = SettingEnableUpnp.IsChecked ?? false;
-        if (enable != _server.Settings.EnableUpnp)
-        {
-            _server.Settings.EnableUpnp = enable;
-            App.ServerManager.UpdateServer(_server);
-        }
+        _viewModel.SaveUpnpSetting(enable);
     }
 
     /// <summary>
@@ -780,16 +726,11 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private void UpdateServerAddressDisplay()
     {
-        if (_server == null)
-            return;
+        _viewModel.UpdateServerAddressDisplay();
 
-        var port = _server.Port;
-        var upnpService = App.ServiceProvider?.GetService(typeof(IPortForwardingService)) as IPortForwardingService;
-        var externalIp = upnpService?.TryGetCachedExternalIp();
-
-        if (externalIp != null)
+        if (!string.IsNullOrEmpty(_viewModel.UpnpAddress))
         {
-            UpnpAddressText.Text = $"{externalIp}:{port}";
+            UpnpAddressText.Text = _viewModel.UpnpAddress;
             UpnpAddressText.Visibility = Visibility.Visible;
             CopyAddressButton.Visibility = Visibility.Visible;
         }
@@ -840,18 +781,10 @@ public partial class ServerDetailPage : Page, IDisposable
             CheckUpnpButton.IsEnabled = false;
             CheckUpnpButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Checking");
 
-            var upnpService = App.ServiceProvider?.GetService(typeof(IPortForwardingService)) as IPortForwardingService;
-            if (upnpService == null)
-            {
-                CheckUpnpButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Error");
-                return;
-            }
-
-            var isAvailable = await upnpService.IsAvailableAsync();
+            var isAvailable = await _viewModel.CheckUpnpAvailabilityAsync();
             CheckUpnpButton.Content = isAvailable
                 ? LocalizationManager.Get("ServerDetail_Upnp_Available")
                 : LocalizationManager.Get("ServerDetail_Upnp_NotAvailable");
-
         }
         catch (Exception ex)
         {
@@ -897,25 +830,14 @@ public partial class ServerDetailPage : Page, IDisposable
             CheckPortButton.IsEnabled = false;
             CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Checking");
 
-            var upnpService = App.ServiceProvider?.GetService(typeof(IPortForwardingService)) as IPortForwardingService;
-            if (upnpService == null)
-            {
-                CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Error");
-                return;
-            }
-
             var port = _server.Port;
-
-            // Проверяем, существует ли проброс порта
-            var isForwarded = await upnpService.CheckMappingAsync(port);
+            var isForwarded = await _viewModel.CheckPortMappingAsync(port);
 
             if (isForwarded)
             {
                 CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Port_Open");
                 CheckPortButton.Appearance = ControlAppearance.Success;
 
-                // Показываем внешний IP:Port
-                var externalIp = await upnpService.GetExternalIpAsync();
                 UpdateServerAddressDisplay();
             }
             else
@@ -998,60 +920,12 @@ public partial class ServerDetailPage : Page, IDisposable
         if (_server == null)
             return;
 
-        try
-        {
-            var modsDir = Path.Combine(_server.Path, "mods");
-            if (!Directory.Exists(modsDir))
-            {
-                ModsList.ItemsSource = Array.Empty<ModItem>();
-                ModsCountBadge.Visibility = Visibility.Collapsed;
-                UpdateToggleAllModsButton();
-                return;
-            }
+        _viewModel.LoadMods();
 
-            // Сканируем как .jar так и .jar.disabled
-            var mods = new List<ModItem>();
-            foreach (var pattern in new[] { "*.jar", "*.jar.disabled" })
-            {
-                foreach (var path in Directory.GetFiles(modsDir, pattern))
-                {
-                    var fileName = Path.GetFileName(path);
-                    var isDisabled = fileName.EndsWith(".disabled");
-                    var cleanName = isDisabled ? fileName.Replace(".jar.disabled", ".jar") : fileName;
-                    var version = ParseModVersion(cleanName);
-                    mods.Add(new ModItem
-                    {
-                        Name = Path.GetFileNameWithoutExtension(cleanName),
-                        Version = version,
-                        FileName = cleanName,
-                        FilePath = path,
-                        FileSize = new FileInfo(path).Length,
-                        Enabled = !isDisabled
-                    });
-                }
-            }
-
-            mods = mods.OrderBy(m => m.Name).ToList();
-            ModsList.ItemsSource = mods;
-
-            // Обновляем бейдж
-            if (mods.Count > 0)
-            {
-                ModsCountBadge.Value = mods.Count.ToString();
-                ModsCountBadge.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                ModsCountBadge.Visibility = Visibility.Collapsed;
-            }
-
-            UpdateToggleAllModsButton();
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Failed to load mods: {ex.Message}", "ServerDetailPage");
-            ShowErrorSafe($"{LocalizationManager.Get("ServerDetail_ModsLoadError")}: {ex.Message}");
-        }
+        ModsList.ItemsSource = _viewModel.Mods;
+        ModsCountBadge.Value = _viewModel.ModsCount;
+        ModsCountBadge.Visibility = _viewModel.Mods.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        UpdateToggleAllModsButton();
     }
 
     private void LoadPlugins()
@@ -1059,74 +933,12 @@ public partial class ServerDetailPage : Page, IDisposable
         if (_server == null)
             return;
 
-        try
-        {
-            var pluginsDir = Path.Combine(_server.Path, "plugins");
-            if (!Directory.Exists(pluginsDir))
-            {
-                PluginsList.ItemsSource = Array.Empty<PluginItem>();
-                PluginsCountBadge.Visibility = Visibility.Collapsed;
-                UpdateToggleAllPluginsButton();
-                return;
-            }
+        _viewModel.LoadPlugins();
 
-            // Сканируем как .jar так и .jar.disabled
-            var plugins = new List<PluginItem>();
-            foreach (var pattern in new[] { "*.jar", "*.jar.disabled" })
-            {
-                foreach (var path in Directory.GetFiles(pluginsDir, pattern))
-                {
-                    var fileName = Path.GetFileName(path);
-                    var isDisabled = fileName.EndsWith(".disabled");
-                    var cleanName = isDisabled ? fileName.Replace(".jar.disabled", ".jar") : fileName;
-                    var version = ParsePluginVersion(cleanName);
-                    plugins.Add(new PluginItem
-                    {
-                        Name = Path.GetFileNameWithoutExtension(cleanName),
-                        Version = version,
-                        FileName = cleanName,
-                        FilePath = path,
-                        FileSize = new FileInfo(path).Length,
-                        Enabled = !isDisabled
-                    });
-                }
-            }
-
-            plugins = plugins.OrderBy(p => p.Name).ToList();
-            PluginsList.ItemsSource = plugins;
-
-            // Обновляем бейдж
-            if (plugins.Count > 0)
-            {
-                PluginsCountBadge.Value = plugins.Count.ToString();
-                PluginsCountBadge.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                PluginsCountBadge.Visibility = Visibility.Collapsed;
-            }
-
-            UpdateToggleAllPluginsButton();
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Failed to load plugins: {ex.Message}", "ServerDetailPage");
-            ShowErrorSafe($"{LocalizationManager.Get("ServerDetail_PluginsLoadError")}: {ex.Message}");
-        }
-    }
-
-    private static string ParseModVersion(string fileName)
-    {
-        var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
-        var parts = nameWithoutExt.Split('-');
-        return parts.Length > 1 ? parts[^1] : LocalizationManager.Get("Common_Unknown");
-    }
-
-    private static string ParsePluginVersion(string fileName)
-    {
-        var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
-        var parts = nameWithoutExt.Split('-');
-        return parts.Length > 1 ? parts[^1] : LocalizationManager.Get("Common_Unknown");
+        PluginsList.ItemsSource = _viewModel.Plugins;
+        PluginsCountBadge.Value = _viewModel.PluginsCount;
+        PluginsCountBadge.Visibility = _viewModel.Plugins.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        UpdateToggleAllPluginsButton();
     }
 
     private void RefreshMods_Click(object sender, RoutedEventArgs e) => LoadMods();
@@ -1137,14 +949,14 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private void UpdateToggleAllModsButton()
     {
-        if (ModsList.ItemsSource is not IList<ModItem> mods || mods.Count == 0)
+        if (_viewModel.Mods.Count == 0)
         {
             ToggleAllModsBtn.Visibility = Visibility.Collapsed;
             return;
         }
 
         ToggleAllModsBtn.Visibility = Visibility.Visible;
-        var allDisabled = mods.All(m => !m.Enabled);
+        var allDisabled = _viewModel.CheckAllModsDisabled();
         if (allDisabled)
         {
             // Все выключены — кнопка «Включить все»
@@ -1162,14 +974,14 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private void UpdateToggleAllPluginsButton()
     {
-        if (PluginsList.ItemsSource is not IList<PluginItem> plugins || plugins.Count == 0)
+        if (_viewModel.Plugins.Count == 0)
         {
             ToggleAllPluginsBtn.Visibility = Visibility.Collapsed;
             return;
         }
 
         ToggleAllPluginsBtn.Visibility = Visibility.Visible;
-        var allDisabled = plugins.All(p => !p.Enabled);
+        var allDisabled = _viewModel.CheckAllPluginsDisabled();
         if (allDisabled)
         {
             ToggleAllPluginsBtn.Content = LocalizationManager.Get("ServerDetail_Plugins_ToggleAll_Enable");
@@ -1413,72 +1225,14 @@ public partial class ServerDetailPage : Page, IDisposable
 
     private async Task ToggleModItem(ModItem mod)
     {
-        try
-        {
-            var disabledPath = mod.FilePath + ".disabled";
-            if (mod.Enabled)
-            {
-                // Disable: .jar → .jar.disabled
-                if (File.Exists(mod.FilePath))
-                {
-                    File.Move(mod.FilePath, disabledPath);
-                    mod.FilePath = disabledPath;
-                    mod.Enabled = false;
-                }
-            }
-            else
-            {
-                // Enable: .jar.disabled → .jar
-                if (File.Exists(mod.FilePath))
-                {
-                    var enabledPath = mod.FilePath.Replace(".jar.disabled", ".jar");
-                    File.Move(mod.FilePath, enabledPath);
-                    mod.FilePath = enabledPath;
-                    mod.Enabled = true;
-                }
-            }
-            LoadMods();
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Toggle mod error: {ex.Message}", ex, "ServerDetailPage");
-            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_ModToggleError")}: {ex.Message}");
-        }
+        await _viewModel.ToggleModAsync(mod);
+        LoadMods();
     }
 
     private async Task TogglePluginItem(PluginItem plugin)
     {
-        try
-        {
-            if (plugin.Enabled)
-            {
-                // Disable: .jar → .jar.disabled
-                var disabledPath = plugin.FilePath + ".disabled";
-                if (File.Exists(plugin.FilePath))
-                {
-                    File.Move(plugin.FilePath, disabledPath);
-                    plugin.FilePath = disabledPath;
-                    plugin.Enabled = false;
-                }
-            }
-            else
-            {
-                // Enable: .jar.disabled → .jar
-                if (File.Exists(plugin.FilePath))
-                {
-                    var enabledPath = plugin.FilePath.Replace(".jar.disabled", ".jar");
-                    File.Move(plugin.FilePath, enabledPath);
-                    plugin.FilePath = enabledPath;
-                    plugin.Enabled = true;
-                }
-            }
-            LoadPlugins();
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Toggle plugin error: {ex.Message}", ex, "ServerDetailPage");
-            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_PluginToggleError")}: {ex.Message}");
-        }
+        await _viewModel.TogglePluginAsync(plugin);
+        LoadPlugins();
     }
 
     /// <summary>
@@ -1486,45 +1240,10 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private async void ToggleAllMods_Click(object sender, RoutedEventArgs e)
     {
-        if (_server == null || ModsList.ItemsSource is not IList<ModItem> mods || mods.Count == 0)
+        if (_server == null)
             return;
 
-        var anyEnabled = mods.Any(m => m.Enabled);
-        var targetEnabled = !anyEnabled; // если хоть один включён — выключаем все, иначе включаем
-
-        foreach (var mod in mods)
-        {
-            if (mod.Enabled == targetEnabled)
-                continue;
-            try
-            {
-                if (targetEnabled)
-                {
-                    var enabledPath = mod.FilePath.Replace(".jar.disabled", ".jar");
-                    if (File.Exists(mod.FilePath))
-                    {
-                        File.Move(mod.FilePath, enabledPath);
-                        mod.FilePath = enabledPath;
-                        mod.Enabled = true;
-                    }
-                }
-                else
-                {
-                    var disabledPath = mod.FilePath + ".disabled";
-                    if (File.Exists(mod.FilePath))
-                    {
-                        File.Move(mod.FilePath, disabledPath);
-                        mod.FilePath = disabledPath;
-                        mod.Enabled = false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Toggle all mods error: {ex.Message}", ex, "ServerDetailPage");
-            }
-        }
-
+        _viewModel.ToggleAllMods();
         LoadMods();
     }
 
@@ -1533,45 +1252,10 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private async void ToggleAllPlugins_Click(object sender, RoutedEventArgs e)
     {
-        if (_server == null || PluginsList.ItemsSource is not IList<PluginItem> plugins || plugins.Count == 0)
+        if (_server == null)
             return;
 
-        var anyEnabled = plugins.Any(p => p.Enabled);
-        var targetEnabled = !anyEnabled;
-
-        foreach (var plugin in plugins)
-        {
-            if (plugin.Enabled == targetEnabled)
-                continue;
-            try
-            {
-                if (targetEnabled)
-                {
-                    var enabledPath = plugin.FilePath.Replace(".jar.disabled", ".jar");
-                    if (File.Exists(plugin.FilePath))
-                    {
-                        File.Move(plugin.FilePath, enabledPath);
-                        plugin.FilePath = enabledPath;
-                        plugin.Enabled = true;
-                    }
-                }
-                else
-                {
-                    var disabledPath = plugin.FilePath + ".disabled";
-                    if (File.Exists(plugin.FilePath))
-                    {
-                        File.Move(plugin.FilePath, disabledPath);
-                        plugin.FilePath = disabledPath;
-                        plugin.Enabled = false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Toggle all plugins error: {ex.Message}", ex, "ServerDetailPage");
-            }
-        }
-
+        _viewModel.ToggleAllPlugins();
         LoadPlugins();
     }
 
@@ -1595,19 +1279,8 @@ public partial class ServerDetailPage : Page, IDisposable
         if (result != ContentDialogResult.Primary)
             return;
 
-        try
-        {
-            if (File.Exists(mod.FilePath))
-            {
-                File.Delete(mod.FilePath);
-                LoadMods();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Delete mod error: {ex.Message}", ex, "ServerDetailPage");
-            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_ModDeleteError")}: {ex.Message}");
-        }
+        await _viewModel.DeleteModAsync(mod);
+        LoadMods();
     }
 
     private async void DeletePlugin_Click(object sender, RoutedEventArgs e)
@@ -1630,19 +1303,8 @@ public partial class ServerDetailPage : Page, IDisposable
         if (result != ContentDialogResult.Primary)
             return;
 
-        try
-        {
-            if (File.Exists(plugin.FilePath))
-            {
-                File.Delete(plugin.FilePath);
-                LoadPlugins();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Delete plugin error: {ex.Message}", ex, "ServerDetailPage");
-            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_PluginDeleteError")}: {ex.Message}");
-        }
+        await _viewModel.DeletePluginAsync(plugin);
+        LoadPlugins();
     }
 
     private async void Delete_Click(object sender, RoutedEventArgs e)
@@ -1655,16 +1317,8 @@ public partial class ServerDetailPage : Page, IDisposable
         if (result != ContentDialogResult.Primary)
             return;
 
-        try
-        {
-            await App.ServerManager.DeleteServerAsync(_serverId!);
-            Back_Click(sender, e);
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Delete server error from detail page: {ex.Message}", ex, "ServerDetailPage");
-            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_DeleteServerError")}: {ex.Message}");
-        }
+        await _viewModel.DeleteServerAsync();
+        Back_Click(sender, e);
     }
 
     /// <summary>

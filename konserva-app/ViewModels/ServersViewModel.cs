@@ -1,40 +1,40 @@
-using Konserva.Localization;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
 using System.Collections.ObjectModel;
-using System.Windows.Input;
+
+using ObservableObject = CommunityToolkit.Mvvm.ComponentModel.ObservableObject;
 
 namespace Konserva.ViewModels;
 
 /// <summary>
 /// ViewModel для страницы списка серверов
 /// </summary>
-public class ServersViewModel : ObservableObject
+public partial class ServersViewModel : ObservableObject, IDisposable
 {
   private readonly IServerManager _serverManager;
-  private string _searchText = string.Empty;
-  private string _filterType = "All";
-  private string _filterStatus = "All";
-  private string _sortField = "Name";
-  private bool _sortAscending = true;
   private readonly HashSet<string> _busyServers = [];
-  private bool _isVisible = true;
+  private bool _disposed;
 
   public ServersViewModel(IServerManager serverManager)
   {
     _serverManager = serverManager;
 
-    PlayCommand = new AsyncRelayCommand<Server>(PlayAsync, CanPlay);
-    DeleteCommand = new AsyncRelayCommand<Server>(DeleteAsync, CanDelete);
-    OpenFolderCommand = new RelayCommand<Server>(OpenFolder, CanOpenFolder);
-    NavigateToServerCommand = new RelayCommand<Server>(NavigateToServer);
-    ToggleFilterCommand = new RelayCommand<string>(ToggleFilter);
-
     _serverManager.OnServersChanged += OnServersChanged;
     _serverManager.OnServerStartError += OnServerStartError;
 
     RefreshList();
+  }
+
+  public void Dispose()
+  {
+    if (_disposed) return;
+    _disposed = true;
+
+    _serverManager.OnServersChanged -= OnServersChanged;
+    _serverManager.OnServerStartError -= OnServerStartError;
   }
 
   /// <summary>
@@ -47,120 +47,72 @@ public class ServersViewModel : ObservableObject
   /// </summary>
   public bool HasNoServers => FilteredServers.Count == 0;
 
-  /// <summary>
-  /// Текст поиска
-  /// </summary>
-  public string SearchText
-  {
-    get => _searchText;
-    set
-    {
-      if (SetProperty(ref _searchText, value))
-        ApplyFilters();
-    }
-  }
+  [ObservableProperty]
+  private string _searchText = string.Empty;
 
-  /// <summary>
-  /// Фильтр по типу (All, Vanilla, Forge, ...)
-  /// </summary>
-  public string FilterType
-  {
-    get => _filterType;
-    set
-    {
-      if (SetProperty(ref _filterType, value))
-        ApplyFilters();
-    }
-  }
+  [ObservableProperty]
+  private string _filterType = "All";
 
-  /// <summary>
-  /// Фильтр по статусу (All, Running, Stopped)
-  /// </summary>
-  public string FilterStatus
-  {
-    get => _filterStatus;
-    set
-    {
-      if (SetProperty(ref _filterStatus, value))
-        ApplyFilters();
-    }
-  }
+  [ObservableProperty]
+  private string _filterStatus = "All";
 
-  /// <summary>
-  /// Поле сортировки (Name, Status, Type, Version)
-  /// </summary>
-  public string SortField
-  {
-    get => _sortField;
-    set
-    {
-      if (SetProperty(ref _sortField, value))
-        ApplyFilters();
-    }
-  }
+  [ObservableProperty]
+  private string _sortField = "Name";
 
-  /// <summary>
-  /// Направление сортировки (true — по возрастанию)
-  /// </summary>
-  public bool SortAscending
-  {
-    get => _sortAscending;
-    set
-    {
-      if (SetProperty(ref _sortAscending, value))
-        ApplyFilters();
-    }
-  }
+  [ObservableProperty]
+  private bool _sortAscending = true;
 
-  // Команды
-  public ICommand PlayCommand { get; }
-  public ICommand DeleteCommand { get; }
-  public ICommand OpenFolderCommand { get; }
-  public ICommand NavigateToServerCommand { get; }
-  public ICommand ToggleFilterCommand { get; }
+  [ObservableProperty]
+  private bool _isVisible = true;
 
   // События для UI (страница подписывается на них)
   public event Action<Server>? NavigateToServerRequested;
   public event Action<Server>? OpenFolderRequested;
   public event Action<Server, string>? ShowErrorRequested;
 
+  partial void OnSearchTextChanged(string value) => ApplyFilters();
+  partial void OnFilterTypeChanged(string value) => ApplyFilters();
+  partial void OnFilterStatusChanged(string value) => ApplyFilters();
+  partial void OnSortFieldChanged(string value) => ApplyFilters();
+  partial void OnSortAscendingChanged(bool value) => ApplyFilters();
+
+  partial void OnIsVisibleChanged(bool value)
+  {
+    if (value)
+      RefreshList();
+  }
+
   private bool CanPlay(Server? server) =>
       server is not null && !_busyServers.Contains(server.Id);
 
+  [RelayCommand(CanExecute = nameof(CanPlay))]
   private async Task PlayAsync(Server? server)
   {
-    if (server is null || !CanPlay(server))
+    if (server is null)
       return;
 
     _busyServers.Add(server.Id);
-    CommandManager.InvalidateRequerySuggested();
 
     try
     {
       if (server.IsRunning)
-      {
         _serverManager.StopServer(server.Id);
-      }
       else
-      {
         _serverManager.StartServer(server.Id);
-      }
     }
     finally
     {
       _busyServers.Remove(server.Id);
-      CommandManager.InvalidateRequerySuggested();
     }
-
-    await Task.CompletedTask;
   }
 
   private bool CanDelete(Server? server) =>
       server is not null && !_busyServers.Contains(server.Id);
 
+  [RelayCommand(CanExecute = nameof(CanDelete))]
   private async Task DeleteAsync(Server? server)
   {
-    if (server is null || !CanDelete(server))
+    if (server is null)
       return;
 
     _busyServers.Add(server.Id);
@@ -175,22 +127,21 @@ public class ServersViewModel : ObservableObject
     }
   }
 
-  private bool CanOpenFolder(Server? server) => server is not null;
-
+  [RelayCommand]
   private void OpenFolder(Server? server)
   {
-    if (server is null)
-      return;
-
-    OpenFolderRequested?.Invoke(server);
+    if (server is not null)
+      OpenFolderRequested?.Invoke(server);
   }
 
+  [RelayCommand]
   private void NavigateToServer(Server? server)
   {
     if (server is not null)
       NavigateToServerRequested?.Invoke(server);
   }
 
+  [RelayCommand]
   private void ToggleFilter(string? filterType)
   {
     if (filterType is null)
@@ -210,32 +161,32 @@ public class ServersViewModel : ObservableObject
 
     var filtered = servers.Where(s =>
     {
-      var matchSearch = string.IsNullOrEmpty(_searchText) ||
-                            s.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
+      var matchSearch = string.IsNullOrEmpty(SearchText) ||
+                            s.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
 
-      var matchType = _filterType == "All" ||
-                          s.ModLoader.Type.ToString().Equals(_filterType, StringComparison.OrdinalIgnoreCase);
+      var matchType = FilterType == "All" ||
+                          s.ModLoader.Type.ToString().Equals(FilterType, StringComparison.OrdinalIgnoreCase);
 
-      var matchStatus = _filterStatus == "All" ||
-                            (_filterStatus == "Running" && s.IsRunning) ||
-                            (_filterStatus == "Stopped" && !s.IsRunning);
+      var matchStatus = FilterStatus == "All" ||
+                            (FilterStatus == "Running" && s.IsRunning) ||
+                            (FilterStatus == "Stopped" && !s.IsRunning);
 
       return matchSearch && matchType && matchStatus;
     });
 
     // Сортировка
-    filtered = _sortField switch
+    filtered = SortField switch
     {
-      "Status" => _sortAscending
+      "Status" => SortAscending
           ? filtered.OrderBy(s => s.IsRunning ? 0 : 1)
           : filtered.OrderBy(s => s.IsRunning ? 1 : 0),
-      "Type" => _sortAscending
+      "Type" => SortAscending
           ? filtered.OrderBy(s => s.ModLoader.Type.ToString())
           : filtered.OrderByDescending(s => s.ModLoader.Type.ToString()),
-      "Version" => _sortAscending
+      "Version" => SortAscending
           ? filtered.OrderBy(s => s.McVersion)
           : filtered.OrderByDescending(s => s.McVersion),
-      _ => _sortAscending
+      _ => SortAscending
           ? filtered.OrderBy(s => s.Name)
           : filtered.OrderByDescending(s => s.Name),
     };
@@ -249,25 +200,7 @@ public class ServersViewModel : ObservableObject
     OnPropertyChanged(nameof(HasNoServers));
   }
 
-  /// <summary>
-  /// Флаг видимости страницы. Когда страница скрыта (навигация на другую страницу),
-  /// OnServersChanged не перестраивает FilteredServers, а только обновляет статусы.
-  /// </summary>
-  public bool IsVisible
-  {
-    get => _isVisible;
-    set
-    {
-      if (_isVisible == value) return;
-      _isVisible = value;
-
-      if (_isVisible)
-      {
-        // При возврате на страницу перестраиваем список с актуальным порядком
-        RefreshList();
-      }
-    }
-  }
+  // ─── Dispose ────────────────────────────────────────────────────
 
   private void OnServersChanged()
   {
@@ -277,7 +210,7 @@ public class ServersViewModel : ObservableObject
       _busyServers.Remove(server.Id);
     }
 
-    if (!_isVisible)
+    if (!IsVisible)
     {
       // Если страница скрыта — только обновляем статусы, не сбрасывая порядок
       var currentServers = _serverManager.GetServers();

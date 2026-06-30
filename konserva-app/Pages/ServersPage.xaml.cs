@@ -4,6 +4,7 @@ using Konserva.Services;
 using Konserva.Utilities;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using CommunityToolkit.Mvvm.DependencyInjection;
 using Konserva.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
@@ -24,7 +25,8 @@ public partial class ServersPage : Page, IDisposable
     {
         InitializeComponent();
 
-        _viewModel = new ServersViewModel(App.ServerManager);
+        _viewModel = Ioc.Default.GetService<ServersViewModel>()
+            ?? new ServersViewModel(Ioc.Default.GetService<IServerManager>()!);
 
         // Подписываемся на события ViewModel для UI-действий
         _viewModel.NavigateToServerRequested += OnNavigateToServer;
@@ -39,13 +41,13 @@ public partial class ServersPage : Page, IDisposable
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        App.ServerManager.OnServerStartError += OnServerStartError;
+        Ioc.Default.GetService<IServerManager>()!.OnServerStartError += OnServerStartError;
         _viewModel.IsVisible = true;
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        App.ServerManager.OnServerStartError -= OnServerStartError;
+        Ioc.Default.GetService<IServerManager>()!.OnServerStartError -= OnServerStartError;
         _viewModel.IsVisible = false;
     }
 
@@ -57,7 +59,7 @@ public partial class ServersPage : Page, IDisposable
 
     private void OnNavigateToServer(Server server)
     {
-        App.MainWindow?.NavigateToServer(server.Id);
+        Ioc.Default.GetService<MainWindow>()?.NavigateToServer(server.Id);
     }
 
     private void OnOpenFolder(Server server)
@@ -91,7 +93,7 @@ public partial class ServersPage : Page, IDisposable
     private void CreateServer_Click(object sender, RoutedEventArgs e)
     {
         Logger.Info("Navigating to CreateServerPage", "ServersPage");
-        App.MainWindow?.NavigateToCreateServer();
+        Ioc.Default.GetService<MainWindow>()?.NavigateToCreateServer();
     }
 
     private void Play_Click(object sender, RoutedEventArgs e)
@@ -117,7 +119,7 @@ public partial class ServersPage : Page, IDisposable
             if (result == ContentDialogResult.Primary)
             {
                 if (_viewModel.DeleteCommand.CanExecute(server))
-                    await ((AsyncRelayCommand<Server>)_viewModel.DeleteCommand).ExecuteAsync(server);
+                    _viewModel.DeleteCommand.Execute(server);
             }
         }
     }
@@ -219,6 +221,6 @@ public partial class ServersPage : Page, IDisposable
         _disposed = true;
         Loaded -= OnLoaded;
         Unloaded -= OnUnloaded;
-        App.ServerManager.OnServerStartError -= OnServerStartError;
+        Ioc.Default.GetService<IServerManager>()!.OnServerStartError -= OnServerStartError;
     }
 }

@@ -1,6 +1,8 @@
-﻿using Konserva.Localization;
+﻿using CommunityToolkit.Mvvm.DependencyInjection;
+using Konserva.Localization;
 using Konserva.Services;
 using Konserva.Utilities;
+using Konserva.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Resilience;
@@ -25,33 +27,8 @@ public partial class App : Application
     private static Mutex? _instanceMutex;
     private static CancellationTokenSource? _pipeCts;
 
+    // Приватная ссылка для очистки DI при завершении
     private static IServiceProvider? _serviceProvider;
-
-    /// <summary>
-    /// Сервис конфигурации
-    /// </summary>
-    public static IConfigService ConfigService =>
-        _serviceProvider?.GetRequiredService<IConfigService>()
-        ?? throw new InvalidOperationException("App not initialized");
-
-    /// <summary>
-    /// Менеджер серверов
-    /// </summary>
-    public static IServerManager ServerManager =>
-        _serviceProvider?.GetRequiredService<IServerManager>()
-        ?? throw new InvalidOperationException("App not initialized");
-
-    /// <summary>
-    /// Главное окно приложения
-    /// </summary>
-    public static new MainWindow MainWindow =>
-        _serviceProvider?.GetRequiredService<MainWindow>()
-        ?? throw new InvalidOperationException("App not initialized");
-
-    /// <summary>
-    /// Сервис провайдер
-    /// </summary>
-    public static IServiceProvider? ServiceProvider => _serviceProvider;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -113,6 +90,7 @@ public partial class App : Application
             // Настройка DI
             var services = ConfigureServices();
             _serviceProvider = services.BuildServiceProvider();
+            Ioc.Default.ConfigureServices(_serviceProvider);
 
             Logger.Info("DI container built", "App");
 
@@ -124,7 +102,7 @@ public partial class App : Application
             // Применяем язык из конфига
             try
             {
-                var config = ConfigService.GetConfig();
+                var config = Ioc.Default.GetService<IConfigService>()!.GetConfig();
                 var language = config.Language ?? "System"; // По умолчанию - язык системы
 
                 // Определяем фактический язык
@@ -148,7 +126,7 @@ public partial class App : Application
             }
 
             // Показываем главное окно (создаётся через DI)
-            var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+            var mainWindow = Ioc.Default.GetService<MainWindow>()!;
             mainWindow.Show();
 
             // Запускаем pipe-сервер для single-instance IPC
@@ -183,6 +161,10 @@ public partial class App : Application
             return new McServerInstaller(httpClient, configService);
         });
         services.AddSingleton<IUpdateService, UpdateService>();
+        services.AddTransient<ServersViewModel>();
+        services.AddTransient<SettingsViewModel>();
+        services.AddTransient<ServerDetailViewModel>();
+        services.AddTransient<CreateServerViewModel>();
         services.AddSingleton<MainWindow>();
 
         // HttpClient для API с retry политикой
@@ -209,7 +191,8 @@ public partial class App : Application
         services.AddHttpClient("UpdateChecker", options =>
         {
             options.Timeout = TimeSpan.FromSeconds(15);
-            options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
+            // User-Agent будет переопределён в UpdateChecker.CheckAsync() актуальной версией
+            options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva");
             options.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
         })
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
@@ -271,7 +254,7 @@ public partial class App : Application
     {
         try
         {
-            var httpClientFactory = _serviceProvider?.GetService<IHttpClientFactory>();
+            var httpClientFactory = Ioc.Default.GetService<IHttpClientFactory>();
 
             // Инициализация UpdateChecker
             var updateCheckHttpClient = httpClientFactory?.CreateClient("UpdateChecker")
@@ -414,7 +397,7 @@ public partial class App : Application
         try
         {
             // Остановка всех серверов
-            if (_serviceProvider?.GetService<IServerManager>() is McServerManager serverManager)
+            if (Ioc.Default.GetService<IServerManager>() is McServerManager serverManager)
             {
                 var servers = serverManager.GetServers();
                 var runningServers = servers.Where(s => s.IsRunning).ToList();

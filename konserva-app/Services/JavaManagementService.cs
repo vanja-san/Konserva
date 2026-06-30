@@ -1,4 +1,5 @@
-﻿using Konserva.Models;
+﻿using CommunityToolkit.Mvvm.DependencyInjection;
+using Konserva.Models;
 using Konserva.Utilities;
 using System.Diagnostics;
 using System.IO;
@@ -29,12 +30,13 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         if (isJavaVersionError)
         {
             // Получаем все установленные Java
-            var cfg = configService ?? App.ConfigService;
+            var cfg = configService ?? Ioc.Default.GetService<IConfigService>()!;
             var allJava = cfg?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
 
-            App.MainWindow?.Dispatcher.Invoke(() =>
+            var mainWindow = Ioc.Default.GetService<MainWindow>();
+            mainWindow?.Dispatcher.Invoke(() =>
             {
-                App.MainWindow?.ShowJavaErrorSnackbar(server, errorMessage, requiredVersion, foundVersion, allJava);
+                mainWindow?.ShowJavaErrorSnackbar(server, errorMessage, requiredVersion, foundVersion, allJava);
             });
         }
         else

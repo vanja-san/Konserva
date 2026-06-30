@@ -1,4 +1,4 @@
-﻿<Page
+<Page
     x:Class="Konserva.Pages.ServerDetailPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -7,26 +7,23 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="">
 
-    <Grid Margin="20,0,20,16"
-          RowDefinitions="Auto,Auto,*">
+    <Grid Margin="20,0,20,16" RowDefinitions="Auto,Auto,*">
         <!--  Заголовок с кнопками управления  -->
-        <Border Grid.Row="0"
-                Margin="16">
+        <Border Grid.Row="0" Margin="16">
             <Grid ColumnDefinitions="*,Auto">
                 <!--  Название сервера  -->
-                <StackPanel Grid.Column="0"
-                            VerticalAlignment="Center">
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <ui:TextBlock
                         x:Name="ServerNameText"
                         FontSize="16"
                         FontWeight="Bold"
                         Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
-                        Text="Server Name"/>
+                        Text="ServerName" />
                     <ui:TextBlock
                         x:Name="ServerInfoText"
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorDisabledBrush}"
-                        Text="X.X.X • Modloader Name"/>
+                        Text="1.0.0 • ModloaderName" />
                 </StackPanel>
 
                 <!--  Кнопки управления  -->
@@ -43,7 +40,7 @@
                         <ui:SymbolIcon
                             x:Name="StartStopIcon"
                             FontSize="20"
-                            Symbol="Play20"/>
+                            Symbol="Play20" />
                     </ui:Button>
 
                     <!--  Открыть папку  -->
@@ -52,8 +49,7 @@
                         Padding="4"
                         Click="OpenFolder_Click"
                         ToolTip="{loc:Loc ServerDetail_OpenFolder}">
-                        <ui:SymbolIcon FontSize="20"
-                                       Symbol="Folder20"/>
+                        <ui:SymbolIcon FontSize="20" Symbol="Folder20" />
                     </ui:Button>
 
                     <!--  Удалить  -->
@@ -64,7 +60,7 @@
                         <ui:SymbolIcon
                             FontSize="20"
                             Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}"
-                            Symbol="Delete20"/>
+                            Symbol="Delete20" />
                     </ui:Button>
                 </StackPanel>
             </Grid>
@@ -80,8 +76,7 @@
             CornerRadius="4">
             <Grid ColumnDefinitions="Auto,*,Auto">
                 <!--  Левая группа кнопок (Консоль, Моды, Плагины)  -->
-                <StackPanel Grid.Column="0"
-                            Orientation="Horizontal">
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <!--  Консоль  -->
                     <ui:Button
                         x:Name="ConsoleNavButton"
@@ -97,12 +92,12 @@
                                 x:Name="ConsoleNavIcon"
                                 Margin="0,0,8,0"
                                 FontSize="20"
-                                Symbol="WindowConsole20"/>
+                                Symbol="WindowConsole20" />
                             <ui:TextBlock
                                 VerticalAlignment="Center"
                                 FontSize="13"
                                 FontWeight="Medium"
-                                Text="{loc:Loc ServerDetail_Console}"/>
+                                Text="{loc:Loc ServerDetail_Console}" />
                         </StackPanel>
                     </ui:Button>
 
@@ -121,12 +116,12 @@
                                 x:Name="ModsNavIcon"
                                 Margin="0,0,8,0"
                                 FontSize="20"
-                                Symbol="CubeAdd20"/>
+                                Symbol="CubeAdd20" />
                             <ui:TextBlock
                                 VerticalAlignment="Center"
                                 FontSize="13"
                                 FontWeight="Medium"
-                                Text="{loc:Loc ServerDetail_Mods}"/>
+                                Text="{loc:Loc ServerDetail_Mods}" />
                         </StackPanel>
                     </ui:Button>
 
@@ -145,19 +140,18 @@
                                 x:Name="PluginsNavIcon"
                                 Margin="0,0,8,0"
                                 FontSize="20"
-                                Symbol="LightbulbFilament20"/>
+                                Symbol="LightbulbFilament20" />
                             <ui:TextBlock
                                 VerticalAlignment="Center"
                                 FontSize="13"
                                 FontWeight="Medium"
-                                Text="{loc:Loc ServerDetail_Plugins}"/>
+                                Text="{loc:Loc ServerDetail_Plugins}" />
                         </StackPanel>
                     </ui:Button>
                 </StackPanel>
 
                 <!--  Правая группа кнопок (Свойства, Настройки)  -->
-                <StackPanel Grid.Column="2"
-                            Orientation="Horizontal">
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <!--  Свойства  -->
                     <ui:Button
                         x:Name="PropertiesNavButton"
@@ -171,7 +165,7 @@
                         <ui:SymbolIcon
                             x:Name="PropertiesNavIcon"
                             FontSize="20"
-                            Symbol="DocumentText20"/>
+                            Symbol="DocumentText20" />
                     </ui:Button>
 
                     <!--  Настройки  -->
@@ -187,15 +181,14 @@
                         <ui:SymbolIcon
                             x:Name="SettingsNavIcon"
                             FontSize="20"
-                            Symbol="TaskListSquareSettings20"/>
+                            Symbol="TaskListSquareSettings20" />
                     </ui:Button>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!--  Содержимое разделов  -->
-        <Border Grid.Row="2"
-                CornerRadius="8">
+        <Border Grid.Row="2" CornerRadius="8">
             <Grid>
                 <!--  Консоль  -->
                 <Grid
@@ -220,8 +213,7 @@
                                 FontSize="12"
                                 LineHeight="14"
                                 LineStackingStrategy="BlockLineHeight">
-                                <Paragraph Margin="0"
-                                           TextIndent="0"/>
+                                <Paragraph Margin="0" TextIndent="0" />
                             </FlowDocument>
                         </ui:RichTextBox.Document>
                     </ui:RichTextBox>
@@ -233,20 +225,19 @@
                         FontSize="14"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         IsHitTestVisible="False"
-                        Text="{loc:Loc ServerDetail_Console_Empty}"/>
+                        Text="{loc:Loc ServerDetail_Console_Empty}" />
                     <!--  Ввод команды  -->
                     <Grid
                         Grid.Row="1"
                         Margin="0,8,0,0"
                         ColumnDefinitions="*,Auto">
-                        <ui:TextBox x:Name="CommandBox"
-                                    KeyDown="CommandBox_KeyDown"/>
+                        <ui:TextBox x:Name="CommandBox" KeyDown="CommandBox_KeyDown" />
                         <ui:Button
                             Grid.Column="1"
                             Margin="8,0,0,0"
                             Padding="20,8"
                             Click="SendCommand_Click"
-                            Content="{loc:Loc ServerDetail_SendCommand}"/>
+                            Content="{loc:Loc ServerDetail_SendCommand}" />
                     </Grid>
                 </Grid>
 
@@ -273,27 +264,26 @@
                                     VerticalAlignment="Center"
                                     Filled="True"
                                     FontSize="20"
-                                    Symbol="AppsListDetail20"/>
+                                    Symbol="AppsListDetail20" />
                                 <ui:TextBlock
                                     FontSize="15"
                                     FontWeight="SemiBold"
                                     Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
-                                    Text="{loc:Loc ServerDetail_Mods_List}"/>
+                                    Text="{loc:Loc ServerDetail_Mods_List}" />
                                 <ui:InfoBadge
                                     x:Name="ModsCountBadge"
                                     Margin="10,0,0,0"
                                     Visibility="Collapsed"
-                                    Value="0"/>
+                                    Value="0" />
                             </StackPanel>
-                            <StackPanel Grid.Column="1"
-                                        Orientation="Horizontal">
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
                                 <ui:Button
                                     x:Name="ToggleAllModsBtn"
                                     Height="32"
                                     Padding="8,0,8,0"
                                     Click="ToggleAllMods_Click"
                                     ToolTip="{loc:Loc ServerDetail_Mods_ToggleAll}">
-                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Mods_ToggleAll_Enable}"/>
+                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Mods_ToggleAll_Enable}" />
                                 </ui:Button>
                                 <ui:Button
                                     x:Name="OpenModsFolderBtn"
@@ -303,8 +293,7 @@
                                     Padding="0"
                                     Click="OpenModsFolder_Click"
                                     ToolTip="{loc:Loc ServerDetail_Mods_OpenFolder}">
-                                    <ui:SymbolIcon FontSize="20"
-                                                   Symbol="FolderOpen20"/>
+                                    <ui:SymbolIcon FontSize="20" Symbol="FolderOpen20" />
                                 </ui:Button>
                                 <ui:Button
                                     x:Name="RefreshModsBtn"
@@ -313,8 +302,7 @@
                                     Padding="0"
                                     Click="RefreshMods_Click"
                                     ToolTip="{loc:Loc ServerDetail_Mods_Refresh}">
-                                    <ui:SymbolIcon FontSize="20"
-                                                   Symbol="ArrowClockwise20"/>
+                                    <ui:SymbolIcon FontSize="20" Symbol="ArrowClockwise20" />
                                 </ui:Button>
                             </StackPanel>
                         </Grid>
@@ -344,14 +332,14 @@
                                                 <ui:SymbolIcon
                                                     Filled="True"
                                                     FontSize="20"
-                                                    Symbol="Cube20"/>
+                                                    Symbol="Cube20" />
                                             </ui:CardControl.Icon>
                                             <ui:CardControl.Header>
                                                 <ui:TextBlock
                                                     FontSize="14"
                                                     Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
                                                     Text="{Binding Name}"
-                                                    TextTrimming="CharacterEllipsis"/>
+                                                    TextTrimming="CharacterEllipsis" />
                                             </ui:CardControl.Header>
                                             <ui:CardControl.ContextMenu>
                                                 <ContextMenu>
@@ -360,8 +348,7 @@
                                                         Header="{loc:Loc ServerDetail_Mods_Delete}"
                                                         Tag="{Binding}">
                                                         <MenuItem.Icon>
-                                                            <ui:SymbolIcon Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}"
-                                                                           Symbol="Delete20"/>
+                                                            <ui:SymbolIcon Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}" Symbol="Delete20" />
                                                         </MenuItem.Icon>
                                                     </MenuItem>
                                                 </ContextMenu>
@@ -374,8 +361,7 @@
                                                 BorderThickness="0"
                                                 Click="ModMoreMenu_Click"
                                                 Tag="{Binding}">
-                                                <ui:SymbolIcon FontSize="16"
-                                                               Symbol="MoreHorizontal20"/>
+                                                <ui:SymbolIcon FontSize="16" Symbol="MoreHorizontal20" />
                                             </ui:Button>
                                         </ui:CardControl>
                                     </DataTemplate>
@@ -408,27 +394,26 @@
                                     VerticalAlignment="Center"
                                     Filled="True"
                                     FontSize="20"
-                                    Symbol="AppsListDetail20"/>
+                                    Symbol="AppsListDetail20" />
                                 <ui:TextBlock
                                     FontSize="15"
                                     FontWeight="SemiBold"
                                     Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
-                                    Text="{loc:Loc ServerDetail_Plugins_List}"/>
+                                    Text="{loc:Loc ServerDetail_Plugins_List}" />
                                 <ui:InfoBadge
                                     x:Name="PluginsCountBadge"
                                     Margin="8,0,0,0"
                                     Visibility="Collapsed"
-                                    Value="0"/>
+                                    Value="0" />
                             </StackPanel>
-                            <StackPanel Grid.Column="1"
-                                        Orientation="Horizontal">
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
                                 <ui:Button
                                     x:Name="ToggleAllPluginsBtn"
                                     Height="32"
                                     Padding="8,0,8,0"
                                     Click="ToggleAllPlugins_Click"
                                     ToolTip="{loc:Loc ServerDetail_Plugins_ToggleAll}">
-                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Plugins_ToggleAll_Enable}"/>
+                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Plugins_ToggleAll_Enable}" />
                                 </ui:Button>
                                 <ui:Button
                                     x:Name="OpenPluginsFolderBtn"
@@ -438,8 +423,7 @@
                                     Padding="0"
                                     Click="OpenPluginsFolder_Click"
                                     ToolTip="{loc:Loc ServerDetail_Plugins_OpenFolder}">
-                                    <ui:SymbolIcon FontSize="20"
-                                                   Symbol="FolderOpen20"/>
+                                    <ui:SymbolIcon FontSize="20" Symbol="FolderOpen20" />
                                 </ui:Button>
                                 <ui:Button
                                     x:Name="RefreshPluginsBtn"
@@ -448,8 +432,7 @@
                                     Padding="0"
                                     Click="RefreshPlugins_Click"
                                     ToolTip="{loc:Loc ServerDetail_Plugins_Refresh}">
-                                    <ui:SymbolIcon FontSize="20"
-                                                   Symbol="ArrowClockwise20"/>
+                                    <ui:SymbolIcon FontSize="20" Symbol="ArrowClockwise20" />
                                 </ui:Button>
                             </StackPanel>
                         </Grid>
@@ -479,14 +462,14 @@
                                                 <ui:SymbolIcon
                                                     Filled="True"
                                                     FontSize="20"
-                                                    Symbol="LightbulbFilament20"/>
+                                                    Symbol="LightbulbFilament20" />
                                             </ui:CardControl.Icon>
                                             <ui:CardControl.Header>
                                                 <ui:TextBlock
                                                     FontSize="14"
                                                     Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
                                                     Text="{Binding Name}"
-                                                    TextTrimming="CharacterEllipsis"/>
+                                                    TextTrimming="CharacterEllipsis" />
                                             </ui:CardControl.Header>
                                             <ui:CardControl.ContextMenu>
                                                 <ContextMenu>
@@ -495,8 +478,7 @@
                                                         Header="{loc:Loc ServerDetail_Plugins_Delete}"
                                                         Tag="{Binding}">
                                                         <MenuItem.Icon>
-                                                            <ui:SymbolIcon Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}"
-                                                                           Symbol="Delete20"/>
+                                                            <ui:SymbolIcon Foreground="{ui:ThemeResource SystemFillColorCriticalBrush}" Symbol="Delete20" />
                                                         </MenuItem.Icon>
                                                     </MenuItem>
                                                 </ContextMenu>
@@ -509,8 +491,7 @@
                                                 BorderThickness="0"
                                                 Click="PluginMoreMenu_Click"
                                                 Tag="{Binding}">
-                                                <ui:SymbolIcon FontSize="16"
-                                                               Symbol="MoreHorizontal20"/>
+                                                <ui:SymbolIcon FontSize="16" Symbol="MoreHorizontal20" />
                                             </ui:Button>
                                         </ui:CardControl>
                                     </DataTemplate>
@@ -521,14 +502,12 @@
                 </Grid>
 
                 <!--  Свойства сервера (server.properties)  -->
-                <Grid x:Name="PropertiesView"
-                      Visibility="Collapsed">
-                    <controls:ServerPropertiesEditor x:Name="PropertiesEditor"/>
+                <Grid x:Name="PropertiesView" Visibility="Collapsed">
+                    <controls:ServerPropertiesEditor x:Name="PropertiesEditor" />
                 </Grid>
 
                 <!--  Настройки сервера  -->
-                <Grid x:Name="SettingsView"
-                      Visibility="Collapsed">
+                <Grid x:Name="SettingsView" Visibility="Collapsed">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <!--  Основные настройки  -->
@@ -541,13 +520,12 @@
                                     <ui:SymbolIcon
                                         Filled="True"
                                         FontSize="20"
-                                        Symbol="TaskListSquaresettings20"/>
+                                        Symbol="TaskListSquaresettings20" />
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
-                                    <ui:TextBlock Text="{loc:Loc ServerProperties_General}"/>
+                                    <ui:TextBlock Text="{loc:Loc ServerProperties_General}" />
                                 </ui:CardExpander.Header>
-                                <Grid Margin="8,0"
-                                      RowDefinitions="Auto">
+                                <Grid Margin="8,0" RowDefinitions="Auto">
                                     <Grid
                                         Grid.Row="0"
                                         Margin="0,8"
@@ -556,11 +534,11 @@
                                             <ui:TextBlock
                                                 Grid.Column="0"
                                                 VerticalAlignment="Center"
-                                                Text="{loc:Loc ServerDetail_Settings_General}"/>
+                                                Text="{loc:Loc ServerDetail_Settings_General}" />
                                             <ui:TextBlock
                                                 FontSize="11"
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                Text="{loc:Loc ServerDetail_Settings_General_Desc}"/>
+                                                Text="{loc:Loc ServerDetail_Settings_General_Desc}" />
                                         </StackPanel>
                                         <ui:TextBox
                                             x:Name="SettingName"
@@ -568,7 +546,7 @@
                                             MinWidth="100"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"
-                                            LostFocus="Setting_LostFocus"/>
+                                            LostFocus="Setting_LostFocus" />
                                     </Grid>
                                 </Grid>
                             </ui:CardExpander>
@@ -583,13 +561,12 @@
                                     <ui:SymbolIcon
                                         Filled="True"
                                         FontSize="20"
-                                        Symbol="Storage20"/>
+                                        Symbol="Storage20" />
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
-                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Settings_RAM}"/>
+                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Settings_RAM}" />
                                 </ui:CardExpander.Header>
-                                <Grid Margin="8,0"
-                                      RowDefinitions="Auto,Auto">
+                                <Grid Margin="8,0" RowDefinitions="Auto,Auto">
                                     <Grid
                                         Grid.Row="0"
                                         Margin="0,8"
@@ -598,11 +575,11 @@
                                             <ui:TextBlock
                                                 Grid.Column="0"
                                                 VerticalAlignment="Center"
-                                                Text="{loc:Loc ServerDetail_Settings_RAM_Min}"/>
+                                                Text="{loc:Loc ServerDetail_Settings_RAM_Min}" />
                                             <ui:TextBlock
                                                 FontSize="11"
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                Text="{loc:Loc ServerDetail_Settings_RAM_Min_Desc}"/>
+                                                Text="{loc:Loc ServerDetail_Settings_RAM_Min_Desc}" />
                                         </StackPanel>
                                         <ui:TextBox
                                             x:Name="SettingRamMin"
@@ -612,7 +589,7 @@
                                             VerticalAlignment="Center"
                                             LostFocus="Setting_LostFocus"
                                             PreviewTextInput="NumberValidationTextBox_PreviewTextInput"
-                                            TextAlignment="Center"/>
+                                            TextAlignment="Center" />
                                     </Grid>
                                     <Grid
                                         Grid.Row="1"
@@ -622,11 +599,11 @@
                                             <ui:TextBlock
                                                 Grid.Column="0"
                                                 VerticalAlignment="Center"
-                                                Text="{loc:Loc ServerDetail_Settings_RAM_Max}"/>
+                                                Text="{loc:Loc ServerDetail_Settings_RAM_Max}" />
                                             <ui:TextBlock
                                                 FontSize="11"
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                Text="{loc:Loc ServerDetail_Settings_RAM_Max_Desc}"/>
+                                                Text="{loc:Loc ServerDetail_Settings_RAM_Max_Desc}" />
                                         </StackPanel>
                                         <ui:TextBox
                                             x:Name="SettingRamMax"
@@ -636,7 +613,7 @@
                                             VerticalAlignment="Center"
                                             LostFocus="Setting_LostFocus"
                                             PreviewTextInput="NumberValidationTextBox_PreviewTextInput"
-                                            TextAlignment="Center"/>
+                                            TextAlignment="Center" />
                                     </Grid>
                                 </Grid>
                             </ui:CardExpander>
@@ -651,42 +628,39 @@
                                     <ui:SymbolIcon
                                         Filled="True"
                                         FontSize="20"
-                                        Symbol="Power20"/>
+                                        Symbol="Power20" />
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
-                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Settings_AutoRestart}"/>
+                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Settings_AutoRestart}" />
                                 </ui:CardExpander.Header>
-                                <Grid Margin="8,0"
-                                      RowDefinitions="Auto,Auto">
+                                <Grid Margin="8,0" RowDefinitions="Auto,Auto">
                                     <Grid
                                         Grid.Row="0"
                                         Margin="0,8"
                                         ColumnDefinitions="*,Auto">
                                         <StackPanel Grid.Column="0">
-                                            <ui:TextBlock FontSize="13"
-                                                          Text="{loc:Loc ServerDetail_Settings_AutoRestart_Enable}"/>
+                                            <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_Settings_AutoRestart_Enable}" />
                                             <ui:TextBlock
                                                 FontSize="11"
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                Text="{loc:Loc ServerDetail_Settings_AutoRestart_Desc}"/>
+                                                Text="{loc:Loc ServerDetail_Settings_AutoRestart_Desc}" />
                                         </StackPanel>
                                         <CheckBox
                                             x:Name="SettingAutoRestart"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"
-                                            Click="Setting_Click"/>
+                                            Click="Setting_Click" />
                                     </Grid>
                                     <Grid
                                         Grid.Row="1"
                                         Margin="0,8"
                                         ColumnDefinitions="*,200">
                                         <StackPanel Grid.Column="0">
-                                            <ui:TextBlock FontSize="13"
-                                                          Text="{loc:Loc ServerDetail_Settings_AutoRestart_Delay}"/>
+                                            <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_Settings_AutoRestart_Delay}" />
                                             <ui:TextBlock
                                                 FontSize="11"
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                Text="{loc:Loc ServerDetail_Settings_AutoRestart_Delay_Desc}"/>
+                                                Text="{loc:Loc ServerDetail_Settings_AutoRestart_Delay_Desc}" />
                                         </StackPanel>
                                         <ui:TextBox
                                             x:Name="SettingAutoRestartDelay"
@@ -696,7 +670,7 @@
                                             VerticalAlignment="Center"
                                             LostFocus="Setting_LostFocus"
                                             PreviewTextInput="NumberValidationTextBox_PreviewTextInput"
-                                            TextAlignment="Center"/>
+                                            TextAlignment="Center" />
                                     </Grid>
                                 </Grid>
                             </ui:CardExpander>
@@ -711,31 +685,29 @@
                                     <ui:SymbolIcon
                                         Filled="True"
                                         FontSize="20"
-                                        Symbol="SquareHintApps20"/>
+                                        Symbol="SquareHintApps20" />
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
-                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Java}"/>
+                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Java}" />
                                 </ui:CardExpander.Header>
-                                <Grid Margin="8,0"
-                                      RowDefinitions="Auto,Auto,Auto">
+                                <Grid Margin="8,0" RowDefinitions="Auto,Auto,Auto">
                                     <Grid
                                         Grid.Row="0"
                                         Margin="0,8"
                                         ColumnDefinitions="*,Auto">
                                         <StackPanel Grid.Column="0">
-                                            <ui:TextBlock FontSize="13"
-                                                          Text="{loc:Loc ServerDetail_Settings_Java_Auto}"/>
+                                            <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_Settings_Java_Auto}" />
                                             <ui:TextBlock
                                                 FontSize="11"
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                Text="{loc:Loc ServerDetail_Settings_Java_Auto_Desc}"/>
+                                                Text="{loc:Loc ServerDetail_Settings_Java_Auto_Desc}" />
                                         </StackPanel>
                                         <CheckBox
                                             x:Name="SettingJavaAutoSelect"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"
                                             Click="Setting_Click"
-                                            IsChecked="True"/>
+                                            IsChecked="True" />
                                     </Grid>
                                     <Grid
                                         x:Name="JavaSelectionGrid"
@@ -745,27 +717,24 @@
                                         <ui:TextBlock
                                             Grid.Column="0"
                                             VerticalAlignment="Center"
-                                            Text="{loc:Loc ServerDetail_Settings_Java_Version}"/>
+                                            Text="{loc:Loc ServerDetail_Settings_Java_Version}" />
                                         <ComboBox
                                             x:Name="SettingJavaComboBox"
                                             Grid.Column="1"
                                             MinWidth="200"
                                             HorizontalAlignment="Right"
-                                            SelectionChanged="SettingJavaComboBox_SelectionChanged"/>
+                                            SelectionChanged="SettingJavaComboBox_SelectionChanged" />
                                     </Grid>
 
                                     <!--  JVM аргументы  -->
-                                    <Grid Grid.Row="2"
-                                          Margin="0,8,0,0">
+                                    <Grid Grid.Row="2" Margin="0,8,0,0">
                                         <Grid RowDefinitions="Auto,Auto">
-                                            <StackPanel Grid.Row="0"
-                                                        Margin="0,0,0,8">
-                                                <ui:TextBlock FontSize="13"
-                                                              Text="{loc:Loc ServerDetail_Settings_JvmArgs}"/>
+                                            <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                                                <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_Settings_JvmArgs}" />
                                                 <ui:TextBlock
                                                     FontSize="11"
                                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                    Text="{loc:Loc ServerDetail_Settings_JvmArgs_Desc}"/>
+                                                    Text="{loc:Loc ServerDetail_Settings_JvmArgs_Desc}" />
                                             </StackPanel>
                                             <TextBox
                                                 x:Name="SettingJvmArgs"
@@ -775,7 +744,7 @@
                                                 FontFamily="Consolas"
                                                 FontSize="12"
                                                 LostFocus="SettingJvmArgs_LostFocus"
-                                                TextWrapping="NoWrap"/>
+                                                TextWrapping="NoWrap" />
                                         </Grid>
                                     </Grid>
                                 </Grid>
@@ -791,48 +760,45 @@
                                     <ui:SymbolIcon
                                         Filled="True"
                                         FontSize="20"
-                                        Symbol="Wifi120"/>
+                                        Symbol="Wifi120" />
                                 </ui:CardExpander.Icon>
                                 <ui:CardExpander.Header>
-                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Upnp}"/>
+                                    <ui:TextBlock Text="{loc:Loc ServerDetail_Upnp}" />
                                 </ui:CardExpander.Header>
-                                <Grid Margin="8,0"
-                                      RowDefinitions="Auto,Auto,Auto">
+                                <Grid Margin="8,0" RowDefinitions="Auto,Auto,Auto">
                                     <Grid
                                         Grid.Row="0"
                                         Margin="0,8"
                                         ColumnDefinitions="*,Auto">
                                         <StackPanel Grid.Column="0">
-                                            <ui:TextBlock FontSize="13"
-                                                          Text="{loc:Loc ServerDetail_Upnp_Enable}"/>
+                                            <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_Upnp_Enable}" />
                                             <ui:TextBlock
                                                 FontSize="11"
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                Text="{loc:Loc ServerDetail_Upnp_Enable_Desc}"/>
+                                                Text="{loc:Loc ServerDetail_Upnp_Enable_Desc}" />
                                         </StackPanel>
                                         <CheckBox
                                             x:Name="SettingEnableUpnp"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"
-                                            Click="SettingEnableUpnp_Click"/>
+                                            Click="SettingEnableUpnp_Click" />
                                     </Grid>
 
-                                    <!-- Row 1: текст + кнопки -->
+                                    <!--  Row 1: текст + кнопки  -->
                                     <Grid
                                         Grid.Row="1"
                                         Margin="0,8"
                                         ColumnDefinitions="*,Auto,Auto">
-                                        <StackPanel Grid.Column="0"
-                                                    VerticalAlignment="Center">
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                             <ui:TextBlock
                                                 VerticalAlignment="Center"
                                                 FontSize="13"
-                                                Text="{loc:Loc ServerDetail_Upnp_Check}"/>
+                                                Text="{loc:Loc ServerDetail_Upnp_Check}" />
                                             <ui:TextBlock
                                                 FontSize="11"
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                 Text="{loc:Loc ServerDetail_Upnp_Check_Desc}"
-                                                TextWrapping="Wrap"/>
+                                                TextWrapping="Wrap" />
                                         </StackPanel>
                                         <ui:Button
                                             x:Name="CheckUpnpButton"
@@ -841,7 +807,7 @@
                                             Margin="0,0,8,0"
                                             VerticalAlignment="Center"
                                             Click="CheckUpnpButton_Click"
-                                            Content="{loc:Loc ServerDetail_Upnp_Check}"/>
+                                            Content="{loc:Loc ServerDetail_Upnp_Check}" />
                                         <ui:Button
                                             x:Name="CheckPortButton"
                                             Grid.Column="2"
@@ -849,21 +815,20 @@
                                             VerticalAlignment="Center"
                                             Appearance="Primary"
                                             Click="CheckPortButton_Click"
-                                            Content="{loc:Loc ServerDetail_Upnp_CheckPort}"/>
+                                            Content="{loc:Loc ServerDetail_Upnp_CheckPort}" />
                                     </Grid>
 
-                                    <!-- Row 2: адрес -->
+                                    <!--  Row 2: адрес  -->
                                     <Grid
                                         Grid.Row="2"
                                         Margin="0,0,0,8"
                                         ColumnDefinitions="*,Auto">
-                                        <StackPanel Grid.Column="0"
-                                                    VerticalAlignment="Center">
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                             <ui:TextBlock
                                                 x:Name="UpnpAddressText"
                                                 FontSize="13"
                                                 Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
-                                                Visibility="Collapsed"/>
+                                                Visibility="Collapsed" />
                                         </StackPanel>
                                         <ui:Button
                                             x:Name="CopyAddressButton"
@@ -873,7 +838,7 @@
                                             VerticalAlignment="Center"
                                             Click="CopyAddressButton_Click"
                                             Content="{loc:Loc ServerDetail_Upnp_CopyAddress}"
-                                            Visibility="Collapsed"/>
+                                            Visibility="Collapsed" />
                                     </Grid>
                                 </Grid>
                             </ui:CardExpander>

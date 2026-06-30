@@ -1,4 +1,5 @@
-﻿using Konserva.Localization;
+﻿using CommunityToolkit.Mvvm.DependencyInjection;
+using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
@@ -180,11 +181,28 @@ public partial class MainWindow : FluentWindow, IDisposable
             ? $"{mainTitle} — {page.Title}"
             : mainTitle;
 
-        // Анимация появления страницы
+        // Анимация появления страницы — стартуем когда UI готов к взаимодействию
         if (e.Content is FrameworkElement pageContent)
         {
+            if (pageContent.IsLoaded)
+            {
+                Wpf.Ui.Animations.TransitionAnimationProvider.ApplyTransition(
+                    pageContent, Wpf.Ui.Animations.Transition.FadeIn, 250);
+            }
+            else
+            {
+                pageContent.Loaded += OnPageLoadedForAnimation;
+            }
+        }
+    }
+
+    private static void OnPageLoadedForAnimation(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement element)
+        {
+            element.Loaded -= OnPageLoadedForAnimation;
             Wpf.Ui.Animations.TransitionAnimationProvider.ApplyTransition(
-                pageContent, Wpf.Ui.Animations.Transition.FadeIn, 250);
+                element, Wpf.Ui.Animations.Transition.FadeIn, 250);
         }
     }
 
@@ -428,9 +446,9 @@ public partial class MainWindow : FluentWindow, IDisposable
     /// </summary>
     public static void NavigateToServerCommand(object parameter)
     {
-        if (parameter is string serverId && App.MainWindow != null)
+        if (parameter is string serverId)
         {
-            App.MainWindow.NavigateToServer(serverId);
+            Ioc.Default.GetService<MainWindow>()?.NavigateToServer(serverId);
         }
     }
 

@@ -21,6 +21,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     private readonly Lock _startStopLock = new();
     private CancellationTokenSource? _startCts;
     private CancellationTokenSource? _stopCts;
+    private CancellationTokenSource? _readyMsgCts;
     private int _playersOnline;
     private string? _pendingErrorOutput;
     private string? _lastJavaDisplayName;
@@ -604,15 +605,11 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     {
         Status = ServerStatus.Stopping;
         OnStatusChanged?.Invoke(Status);
-        AppendLog($" {LocalizationManager.Get("Log_StoppingServer")}");
+        AppendLog($" {LocalizationManager.Get("Log_StoppingWithCommand")}");
 
         try
         {
-            AppendLog($" {LocalizationManager.Get("Log_SendingStopCommand")}");
             SendCommand("stop");
-
-            // Ждём завершения процесса с таймаутом 60 сек
-            AppendLog($" {LocalizationManager.Get("Log_WaitingForProcessExit")}");
             var startTime = Environment.TickCount64;
 
             while (_process != null && !_process.HasExited && (Environment.TickCount64 - startTime) < Constants.ServerStopTimeoutMs)
@@ -628,8 +625,6 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             }
             else
             {
-                AppendLog($" {LocalizationManager.Get("Log_ServerStoppedSuccessfully")}");
-
                 // Ждём немного для обработки последних строк вывода
                 await Task.Delay(Constants.ServerStatusCheckDelayMs);
             }
@@ -687,7 +682,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
         try
         {
-            AppendLog($"[CMD] {string.Format(LocalizationManager.Get("Log_CommandSent"), command)}");
+            AppendLog($"[Console] {string.Format(LocalizationManager.Get("Log_CommandSent"), command)}");
             Logger.Info($"[SendCommand] Запись в StandardInput: {command}", "McServerProcess");
             _process.StandardInput.WriteLine(command);
             _process.StandardInput.Flush();
@@ -819,7 +814,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             }
             else
             {
-                AppendLog($" {LocalizationManager.Get("Log_ServerStoppedCode0")}");
+                AppendLog($" {LocalizationManager.Get("Log_ServerStoppedSuccessfully")}");
             }
 
             _process?.Dispose();
@@ -871,6 +866,42 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             }
 
             OnLog?.Invoke(logLine);
+        }
+    }
+
+    /// <summary>
+    /// Показать сообщение о готовности сервера с задержкой,
+    /// чтобы оно появилось после всех завершающих строк вывода.
+    /// </summary>
+    private async Task ShowServerReadyDelayedAsync()
+    {
+        _readyMsgCts?.Cancel();
+        _readyMsgCts = new CancellationTokenSource();
+        var token = _readyMsgCts.Token;
+
+        try
+        {
+            await Task.Delay(500, token);
+
+            if (Status == ServerStatus.Starting && !token.IsCancellationRequested)
+            {
+                AppendLog($"{LocalizationManager.Get("Log_ServerStarted")}");
+                Status = ServerStatus.Running;
+                OnStatusChanged?.Invoke(Status);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ожидаемо — новый вызов или остановка
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"ShowServerReadyDelayed error: {ex.Message}", "McServerProcess");
+        }
+        finally
+        {
+            _readyMsgCts?.Dispose();
+            _readyMsgCts = null;
         }
     }
 
@@ -955,9 +986,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             if (_serverReady)
             {
-                AppendLog($"[SUCCESS] {LocalizationManager.Get("Log_ServerStarted")}");
-                Status = ServerStatus.Running;
-                OnStatusChanged?.Invoke(Status);
+                _ = ShowServerReadyDelayedAsync();
             }
         }
 
@@ -1074,6 +1103,10 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         _stopCts?.Cancel();
         _stopCts?.Dispose();
         _stopCts = null;
+
+        _readyMsgCts?.Cancel();
+        _readyMsgCts?.Dispose();
+        _readyMsgCts = null;
 
         // Очистка логов
         lock (_lock)
