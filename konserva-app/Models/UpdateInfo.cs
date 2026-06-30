@@ -13,5 +13,11 @@ namespace Konserva.Models
         public long SizeBytes { get; set; }
         public string ReleaseNotes { get; set; } = string.Empty;
         public string ChangelogUrl { get; set; } = string.Empty;
+
+        /// <summary>
+        /// true, если удалось прочитать version.json (HTTP 200).
+        /// false при таймауте или другой сетевой ошибке.
+        /// </summary>
+        public bool IsCheckSuccessful { get; set; }
     }
 }

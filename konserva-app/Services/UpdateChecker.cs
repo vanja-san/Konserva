@@ -12,7 +12,8 @@ using static Konserva.Models.ApiUrls;
 namespace Konserva.Services
 {
     /// <summary>
-    /// Проверяет наличие обновлений через GitHub Releases API.
+    /// Проверяет наличие обновлений через version.json в корне репозитория.
+    /// Файл раздаётся через raw.githubusercontent.com (CDN, без rate limit).
     /// </summary>
     public static class UpdateChecker
     {
@@ -27,7 +28,7 @@ namespace Konserva.Services
         }
 
         /// <summary>
-        /// Проверяет наличие обновления. Тип сборки определяется автоматически по размеру exe.
+        /// Проверяет наличие обновления через version.json на raw.githubusercontent.com.
         /// </summary>
         public static async Task<UpdateInfo> CheckAsync()
         {
@@ -37,55 +38,57 @@ namespace Konserva.Services
 
             try
             {
-                var client = _client;
-                if (client == null)
-                {
-                    client = new HttpClient();
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd($"Konserva/{currentVersion}");
-                    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
-                }
-
+                var client = _client ?? new HttpClient();
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-                var response = await client.GetAsync(GitHubReleasesLatest, cts.Token);
-                if (!response.IsSuccessStatusCode)
+
+                var json = await client.GetStringAsync(VersionManifestUrl, cts.Token);
+
+                var manifest = JsonSerializer.Deserialize<VersionManifest>(json);
+                if (manifest == null || string.IsNullOrEmpty(manifest.LatestVersion))
                 {
-                    Logger.Warning($"Update check failed with status {response.StatusCode}", "UpdateChecker");
+                    Logger.Warning("Version manifest is empty or invalid", "UpdateChecker");
                     return updateInfo;
                 }
 
-                var json = await response.Content.ReadAsStringAsync();
-                var release = JsonDocument.Parse(json).RootElement;
+                updateInfo.IsCheckSuccessful = true;
 
-                var tagName = release.GetProperty("tag_name").GetString();
-                if (string.IsNullOrEmpty(tagName))
-                    return updateInfo;
-
-                // Убираем префикс 'v' если есть
-                var newVersion = tagName.TrimStart('v');
+                var newVersion = manifest.LatestVersion.TrimStart('v');
 
                 if (!IsNewerVersion(currentVersion, newVersion))
-                    return updateInfo;
-
-                // Ищем нужный ассет по buildType
-                var (assetName, downloadUrl, sizeBytes) = FindAsset(release, buildType);
-                if (string.IsNullOrEmpty(downloadUrl))
                 {
-                    Logger.Warning($"No matching asset found for build type '{buildType}'", "UpdateChecker");
+                    Logger.Info($"No update — current {currentVersion} is up to date", "UpdateChecker");
                     return updateInfo;
                 }
 
-                var body = release.TryGetProperty("body", out var bodyProp) ? bodyProp.GetString() : string.Empty;
-                var htmlUrl = release.TryGetProperty("html_url", out var htmlProp) ? htmlProp.GetString() : string.Empty;
+                // Ищем ассет под наш тип сборки
+                var download = manifest.Downloads?.GetValueOrDefault(buildType);
+                if (download == null || string.IsNullOrEmpty(download.Url))
+                {
+                    Logger.Warning($"No download found for build type '{buildType}' in version manifest", "UpdateChecker");
+                    return updateInfo;
+                }
 
                 updateInfo.IsAvailable = true;
                 updateInfo.NewVersion = newVersion;
-                updateInfo.AssetName = assetName;
-                updateInfo.DownloadUrl = downloadUrl;
-                updateInfo.SizeBytes = sizeBytes;
-                updateInfo.ReleaseNotes = body ?? string.Empty;
-                updateInfo.ChangelogUrl = htmlUrl ?? string.Empty;
+                updateInfo.AssetName = download.AssetName;
+                updateInfo.DownloadUrl = download.Url;
+                updateInfo.SizeBytes = download.SizeBytes;
+                updateInfo.ReleaseNotes = manifest.ReleaseNotes ?? string.Empty;
+                updateInfo.ChangelogUrl = manifest.ChangelogUrl ?? string.Empty;
 
-                Logger.Info($"Update available: {newVersion} ({assetName})", "UpdateChecker");
+                Logger.Info($"Update available: {newVersion} ({download.AssetName})", "UpdateChecker");
+            }
+            catch (JsonException ex)
+            {
+                Logger.Error($"Version manifest parse failed: {ex.Message}", ex, "UpdateChecker");
+            }
+            catch (HttpRequestException ex)
+            {
+                Logger.Error($"Update check failed (network): {ex.Message}", ex, "UpdateChecker");
+            }
+            catch (TaskCanceledException)
+            {
+                Logger.Warning("Update check timed out", "UpdateChecker");
             }
             catch (Exception ex)
             {
@@ -117,6 +120,11 @@ namespace Konserva.Services
             }
         }
 
+        /// <summary>
+        /// Публичный доступ к текущей версии (без вызова API).
+        /// </summary>
+        public static string GetCurrentVersionStatic() => GetCurrentVersion();
+
         private static string GetCurrentVersion()
         {
             var assembly = Assembly.GetExecutingAssembly();
@@ -132,38 +140,6 @@ namespace Konserva.Services
                 return false;
 
             return latestVer > currentVer;
-        }
-
-        private static (string name, string url, long size) FindAsset(JsonElement release, string buildType)
-        {
-            if (!release.TryGetProperty("assets", out var assets))
-                return (string.Empty, string.Empty, 0);
-
-            var suffix = buildType.Equals("full", StringComparison.OrdinalIgnoreCase) ? "-full" : "-deps";
-
-            foreach (var asset in assets.EnumerateArray())
-            {
-                var name = asset.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : string.Empty;
-                if (string.IsNullOrEmpty(name))
-                    continue;
-
-                // Ищем .zip с нужным суффиксом
-                if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var lowerName = name.ToLowerInvariant();
-                if (lowerName.Contains(suffix.ToLowerInvariant()))
-                {
-                    var url = asset.TryGetProperty("browser_download_url", out var urlProp)
-                        ? urlProp.GetString()
-                        : string.Empty;
-                    var size = asset.TryGetProperty("size", out var sizeProp) ? sizeProp.GetInt64() : 0L;
-
-                    return (name, url ?? string.Empty, size);
-                }
-            }
-
-            return (string.Empty, string.Empty, 0);
         }
     }
 }

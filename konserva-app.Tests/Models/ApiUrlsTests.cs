@@ -9,15 +9,9 @@ namespace Konserva.Tests.Models;
 public class ApiUrlsTests
 {
     [Fact]
-    public void GitHubApi_IsCorrect()
+    public void VersionManifestUrl_IsCorrect()
     {
-        Assert.Equal("https://api.github.com/repos/vanja-san/Konserva", ApiUrls.GitHubApi);
-    }
-
-    [Fact]
-    public void GitHubReleasesLatest_BuildsFromGitHubApi()
-    {
-        Assert.Equal(ApiUrls.GitHubApi + "/releases/latest", ApiUrls.GitHubReleasesLatest);
+        Assert.Equal("https://raw.githubusercontent.com/vanja-san/Konserva/main/.github/version.json", ApiUrls.VersionManifestUrl);
     }
 
     [Fact]

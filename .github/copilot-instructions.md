@@ -103,10 +103,13 @@ dotnet publish konserva-app/konserva-app.csproj -c Release -r win-x64 --self-con
 ## 🔄 Update Check Flow
 1. `App.xaml.cs` → `InitializeServicesAsync()` → `UpdateChecker.Initialize(httpClient)`
 2. `MainWindow_Loaded` → `InitializeMainWindow()` → `StartUpdateCheckLoop()`
-3. `UpdateCheckLoopAsync()` → сначала всегда `CheckForUpdatesAsync()`, затем цикл по режиму
-4. `CheckForUpdatesAsync()` → `UpdateChecker.CheckAsync()` → GitHub Releases API
-5. Если `config.CheckUpdates == false` (On Launch) — ждёт 1 мин и проверяет, не изменился ли режим
-6. Если `config.CheckUpdates == true` (Scheduled) — `PeriodicTimer` с интервалом из конфига
+3. `UpdateCheckLoopAsync()` → `UpdateService.Start()` → `LoopAsync()`
+4. `LoopAsync()` → сразу `FetchAndSaveAsync()` → `UpdateChecker.CheckAsync()`
+5. `UpdateChecker.CheckAsync()` → читает **`version.json`** через `raw.githubusercontent.com` (CDN, без rate limit)
+6. `version.json` лежит в `.github/`: `latestVersion`, `downloads` (full/deps), `releaseNotes`, `changelogUrl`
+7. Если `config.CheckUpdates == false` (On Launch) — после первой проверки завершается
+8. Если `config.CheckUpdates == true` (Scheduled) — `PeriodicTimer` с интервалом из конфига
+9. In-memory throttle 15 мин между реальными HTTP-запросами (защита от частых перезапусков)
 
 ## 🧪 Тестирование
 - Используйте `[Theory]` + `[InlineData]` для параметризованных тестов

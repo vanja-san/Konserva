@@ -5,9 +5,9 @@ namespace Konserva.Models;
 /// </summary>
 public static class ApiUrls
 {
-    // --- GitHub ---
-    public const string GitHubApi = "https://api.github.com/repos/vanja-san/Konserva";
-    public const string GitHubReleasesLatest = GitHubApi + "/releases/latest";
+    // --- GitHub: version manifest (raw CDN, без rate limit) ---
+    public const string VersionManifestUrl = "https://raw.githubusercontent.com/vanja-san/Konserva/main/.github/version.json";
+
     public const string MinecraftEula = "https://aka.ms/MinecraftEULA";
 
     // --- Mojang ---
