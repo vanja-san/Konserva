@@ -29,7 +29,8 @@ jobs:
       uses: github/codeql-action/init@v4
       with:
         languages: csharp
-        queries: security-extended,security-and-quality
+        queries: security-extended
+        config-file: ./.github/codeql/codeql-config.yml
 
     - name: Build
       run: |
