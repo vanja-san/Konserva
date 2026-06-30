@@ -15,10 +15,6 @@ public class ConfigService : IConfigService, IDisposable
     public ConfigService()
         : this(Path.Combine(AppContext.BaseDirectory, "config.json"))
     {
-        var exeDir = AppContext.BaseDirectory;
-        Directory.CreateDirectory(exeDir);
-        Directory.CreateDirectory(Path.Combine(exeDir, "Servers"));
-        Directory.CreateDirectory(Path.Combine(exeDir, "Logs"));
     }
 
     /// <summary>
@@ -29,8 +25,21 @@ public class ConfigService : IConfigService, IDisposable
         _store = new FileBasedStore<AppConfig>(configPath);
     }
 
+    /// <summary>
+    /// Создание необходимых директорий при первом обращении
+    /// </summary>
+    private static void EnsureDirectoriesExist()
+    {
+        var exeDir = AppContext.BaseDirectory;
+        Directory.CreateDirectory(exeDir);
+        Directory.CreateDirectory(Path.Combine(exeDir, "Servers"));
+        Directory.CreateDirectory(Path.Combine(exeDir, "Logs"));
+    }
+
     public AppConfig GetConfig()
     {
+        EnsureDirectoriesExist();
+
         var config = _store.Load();
         if (config != null)
             return config;
@@ -42,6 +51,8 @@ public class ConfigService : IConfigService, IDisposable
 
     public async Task<AppConfig> GetConfigAsync(CancellationToken ct = default)
     {
+        EnsureDirectoriesExist();
+
         var config = await _store.LoadAsync(ct);
         if (config != null)
             return config;

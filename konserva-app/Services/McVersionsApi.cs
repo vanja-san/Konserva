@@ -25,19 +25,27 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
     private bool _disposed;
     private VersionsCache? _fileCache;
 
-    private static readonly string CacheFolder = Path.Combine(
-        AppDomain.CurrentDomain.BaseDirectory, "Servers");
-
-    private static readonly string CacheFilePath = Path.Combine(CacheFolder, "versions_cache.json");
+    private readonly string _cacheFolder;
+    private readonly string _cacheFilePath;
     private readonly IConfigService? _configService;
 
     [GeneratedRegex(@"<version>([^<]+)</version>")]
     private static partial Regex XmlVersionRegex();
 
     public McVersionsApi(HttpClient httpClient, IConfigService? configService = null)
+        : this(httpClient, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Servers"), configService)
+    {
+    }
+
+    /// <summary>
+    /// Конструктор с указанием папки кэша (для тестов)
+    /// </summary>
+    internal McVersionsApi(HttpClient httpClient, string cacheFolder, IConfigService? configService = null)
     {
         _http = httpClient;
         _configService = configService;
+        _cacheFolder = cacheFolder;
+        _cacheFilePath = Path.Combine(_cacheFolder, "versions_cache.json");
         _ = LoadFileCacheAsync();
     }
 
@@ -643,10 +651,10 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
     {
         try
         {
-            if (!File.Exists(CacheFilePath))
+            if (!File.Exists(_cacheFilePath))
                 return;
 
-            var json = await File.ReadAllTextAsync(CacheFilePath);
+            var json = await File.ReadAllTextAsync(_cacheFilePath);
             _fileCache = JsonSerializer.Deserialize<VersionsCache>(json);
             Logger.Info($"Loaded file cache: {_fileCache?.LastUpdated}", "McVersionsApi");
         }
@@ -664,12 +672,12 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
         await _fileLock.WaitAsync();
         try
         {
-            var dir = Path.GetDirectoryName(CacheFilePath);
+            var dir = Path.GetDirectoryName(_cacheFilePath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
 
             var json = JsonSerializer.Serialize(_fileCache);
-            await File.WriteAllTextAsync(CacheFilePath, json);
+            await File.WriteAllTextAsync(_cacheFilePath, json);
             Logger.Info("File cache saved", "McVersionsApi");
         }
         catch (Exception ex)

@@ -9,8 +9,29 @@ using Xunit;
 
 namespace Konserva.Tests.Services;
 
-public class McVersionsApiTests
+public class McVersionsApiTests : IDisposable
 {
+    private readonly string _cacheFolder;
+    private readonly string _cacheFile;
+    private bool _disposed;
+
+    public McVersionsApiTests()
+    {
+        // Каждый тест получает свою временную папку — никаких конфликтов файлового кэша
+        _cacheFolder = Path.Combine(Path.GetTempPath(), $"konserva_mcapi_test_{Guid.NewGuid()}");
+        _cacheFile = Path.Combine(_cacheFolder, "versions_cache.json");
+        Directory.CreateDirectory(_cacheFolder);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+        try { Directory.Delete(_cacheFolder, recursive: true); }
+        catch { /* игнорируем ошибки при очистке */ }
+    }
+
     [Fact]
     public async Task GetMcVersions_ReturnsVersions_FromMoJangApi()
     {
@@ -36,12 +57,6 @@ public class McVersionsApiTests
     [Fact]
     public async Task GetMcVersions_ReturnsEmptyArray_OnFailure()
     {
-        // Чистим кэш перед тестом для изоляции
-        var cacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Servers");
-        var cacheFile = Path.Combine(cacheDir, "versions_cache.json");
-        if (File.Exists(cacheFile))
-            File.Delete(cacheFile);
-
         var api = CreateApiWithMockHandler("invalid json");
         var versions = await api.GetMcVersions();
 
@@ -104,7 +119,7 @@ public class McVersionsApiTests
         Assert.Equal("latest", versions[0]);
     }
 
-    private static McVersionsApi CreateApiWithMockHandler(string responseContent, HttpStatusCode statusCode = HttpStatusCode.OK)
+    private McVersionsApi CreateApiWithMockHandler(string responseContent, HttpStatusCode statusCode = HttpStatusCode.OK)
     {
         var mockHandler = new Mock<HttpMessageHandler>();
         mockHandler
@@ -120,6 +135,6 @@ public class McVersionsApiTests
             });
 
         var httpClient = new HttpClient(mockHandler.Object);
-        return new McVersionsApi(httpClient);
+        return new McVersionsApi(httpClient, _cacheFolder);
     }
 }
