@@ -30,6 +30,12 @@ jobs:
       with:
         languages: csharp
         queries: security-extended
+        config: |
+          paths-ignore:
+            - '**/bin/**'
+            - '**/obj/**'
+            - '**/publish/**'
+            - '**/TestResults/**'
 
     - name: Build
       run: |
