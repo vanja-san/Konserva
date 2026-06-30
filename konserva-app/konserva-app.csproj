@@ -22,7 +22,11 @@
     <Copyright>Copyright (c) 2026 vanja-san</Copyright>
 	  
     <Optimize>true</Optimize>
-    <DebugType>none</DebugType>
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest</AnalysisLevel>
     <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
     <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
     <PublishReadyToRun>false</PublishReadyToRun>
@@ -46,7 +50,6 @@
 
   <PropertyGroup>
     <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,0 +1,27 @@
+# EditorConfig for Konserva project
+
+root = true
+
+# All files
+[*]
+indent_style = space
+indent_size = 4
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# XML files
+[*.{xml,config,props,targets,csproj,resx}]
+indent_size = 2
+
+# YAML files
+[*.{yml,yaml}]
+indent_size = 2
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+
+# Batch files
+[*.bat]
+end_of_line = crlf

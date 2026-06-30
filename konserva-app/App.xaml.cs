@@ -182,6 +182,7 @@ public partial class App : Application
             var httpClient = httpClientFactory.CreateClient("McServerInstaller");
             return new McServerInstaller(httpClient, configService);
         });
+        services.AddSingleton<IUpdateService, UpdateService>();
         services.AddSingleton<MainWindow>();
 
         // HttpClient для API с retry политикой

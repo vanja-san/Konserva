@@ -20,6 +20,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     private readonly IConfigService _config;
     private readonly IServerManager _serverManager;
     private readonly IJavaManagementService _javaService;
+    private readonly IUpdateService _updateService;
     private IContentDialogService? _contentDialogService;
     private bool _disposed;
     private bool _isUpdatingStatusBar;
@@ -30,13 +31,16 @@ public partial class MainWindow : FluentWindow, IDisposable
     private MenuItem? _trayStatusMenuItem;
     private bool _isExiting;
 
-    public MainWindow(IConfigService configService, IServerManager serverManager, IJavaManagementService javaService)
+    public MainWindow(IConfigService configService, IServerManager serverManager, IJavaManagementService javaService, IUpdateService updateService)
     {
         InitializeComponent();
 
         _config = configService;
         _serverManager = serverManager;
         _javaService = javaService;
+        _updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
+
+        _updateService.UpdateAvailable += OnUpdateAvailable;
 
         _serverManager.OnServersChanged += UpdateStatusBar;
         _serverManager.OnServersChanged += UpdateTrayStatus;
@@ -485,7 +489,8 @@ public partial class MainWindow : FluentWindow, IDisposable
             return;
 
         StopStatusBarTimer();
-        StopUpdateCheckLoop();
+        _updateService.Stop();
+        _updateService.UpdateAvailable -= OnUpdateAvailable;
         _serverManager.OnServersChanged -= UpdateStatusBar;
         _serverManager.OnServersChanged -= UpdateTrayStatus;
 
@@ -502,30 +507,9 @@ public partial class MainWindow : FluentWindow, IDisposable
 
     // ===== Update checking =====
 
-    private CancellationTokenSource? _updateCheckCts;
-
-    /// <summary>
-    /// Проверяет наличие обновлений через GitHub API.
-    /// Вызывается при старте и по таймеру в Scheduled-режиме.
-    /// </summary>
-    private async Task CheckForUpdatesAsync()
+    private void OnUpdateAvailable(UpdateInfo updateInfo)
     {
-        try
-        {
-            var updateInfo = await UpdateChecker.CheckAsync();
-
-            // Обновляем время проверки
-            _config.UpdateConfig(c => c.LastUpdateCheck = SystemTime.UtcNow);
-
-            if (updateInfo.IsAvailable)
-            {
-                Dispatcher.Invoke(() => UpdateNotificationControl.Show(updateInfo));
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Update check failed: {ex.Message}", ex, "MainWindow");
-        }
+        Dispatcher.Invoke(() => UpdateNotificationControl.Show(updateInfo));
     }
 
     /// <summary>
@@ -533,76 +517,15 @@ public partial class MainWindow : FluentWindow, IDisposable
     /// </summary>
     public void StartUpdateCheckLoop()
     {
-        _updateCheckCts?.Cancel();
-        _updateCheckCts?.Dispose();
-        _updateCheckCts = new CancellationTokenSource();
-        _ = UpdateCheckLoopAsync(_updateCheckCts.Token);
-    }
-
-    private void StopUpdateCheckLoop()
-    {
-        _updateCheckCts?.Cancel();
-        _updateCheckCts?.Dispose();
-        _updateCheckCts = null;
-    }
-
-    /// <summary>
-    /// Фоновый цикл: проверяет обновления при старте (всегда).
-    /// В режиме «Заданное время» — повторяет каждые N часов.
-    /// В режиме «При запуске» — ждёт и проверяет, не изменился ли режим.
-    /// </summary>
-    private async Task UpdateCheckLoopAsync(CancellationToken ct)
-    {
-        try
-        {
-            // Первая проверка при старте (всегда, в любом режиме)
-            await CheckForUpdatesAsync();
-
-            while (!ct.IsCancellationRequested)
-            {
-                var config = _config.GetConfig();
-
-                if (!config.CheckUpdates)
-                {
-                    // Режим «При запуске» — не проверяем периодически.
-                    // Ждём немного и проверяем, не переключили ли на «Заданное время».
-                    await Task.Delay(TimeSpan.FromMinutes(1), ct);
-                    continue;
-                }
-
-                // Режим «Заданное время» — ждём интервал и проверяем
-                var intervalHours = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
-                using var timer = new PeriodicTimer(TimeSpan.FromHours(intervalHours));
-
-                if (await timer.WaitForNextTickAsync(ct))
-                {
-                    await CheckForUpdatesAsync();
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Ожидаемая отмена
-        }
+        _updateService.Start();
     }
 
     /// <summary>
     /// Принудительная проверка обновлений (вызывается из SettingsPage).
-    /// Обновляет время последней проверки, чтобы не дублировать следующую.
     /// </summary>
     public async Task<UpdateInfo> ForceCheckForUpdatesAsync()
     {
-        var updateInfo = await UpdateChecker.CheckAsync();
-
-        if (updateInfo.IsAvailable)
-        {
-            Dispatcher.Invoke(() => UpdateNotificationControl.Show(updateInfo));
-        }
-
-        // Обновляем время последней проверки, чтобы Scheduled-цикл не дёргал API повторно
-        _config.UpdateConfig(c => c.LastUpdateCheck = SystemTime.UtcNow);
-
-        return updateInfo;
+        return await _updateService.ForceCheckAsync();
     }
 
     // ===== Java Error Snackbar =====

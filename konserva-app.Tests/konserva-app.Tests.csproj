@@ -10,6 +10,9 @@
     <IsTestProject>true</IsTestProject>
     <IsPackable>false</IsPackable>
     
+    <!-- Отключаем xUnit1051: вызовы с дефолтным CancellationToken — осознанное решение -->
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
+    
     <!-- Включаем WPF -->
     <UseWPF>true</UseWPF>
   </PropertyGroup>
