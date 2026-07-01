@@ -6,7 +6,7 @@ namespace Konserva.Models;
 public static class ApiUrls
 {
     // --- GitHub: version manifest (raw CDN, без rate limit) ---
-    public const string VersionManifestUrl = "https://raw.githubusercontent.com/vanja-san/Konserva/main/.github/version.json";
+    public const string VersionManifestUrl = "https://raw.githubusercontent.com/vanja-san/Konserva/master/.github/version.json";
 
     public const string MinecraftEula = "https://aka.ms/MinecraftEULA";
 

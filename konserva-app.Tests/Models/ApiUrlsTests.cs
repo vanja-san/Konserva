@@ -11,7 +11,7 @@ public class ApiUrlsTests
     [Fact]
     public void VersionManifestUrl_IsCorrect()
     {
-        Assert.Equal("https://raw.githubusercontent.com/vanja-san/Konserva/main/.github/version.json", ApiUrls.VersionManifestUrl);
+        Assert.Equal("https://raw.githubusercontent.com/vanja-san/Konserva/master/.github/version.json", ApiUrls.VersionManifestUrl);
     }
 
     [Fact]
