@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Konserva.Services;
 
 namespace Konserva.Tests.Services;
@@ -51,15 +52,16 @@ public class UpdateCheckerTests
     [Fact]
     public void GetCurrentVersion_ReturnsValidVersionString()
     {
-        var method = typeof(UpdateChecker).GetMethod("GetCurrentVersion",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        // Arrange
+        using var httpClient = new HttpClient();
+        var checker = new UpdateChecker(httpClient);
 
-        var result = method!.Invoke(null, null);
+        // Act
+        var result = checker.GetCurrentVersion();
 
-        result.Should().NotBeNull();
-        var versionStr = result as string;
-        versionStr.Should().NotBeNullOrEmpty();
-        Version.TryParse(versionStr, out _).Should().BeTrue();
+        // Assert
+        result.Should().NotBeNullOrEmpty();
+        Version.TryParse(result, out _).Should().BeTrue();
     }
 
     #endregion
@@ -80,8 +82,12 @@ public class UpdateCheckerTests
     [Fact]
     public async Task CheckAsync_ReturnsUpdateInfo_WithCurrentVersion()
     {
+        // Arrange
+        using var httpClient = new HttpClient();
+        var checker = new UpdateChecker(httpClient);
+
         // Act
-        var result = await UpdateChecker.CheckAsync();
+        var result = await checker.CheckAsync();
 
         // Assert
         result.Should().NotBeNull();
@@ -91,8 +97,12 @@ public class UpdateCheckerTests
     [Fact]
     public async Task CheckAsync_ReturnsUpdateInfo_EvenOnNetworkFailure()
     {
-        // Даже при сетевой ошибке метод не должен бросать исключений
-        var action = async () => await UpdateChecker.CheckAsync();
+        // Arrange
+        using var httpClient = new HttpClient();
+        var checker = new UpdateChecker(httpClient);
+
+        // Act & Assert: даже при сетевой ошибке метод не должен бросать исключений
+        var action = async () => await checker.CheckAsync();
         await action.Should().NotThrowAsync();
     }
 

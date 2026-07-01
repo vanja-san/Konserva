@@ -91,8 +91,7 @@ public partial class CreateServerPage : Page
             await FilterMcVersionsAsync();
             Logger.Info("FilterMcVersionsAsync completed", "CreateServerPage");
 
-            // Запускаем анимацию волны точек (она скрыта, пока не начнётся установка)
-            ProgressDots.Start();
+            // ProgressRing запускается автоматически при отображении панели
         }
         catch (Exception ex)
         {
@@ -114,8 +113,7 @@ public partial class CreateServerPage : Page
         McVersionBox.SelectionChanged -= McVersionBox_SelectionChanged;
         LoaderVersionBox.SelectionChanged -= _loaderVersionChangedHandler;
 
-        // Останавливаем анимацию
-        ProgressDots.Stop();
+        // ProgressRing останавливается автоматически при скрытии панели
 
         // Отменяем установку, если пользователь ушёл со страницы
         if (_isInstalling && _installCts != null)

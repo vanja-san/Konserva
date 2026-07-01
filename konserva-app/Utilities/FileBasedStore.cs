@@ -12,7 +12,8 @@ public class FileBasedStore<T> where T : class
 {
   private readonly string _filePath;
   private readonly JsonSerializerOptions _jsonOptions;
-  private readonly Lock _lock = new();
+  private readonly Lock _syncLock = new();
+  private readonly SemaphoreSlim _asyncLock = new(1, 1);
   private T? _cached;
   private long _lastFileSize;
   private DateTime _lastWriteTime;
@@ -38,7 +39,7 @@ public class FileBasedStore<T> where T : class
   /// </summary>
   public T? Load()
   {
-    lock (_lock)
+    lock (_syncLock)
     {
       if (_cached != null && !IsFileModified())
         return _cached;
@@ -54,19 +55,20 @@ public class FileBasedStore<T> where T : class
   /// </summary>
   public async Task<T?> LoadAsync(CancellationToken ct = default)
   {
-    lock (_lock)
+    await _asyncLock.WaitAsync(ct);
+    try
     {
       if (_cached != null && !IsFileModified())
         return _cached;
-    }
 
-    var data = await LoadFromFileAsync(ct);
-
-    lock (_lock)
-    {
+      var data = await LoadFromFileAsync(ct);
       _cached = data;
       UpdateFileStats();
       return _cached;
+    }
+    finally
+    {
+      _asyncLock.Release();
     }
   }
 
@@ -75,7 +77,7 @@ public class FileBasedStore<T> where T : class
   /// </summary>
   public void Save(T data)
   {
-    lock (_lock)
+    lock (_syncLock)
     {
       _cached = data;
       SaveToFile(data);
@@ -88,16 +90,16 @@ public class FileBasedStore<T> where T : class
   /// </summary>
   public async Task SaveAsync(T data, CancellationToken ct = default)
   {
-    lock (_lock)
+    await _asyncLock.WaitAsync(ct);
+    try
     {
       _cached = data;
-    }
-
-    await SaveToFileAsync(data, ct);
-
-    lock (_lock)
-    {
+      await SaveToFileAsync(data, ct);
       UpdateFileStats();
+    }
+    finally
+    {
+      _asyncLock.Release();
     }
   }
 
@@ -106,7 +108,7 @@ public class FileBasedStore<T> where T : class
   /// </summary>
   public T? PeekCache()
   {
-    lock (_lock)
+    lock (_syncLock)
     {
       return _cached;
     }

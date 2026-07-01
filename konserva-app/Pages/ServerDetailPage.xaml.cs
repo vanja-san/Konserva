@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using Wpf.Ui.Controls;
 using WpfButton = Wpf.Ui.Controls.Button;
 using WpfMenuItem = Wpf.Ui.Controls.MenuItem;
@@ -27,6 +28,7 @@ public partial class ServerDetailPage : Page, IDisposable
     private bool _disposed;
     private bool _isBusy;
     private CancellationTokenSource? _statusCts;
+    private CancellationTokenSource? _errorResetCts;
 
     /// <summary>
     /// Конструктор для навигации через NavigationView (с параметром serverId)
@@ -389,24 +391,124 @@ public partial class ServerDetailPage : Page, IDisposable
 
             await this.InvokeAsync(() =>
             {
-                // Обновляем иконку и ToolTip кнопки старт/стоп
-                StartStopIcon.Symbol = status switch
-                {
-                    ServerStatus.Running => Wpf.Ui.Controls.SymbolRegular.Stop20,
-                    ServerStatus.Starting => Wpf.Ui.Controls.SymbolRegular.Stop20,
-                    ServerStatus.Stopping => Wpf.Ui.Controls.SymbolRegular.Stop20,
-                    _ => Wpf.Ui.Controls.SymbolRegular.Play20
-                };
+                // Определяем настройки для каждого статуса
+                SymbolRegular icon;
+                string toolTip, text;
+                ControlAppearance appearance;
+                bool isTransitioning;
 
-                StartStopButton.ToolTip = status switch
+                switch (status)
                 {
-                    ServerStatus.Running => LocalizationManager.Get("ServerDetail_Stop"),
-                    ServerStatus.Starting => LocalizationManager.Get("ServerDetail_Starting"),
-                    ServerStatus.Stopping => LocalizationManager.Get("ServerDetail_Stopping"),
-                    _ => LocalizationManager.Get("ServerDetail_Start")
-                };
+                    case ServerStatus.Running:
+                        icon = Wpf.Ui.Controls.SymbolRegular.Stop20;
+                        toolTip = LocalizationManager.Get("ServerDetail_Stop");
+                        text = LocalizationManager.Get("ServerDetail_Stop");
+                        appearance = ControlAppearance.Danger;
+                        isTransitioning = false;
+                        break;
+                    case ServerStatus.Starting:
+                        icon = Wpf.Ui.Controls.SymbolRegular.ArrowRepeat120;
+                        toolTip = LocalizationManager.Get("ServerDetail_Starting");
+                        text = LocalizationManager.Get("ServerDetail_Starting");
+                        appearance = ControlAppearance.Caution;
+                        isTransitioning = true;
+                        break;
+                    case ServerStatus.Stopping:
+                        icon = Wpf.Ui.Controls.SymbolRegular.ArrowRepeat120;
+                        toolTip = LocalizationManager.Get("ServerDetail_Stopping");
+                        text = LocalizationManager.Get("ServerDetail_Stopping");
+                        appearance = ControlAppearance.Caution;
+                        isTransitioning = true;
+                        break;
+                    case ServerStatus.Error:
+                        icon = Wpf.Ui.Controls.SymbolRegular.Play20;
+                        toolTip = LocalizationManager.Get("ServerDetail_Start");
+                        text = LocalizationManager.Get("ServerStatus_Error");
+                        appearance = ControlAppearance.Danger;
+                        isTransitioning = false;
+                        break;
+                    default: // Stopped
+                        icon = Wpf.Ui.Controls.SymbolRegular.Play20;
+                        toolTip = LocalizationManager.Get("ServerDetail_Start");
+                        text = LocalizationManager.Get("ServerDetail_Start");
+                        appearance = ControlAppearance.Primary;
+                        isTransitioning = false;
+                        break;
+                }
 
-                StartStopButton.IsEnabled = status is not (ServerStatus.Starting or ServerStatus.Stopping);
+                // Иконка, текст, цвет кнопки
+                StartStopIcon.Symbol = icon;
+                StartStopIcon.Visibility = isTransitioning ? Visibility.Collapsed : Visibility.Visible;
+                StartStopPulse.Visibility = isTransitioning ? Visibility.Visible : Visibility.Collapsed;
+                StartStopText.Visibility = string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
+                StartStopButton.ToolTip = toolTip;
+                StartStopButton.Appearance = appearance;
+                StartStopButton.IsEnabled = !isTransitioning;
+                StartStopText.Text = text;
+
+                // Останавливаем старую пульсацию
+                StartStopPulse.BeginAnimation(UIElement.OpacityProperty, null);
+                StartStopButton.BeginAnimation(UIElement.OpacityProperty, null);
+                StartStopButton.Opacity = 1.0;
+
+                // Пульсация для переходных состояний (кружок + кнопка)
+                if (isTransitioning)
+                {
+                    var pulseSb = new Storyboard
+                    {
+                        RepeatBehavior = RepeatBehavior.Forever,
+                        AutoReverse = true
+                    };
+                    var anim = new DoubleAnimation
+                    {
+                        From = 1.0,
+                        To = 0.2,
+                        Duration = TimeSpan.FromSeconds(0.7)
+                    };
+
+                    // Пульсация кружка
+                    var ellipseAnim = anim.Clone();
+                    Storyboard.SetTarget(ellipseAnim, StartStopPulse);
+                    Storyboard.SetTargetProperty(ellipseAnim, new PropertyPath("Opacity"));
+                    pulseSb.Children.Add(ellipseAnim);
+
+                    // Пульсация кнопки
+                    var btnAnim = anim.Clone();
+                    Storyboard.SetTarget(btnAnim, StartStopButton);
+                    Storyboard.SetTargetProperty(btnAnim, new PropertyPath("Opacity"));
+                    pulseSb.Children.Add(btnAnim);
+
+                    pulseSb.Begin();
+                    StartStopPulse.Opacity = 1.0;
+                }
+
+                // Автосброс Error через 10 секунд
+                _errorResetCts?.Cancel();
+                _errorResetCts?.Dispose();
+                _errorResetCts = null;
+
+                if (status == ServerStatus.Error)
+                {
+                    _errorResetCts = new CancellationTokenSource();
+                    var ct = _errorResetCts.Token;
+                    var capturedServer = _server;
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(10), ct);
+                            await this.InvokeAsync(() =>
+                            {
+                                if (capturedServer != null)
+                                    capturedServer.Status = ServerStatus.Stopped;
+                                UpdateStatus(ServerStatus.Stopped);
+                            });
+                        }
+                        catch (OperationCanceledException)
+                        {
+                        }
+                    }, ct).SafeFireAndForget(errorMessage: "Error auto-reset failed");
+                }
             });
         }
         catch (Exception ex)
@@ -1348,6 +1450,10 @@ public partial class ServerDetailPage : Page, IDisposable
         UnsubscribeFromProcess();
 
         StopStatusTimer();
+
+        _errorResetCts?.Cancel();
+        _errorResetCts?.Dispose();
+
         _disposed = true;
     }
 }

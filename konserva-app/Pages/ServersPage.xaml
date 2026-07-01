@@ -256,9 +256,62 @@
                                             <Ellipse
                                                 Width="10"
                                                 Height="10"
-                                                Margin="0,0,8,0"
+                                                Margin="0,0,4,0"
                                                 VerticalAlignment="Center"
-                                                Fill="{Binding Status, Converter={StaticResource StatusToBrush}}"/>
+                                                Fill="{Binding Status, Converter={StaticResource StatusToBrush}}">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Status}"
+                                                                    Value="Starting">
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard RepeatBehavior="Forever"
+                                                                                AutoReverse="True">
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                    From="1.0"
+                                                                                    To="0.2"
+                                                                                    Duration="0:0:0.7"/>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                    To="1.0"
+                                                                                    Duration="0:0:0.2"/>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.ExitActions>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}"
+                                                                    Value="Stopping">
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard RepeatBehavior="Forever"
+                                                                                AutoReverse="True">
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                    From="1.0"
+                                                                                    To="0.2"
+                                                                                    Duration="0:0:0.7"/>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                    To="1.0"
+                                                                                    Duration="0:0:0.2"/>
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.ExitActions>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
                                             <ui:Button
                                                 x:Name="PlayButton"
                                                 Margin="0,0,8,0"

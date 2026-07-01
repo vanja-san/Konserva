@@ -1,16 +1,19 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Konserva.Utilities;
+using ObservableObject = CommunityToolkit.Mvvm.ComponentModel.ObservableObject;
 
 namespace Konserva.Models;
 
 /// <summary>
 /// Настройки сервера
 /// </summary>
-public class ServerSettings
+public class ServerSettings : ObservableObject
 {
     private int _ramMin = Constants.DefaultRamMinMb;
     private int _ramMax = Constants.DefaultRamMaxMb;
+    private int _cpuCores = Environment.ProcessorCount;
 
     /// <summary>
     /// Минимум RAM (MB). Минимум: 256, Максимум: RamMax
@@ -21,7 +24,9 @@ public class ServerSettings
         get => _ramMin;
         set
         {
-            _ramMin = Math.Clamp(value, Constants.MinRamMb, RamMax);
+            var clamped = Math.Clamp(value, Constants.MinRamMb, RamMax);
+            if (SetProperty(ref _ramMin, clamped))
+                OnPropertyChanged(nameof(RamMax));
         }
     }
 
@@ -34,7 +39,9 @@ public class ServerSettings
         get => _ramMax;
         set
         {
-            _ramMax = Math.Clamp(value, RamMin, Constants.MaxRamMb);
+            var clamped = Math.Clamp(value, RamMin, Constants.MaxRamMb);
+            if (SetProperty(ref _ramMax, clamped))
+                OnPropertyChanged(nameof(RamMin));
         }
     }
 
@@ -44,9 +51,13 @@ public class ServerSettings
     [Range(1, 128)]
     public int CpuCores
     {
-        get => field;
-        set => field = Math.Clamp(value, 1, Environment.ProcessorCount);
-    } = Environment.ProcessorCount;
+        get => _cpuCores;
+        set
+        {
+            var clamped = Math.Clamp(value, 1, Environment.ProcessorCount);
+            SetProperty(ref _cpuCores, clamped);
+        }
+    }
 
     /// <summary>
     /// ID выбранной Java версии (если null, используется Java по умолчанию)

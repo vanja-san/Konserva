@@ -31,7 +31,9 @@ public partial class SettingsPage : Page
                 Ioc.Default.GetService<IJavaManagementService>()
                     ?? new JavaManagementService(Ioc.Default.GetService<IConfigService>()!),
                 Ioc.Default.GetService<IUpdateService>()
-                    ?? new UpdateService(Ioc.Default.GetService<IConfigService>()!));
+                    ?? new UpdateService(
+                        Ioc.Default.GetService<IConfigService>()!,
+                        Ioc.Default.GetService<IUpdateChecker>()!));
 
         Title = LocalizationManager.Get("Settings_Title");
         Loaded += OnLoaded;
@@ -350,14 +352,12 @@ public partial class SettingsPage : Page
         {
             CheckUpdatesButton.IsEnabled = false;
 
-            // Показываем анимацию точек рядом с текстом
+            // Показываем индикатор загрузки
             UpdateWaveDots.Visibility = Visibility.Visible;
-            UpdateWaveDots.Start();
 
             var updateInfo = await _viewModel.ForceCheckUpdatesAsync();
 
-            // Останавливаем анимацию, убираем точки, обновляем текст
-            UpdateWaveDots.Stop();
+            // Убираем индикатор, обновляем текст
             UpdateWaveDots.Visibility = Visibility.Collapsed;
 
             if (!updateInfo.IsAvailable)
@@ -373,7 +373,6 @@ public partial class SettingsPage : Page
         }
         catch (Exception ex)
         {
-            UpdateWaveDots.Stop();
             UpdateWaveDots.Visibility = Visibility.Collapsed;
             CheckUpdatesButtonText.Text = $"{LocalizationManager.Get("Settings_CheckForUpdates")} — {LocalizationManager.Get("Settings_UpdateCheckError")}";
             Logger.Error($"Update check error in button: {ex.Message}", ex, "SettingsPage");

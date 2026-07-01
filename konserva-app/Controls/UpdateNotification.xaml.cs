@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using CommunityToolkit.Mvvm.DependencyInjection;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
@@ -88,7 +89,10 @@ namespace Konserva.Controls
                     });
                 });
 
-                var success = await AppUpdater.ApplyAsync(_updateInfo, progress);
+                var appUpdater = Ioc.Default.GetService<IAppUpdater>();
+                var success = appUpdater != null
+                    ? await appUpdater.ApplyAsync(_updateInfo, progress)
+                    : false;
                 if (!success)
                 {
                     SetErrorState();

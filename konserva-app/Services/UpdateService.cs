@@ -10,6 +10,7 @@ namespace Konserva.Services;
 public sealed class UpdateService : IUpdateService, IDisposable
 {
   private readonly IConfigService _config;
+  private readonly IUpdateChecker _updateChecker;
   private CancellationTokenSource? _cts;
   private bool _disposed;
 
@@ -20,9 +21,10 @@ public sealed class UpdateService : IUpdateService, IDisposable
 
   public event Action<UpdateInfo>? UpdateAvailable;
 
-  public UpdateService(IConfigService config)
+  public UpdateService(IConfigService config, IUpdateChecker updateChecker)
   {
     _config = config ?? throw new ArgumentNullException(nameof(config));
+    _updateChecker = updateChecker ?? throw new ArgumentNullException(nameof(updateChecker));
   }
 
   /// <inheritdoc/>
@@ -30,7 +32,7 @@ public sealed class UpdateService : IUpdateService, IDisposable
   {
     Stop();
     _cts = new CancellationTokenSource();
-    _ = LoopAsync(_cts.Token);
+    LoopAsync(_cts.Token).SafeFireAndForget(errorMessage: "Update check loop failed");
   }
 
   /// <inheritdoc/>
@@ -67,12 +69,12 @@ public sealed class UpdateService : IUpdateService, IDisposable
       Logger.Info("Skipped — last fetch < 15 min ago", "UpdateService");
       return new UpdateInfo
       {
-        CurrentVersion = UpdateChecker.GetCurrentVersionStatic(),
+        CurrentVersion = _updateChecker.GetCurrentVersion(),
         IsCheckSuccessful = true
       };
     }
 
-    var updateInfo = await UpdateChecker.CheckAsync();
+    var updateInfo = await _updateChecker.CheckAsync();
 
     if (updateInfo.IsCheckSuccessful)
     {

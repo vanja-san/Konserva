@@ -13,21 +13,37 @@ namespace Konserva.Services;
 /// <summary>
 /// Сервис автоматической установки серверов Minecraft
 /// </summary>
-public partial class McServerInstaller : IServerInstaller
+public partial class McServerInstaller : IServerInstaller, IDisposable
 {
     [GeneratedRegex(@"forge-(\d+\.\d+\.\d+-\d+\.\d+\.\d+)")]
     private partial Regex ForgeVersionRegex();
     private HttpClient _http;
+    private readonly bool _ownsHttpClient;
     private IConfigService? _configService;
+    private bool _disposed;
 
     public McServerInstaller(HttpClient? httpClient, IConfigService? configService = null)
     {
+        _ownsHttpClient = httpClient == null;
         _http = httpClient ?? new HttpClient();
         _http.Timeout = TimeSpan.FromMinutes(5);
         _http.DefaultRequestHeaders.Add("User-Agent", "Konserva/1.0");
         _http.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
         _http.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
         _configService = configService;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        if (_ownsHttpClient)
+        {
+            _http?.Dispose();
+            _http = null!;
+        }
     }
 
     private HttpClient GetHttpClient()

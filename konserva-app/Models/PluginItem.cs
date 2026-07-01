@@ -1,14 +1,12 @@
-﻿using Konserva.Utilities;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Konserva.Models;
 
 /// <summary>
 /// Информация о плагине
 /// </summary>
-public class PluginItem : ObservableObject
+public partial class PluginItem : ObservableObject
 {
-    private bool _enabled = true;
-
     /// <summary>
     /// Имя плагина (без расширения)
     /// </summary>
@@ -37,9 +35,6 @@ public class PluginItem : ObservableObject
     /// <summary>
     /// Включён ли плагин (.jar) или отключён (.jar.disabled)
     /// </summary>
-    public bool Enabled
-    {
-        get => _enabled;
-        set => SetProperty(ref _enabled, value);
-    }
+    [ObservableProperty]
+    private bool _enabled = true;
 }

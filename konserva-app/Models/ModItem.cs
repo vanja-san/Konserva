@@ -1,14 +1,12 @@
-﻿using Konserva.Utilities;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Konserva.Models;
 
 /// <summary>
 /// Информация о моде
 /// </summary>
-public class ModItem : ObservableObject
+public partial class ModItem : ObservableObject
 {
-    private bool _enabled = true;
-
     /// <summary>
     /// Имя мода (без расширения)
     /// </summary>
@@ -37,9 +35,6 @@ public class ModItem : ObservableObject
     /// <summary>
     /// Включён ли мод (.jar) или отключён (.jar.disabled)
     /// </summary>
-    public bool Enabled
-    {
-        get => _enabled;
-        set => SetProperty(ref _enabled, value);
-    }
+    [ObservableProperty]
+    private bool _enabled = true;
 }

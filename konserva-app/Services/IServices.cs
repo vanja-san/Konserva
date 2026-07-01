@@ -95,3 +95,24 @@ public interface IJavaManagementService
     bool SetDefaultJava(string javaId);
     Task<JavaInstallation?> GetCompatibleJavaAsync(string mcVersion, IServerInstaller installer, string serverPath, CancellationToken ct = default);
 }
+
+/// <summary>
+/// Сервис проверки обновлений приложения через version.json на GitHub
+/// </summary>
+public interface IUpdateChecker
+{
+    /// <summary>Текущая версия приложения (из AssemblyVersion)</summary>
+    string GetCurrentVersion();
+
+    /// <summary>Проверить наличие обновлений</summary>
+    Task<UpdateInfo> CheckAsync();
+}
+
+/// <summary>
+/// Сервис скачивания и применения обновлений приложения
+/// </summary>
+public interface IAppUpdater
+{
+    /// <summary>Скачать и применить обновление</summary>
+    Task<bool> ApplyAsync(UpdateInfo updateInfo, IProgress<double>? progress = null);
+}

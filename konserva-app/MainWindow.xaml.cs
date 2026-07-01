@@ -213,7 +213,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     {
         _statusBarCts?.Cancel();
         _statusBarCts = new CancellationTokenSource();
-        _ = StatusBarLoopAsync(_statusBarCts.Token);
+        StatusBarLoopAsync(_statusBarCts.Token).SafeFireAndForget(errorMessage: "StatusBar loop failed");
     }
 
     /// <summary>

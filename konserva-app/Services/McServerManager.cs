@@ -97,7 +97,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
 
         RemoveStoppedOrErroredProcess(id, existingProcess);
         // fire-and-forget для синхронного вызова
-        _ = StartServerCoreAsync(server, CancellationToken.None);
+        StartServerCoreAsync(server, CancellationToken.None).SafeFireAndForget(errorMessage: "Server start failed");
     }
 
     public async Task StartServerAsync(string id, CancellationToken ct = default)

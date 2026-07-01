@@ -78,7 +78,7 @@ public partial class App : Application
         };
 
         // 6. Запускаем асинхронную инициализацию
-        _ = StartupAsync();
+        StartupAsync().SafeFireAndForget(errorMessage: "App startup failed");
     }
 
     private static async Task StartupAsync()
@@ -161,6 +161,16 @@ public partial class App : Application
             return new McServerInstaller(httpClient, configService);
         });
         services.AddSingleton<IUpdateService, UpdateService>();
+        services.AddSingleton<IUpdateChecker>(sp =>
+        {
+            var factory = sp.GetRequiredService<IHttpClientFactory>();
+            return new UpdateChecker(factory.CreateClient("UpdateChecker"));
+        });
+        services.AddSingleton<IAppUpdater>(sp =>
+        {
+            var factory = sp.GetRequiredService<IHttpClientFactory>();
+            return new AppUpdater(factory.CreateClient("AppUpdater"));
+        });
         services.AddTransient<ServersViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<ServerDetailViewModel>();
@@ -173,13 +183,7 @@ public partial class App : Application
             options.Timeout = TimeSpan.FromSeconds(30);
             options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
         })
-            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-            {
-                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
-                MaxConnectionsPerServer = 10,
-                AutomaticDecompression = DecompressionMethods.All
-            })
+            .ConfigurePrimaryHttpMessageHandler(HttpClientDefaults.CreateDefaultHandler)
             .AddStandardResilienceHandler(options =>
             {
                 options.Retry.MaxRetryAttempts = 3;
@@ -195,13 +199,7 @@ public partial class App : Application
             options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva");
             options.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
         })
-            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-            {
-                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
-                MaxConnectionsPerServer = 10,
-                AutomaticDecompression = DecompressionMethods.All
-            })
+            .ConfigurePrimaryHttpMessageHandler(HttpClientDefaults.CreateDefaultHandler)
             .AddStandardResilienceHandler(options =>
             {
                 options.Retry.MaxRetryAttempts = 2;
@@ -215,13 +213,7 @@ public partial class App : Application
             options.Timeout = TimeSpan.FromMinutes(10);
             options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
         })
-            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-            {
-                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
-                MaxConnectionsPerServer = 10,
-                AutomaticDecompression = DecompressionMethods.All
-            });
+            .ConfigurePrimaryHttpMessageHandler(HttpClientDefaults.CreateDefaultHandler);
 
         // HttpClient для McServerInstaller (скачивание серверов) с retry политикой
         services.AddHttpClient("McServerInstaller", options =>
@@ -229,13 +221,7 @@ public partial class App : Application
             options.Timeout = TimeSpan.FromMinutes(5);
             options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
         })
-            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-            {
-                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
-                MaxConnectionsPerServer = 10,
-                AutomaticDecompression = DecompressionMethods.All
-            })
+            .ConfigurePrimaryHttpMessageHandler(HttpClientDefaults.CreateDefaultHandler)
             .AddStandardResilienceHandler(options =>
             {
                 options.Retry.MaxRetryAttempts = 3;
@@ -250,28 +236,10 @@ public partial class App : Application
     /// <summary>
     /// Инициализация сервисов
     /// </summary>
-    private static async Task InitializeServicesAsync()
+    private static Task InitializeServicesAsync()
     {
-        try
-        {
-            var httpClientFactory = Ioc.Default.GetService<IHttpClientFactory>();
-
-            // Инициализация UpdateChecker
-            var updateCheckHttpClient = httpClientFactory?.CreateClient("UpdateChecker")
-                ?? new HttpClient();
-            UpdateChecker.Initialize(updateCheckHttpClient);
-            Logger.Info("UpdateChecker initialized", "App");
-
-            // Инициализация AppUpdater
-            var updateHttpClient = httpClientFactory?.CreateClient("AppUpdater")
-                ?? new HttpClient();
-            AppUpdater.Initialize(updateHttpClient);
-            Logger.Info("AppUpdater initialized", "App");
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Service initialization error: {ex.Message}", "App");
-        }
+        Logger.Info("Services initialized (DI)", "App");
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -379,7 +347,9 @@ public partial class App : Application
         // Дожидаемся остановки серверов (иначе Java процессы останутся в фоне и заблокируют порт)
         try
         {
-            Task.Run(async () => await CleanupAsync()).GetAwaiter().GetResult();
+            // Выполняем CleanupAsync на пуле потоков (без SynchronizationContext),
+            // чтобы избежать deadlock при GetAwaiter().GetResult() на UI-потоке
+            Task.Run(CleanupAsync).GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {

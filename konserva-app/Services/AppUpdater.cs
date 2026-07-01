@@ -14,16 +14,13 @@ namespace Konserva.Services
     /// <summary>
     /// Скачивает обновление, распаковывает и заменяет файлы через батник.
     /// </summary>
-    public static class AppUpdater
+    public sealed class AppUpdater : IAppUpdater
     {
-        private static readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+        private readonly HttpClient _client;
+        private readonly SemaphoreSlim _lock = new(1, 1);
         private static readonly string UpdateLogPath = Path.Combine(AppContext.BaseDirectory, "Logs", "Update.log");
-        private static HttpClient? _client;
 
-        /// <summary>
-        /// Инициализация с HttpClient из DI (вызывается при старте приложения).
-        /// </summary>
-        public static void Initialize(HttpClient httpClient)
+        public AppUpdater(HttpClient httpClient)
         {
             _client = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         }
@@ -31,7 +28,7 @@ namespace Konserva.Services
         /// <summary>
         /// Выполняет обновление: скачивает ZIP, распаковывает, запускает батник, закрывает приложение.
         /// </summary>
-        public static async Task<bool> ApplyAsync(UpdateInfo updateInfo, IProgress<double>? progress = null)
+        public async Task<bool> ApplyAsync(UpdateInfo updateInfo, IProgress<double>? progress = null)
         {
             if (!await _lock.WaitAsync(0))
             {
@@ -103,7 +100,7 @@ namespace Konserva.Services
         /// Создаёт update.bat для замены файлов.
         /// Пути экранируются от batch-метасимволов (&, |, %, ^, ! и др.).
         /// </summary>
-        private static string CreateUpdateScript(string tempDir, string appDir)
+        private string CreateUpdateScript(string tempDir, string appDir)
         {
             var extractedDir = Path.Combine(tempDir, "extracted");
             var batchPath = Path.Combine(tempDir, "update.bat");
@@ -157,13 +154,12 @@ exit
         /// <summary>
         /// Скачивает файл по указанному URL. Все ресурсы освобождаются до возврата.
         /// </summary>
-        private static async Task DownloadFileAsync(string url, string destPath, string currentVersion, IProgress<double>? progress)
+        private async Task DownloadFileAsync(string url, string destPath, string currentVersion, IProgress<double>? progress)
         {
-            var client = _client ?? new HttpClient();
-            client.DefaultRequestHeaders.UserAgent.ParseAdd($"Konserva/{currentVersion}");
+            _client.DefaultRequestHeaders.UserAgent.ParseAdd($"Konserva/{currentVersion}");
 
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-            using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+            using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
             response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? -1;

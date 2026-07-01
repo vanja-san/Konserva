@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Konserva.Models;
 using Konserva.Utilities;
@@ -15,14 +16,11 @@ namespace Konserva.Services
     /// Проверяет наличие обновлений через version.json в корне репозитория.
     /// Файл раздаётся через raw.githubusercontent.com (CDN, без rate limit).
     /// </summary>
-    public static class UpdateChecker
+    public sealed class UpdateChecker : IUpdateChecker
     {
-        private static HttpClient? _client;
+        private readonly HttpClient _client;
 
-        /// <summary>
-        /// Инициализация с HttpClient из DI (вызывается при старте приложения).
-        /// </summary>
-        public static void Initialize(HttpClient httpClient)
+        public UpdateChecker(HttpClient httpClient)
         {
             _client = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         }
@@ -30,7 +28,7 @@ namespace Konserva.Services
         /// <summary>
         /// Проверяет наличие обновления через version.json на raw.githubusercontent.com.
         /// </summary>
-        public static async Task<UpdateInfo> CheckAsync()
+        public async Task<UpdateInfo> CheckAsync()
         {
             var currentVersion = GetCurrentVersion();
             var buildType = DetectBuildType();
@@ -38,10 +36,9 @@ namespace Konserva.Services
 
             try
             {
-                var client = _client ?? new HttpClient();
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
 
-                var json = await client.GetStringAsync(VersionManifestUrl, cts.Token);
+                var json = await _client.GetStringAsync(VersionManifestUrl, cts.Token);
 
                 var manifest = JsonSerializer.Deserialize<VersionManifest>(json);
                 if (manifest == null || string.IsNullOrEmpty(manifest.LatestVersion))
@@ -123,9 +120,7 @@ namespace Konserva.Services
         /// <summary>
         /// Публичный доступ к текущей версии (без вызова API).
         /// </summary>
-        public static string GetCurrentVersionStatic() => GetCurrentVersion();
-
-        private static string GetCurrentVersion()
+        public string GetCurrentVersion()
         {
             var assembly = Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version;

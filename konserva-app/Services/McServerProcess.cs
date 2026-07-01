@@ -1120,6 +1120,10 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         OnStatusChanged = null;
         OnPlayersChanged = null;
 
+        // Dispose fallback McServerInstaller, если он был создан нами
+        if (installer == null && _installer is IDisposable disposableInstaller)
+            disposableInstaller.Dispose();
+
         _disposed = true;
         GC.SuppressFinalize(this);
     }
