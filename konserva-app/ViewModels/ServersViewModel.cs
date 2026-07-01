@@ -96,9 +96,9 @@ public partial class ServersViewModel : ObservableObject, IDisposable
     try
     {
       if (server.IsRunning)
-        _serverManager.StopServer(server.Id);
+        await _serverManager.StopServerAsync(server.Id);
       else
-        _serverManager.StartServer(server.Id);
+        await _serverManager.StartServerAsync(server.Id);
     }
     finally
     {

@@ -83,6 +83,15 @@ public partial class CreateServerViewModel : ObservableObject
 
   public bool IsCancelled => _wasCancelled;
 
+  /// <summary>Полный список всех версий MC (нефильтрованный)</summary>
+  public string[] McVersionList => _allMcVersions;
+
+  /// <summary>Загруженные Paper-версии</summary>
+  public HashSet<string> PaperVersions => _paperVersions;
+
+  /// <summary>Загруженные Quilt-совместимые версии</summary>
+  public HashSet<string>? QuiltSupportedVersions => _quiltSupportedVersions;
+
   // ─── Загрузка начальных данных ──────────────────────────────────
 
   public async Task InitializeAsync()
@@ -103,7 +112,7 @@ public partial class CreateServerViewModel : ObservableObject
       supportedVersions = _paperVersions.Count > 0 ? _paperVersions : [.. _allMcVersions];
     else if (modLoader == "NeoForge")
       supportedVersions = [.. _allMcVersions.Where(v =>
-                TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
+                McVersionHelper.TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
     else if (modLoader == "Quilt" && _quiltSupportedVersions != null)
       supportedVersions = _quiltSupportedVersions;
     else
@@ -111,7 +120,7 @@ public partial class CreateServerViewModel : ObservableObject
 
     var versions = _allMcVersions
         .Where(v => supportedVersions.Contains(v))
-        .Where(v => ShowSnapshots || !IsSnapshot(v))
+        .Where(v => ShowSnapshots || !McVersionHelper.IsSnapshot(v))
         .ToArray();
 
     McVersions = new System.Collections.ObjectModel.ObservableCollection<string>(versions);
@@ -145,18 +154,16 @@ public partial class CreateServerViewModel : ObservableObject
 
     var supported = new HashSet<string>();
     var recentVersions = _allMcVersions
-        .Where(v => TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))
+        .Where(v => McVersionHelper.TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))
         .Take(20)
         .ToArray();
-
-    using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
 
     foreach (var version in recentVersions)
     {
       try
       {
         var url = $"{ApiUrls.QuiltVersionsLoader}/{version}";
-        var response = await httpClient.GetStringAsync(url);
+        var response = await _versionsApi.GetStringWithDecompressionAsync(url);
         using var doc = System.Text.Json.JsonDocument.Parse(response);
         if (doc.RootElement.EnumerateArray().Any())
           supported.Add(version);
@@ -173,6 +180,10 @@ public partial class CreateServerViewModel : ObservableObject
 
     _quiltSupportedVersions = supported.Count > 0 ? supported : [.. _allMcVersions];
   }
+
+  public int GetPaperVersionsCount() => _paperVersions.Count;
+
+  public HashSet<string>? GetQuiltSupportedVersions() => _quiltSupportedVersions;
 
   // ─── Загрузка версий загрузчика ─────────────────────────────────
 
@@ -213,7 +224,7 @@ public partial class CreateServerViewModel : ObservableObject
       {
         versions = modLoaderType switch
         {
-          "NeoForge" => [.. versions.Where(v => !IsNeoForgeSnapshot(v))],
+          "NeoForge" => [.. versions.Where(v => !McVersionHelper.IsNeoForgeSnapshot(v))],
           "Quilt" => [.. versions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))],
           "Paper" => [.. versions.Where(v => !v.Contains("(ALPHA)", StringComparison.OrdinalIgnoreCase))],
           _ => versions
@@ -254,7 +265,7 @@ public partial class CreateServerViewModel : ObservableObject
     {
       currentVersions = modLoaderType switch
       {
-        "NeoForge" => [.. currentVersions.Where(v => !IsNeoForgeSnapshot(v))],
+        "NeoForge" => [.. currentVersions.Where(v => !McVersionHelper.IsNeoForgeSnapshot(v))],
         "Quilt" => [.. currentVersions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))],
         "Paper" => [.. currentVersions.Where(v => !v.Contains("(ALPHA)", StringComparison.OrdinalIgnoreCase))],
         _ => currentVersions
@@ -265,7 +276,7 @@ public partial class CreateServerViewModel : ObservableObject
       return currentMcVersion;
 
     var mcVersions = _allMcVersions
-        .Where(v => ShowSnapshots || !IsSnapshot(v))
+        .Where(v => ShowSnapshots || !McVersionHelper.IsSnapshot(v))
         .Take(10)
         .ToList();
 
@@ -288,7 +299,7 @@ public partial class CreateServerViewModel : ObservableObject
         {
           versions = modLoaderType switch
           {
-            "NeoForge" => [.. versions.Where(v => !IsNeoForgeSnapshot(v))],
+            "NeoForge" => [.. versions.Where(v => !McVersionHelper.IsNeoForgeSnapshot(v))],
             "Quilt" => [.. versions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))],
             "Paper" => [.. versions.Where(v => !v.Contains("(ALPHA)", StringComparison.OrdinalIgnoreCase))],
             _ => versions
@@ -488,46 +499,9 @@ public partial class CreateServerViewModel : ObservableObject
   }
 
   // ─── Helpers ────────────────────────────────────────────────────
-
-  public static bool TryParseMcVersion(string version, out int major, out int minor)
-  {
-    major = 0;
-    minor = 0;
-    try
-    {
-      var parts = version.Split('.');
-      if (parts.Length >= 2)
-      {
-        major = int.Parse(parts[0]);
-        minor = int.Parse(parts[1]);
-        return true;
-      }
-    }
-    catch { }
-    return false;
-  }
-
-  public static bool IsSnapshot(string version)
-  {
-    var snapshotMarkers = new[] { "w", "-pre", "-rc", "-snapshot", "Pre-Release", " pre", "inf" };
-    if (snapshotMarkers.Any(m => version.Contains(m, StringComparison.OrdinalIgnoreCase)))
-      return true;
-    var snapshotPrefixes = new[] { "a", "b", "c", "rd" };
-    if (snapshotPrefixes.Any(p => version.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
-      return true;
-    if (version.Contains("-beta", StringComparison.OrdinalIgnoreCase))
-      return true;
-    return false;
-  }
-
-  public static bool IsNeoForgeSnapshot(string fullVersion)
-  {
-    if (string.IsNullOrEmpty(fullVersion)) return false;
-    return fullVersion.Contains("-beta", StringComparison.OrdinalIgnoreCase) ||
-           fullVersion.Contains("-alpha.", StringComparison.OrdinalIgnoreCase) ||
-           fullVersion.Contains("+snapshot", StringComparison.OrdinalIgnoreCase) ||
-           fullVersion.Contains("+pre", StringComparison.OrdinalIgnoreCase);
-  }
+  // Статические методы TryParseMcVersion, IsSnapshot, IsNeoForgeSnapshot
+  // вынесены в общий класс McVersionHelper в Utilities.
+  // Используйте McVersionHelper.* вместо этих методов.
 
   /// <summary>
   /// Результат валидации пути

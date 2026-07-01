@@ -260,6 +260,27 @@ public class McServerInstallerTests : IDisposable
     }
 
     [Fact]
+    public void BuildLaunchArgs_SkipsParallelRefProcEnabled_ForJava26()
+    {
+        var settings = new ServerSettings { RamMin = 1024, RamMax = 4096 };
+        var result = _installer.BuildLaunchArgs("/path/server.jar", settings, ServerLaunchType.Standard, javaMajorVersion: 26);
+
+        result.Should().NotContain("ParallelRefProcEnabled");
+        // Другие GC-флаги не должны пострадать
+        result.Should().Contain("-XX:+UseG1GC");
+        result.Should().Contain("-XX:+DisableExplicitGC");
+    }
+
+    [Fact]
+    public void BuildLaunchArgs_IncludesParallelRefProcEnabled_ForJava25()
+    {
+        var settings = new ServerSettings { RamMin = 1024, RamMax = 4096 };
+        var result = _installer.BuildLaunchArgs("/path/server.jar", settings, ServerLaunchType.Standard, javaMajorVersion: 25);
+
+        result.Should().Contain("-XX:+ParallelRefProcEnabled");
+    }
+
+    [Fact]
     public void BuildLaunchArgs_DifferentLaunchTypes_ProducesSameArgs()
     {
         var settings = new ServerSettings { RamMin = 2048, RamMax = 4096 };

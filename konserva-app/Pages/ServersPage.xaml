@@ -1,4 +1,4 @@
-﻿<Page
+<Page
     x:Class="Konserva.Pages.ServersPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -8,17 +8,15 @@
     <Page.Resources>
         <!--  Без переопределения — чекбоксы используют тему по умолчанию  -->
     </Page.Resources>
-    <Grid Margin="16"
-          RowDefinitions="Auto,*">
+    <Grid Margin="16" RowDefinitions="Auto,*">
         <!--  Поиск и фильтры  -->
-        <Border Grid.Row="0"
-                Margin="0,0,0,8">
+        <Border Grid.Row="0" Margin="0,0,0,8">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <!--  Поиск с watermark  -->
@@ -30,7 +28,7 @@
                         x:Name="SearchBox"
                         GotFocus="SearchBox_GotFocus"
                         LostFocus="SearchBox_LostFocus"
-                        TextChanged="SearchBox_TextChanged"/>
+                        TextChanged="SearchBox_TextChanged" />
                     <ui:TextBlock
                         x:Name="SearchPlaceholder"
                         Margin="12,0,0,0"
@@ -40,7 +38,7 @@
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         IsHitTestVisible="False"
                         Text="{loc:Loc ServersPage_Search}"
-                        Visibility="Visible"/>
+                        Visibility="Visible" />
                 </Grid>
 
                 <!--  Sort DropDownButton  -->
@@ -57,36 +55,35 @@
                             <MenuItem
                                 FontWeight="SemiBold"
                                 Header="{loc:Loc ServersPage_Sort_Header}"
-                                IsEnabled="False"/>
+                                IsEnabled="False" />
                             <MenuItem
                                 x:Name="SortNameItem"
                                 Click="SortMenuItem_Click"
                                 Header="{loc:Loc ServersPage_Sort_Name}"
                                 IsCheckable="True"
                                 IsChecked="True"
-                                Tag="Name"/>
+                                Tag="Name" />
                             <MenuItem
                                 x:Name="SortStatusItem"
                                 Click="SortMenuItem_Click"
                                 Header="{loc:Loc ServersPage_Sort_Status}"
                                 IsCheckable="True"
-                                Tag="Status"/>
+                                Tag="Status" />
                             <MenuItem
                                 x:Name="SortTypeItem"
                                 Click="SortMenuItem_Click"
                                 Header="{loc:Loc ServersPage_Sort_Type}"
                                 IsCheckable="True"
-                                Tag="Type"/>
+                                Tag="Type" />
                             <MenuItem
                                 x:Name="SortVersionItem"
                                 Click="SortMenuItem_Click"
                                 Header="{loc:Loc ServersPage_Sort_Version}"
                                 IsCheckable="True"
-                                Tag="Version"/>
+                                Tag="Version" />
                         </ContextMenu>
                     </ui:DropDownButton.Flyout>
-                    <ui:SymbolIcon FontSize="16"
-                                   Symbol="ArrowSort24"/>
+                    <ui:SymbolIcon FontSize="16" Symbol="ArrowSort24" />
                 </ui:DropDownButton>
 
                 <!--  Filter DropDownButton  -->
@@ -104,66 +101,65 @@
                             <MenuItem
                                 FontWeight="SemiBold"
                                 Header="{loc:Loc ServersPage_Filter_All}"
-                                IsEnabled="False"/>
+                                IsEnabled="False" />
                             <MenuItem
                                 x:Name="TypeAllItem"
                                 Click="TypeMenuItem_Click"
                                 Header="{loc:Loc ServersPage_Filter_All}"
                                 IsCheckable="True"
                                 IsChecked="True"
-                                Tag="All"/>
+                                Tag="All" />
                             <MenuItem
                                 Click="TypeMenuItem_Click"
                                 Header="Vanilla"
                                 IsCheckable="True"
-                                Tag="Vanilla"/>
+                                Tag="Vanilla" />
                             <MenuItem
                                 Click="TypeMenuItem_Click"
                                 Header="Forge"
                                 IsCheckable="True"
-                                Tag="Forge"/>
+                                Tag="Forge" />
                             <MenuItem
                                 Click="TypeMenuItem_Click"
                                 Header="NeoForge"
                                 IsCheckable="True"
-                                Tag="NeoForge"/>
+                                Tag="NeoForge" />
                             <MenuItem
                                 Click="TypeMenuItem_Click"
                                 Header="Fabric"
                                 IsCheckable="True"
-                                Tag="Fabric"/>
+                                Tag="Fabric" />
                             <MenuItem
                                 Click="TypeMenuItem_Click"
                                 Header="Paper"
                                 IsCheckable="True"
-                                Tag="Paper"/>
-                            <Separator/>
+                                Tag="Paper" />
+                            <Separator />
                             <!--  Status filter  -->
                             <MenuItem
                                 FontWeight="SemiBold"
                                 Header="{loc:Loc ServersPage_Filter_Status}"
-                                IsEnabled="False"/>
+                                IsEnabled="False" />
                             <MenuItem
                                 x:Name="StatusAllItem"
                                 Click="StatusMenuItem_Click"
                                 Header="{loc:Loc ServersPage_Filter_AllServers}"
                                 IsCheckable="True"
                                 IsChecked="True"
-                                Tag="All"/>
+                                Tag="All" />
                             <MenuItem
                                 Click="StatusMenuItem_Click"
                                 Header="{loc:Loc ServersPage_Filter_Running}"
                                 IsCheckable="True"
-                                Tag="Running"/>
+                                Tag="Running" />
                             <MenuItem
                                 Click="StatusMenuItem_Click"
                                 Header="{loc:Loc ServersPage_Filter_Stopped}"
                                 IsCheckable="True"
-                                Tag="Stopped"/>
+                                Tag="Stopped" />
                         </ContextMenu>
                     </ui:DropDownButton.Flyout>
-                    <ui:SymbolIcon FontSize="16"
-                                   Symbol="Filter12"/>
+                    <ui:SymbolIcon FontSize="16" Symbol="Filter12" />
                 </ui:DropDownButton>
 
                 <!--  Create Server Button  -->
@@ -174,8 +170,7 @@
                     Padding="0"
                     Click="CreateServer_Click"
                     ToolTip="{loc:Loc ServersPage_Create}">
-                    <ui:SymbolIcon FontSize="13"
-                                   Symbol="Add32"/>
+                    <ui:SymbolIcon FontSize="13" Symbol="Add32" />
                 </ui:Button>
             </Grid>
         </Border>
@@ -183,13 +178,11 @@
         <!--  Список серверов  -->
         <Border Grid.Row="1">
             <Grid>
-                <ScrollViewer CanContentScroll="True"
-                              VerticalScrollBarVisibility="Auto">
-                    <ItemsControl x:Name="ServersList"
-                                  ItemsSource="{Binding FilteredServers}">
+                <ScrollViewer CanContentScroll="True" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="ServersList" ItemsSource="{Binding FilteredServers}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <StackPanel/>
+                                <StackPanel />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
@@ -207,42 +200,38 @@
                                             Filled="True"
                                             FontSize="20"
                                             Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                            Symbol="ServerSurface16"/>
+                                            Symbol="ServerSurface16" />
                                     </ui:CardAction.Icon>
                                     <Grid ColumnDefinitions="*,Auto">
                                         <!--  Название и информация  -->
-                                        <StackPanel Grid.Column="0"
-                                                    VerticalAlignment="Center">
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                             <ui:TextBlock
                                                 FontSize="14"
                                                 FontWeight="SemiBold"
-                                                Text="{Binding Name}"/>
-                                            <StackPanel Margin="0,4,0,0"
-                                                        Orientation="Horizontal">
+                                                Text="{Binding Name}" />
+                                            <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
                                                 <ui:TextBlock
                                                     VerticalAlignment="Center"
                                                     FontSize="12"
                                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
-                                                    <Run Text="{Binding McVersion}"/>
+                                                    <Run Text="{Binding McVersion}" />
                                                 </ui:TextBlock>
                                                 <ui:TextBlock
                                                     VerticalAlignment="Center"
                                                     FontSize="8"
                                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                    Text="  •  "/>
-                                                <ui:TextBlock FontSize="12"
-                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
-                                                    <Run Text="{Binding ModLoader.Type}"/>
+                                                    Text="  •  " />
+                                                <ui:TextBlock FontSize="12" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
+                                                    <Run Text="{Binding ModLoader.Type}" />
                                                 </ui:TextBlock>
                                                 <ui:TextBlock
                                                     VerticalAlignment="Center"
                                                     FontSize="8"
                                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                    Text="  •  "/>
-                                                <ui:TextBlock FontSize="12"
-                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
-                                                    <Run Text="{loc:Loc ServersPage_Port}"/>
-                                                    <Run Text="{Binding Port}"/>
+                                                    Text="  •  " />
+                                                <ui:TextBlock FontSize="12" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
+                                                    <Run Text="{loc:Loc ServersPage_Port}" />
+                                                    <Run Text="{Binding Port}" />
                                                 </ui:TextBlock>
                                             </StackPanel>
                                         </StackPanel>
@@ -256,54 +245,54 @@
                                             <Ellipse
                                                 Width="10"
                                                 Height="10"
-                                                Margin="0,0,4,0"
+                                                Margin="0,0,8,0"
                                                 VerticalAlignment="Center"
                                                 Fill="{Binding Status, Converter={StaticResource StatusToBrush}}">
                                                 <Ellipse.Style>
                                                     <Style TargetType="Ellipse">
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Status}"
-                                                                    Value="Starting">
+                                                            <DataTrigger Binding="{Binding Status}" Value="Starting">
                                                                 <DataTrigger.EnterActions>
                                                                     <BeginStoryboard>
-                                                                        <Storyboard RepeatBehavior="Forever"
-                                                                                AutoReverse="True">
-                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                                    From="1.0"
-                                                                                    To="0.2"
-                                                                                    Duration="0:0:0.7"/>
+                                                                        <Storyboard AutoReverse="True" RepeatBehavior="Forever">
+                                                                            <DoubleAnimation
+                                                                                Storyboard.TargetProperty="Opacity"
+                                                                                From="1.0"
+                                                                                To="0.2"
+                                                                                Duration="0:0:0.7" />
                                                                         </Storyboard>
                                                                     </BeginStoryboard>
                                                                 </DataTrigger.EnterActions>
                                                                 <DataTrigger.ExitActions>
                                                                     <BeginStoryboard>
                                                                         <Storyboard>
-                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                                    To="1.0"
-                                                                                    Duration="0:0:0.2"/>
+                                                                            <DoubleAnimation
+                                                                                Storyboard.TargetProperty="Opacity"
+                                                                                To="1.0"
+                                                                                Duration="0:0:0.2" />
                                                                         </Storyboard>
                                                                     </BeginStoryboard>
                                                                 </DataTrigger.ExitActions>
                                                             </DataTrigger>
-                                                            <DataTrigger Binding="{Binding Status}"
-                                                                    Value="Stopping">
+                                                            <DataTrigger Binding="{Binding Status}" Value="Stopping">
                                                                 <DataTrigger.EnterActions>
                                                                     <BeginStoryboard>
-                                                                        <Storyboard RepeatBehavior="Forever"
-                                                                                AutoReverse="True">
-                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                                    From="1.0"
-                                                                                    To="0.2"
-                                                                                    Duration="0:0:0.7"/>
+                                                                        <Storyboard AutoReverse="True" RepeatBehavior="Forever">
+                                                                            <DoubleAnimation
+                                                                                Storyboard.TargetProperty="Opacity"
+                                                                                From="1.0"
+                                                                                To="0.2"
+                                                                                Duration="0:0:0.7" />
                                                                         </Storyboard>
                                                                     </BeginStoryboard>
                                                                 </DataTrigger.EnterActions>
                                                                 <DataTrigger.ExitActions>
                                                                     <BeginStoryboard>
                                                                         <Storyboard>
-                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                                    To="1.0"
-                                                                                    Duration="0:0:0.2"/>
+                                                                            <DoubleAnimation
+                                                                                Storyboard.TargetProperty="Opacity"
+                                                                                To="1.0"
+                                                                                Duration="0:0:0.2" />
                                                                         </Storyboard>
                                                                     </BeginStoryboard>
                                                                 </DataTrigger.ExitActions>
@@ -323,13 +312,10 @@
                                                 <ui:SymbolIcon FontSize="20">
                                                     <ui:SymbolIcon.Style>
                                                         <Style TargetType="ui:SymbolIcon">
-                                                            <Setter Property="Symbol"
-                                                                    Value="Play20"/>
+                                                            <Setter Property="Symbol" Value="Play20" />
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsRunning}"
-                                                                             Value="True">
-                                                                    <Setter Property="Symbol"
-                                                                            Value="Stop20"/>
+                                                                <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                                    <Setter Property="Symbol" Value="Stop20" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -344,8 +330,7 @@
                                                 CommandParameter="{Binding}"
                                                 Tag="{Binding}"
                                                 ToolTip="{loc:Loc ServersPage_OpenFolder}">
-                                                <ui:SymbolIcon FontSize="20"
-                                                               Symbol="Folder20"/>
+                                                <ui:SymbolIcon FontSize="20" Symbol="Folder20" />
                                             </ui:Button>
                                             <ui:Button
                                                 Margin="0,0,12,0"
@@ -354,8 +339,7 @@
                                                 Click="Delete_Click"
                                                 Tag="{Binding}"
                                                 ToolTip="{loc:Loc ServersPage_Delete}">
-                                                <ui:SymbolIcon FontSize="20"
-                                                               Symbol="Delete20"/>
+                                                <ui:SymbolIcon FontSize="20" Symbol="Delete20" />
                                             </ui:Button>
                                         </StackPanel>
                                     </Grid>
@@ -376,14 +360,14 @@
                         FontSize="16"
                         FontTypography="BodyStrong"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        Text="{loc:Loc ServersPage_NoServers}"/>
+                        Text="{loc:Loc ServersPage_NoServers}" />
                     <ui:TextBlock
                         Margin="0,4,0,0"
                         HorizontalAlignment="Center"
                         FontSize="13"
                         FontTypography="Body"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        Text="{loc:Loc ServersPage_NoServers_Description}"/>
+                        Text="{loc:Loc ServersPage_NoServers_Description}" />
                 </StackPanel>
             </Grid>
         </Border>

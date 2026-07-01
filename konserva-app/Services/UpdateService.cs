@@ -108,16 +108,33 @@ public sealed class UpdateService : IUpdateService, IDisposable
 
       Logger.Info("Update check in 'Scheduled' mode — starting timer", "UpdateService");
 
-      while (!ct.IsCancellationRequested)
-      {
-        config = _config.GetConfig();
-        var intervalHours = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
-        using var timer = new PeriodicTimer(TimeSpan.FromHours(intervalHours));
+      var lastInterval = -1;
+      PeriodicTimer? timer = null;
 
-        if (await timer.WaitForNextTickAsync(ct))
+      try
+      {
+        while (!ct.IsCancellationRequested)
         {
-          await FetchAndSaveAsync();
+          config = _config.GetConfig();
+          var intervalHours = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
+
+          // Пересоздаём таймер только при изменении интервала
+          if (intervalHours != lastInterval)
+          {
+            timer?.Dispose();
+            timer = new PeriodicTimer(TimeSpan.FromHours(intervalHours));
+            lastInterval = intervalHours;
+          }
+
+          if (await timer!.WaitForNextTickAsync(ct))
+          {
+            await FetchAndSaveAsync();
+          }
         }
+      }
+      finally
+      {
+        timer?.Dispose();
       }
     }
     catch (OperationCanceledException)

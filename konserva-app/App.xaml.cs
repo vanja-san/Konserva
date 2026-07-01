@@ -347,9 +347,18 @@ public partial class App : Application
         // Дожидаемся остановки серверов (иначе Java процессы останутся в фоне и заблокируют порт)
         try
         {
-            // Выполняем CleanupAsync на пуле потоков (без SynchronizationContext),
-            // чтобы избежать deadlock при GetAwaiter().GetResult() на UI-потоке
-            Task.Run(CleanupAsync).GetAwaiter().GetResult();
+            // CleanupAsync запускается на пуле потоков (без SynchronizationContext),
+            // чтобы исключить deadlock при синхронном ожидании на UI-потоке.
+            // Таймаут 30с — если остановка серверов зависнет, приложение всё равно закроется.
+            var cleanupTask = Task.Run(CleanupAsync);
+            if (!cleanupTask.Wait(TimeSpan.FromSeconds(30)))
+            {
+                Logger.Warning("Cleanup timeout (30s) during shutdown, some servers may still be running", "App");
+            }
+            else
+            {
+                cleanupTask.GetAwaiter().GetResult(); // проброс исключений
+            }
         }
         catch (Exception ex)
         {

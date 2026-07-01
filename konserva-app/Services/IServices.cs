@@ -46,8 +46,6 @@ public interface IServerManager
     McServerProcess? GetProcess(string id);
     IReadOnlyList<McServerProcess> GetProcesses();
     Server CreateServer(string name, string mcVersion, ModLoader modLoader, string path);
-    void StartServer(string id);
-    void StopServer(string id);
     void SendCommand(string id, string command);
     void UpdateServer(Server server);
     (int total, int running, int stopped) GetStats();

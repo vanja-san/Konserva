@@ -44,18 +44,12 @@ public class ServerStorageService : IServerStorageService, IDisposable
     {
         // Берём кэш напрямую, чтобы не перезагружать весь файл
         var servers = _store.PeekCache() ?? LoadServers();
-        var existing = servers.FirstOrDefault(s => s.Id == server.Id);
-        if (existing == null)
+        var index = servers.FindIndex(s => s.Id == server.Id);
+        if (index < 0)
             return;
 
-        existing.Name = server.Name;
-        existing.Path = server.Path;
-        existing.McVersion = server.McVersion;
-        existing.ModLoader = server.ModLoader;
-        existing.Settings = server.Settings;
-        existing.Port = server.Port;
-        existing.AutoStart = server.AutoStart;
-        existing.LastPlayed = server.LastPlayed;
+        // Заменяем весь объект — не нужно вручную копировать каждое свойство
+        servers[index] = server;
 
         _store.Save(servers);
     }

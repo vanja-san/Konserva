@@ -50,7 +50,7 @@ public sealed class Logger : IAsyncDisposable
 
     // Счётчик ожидающих записи и сигнал для FlushAsync
     private static int _pendingLogEntries;
-    private static readonly SemaphoreSlim _flushSignal = new(0);
+    private static TaskCompletionSource _flushTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     // Кэш последних логов (thread-safe)
     private static readonly System.Collections.Concurrent.ConcurrentQueue<LogEntry> _recentLogs = new();
@@ -137,11 +137,10 @@ public sealed class Logger : IAsyncDisposable
                 System.Diagnostics.Debug.WriteLine(FormatLogEntry(entry));
 
                 // Сигналим FlushAsync когда все ожидающие записи обработаны
-                if (Interlocked.Decrement(ref _pendingLogEntries) <= 0)
+                if (Interlocked.Decrement(ref _pendingLogEntries) == 0)
                 {
-                    try { _flushSignal.Release(); }
-                    catch (ObjectDisposedException) { /* Logger shutting down */ }
-                    catch (SemaphoreFullException) { /* Already signaled, nothing to wait */ }
+                    var previous = Interlocked.Exchange(ref _flushTcs, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
+                    previous.TrySetResult();
                 }
             }
         }
@@ -323,12 +322,13 @@ public sealed class Logger : IAsyncDisposable
     /// </summary>
     public static async Task FlushAsync()
     {
-        // Если нет ожидающих записей — возвращаемся сразу
+        // Захватываем TCS до проверки pending, чтобы избежать race:
+        // если pending обнулится между проверкой и ожиданием — TCS уже будет завершён
+        var tcs = _flushTcs;
         if (Volatile.Read(ref _pendingLogEntries) <= 0)
             return;
 
-        // Ждём сигнала с таймаутом
-        await _flushSignal.WaitAsync(TimeSpan.FromSeconds(5));
+        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     /// <summary>
@@ -369,7 +369,6 @@ public sealed class Logger : IAsyncDisposable
         }
 
         _logChannel.Writer.Complete();
-        _flushSignal.Dispose();
     }
 
     #endregion

@@ -1,18 +1,18 @@
 {
-  "latestVersion": "1.10.1",
+  "latestVersion": "1.10.2",
   "minRequiredVersion": "0.0.0",
   "downloads": {
     "full": {
-      "url": "https://github.com/vanja-san/Konserva/releases/download/v1.10.1/Konserva-1.10.1-full.zip",
+      "url": "https://github.com/vanja-san/Konserva/releases/download/v1.10.2/Konserva-1.10.2-full.zip",
       "sizeBytes": 60000000,
-      "assetName": "Konserva-1.10.1-full.zip"
+      "assetName": "Konserva-1.10.2-full.zip"
     },
     "deps": {
-      "url": "https://github.com/vanja-san/Konserva/releases/download/v1.10.1/Konserva-1.10.1-deps.zip",
+      "url": "https://github.com/vanja-san/Konserva/releases/download/v1.10.2/Konserva-1.10.2-deps.zip",
       "sizeBytes": 9000000,
-      "assetName": "Konserva-1.10.1-deps.zip"
+      "assetName": "Konserva-1.10.2-deps.zip"
     }
   },
   "releaseNotes": "",
-  "changelogUrl": "https://github.com/vanja-san/Konserva/releases/tag/v1.10.1"
+  "changelogUrl": "https://github.com/vanja-san/Konserva/releases/tag/v1.10.2"
 }

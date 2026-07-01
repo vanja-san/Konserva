@@ -86,20 +86,6 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         return server;
     }
 
-    public void StartServer(string id)
-    {
-        var server = GetServer(id);
-        if (server == null)
-            return;
-
-        if (!CanStartServer(id, out var existingProcess))
-            return;
-
-        RemoveStoppedOrErroredProcess(id, existingProcess);
-        // fire-and-forget для синхронного вызова
-        StartServerCoreAsync(server, CancellationToken.None).SafeFireAndForget(errorMessage: "Server start failed");
-    }
-
     public async Task StartServerAsync(string id, CancellationToken ct = default)
     {
         var server = GetServer(id);
@@ -293,41 +279,6 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         {
             OnServersChanged?.Invoke();
         });
-    }
-
-    public void StopServer(string id)
-    {
-        // UPnP: удаляем проброс порта при остановке (если включено)
-        TryDeleteUpnpMappingForServer(id);
-
-        if (_processes.TryRemove(id, out var process))
-        {
-            // останавливаем процесс в фоне, чтобы не блокировать UI
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await process.StopAsync();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error($"[StopServer] Ошибка остановки: {ex.Message}", ex, "McServerManager");
-                }
-                finally
-                {
-                    // Отписываем обработчик ТОЛЬКО после полной остановки
-                    if (_statusHandlers.TryRemove(id, out var handler))
-                    {
-                        process.OnStatusChanged -= handler;
-                    }
-                    process.Dispose();
-                }
-            });
-        }
-        else
-        {
-            _statusHandlers.TryRemove(id, out _);
-        }
     }
 
     public async Task StopServerAsync(string id, CancellationToken ct = default)

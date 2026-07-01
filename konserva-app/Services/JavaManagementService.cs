@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.DependencyInjection;
 using Konserva.Models;
 using Konserva.Utilities;
+using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO;
 
@@ -135,62 +136,77 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     /// Стандартные пути к Java
     /// </summary>
     /// <summary>
-    /// Поиск Java в реестре Windows
+    /// Поиск Java в реестре Windows через прямой RegistryKey API (вместо PowerShell)
     /// </summary>
     private static List<string> FindJavaInRegistry()
     {
         var paths = new List<string>();
 
+        // (registryHive, subKey) пары для поиска JavaHome
         var registryRoots = new[]
         {
-            @"HKLM:\SOFTWARE\JavaSoft",
-            @"HKLM:\SOFTWARE\IBM\Java",
-            @"HKLM:\SOFTWARE\Azul Zulu",
-            @"HKCU:\SOFTWARE\JavaSoft",
-            @"HKLM:\SOFTWARE\Microsoft\JDK",
-            @"HKLM:\SOFTWARE\Amazon Corretto",
+            (RegistryHive.LocalMachine, @"SOFTWARE\JavaSoft"),
+            (RegistryHive.LocalMachine, @"SOFTWARE\IBM\Java"),
+            (RegistryHive.LocalMachine, @"SOFTWARE\Azul Zulu"),
+            (RegistryHive.CurrentUser,  @"SOFTWARE\JavaSoft"),
+            (RegistryHive.LocalMachine, @"SOFTWARE\Microsoft\JDK"),
+            (RegistryHive.LocalMachine, @"SOFTWARE\Amazon Corretto"),
         };
 
-        var powershellScript = string.Join("; ", registryRoots.Select(r =>
-            $"Get-ChildItem -Path '{r}' -ErrorAction SilentlyContinue | ForEach-Object {{ " +
-            $"Get-ChildItem -Path $_.PsPath -Recurse -ErrorAction SilentlyContinue | " +
-            $"Where-Object {{{{ $_.GetType().Name -eq 'RegistryKey' }}}} | " +
-            $"ForEach-Object {{ (Get-ItemProperty -Path $_.PsPath -Name 'JavaHome' -ErrorAction SilentlyContinue).JavaHome }}" +
-            $"}}"));
+        foreach (var (hive, keyPath) in registryRoots)
+        {
+            try
+            {
+                using var baseKey = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64);
+                using var key = baseKey.OpenSubKey(keyPath);
+                if (key == null) continue;
 
+                CollectJavaHomes(key, paths);
+            }
+            catch
+            {
+                // Hive недоступен — пропускаем
+            }
+        }
+
+        return paths;
+    }
+
+    /// <summary>
+    /// Рекурсивно собирает все JavaHome из указанной ветки реестра
+    /// </summary>
+    private static void CollectJavaHomes(RegistryKey key, List<string> paths)
+    {
         try
         {
-            var startInfo = new ProcessStartInfo
+            // Пробуем получить JavaHome в текущем ключе
+            var javaHome = key.GetValue("JavaHome") as string;
+            if (!string.IsNullOrEmpty(javaHome) && !paths.Contains(javaHome, StringComparer.OrdinalIgnoreCase))
             {
-                FileName = "powershell",
-                Arguments = $"-Command \"{powershellScript}\"",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(startInfo);
-            if (process == null) return paths;
-
-            var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit(Constants.JavaPathCheckTimeoutMs);
-
-            foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var javaHome = line.Trim();
-                if (string.IsNullOrEmpty(javaHome) || !Directory.Exists(javaHome)) continue;
-
                 var javaPath = Path.Combine(javaHome, "bin", "java.exe");
                 if (File.Exists(javaPath))
                     paths.Add(javaPath);
             }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Failed to search registry for Java: {ex.Message}", "JavaManagementService");
-        }
 
-        return paths;
+            // Рекурсивно обходим подразделы
+            foreach (var subKeyName in key.GetSubKeyNames())
+            {
+                try
+                {
+                    using var subKey = key.OpenSubKey(subKeyName);
+                    if (subKey != null)
+                        CollectJavaHomes(subKey, paths);
+                }
+                catch
+                {
+                    // Подраздел недоступен — пропускаем
+                }
+            }
+        }
+        catch
+        {
+            // Ключ недоступен — пропускаем
+        }
     }
 
     /// <summary>

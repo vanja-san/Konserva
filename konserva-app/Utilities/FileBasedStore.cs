@@ -12,8 +12,7 @@ public class FileBasedStore<T> where T : class
 {
   private readonly string _filePath;
   private readonly JsonSerializerOptions _jsonOptions;
-  private readonly Lock _syncLock = new();
-  private readonly SemaphoreSlim _asyncLock = new(1, 1);
+  private readonly SemaphoreSlim _lock = new(1, 1);
   private T? _cached;
   private long _lastFileSize;
   private DateTime _lastWriteTime;
@@ -39,7 +38,8 @@ public class FileBasedStore<T> where T : class
   /// </summary>
   public T? Load()
   {
-    lock (_syncLock)
+    _lock.Wait();
+    try
     {
       if (_cached != null && !IsFileModified())
         return _cached;
@@ -48,6 +48,10 @@ public class FileBasedStore<T> where T : class
       UpdateFileStats();
       return _cached;
     }
+    finally
+    {
+      _lock.Release();
+    }
   }
 
   /// <summary>
@@ -55,7 +59,7 @@ public class FileBasedStore<T> where T : class
   /// </summary>
   public async Task<T?> LoadAsync(CancellationToken ct = default)
   {
-    await _asyncLock.WaitAsync(ct);
+    await _lock.WaitAsync(ct);
     try
     {
       if (_cached != null && !IsFileModified())
@@ -68,7 +72,7 @@ public class FileBasedStore<T> where T : class
     }
     finally
     {
-      _asyncLock.Release();
+      _lock.Release();
     }
   }
 
@@ -77,11 +81,16 @@ public class FileBasedStore<T> where T : class
   /// </summary>
   public void Save(T data)
   {
-    lock (_syncLock)
+    _lock.Wait();
+    try
     {
       _cached = data;
       SaveToFile(data);
       UpdateFileStats();
+    }
+    finally
+    {
+      _lock.Release();
     }
   }
 
@@ -90,7 +99,7 @@ public class FileBasedStore<T> where T : class
   /// </summary>
   public async Task SaveAsync(T data, CancellationToken ct = default)
   {
-    await _asyncLock.WaitAsync(ct);
+    await _lock.WaitAsync(ct);
     try
     {
       _cached = data;
@@ -99,7 +108,7 @@ public class FileBasedStore<T> where T : class
     }
     finally
     {
-      _asyncLock.Release();
+      _lock.Release();
     }
   }
 
@@ -108,25 +117,45 @@ public class FileBasedStore<T> where T : class
   /// </summary>
   public T? PeekCache()
   {
-    lock (_syncLock)
+    _lock.Wait();
+    try
     {
       return _cached;
+    }
+    finally
+    {
+      _lock.Release();
     }
   }
 
   /// <summary>
-  /// Выполнить действие над данными с сохранением (только для типов с default-конструктором)
+  /// Выполнить действие над данными с сохранением
   /// </summary>
   public void Update(Action<T> updateAction)
   {
-    var data = Load();
-    if (data == null)
+    _lock.Wait();
+    try
     {
-      Logger.Warning($"Cannot update {typeof(T).Name}: no data loaded and no default available", "FileBasedStore");
-      return;
+      if (_cached == null)
+      {
+        _cached = LoadFromFile();
+        UpdateFileStats();
+      }
+
+      if (_cached == null)
+      {
+        Logger.Warning($"Cannot update {typeof(T).Name}: no data loaded", "FileBasedStore");
+        return;
+      }
+
+      updateAction(_cached);
+      SaveToFile(_cached);
+      UpdateFileStats();
     }
-    updateAction(data);
-    Save(data);
+    finally
+    {
+      _lock.Release();
+    }
   }
 
   private T? LoadFromFile()

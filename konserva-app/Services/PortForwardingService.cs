@@ -170,6 +170,11 @@ public sealed class PortForwardingService : IPortForwardingService, IDisposable
       Logger.Warning($"Failed to get external IP: {ex.Message}", "UPnP");
       return null;
     }
+    catch (Exception ex)
+    {
+      Logger.Warning($"Get external IP unexpected error: {ex.Message}", "UPnP");
+      return null;
+    }
   }
 
   /// <summary>

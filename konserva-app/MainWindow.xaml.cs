@@ -148,6 +148,9 @@ public partial class MainWindow : FluentWindow, IDisposable
         var config = _config.GetConfig();
         ApplyTheme(config.Theme ?? "System");
 
+        // Отслеживаем системную тему для авто-обновления при смене в Windows
+        Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this);
+
         AutoDetectJava();
         StartStatusBarTimer();
         StartUpdateCheckLoop();
@@ -472,32 +475,24 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Применение темы приложения
+    /// Применение темы приложения через WPF-UI
     /// </summary>
     public void ApplyTheme(string theme)
     {
-
-        // Сначала применяем тему через ApplicationThemeManager
-        var wpfTheme = theme switch
-        {
-            "Dark" => Wpf.Ui.Appearance.ApplicationTheme.Dark,
-            "Light" => Wpf.Ui.Appearance.ApplicationTheme.Light,
-            _ => Wpf.Ui.Appearance.ApplicationTheme.Unknown // System
-        };
-
-        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(wpfTheme);
-
-        // Для системной темы нужно явно обновить ресурсы
         if (theme == "System")
         {
-            // Проверяем текущую системную тему и применяем соответствующую
-            var isSystemDark = Microsoft.Win32.Registry.GetValue(
-                "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
-                "AppsUseLightTheme",
-                1
-            ) is int value && value == 0;
+            Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
+        }
+        else
+        {
+            var wpfTheme = theme switch
+            {
+                "Dark" => Wpf.Ui.Appearance.ApplicationTheme.Dark,
+                "Light" => Wpf.Ui.Appearance.ApplicationTheme.Light,
+                _ => Wpf.Ui.Appearance.ApplicationTheme.Unknown
+            };
 
-            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(isSystemDark ? Wpf.Ui.Appearance.ApplicationTheme.Dark : Wpf.Ui.Appearance.ApplicationTheme.Light);
+            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(wpfTheme);
         }
     }
 
@@ -724,19 +719,4 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 }
 
-/// <summary>
-/// Extension для fire-and-forget задач.
-/// </summary>
-internal static class TaskExtensions
-{
-    public static void FireAndForget(this Task task)
-    {
-        _ = task.ContinueWith(t =>
-        {
-            if (t.IsFaulted && t.Exception != null)
-            {
-                Logger.Error($"FireAndForget error: {t.Exception.InnerException?.Message}", t.Exception.InnerException, "TaskExtensions");
-            }
-        }, TaskScheduler.Default);
-    }
-}
+// Вместо TaskExtensions.FireAndForget используйте SafeFireAndForget из CommunityToolkit

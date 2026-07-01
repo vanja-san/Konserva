@@ -124,6 +124,12 @@ public partial class SettingsViewModel : ObservableObject
 
     _configService.SaveConfig(config);
 
+    // Применяем язык немедленно, без перезапуска
+    if (languageChanged)
+    {
+      LocalizationManager.SetLanguage(Language);
+    }
+
     return languageChanged;
   }
 

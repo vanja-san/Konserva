@@ -3,6 +3,7 @@ using Konserva.Models;
 using Konserva.Utilities;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -13,7 +14,7 @@ namespace Konserva.Services;
 /// </summary>
 public partial class McServerProcess(Server server, IConfigService? configService = null, IServerInstaller? installer = null) : IDisposable
 {
-    private readonly IServerInstaller _installer = installer ?? new McServerInstaller(null);
+    private readonly IServerInstaller _installer = installer ?? new McServerInstaller(new HttpClient());
     private Process? _process;
     private readonly StringBuilder _logs = new();
     private readonly List<string> _logLines = [];

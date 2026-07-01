@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Reflection;
@@ -103,7 +102,7 @@ namespace Konserva.Services
         {
             try
             {
-                var exePath = Process.GetCurrentProcess().MainModule?.FileName;
+                var exePath = Environment.ProcessPath;
                 if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
                     return "deps"; // fallback
 

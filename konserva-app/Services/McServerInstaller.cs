@@ -17,15 +17,13 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
 {
     [GeneratedRegex(@"forge-(\d+\.\d+\.\d+-\d+\.\d+\.\d+)")]
     private partial Regex ForgeVersionRegex();
-    private HttpClient _http;
-    private readonly bool _ownsHttpClient;
+    private readonly HttpClient _http;
     private IConfigService? _configService;
     private bool _disposed;
 
-    public McServerInstaller(HttpClient? httpClient, IConfigService? configService = null)
+    public McServerInstaller(HttpClient httpClient, IConfigService? configService = null)
     {
-        _ownsHttpClient = httpClient == null;
-        _http = httpClient ?? new HttpClient();
+        _http = httpClient;
         _http.Timeout = TimeSpan.FromMinutes(5);
         _http.DefaultRequestHeaders.Add("User-Agent", "Konserva/1.0");
         _http.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
@@ -38,20 +36,10 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
         if (_disposed)
             return;
         _disposed = true;
-
-        if (_ownsHttpClient)
-        {
-            _http?.Dispose();
-            _http = null!;
-        }
+        // HttpClient получен из IHttpClientFactory — не диспозим, фабрика управляет его жизнью
     }
 
-    private HttpClient GetHttpClient()
-    {
-        if (_http == null)
-            throw new InvalidOperationException("McServerInstaller not initialized. Call Initialize() first.");
-        return _http;
-    }
+    private HttpClient GetHttpClient() => _http;
 
     /// <summary>
     /// Информация о версии Minecraft
@@ -1778,8 +1766,17 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
         // Пользовательские JVM аргументы (GC оптимизации и т.п. — настраивается в настройках сервера)
         foreach (var arg in settings.JavaArgs)
         {
-            if (!string.IsNullOrWhiteSpace(arg))
-                args.Append($"{arg} ");
+            if (string.IsNullOrWhiteSpace(arg))
+                continue;
+
+            // ParallelRefProcEnabled deprecated в Java 26+, пропускаем для JDK >= 26
+            if (javaMajorVersion >= 26 && arg.Contains("ParallelRefProcEnabled", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.Info($"Skipping deprecated arg '{arg}' for Java {javaMajorVersion}", "McServerInstaller");
+                continue;
+            }
+
+            args.Append($"{arg} ");
         }
 
         // NeoForge (21.x+) не использует -jar, нужен classpath/module-path + bootstrap main class

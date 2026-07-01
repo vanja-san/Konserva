@@ -247,12 +247,12 @@ public partial class ServerDetailViewModel : ObservableObject
     {
       if (_server.IsRunning)
       {
-        _serverManager.StopServer(_serverId!);
+        await _serverManager.StopServerAsync(_serverId!);
       }
       else
       {
         _server.ErrorDialogShown = false;
-        _serverManager.StartServer(_serverId!);
+        await _serverManager.StartServerAsync(_serverId!);
       }
     }
     catch (Exception ex)

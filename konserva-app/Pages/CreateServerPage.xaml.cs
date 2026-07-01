@@ -31,14 +31,9 @@ public partial class CreateServerPage : Page
     private bool _isChangingModLoader;
     private CancellationTokenSource? _installCts;
     private bool _wasCancelled;
-    private bool _isFindingCompatibleVersion;
-    private string[] _allMcVersions = [];
-    private HashSet<string> _paperVersions = [];
-    private HashSet<string>? _quiltSupportedVersions;
     private string? _lastLoadedModLoader;
     private string? _lastLoadedMcVersion;
     private bool _isLoadingInProgress;
-    private string? _currentModLoader;
     private CancellationTokenSource? _loaderLoadingCts;
     private readonly SelectionChangedEventHandler _loaderVersionChangedHandler; // for clean unsubscribe
 
@@ -48,11 +43,11 @@ public partial class CreateServerPage : Page
             ?? new CreateServerViewModel(
                 Ioc.Default.GetService<IConfigService>()!,
                 Ioc.Default.GetService<IMcVersionsApi>()!,
-                Ioc.Default.GetService<IServerInstaller>() ?? new McServerInstaller(new HttpClient()),
+                Ioc.Default.GetService<IServerInstaller>()!,
                 Ioc.Default.GetService<IServerManager>()!);
         _configService = Ioc.Default.GetService<IConfigService>();
         _versionsApi = Ioc.Default.GetService<IMcVersionsApi>()!;
-        _installer = Ioc.Default.GetService<IServerInstaller>() ?? new McServerInstaller(new HttpClient());
+        _installer = Ioc.Default.GetService<IServerInstaller>()!;
 
         InitializeComponent();
 
@@ -78,12 +73,10 @@ public partial class CreateServerPage : Page
             McVersionBox.SelectionChanged += McVersionBox_SelectionChanged;
             LoaderVersionBox.SelectionChanged += _loaderVersionChangedHandler;
 
-            // Инициализируем ViewModel
+            // Инициализируем ViewModel (загружает и фильтрует версии)
             await _viewModel.InitializeAsync();
 
-            // Загружаем все версии Minecraft для UI
-            _allMcVersions = await _versionsApi.GetMcVersions();
-            Logger.Info($"Loaded {_allMcVersions.Length} Minecraft versions", "CreateServerPage");
+            Logger.Info($"Loaded {_viewModel.McVersionList.Length} Minecraft versions", "CreateServerPage");
 
             ServerPathBox.Text = _viewModel.GetDefaultServerPath();
             Logger.Info($"Server path: {ServerPathBox.Text}", "CreateServerPage");
@@ -159,48 +152,48 @@ public partial class CreateServerPage : Page
         try
         {
             var showSnapshots = ShowSnapshotsBox.IsChecked ?? false;
-            var selectedModLoader = modLoaderOverride ?? GetSelectedModLoader();
+            var selectedModLoader = modLoaderOverride ?? _viewModel.SelectedModLoader;
 
             Logger.Info($"FilterMcVersionsAsync: modLoader={selectedModLoader}, showSnapshots={showSnapshots}", "CreateServerPage");
 
-            if (selectedModLoader == "Paper" && _paperVersions.Count == 0)
-                await LoadPaperVersionsAsync();
+            if (selectedModLoader == "Paper" && _viewModel.GetPaperVersionsCount() == 0)
+                await _viewModel.LoadPaperVersionsAsync();
 
             HashSet<string> supportedVersions;
 
             if (selectedModLoader == "NeoForge")
             {
                 // NeoForge — MC 1.16+ (не поддерживает более старые версии)
-                supportedVersions = [.. _allMcVersions.Where(v =>
-                    TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
+                supportedVersions = [.. _viewModel.McVersionList.Where(v =>
+                    McVersionHelper.TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
             }
             else if (selectedModLoader == "Quilt")
             {
-                if (_quiltSupportedVersions == null)
+                if (_viewModel.QuiltSupportedVersions == null)
                 {
                     Logger.Info("Loading Quilt supported versions...", "CreateServerPage");
-                    _quiltSupportedVersions = await GetQuiltSupportedVersionsAsync();
-                    Logger.Info($"Loaded {_quiltSupportedVersions.Count} Quilt supported versions", "CreateServerPage");
+                    await _viewModel.LoadQuiltSupportedVersionsAsync();
+                    Logger.Info($"Loaded {_viewModel.QuiltSupportedVersions?.Count ?? 0} Quilt supported versions", "CreateServerPage");
                 }
-                supportedVersions = _quiltSupportedVersions;
+                supportedVersions = _viewModel.QuiltSupportedVersions ?? [.. _viewModel.McVersionList];
             }
             else if (selectedModLoader == "Paper")
             {
-                if (_paperVersions.Count == 0)
-                    await LoadPaperVersionsAsync();
-                supportedVersions = _paperVersions.Count > 0 ? _paperVersions : [.. _allMcVersions];
+                if (_viewModel.PaperVersions.Count == 0)
+                    await _viewModel.LoadPaperVersionsAsync();
+                supportedVersions = _viewModel.PaperVersions.Count > 0 ? _viewModel.PaperVersions : [.. _viewModel.McVersionList];
             }
             else
             {
-                supportedVersions = [.. _allMcVersions];
+                supportedVersions = [.. _viewModel.McVersionList];
             }
 
-            var versions = _allMcVersions
+            var versions = _viewModel.McVersionList
                 .Where(v => supportedVersions.Contains(v))
-                .Where(v => showSnapshots || !IsSnapshot(v))
+                .Where(v => showSnapshots || !McVersionHelper.IsSnapshot(v))
                 .ToArray();
 
-            Logger.Info($"Filtered MC versions for {selectedModLoader}: {versions.Length} (from {_allMcVersions.Length})", "CreateServerPage");
+            Logger.Info($"Filtered MC versions for {selectedModLoader}: {versions.Length} (from {_viewModel.McVersionList.Length})", "CreateServerPage");
 
             var currentMcVersion = McVersionBox.SelectedItem is ComboBoxItem currentItem ? currentItem.Content?.ToString() : null;
 
@@ -242,19 +235,20 @@ public partial class CreateServerPage : Page
         }
 
         // Если версии загрузчика не загружены или нужна проверка стабильности
-        if (!string.IsNullOrEmpty(_currentModLoader) && _currentModLoader is "Forge" or "NeoForge" or "Fabric" or "Quilt" or "Paper")
+        var modLoader = _viewModel.SelectedModLoader;
+        if (!string.IsNullOrEmpty(modLoader) && modLoader is "Forge" or "NeoForge" or "Fabric" or "Quilt" or "Paper")
         {
             var selectedMcVersion = (McVersionBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
             var showSnapshots = ShowSnapshotsBox?.IsChecked ?? false;
 
             // Для Quilt без снапшотов — проверяем, есть ли стабильные версии
             if (!string.IsNullOrEmpty(selectedMcVersion) &&
-                !showSnapshots && _currentModLoader == "Quilt")
+                !showSnapshots && modLoader == "Quilt")
             {
-                var compatibleVersion = await FindLastCompatibleMcVersionAsync(_currentModLoader, selectedMcVersion, showSnapshots);
+                var compatibleVersion = await FindLastCompatibleMcVersionAsync(modLoader, selectedMcVersion, showSnapshots);
                 if (compatibleVersion != null && compatibleVersion != selectedMcVersion)
                 {
-                    Logger.Info($"Switching to compatible MC version for {_currentModLoader}: {compatibleVersion}", "CreateServerPage");
+                    Logger.Info($"Switching to compatible MC version for {modLoader}: {compatibleVersion}", "CreateServerPage");
                     var matchingItem = McVersionBox.Items.Cast<ComboBoxItem>()
                         .FirstOrDefault(item => item.Content?.ToString() == compatibleVersion);
                     if (matchingItem != null)
@@ -268,8 +262,8 @@ public partial class CreateServerPage : Page
             if (!string.IsNullOrEmpty(selectedMcVersion))
             {
                 LoaderVersionBox.Items.Clear();
-                Logger.Info($"Calling LoadLoaderVersions manually: {_currentModLoader} for MC {selectedMcVersion}", "CreateServerPage");
-                _ = LoadLoaderVersions(_currentModLoader, selectedMcVersion);
+                Logger.Info($"Calling LoadLoaderVersions manually: {modLoader} for MC {selectedMcVersion}", "CreateServerPage");
+                _ = LoadLoaderVersions(modLoader, selectedMcVersion);
             }
         }
     }
@@ -292,7 +286,7 @@ public partial class CreateServerPage : Page
 
         // Строгая фильтрация: только стабильные версии считаются совместимыми
         if (modLoaderType == "NeoForge" && !showSnapshots)
-            currentVersions = [.. currentVersions.Where(v => !IsNeoForgeSnapshot(v))];
+            currentVersions = [.. currentVersions.Where(v => !McVersionHelper.IsNeoForgeSnapshot(v))];
         else if (modLoaderType == "Quilt" && !showSnapshots)
             currentVersions = [.. currentVersions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))];
         else if (modLoaderType == "Paper" && !showSnapshots)
@@ -302,8 +296,8 @@ public partial class CreateServerPage : Page
             return currentMcVersion;
 
         // Текущая не подходит — ищем среди последних 10
-        var mcVersions = _allMcVersions
-            .Where(v => showSnapshots || !IsSnapshot(v))
+        var mcVersions = _viewModel.McVersionList
+            .Where(v => showSnapshots || !McVersionHelper.IsSnapshot(v))
             .Take(10)
             .ToList();
 
@@ -324,7 +318,7 @@ public partial class CreateServerPage : Page
                 };
 
                 if (modLoaderType == "NeoForge" && !showSnapshots)
-                    versions = [.. versions.Where(v => !IsNeoForgeSnapshot(v))];
+                    versions = [.. versions.Where(v => !McVersionHelper.IsNeoForgeSnapshot(v))];
                 else if (modLoaderType == "Quilt" && !showSnapshots)
                     versions = [.. versions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))];
                 else if (modLoaderType == "Paper" && !showSnapshots)
@@ -339,94 +333,6 @@ public partial class CreateServerPage : Page
         return null;
     }
 
-    private async Task<HashSet<string>> GetQuiltSupportedVersionsAsync()
-    {
-        var supported = new HashSet<string>();
-
-        var recentVersions = _allMcVersions
-            .Where(v => TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))
-            .Take(50)
-            .ToArray();
-
-        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
-
-        foreach (var version in recentVersions.Take(20))
-        {
-            try
-            {
-                var url = $"{QuiltVersionsLoader}/{version}";
-                var response = await httpClient.GetStringAsync(url);
-
-                using var doc = System.Text.Json.JsonDocument.Parse(response);
-                var array = doc.RootElement.EnumerateArray();
-
-                if (array.Any())
-                {
-                    supported.Add(version);
-                }
-            }
-            catch (HttpRequestException httpEx) when (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                // 404 — версия не поддерживается
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"Failed to check Quilt support for version {version}: {ex.Message}", "CreateServerPage");
-            }
-        }
-
-        return supported.Count > 0 ? supported : [.. _allMcVersions];
-    }
-
-    private async Task LoadPaperVersionsAsync()
-    {
-        try
-        {
-            var response = await _versionsApi.GetStringWithDecompressionAsync(
-                PaperApi + "/projects/paper");
-            using var doc = System.Text.Json.JsonDocument.Parse(response);
-            _paperVersions = [.. doc.RootElement.GetProperty("versions")
-                .EnumerateObject()
-                .SelectMany(g => g.Value.EnumerateArray())
-                .Select(v => v.GetString()!)];
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Failed to load Paper versions, using fallback: {ex.Message}", "CreateServerPage");
-            _paperVersions = [.. _allMcVersions];
-        }
-    }
-
-    private static bool TryParseMcVersion(string version, out int major, out int minor)
-    {
-        major = 0;
-        minor = 0;
-
-        try
-        {
-            var parts = version.Split('.');
-            if (parts.Length >= 2)
-            {
-                major = int.Parse(parts[0]);
-                minor = int.Parse(parts[1]);
-                return true;
-            }
-        }
-        catch
-        {
-            // Ignore parse errors
-        }
-
-        return false;
-    }
-
-    private string GetSelectedModLoader()
-    {
-        if (ModLoaderBox.SelectedItem is ComboBoxItem item)
-            return item.Tag?.ToString() ?? "Vanilla";
-        return "Vanilla";
-    }
-
     /// <summary>
     /// Проверяет, все ли обязательные поля заполнены и возвращает список ошибок
     /// </summary>
@@ -435,6 +341,10 @@ public partial class CreateServerPage : Page
         // Синхронизируем данные с ViewModel
         _viewModel.ServerName = ServerNameBox.Text;
         _viewModel.ServerPath = ServerPathBox.Text;
+
+        // Синхронизируем выбранную версию загрузчика из ComboBox в ViewModel
+        if (LoaderVersionBox.SelectedItem is ComboBoxItem { Content: string loaderVersion })
+            _viewModel.SelectedLoaderVersion = loaderVersion;
 
         return _viewModel.GetValidationErrors();
     }
@@ -463,58 +373,9 @@ public partial class CreateServerPage : Page
         }
     }
 
-    private static bool IsSnapshot(string version)
-    {
-        var snapshotMarkers = new[] { "w", "-pre", "-rc", "-snapshot", "Pre-Release", " pre", "inf" };
-        if (snapshotMarkers.Any(m => version.Contains(m, StringComparison.OrdinalIgnoreCase)))
-            return true;
-
-        var snapshotPrefixes = new[] { "a", "b", "c", "rd" };
-        if (snapshotPrefixes.Any(p => version.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
-            return true;
-
-        if (version.Contains("-beta", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        return false;
-    }
-
-    private static bool IsNeoForgeSnapshot(string fullVersion)
-    {
-        if (string.IsNullOrEmpty(fullVersion))
-            return false;
-
-        if (fullVersion.Contains("-beta", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (fullVersion.Contains("-alpha.", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (fullVersion.Contains("+snapshot", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (fullVersion.Contains("+pre", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        return false;
-    }
-
-    private static bool IsQuiltSnapshot(string fullVersion)
-    {
-        if (string.IsNullOrEmpty(fullVersion))
-            return false;
-
-        if (fullVersion.Contains("-beta", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (fullVersion.Contains("-pre.", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (fullVersion.Contains("-rc.", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        return false;
-    }
+    // Статические методы TryParseMcVersion, IsSnapshot, IsNeoForgeSnapshot, IsQuiltSnapshot
+    // вынесены в общий класс McVersionHelper в Utilities.
+    // Используйте McVersionHelper.* вместо этих методов.
 
 
 
@@ -591,9 +452,10 @@ public partial class CreateServerPage : Page
             _isLoadingInProgress = false;
             _lastLoadedModLoader = null;
             _lastLoadedMcVersion = null;
-            _isFindingCompatibleVersion = false;
 
-            _currentModLoader = tag;
+            if (tag is not null)
+                _viewModel.SelectedModLoader = tag;
+            _viewModel.IsFindingCompatibleVersion = false;
 
             var isEnabled = tag is "Forge" or "NeoForge" or "Fabric" or "Quilt" or "Paper";
             LoaderVersionBox.IsEnabled = isEnabled;
@@ -626,9 +488,9 @@ public partial class CreateServerPage : Page
             return;
         }
 
-        if (_isFindingCompatibleVersion)
+        if (_viewModel.IsFindingCompatibleVersion)
         {
-            Logger.Info($"LoadLoaderVersions skipped: _isFindingCompatibleVersion=True", "CreateServerPage");
+            Logger.Info($"LoadLoaderVersions skipped: IsFindingCompatibleVersion=True", "CreateServerPage");
             return;
         }
 
@@ -661,13 +523,13 @@ public partial class CreateServerPage : Page
             var showSnapshots = ShowSnapshotsBox?.IsChecked ?? false;
             if (modLoaderType == "NeoForge" && !showSnapshots)
             {
-                versions = [.. versions.Where(v => !IsNeoForgeSnapshot(v))];
+                versions = [.. versions.Where(v => !McVersionHelper.IsNeoForgeSnapshot(v))];
                 Logger.Info($"Filtered NeoForge versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerPage");
             }
 
             if (modLoaderType == "Quilt" && !showSnapshots)
             {
-                versions = [.. versions.Where(v => !IsQuiltSnapshot(v))];
+                versions = [.. versions.Where(v => !McVersionHelper.IsQuiltSnapshot(v))];
                 Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerPage");
             }
 
@@ -690,6 +552,10 @@ public partial class CreateServerPage : Page
                     IsSelected = true
                 });
                 LoaderVersionBox.IsEnabled = false;
+
+                // Синхронизируем с ViewModel для валидации
+                _viewModel.LoaderVersions.Clear();
+                _viewModel.SelectedLoaderVersion = string.Empty;
                 return;
             }
 
@@ -707,6 +573,10 @@ public partial class CreateServerPage : Page
             {
                 LoaderVersionBox.Items.Add(new ComboBoxItem { Content = version });
             }
+
+            // Синхронизируем с ViewModel для валидации
+            _viewModel.LoaderVersions = new System.Collections.ObjectModel.ObservableCollection<string>(versions);
+            _viewModel.SelectedLoaderVersion = firstVersion;
         }
         catch (Exception ex)
         {
@@ -719,6 +589,10 @@ public partial class CreateServerPage : Page
                 IsSelected = true
             });
             LoaderVersionBox.IsEnabled = false;
+
+            // Синхронизируем с ViewModel для валидации
+            _viewModel.LoaderVersions.Clear();
+            _viewModel.SelectedLoaderVersion = string.Empty;
         }
         finally
         {
@@ -730,7 +604,7 @@ public partial class CreateServerPage : Page
 
     private async void McVersionBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_isInitializing || _isChangingSnapshots || _isFindingCompatibleVersion || _isChangingModLoader || McVersionBox == null || ModLoaderBox == null)
+        if (_isInitializing || _isChangingSnapshots || _viewModel.IsFindingCompatibleVersion || _isChangingModLoader || McVersionBox == null || ModLoaderBox == null)
         {
             Logger.Info($"McVersionBox_SelectionChanged skipped", "CreateServerPage");
             return;
@@ -739,7 +613,7 @@ public partial class CreateServerPage : Page
         if (ModLoaderBox.SelectedItem is ComboBoxItem item &&
             McVersionBox.SelectedItem is ComboBoxItem mcItem)
         {
-            var tag = _currentModLoader ?? item.Tag?.ToString();
+            var tag = _viewModel.SelectedModLoader ?? item.Tag?.ToString();
             var mcVersion = mcItem.Content?.ToString();
 
             if (!string.IsNullOrEmpty(tag) && !string.IsNullOrEmpty(mcVersion) &&

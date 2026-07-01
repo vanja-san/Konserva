@@ -305,10 +305,10 @@ public class McServerManagerTests : IDisposable
     #region StartServer Edge Cases
 
     [Fact]
-    public void StartServer_DoesNotThrow_WhenServerNotFound()
+    public async Task StartServer_DoesNotThrow_WhenServerNotFound()
     {
-        var action = () => _manager.StartServer("non-existent-id");
-        action.Should().NotThrow();
+        var action = async () => await _manager.StartServerAsync("non-existent-id");
+        await action.Should().NotThrowAsync();
     }
 
     [Fact]
@@ -319,11 +319,11 @@ public class McServerManagerTests : IDisposable
     }
 
     [Fact]
-    public void StopServer_DoesNotThrow_WhenServerNotRunning()
+    public async Task StopServer_DoesNotThrow_WhenServerNotRunning()
     {
         var server = _manager.CreateServer("Test", "1.21.1", new ModLoader { Type = ModLoaderType.Vanilla }, _testServerPath);
-        var action = () => _manager.StopServer(server.Id);
-        action.Should().NotThrow();
+        var action = async () => await _manager.StopServerAsync(server.Id);
+        await action.Should().NotThrowAsync();
     }
 
     [Fact]
@@ -335,10 +335,10 @@ public class McServerManagerTests : IDisposable
     }
 
     [Fact]
-    public void StopServer_DoesNotThrow_WhenIdNotFound()
+    public async Task StopServer_DoesNotThrow_WhenIdNotFound()
     {
-        var action = () => _manager.StopServer("non-existent-id");
-        action.Should().NotThrow();
+        var action = async () => await _manager.StopServerAsync("non-existent-id");
+        await action.Should().NotThrowAsync();
     }
 
     [Fact]

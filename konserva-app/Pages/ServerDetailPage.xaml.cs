@@ -30,11 +30,14 @@ public partial class ServerDetailPage : Page, IDisposable
     private CancellationTokenSource? _statusCts;
     private CancellationTokenSource? _errorResetCts;
 
-    /// <summary>
-    /// Конструктор для навигации через NavigationView (с параметром serverId)
-    /// </summary>
-    public ServerDetailPage()
+    private static readonly Brush SuccessBrush = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
+    private static readonly Brush WarningBrush = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
+    private static readonly Brush ErrorBrush = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
+    private static readonly Brush DefaultBrush = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33));
+
+    public ServerDetailPage(string? serverId = null)
     {
+        _serverId = serverId;
         _viewModel = Ioc.Default.GetService<ServerDetailViewModel>()
             ?? new ServerDetailViewModel(
                 Ioc.Default.GetService<IServerManager>()!,
@@ -51,23 +54,9 @@ public partial class ServerDetailPage : Page, IDisposable
         Unloaded += OnUnloaded;
     }
 
-    /// <summary>
-    /// Конструктор для прямой инициализации с serverId
-    /// </summary>
-    public ServerDetailPage(string serverId) : this()
-    {
-        _serverId = serverId;
-    }
-
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Получаем serverId из DataContext если не был установлен через конструктор
-        if (_serverId == null && DataContext is string dataContextId)
-        {
-            _serverId = dataContextId;
-        }
-
-        // Передаём serverId в ViewModel
+        // Передаём serverId в ViewModel (устанавливается через конструктор или DataContext)
         _viewModel.ServerId = _serverId;
 
         // Подписываемся на событие ошибки запуска
@@ -878,39 +867,72 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private async void CheckUpnpButton_Click(object sender, RoutedEventArgs e)
     {
+        // Скрываем предыдущий результат перед новой проверкой
+        UpnpCheckResultText.Visibility = Visibility.Collapsed;
+        UpnpCheckResultIcon.Visibility = Visibility.Collapsed;
+
         try
         {
+            CheckUpnpProgress.Visibility = Visibility.Visible;
             CheckUpnpButton.IsEnabled = false;
-            CheckUpnpButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Checking");
+            CheckUpnpText.Text = LocalizationManager.Get("ServerDetail_Upnp_Checking");
 
             var isAvailable = await _viewModel.CheckUpnpAvailabilityAsync();
-            CheckUpnpButton.Content = isAvailable
-                ? LocalizationManager.Get("ServerDetail_Upnp_Available")
-                : LocalizationManager.Get("ServerDetail_Upnp_NotAvailable");
+
+            CheckUpnpProgress.Visibility = Visibility.Collapsed;
+            CheckUpnpButton.IsEnabled = true;
+            CheckUpnpText.Text = LocalizationManager.Get("ServerDetail_Upnp_Check");
+
+            if (isAvailable)
+            {
+                UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_Available");
+                UpnpCheckResultText.Foreground = SuccessBrush;
+            }
+            else
+            {
+                UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_NotAvailable");
+                UpnpCheckResultText.Foreground = WarningBrush;
+            }
+
+            UpnpCheckResultText.Visibility = Visibility.Visible;
+            UpnpCheckResultIcon.Visibility = Visibility.Collapsed;
         }
         catch (Exception ex)
         {
             Logger.Error($"UPnP check error: {ex.Message}", ex, "ServerDetailPage");
-            CheckUpnpButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Error");
+            CheckUpnpProgress.Visibility = Visibility.Collapsed;
+            CheckUpnpButton.IsEnabled = true;
+            CheckUpnpText.Text = LocalizationManager.Get("ServerDetail_Upnp_Check");
+
+            UpnpCheckResultText.Visibility = Visibility.Collapsed;
+            UpnpCheckResultIcon.Symbol = SymbolRegular.ErrorCircle24;
+            UpnpCheckResultIcon.ToolTip = new ToolTip
+            {
+                Content = $"UPnP: {ex.Message}",
+                FontSize = 14
+            };
+            UpnpCheckResultIcon.Foreground = ErrorBrush;
+            UpnpCheckResultIcon.Visibility = Visibility.Visible;
         }
         finally
         {
-            _ = ResetCheckUpnpButtonAsync();
+            _ = ResetCheckUpnpResultAsync();
         }
     }
 
     /// <summary>
-    /// Сбрасывает кнопку UPnP через 5 секунд.
+    /// Сбрасывает результат проверки UPnP через 5 секунд.
     /// </summary>
-    private async Task ResetCheckUpnpButtonAsync()
+    private async Task ResetCheckUpnpResultAsync()
     {
         try
         {
             await Task.Delay(5000);
             Dispatcher.Invoke(() =>
             {
-                CheckUpnpButton.IsEnabled = true;
-                CheckUpnpButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Check");
+                UpnpCheckResultText.Visibility = Visibility.Collapsed;
+                UpnpCheckResultText.Text = string.Empty;
+                UpnpCheckResultText.Foreground = DefaultBrush;
             });
         }
         catch
@@ -920,62 +942,85 @@ public partial class ServerDetailPage : Page, IDisposable
     }
 
     /// <summary>
-    /// Проверка проброса порта через UPnP. Результат показывается прямо на кнопке.
+    /// Проверка проброса порта через UPnP. Результат показывается слева от кнопок.
     /// </summary>
     private async void CheckPortButton_Click(object sender, RoutedEventArgs e)
     {
         if (_server == null)
             return;
 
+        // Скрываем предыдущий результат перед новой проверкой
+        UpnpCheckResultText.Visibility = Visibility.Collapsed;
+        UpnpCheckResultIcon.Visibility = Visibility.Collapsed;
+
         try
         {
+            CheckPortProgress.Visibility = Visibility.Visible;
             CheckPortButton.IsEnabled = false;
-            CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Checking");
+            CheckPortText.Text = LocalizationManager.Get("ServerDetail_Upnp_Checking");
 
             var port = _server.Port;
             var isForwarded = await _viewModel.CheckPortMappingAsync(port);
 
+            CheckPortProgress.Visibility = Visibility.Collapsed;
+            CheckPortButton.IsEnabled = true;
+            CheckPortText.Text = LocalizationManager.Get("ServerDetail_Upnp_CheckPort");
+
             if (isForwarded)
             {
-                CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Port_Open");
-                CheckPortButton.Appearance = ControlAppearance.Success;
-
+                UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_Port_Open");
+                UpnpCheckResultText.Foreground = SuccessBrush;
                 UpdateServerAddressDisplay();
             }
             else
             {
-                CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Port_Closed");
-                CheckPortButton.Appearance = ControlAppearance.Caution;
+                UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_Port_Closed");
+                UpnpCheckResultText.Foreground = ErrorBrush;
 
                 // Скрываем адрес, если порт закрыт
                 UpnpAddressText.Visibility = Visibility.Collapsed;
                 CopyAddressButton.Visibility = Visibility.Collapsed;
             }
+
+            UpnpCheckResultText.Visibility = Visibility.Visible;
+            UpnpCheckResultIcon.Visibility = Visibility.Collapsed;
         }
         catch (Exception ex)
         {
             Logger.Error($"UPnP port check error: {ex.Message}", ex, "ServerDetailPage");
-            CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_Error");
+            CheckPortProgress.Visibility = Visibility.Collapsed;
+            CheckPortButton.IsEnabled = true;
+            CheckPortText.Text = LocalizationManager.Get("ServerDetail_Upnp_CheckPort");
+
+            UpnpCheckResultText.Visibility = Visibility.Collapsed;
+            UpnpCheckResultIcon.Symbol = SymbolRegular.ErrorCircle24;
+            UpnpCheckResultIcon.ToolTip = new ToolTip
+            {
+                Content = $"UPnP: {ex.Message}",
+                FontSize = 14
+            };
+            UpnpCheckResultIcon.Foreground = ErrorBrush;
+            UpnpCheckResultIcon.Visibility = Visibility.Visible;
         }
         finally
         {
-            _ = ResetCheckPortButtonAsync();
+            _ = ResetCheckPortResultAsync();
         }
     }
 
     /// <summary>
-    /// Сбрасывает кнопку проверки порта через 5 секунд.
+    /// Сбрасывает результат проверки порта через 5 секунд.
     /// </summary>
-    private async Task ResetCheckPortButtonAsync()
+    private async Task ResetCheckPortResultAsync()
     {
         try
         {
             await Task.Delay(5000);
             Dispatcher.Invoke(() =>
             {
-                CheckPortButton.IsEnabled = true;
-                CheckPortButton.Appearance = ControlAppearance.Primary;
-                CheckPortButton.Content = LocalizationManager.Get("ServerDetail_Upnp_CheckPort");
+                UpnpCheckResultText.Visibility = Visibility.Collapsed;
+                UpnpCheckResultText.Text = string.Empty;
+                UpnpCheckResultText.Foreground = DefaultBrush;
             });
         }
         catch
