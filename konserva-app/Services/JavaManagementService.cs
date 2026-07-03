@@ -453,6 +453,44 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
+    /// Scans the system for all installed Java runtimes and adds new ones to config.
+    /// Skips paths already present in the configuration.
+    /// </summary>
+    public List<JavaInstallation> ScanAndAddJava()
+    {
+        var config = configService.GetConfig();
+        var foundJava = FindInstalledJava();
+        var addedCount = 0;
+
+        foreach (var java in foundJava)
+        {
+            // Skip if already in config (by path)
+            if (config.JavaInstallations.Any(j => string.Equals(j.Path, java.Path, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            // If this is the first Java, make it default
+            if (config.JavaInstallations.Count == 0 && addedCount == 0)
+                java.IsDefault = true;
+
+            config.JavaInstallations.Add(java);
+            addedCount++;
+        }
+
+        if (addedCount > 0)
+        {
+            // If a default Java was added, update DefaultJavaId
+            var newDefault = config.JavaInstallations.FirstOrDefault(j => j.IsDefault);
+            if (newDefault != null)
+                config.DefaultJavaId = newDefault.Id;
+
+            configService.SaveConfig(config);
+        }
+
+        Logger.Info($"ScanAndAddJava: found {foundJava.Count} total, added {addedCount} new", "JavaManagementService");
+        return [.. config.JavaInstallations];
+    }
+
+    /// <summary>
     /// Получение совместимой Java версии для сервера
     /// </summary>
     public async Task<JavaInstallation?> GetCompatibleJavaAsync(

@@ -202,6 +202,61 @@ public partial class SettingsPage : Page
         }
     }
 
+    private async void ScanJava_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            ScanJavaButton.IsEnabled = false;
+            ScanJavaButton.ToolTip = LocalizationManager.Get("Settings_Java_Scanning");
+            JavaScanResultText.Visibility = Visibility.Collapsed;
+
+            var totalFound = await Task.Run(() => _viewModel.ScanJava());
+
+            RefreshUI();
+
+            if (totalFound > 0)
+            {
+                JavaScanResultText.Text = LocalizationManager.Get("Settings_Java_Scan_Success", totalFound.ToString());
+                JavaScanResultText.Visibility = Visibility.Visible;
+
+                // Auto-hide after 5 seconds
+                _ = AutoHideJavaScanResultAsync();
+            }
+            else
+            {
+                JavaScanResultText.Text = LocalizationManager.Get("Settings_Java_Scan_NoneFound");
+                JavaScanResultText.Visibility = Visibility.Visible;
+
+                _ = AutoHideJavaScanResultAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"ScanJava_Click error: {ex.Message}", ex, "SettingsPage");
+            JavaScanResultText.Text = LocalizationManager.Get("Settings_Java_Scan_Error");
+            JavaScanResultText.Visibility = Visibility.Visible;
+            _ = AutoHideJavaScanResultAsync();
+        }
+        finally
+        {
+            ScanJavaButton.IsEnabled = true;
+            ScanJavaButton.ToolTip = LocalizationManager.Get("Settings_Java_Scan");
+        }
+    }
+
+    private async Task AutoHideJavaScanResultAsync()
+    {
+        try
+        {
+            await Task.Delay(Constants.InfoBarAutoCloseDelayMs);
+            Dispatcher.Invoke(() => JavaScanResultText.Visibility = Visibility.Collapsed);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"AutoHideJavaScanResultAsync error: {ex.Message}", "SettingsPage");
+        }
+    }
+
     private async void AddJava_Click(object sender, RoutedEventArgs e)
     {
         try

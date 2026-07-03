@@ -534,12 +534,22 @@ public partial class MainWindow : FluentWindow, IDisposable
 
     private void OnUpdateCheckCompleted(UpdateInfo updateInfo)
     {
-        Dispatcher.Invoke(() =>
+        Dispatcher.Invoke(async () =>
         {
             UpdateProgressRing.Visibility = Visibility.Collapsed;
-            UpdateCheckmarkIcon.Visibility = !updateInfo.IsAvailable
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+
+            if (!updateInfo.IsAvailable)
+            {
+                UpdateCheckmarkIcon.Visibility = Visibility.Visible;
+
+                // Auto-hide checkmark after 5 seconds
+                await Task.Delay(5000);
+                UpdateCheckmarkIcon.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                UpdateCheckmarkIcon.Visibility = Visibility.Collapsed;
+            }
         });
     }
 

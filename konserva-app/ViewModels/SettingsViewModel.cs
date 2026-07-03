@@ -183,6 +183,16 @@ public partial class SettingsViewModel : ObservableObject
     return removed;
   }
 
+  /// <summary>
+  /// Сканирует систему на наличие установленных Java и добавляет новые
+  /// </summary>
+  public int ScanJava()
+  {
+    var installations = _javaService.ScanAndAddJava();
+    JavaInstallations = new System.Collections.ObjectModel.ObservableCollection<JavaInstallation>(installations);
+    return installations.Count;
+  }
+
   // ─── Проверка обновлений ────────────────────────────────────────
 
   /// <summary>
