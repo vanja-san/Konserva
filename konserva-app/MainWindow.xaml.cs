@@ -42,6 +42,8 @@ public partial class MainWindow : FluentWindow, IDisposable
         _updateService = updateService ?? throw new ArgumentNullException(nameof(updateService));
 
         _updateService.UpdateAvailable += OnUpdateAvailable;
+        _updateService.CheckStarted += OnUpdateCheckStarted;
+        _updateService.CheckCompleted += OnUpdateCheckCompleted;
 
         _serverManager.OnServersChanged += UpdateStatusBar;
         _serverManager.OnServersChanged += UpdateTrayStatus;
@@ -327,16 +329,6 @@ public partial class MainWindow : FluentWindow, IDisposable
                 ? $"{totalRamMB / 1024.0:0.#} GB"
                 : $"{totalRamMB} MB";
 
-            var config = _config.GetConfig();
-            StatusJava.Text = !string.IsNullOrEmpty(config.DefaultJavaId)
-                ? config.JavaInstallations.FirstOrDefault(j => j.Id == config.DefaultJavaId) switch
-                {
-                    null => $"{config.JavaInstallations.Count} {LocalizationManager.Get("MainWindow_JavaVersions")}",
-                    var java => java.DisplayName
-                }
-                : config.JavaInstallations.Count > 0
-                    ? $"{config.JavaInstallations.Count} {LocalizationManager.Get("MainWindow_JavaVersions")}"
-                    : LocalizationManager.Get("StatusBar_Java_NotConfigured");
         }
         finally
         {
@@ -347,10 +339,20 @@ public partial class MainWindow : FluentWindow, IDisposable
     // ===== Tray =====
 
     /// <summary>
-    /// При закрытии окна сворачиваем в трей вместо выхода.
+    /// При сворачивании окна — в трей в зависимости от режима.
     /// </summary>
     private void MainWindow_StateChanged(object? sender, EventArgs e)
     {
+        if (WindowState == WindowState.Minimized)
+        {
+            var config = _config.GetConfig();
+            var mode = Enum.TryParse<MinimizeToTrayMode>(config.MinimizeToTrayMode, out var m) ? m : MinimizeToTrayMode.OnClose;
+            if (mode is MinimizeToTrayMode.OnMinimize or MinimizeToTrayMode.Always)
+            {
+                Hide();
+            }
+        }
+
         UpdateTrayIconVisibility();
     }
 
@@ -365,26 +367,19 @@ public partial class MainWindow : FluentWindow, IDisposable
         try
         {
             var config = _config.GetConfig();
+            var mode = Enum.TryParse<MinimizeToTrayMode>(config.MinimizeToTrayMode, out var m) ? m : MinimizeToTrayMode.None;
+            var isTrayActive = mode != MinimizeToTrayMode.None;
 
-            if (config.ShowTrayIconAlways)
+            // Иконка показывается только если трей активен И окно свёрнуто или скрыто
+            if (isTrayActive && (WindowState == WindowState.Minimized || !IsVisible))
             {
-                // Всегда показываем иконку
                 if (!_trayIcon.IsRegistered)
                     _trayIcon.Register();
             }
             else
             {
-                // Иконка только когда окно свёрнуто или скрыто
-                if (WindowState == WindowState.Minimized || !IsVisible)
-                {
-                    if (!_trayIcon.IsRegistered)
-                        _trayIcon.Register();
-                }
-                else
-                {
-                    if (_trayIcon.IsRegistered)
-                        _trayIcon.Unregister();
-                }
+                if (_trayIcon.IsRegistered)
+                    _trayIcon.Unregister();
             }
         }
         catch (Exception ex)
@@ -399,9 +394,10 @@ public partial class MainWindow : FluentWindow, IDisposable
         if (_isExiting)
             return;
 
-        // Сворачиваем в трей только если настройка включена
+        // Сворачиваем в трей при закрытии в зависимости от режима
         var config = _config.GetConfig();
-        if (config.MinimizeToTray)
+        var mode = Enum.TryParse<MinimizeToTrayMode>(config.MinimizeToTrayMode, out var m) ? m : MinimizeToTrayMode.OnClose;
+        if (mode is MinimizeToTrayMode.OnClose or MinimizeToTrayMode.Always)
         {
             e.Cancel = true;
             Hide();
@@ -504,6 +500,8 @@ public partial class MainWindow : FluentWindow, IDisposable
         StopStatusBarTimer();
         _updateService.Stop();
         _updateService.UpdateAvailable -= OnUpdateAvailable;
+        _updateService.CheckStarted -= OnUpdateCheckStarted;
+        _updateService.CheckCompleted -= OnUpdateCheckCompleted;
         _serverManager.OnServersChanged -= UpdateStatusBar;
         _serverManager.OnServersChanged -= UpdateTrayStatus;
 
@@ -523,6 +521,26 @@ public partial class MainWindow : FluentWindow, IDisposable
     private void OnUpdateAvailable(UpdateInfo updateInfo)
     {
         Dispatcher.Invoke(() => UpdateNotificationControl.Show(updateInfo));
+    }
+
+    private void OnUpdateCheckStarted()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            UpdateProgressRing.Visibility = Visibility.Visible;
+            UpdateCheckmarkIcon.Visibility = Visibility.Collapsed;
+        });
+    }
+
+    private void OnUpdateCheckCompleted(UpdateInfo updateInfo)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            UpdateProgressRing.Visibility = Visibility.Collapsed;
+            UpdateCheckmarkIcon.Visibility = !updateInfo.IsAvailable
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        });
     }
 
     /// <summary>

@@ -20,6 +20,8 @@ public sealed class UpdateService : IUpdateService, IDisposable
   private static readonly TimeSpan MinFetchInterval = TimeSpan.FromMinutes(15);
 
   public event Action<UpdateInfo>? UpdateAvailable;
+  public event Action? CheckStarted;
+  public event Action<UpdateInfo>? CheckCompleted;
 
   public UpdateService(IConfigService config, IUpdateChecker updateChecker)
   {
@@ -47,7 +49,9 @@ public sealed class UpdateService : IUpdateService, IDisposable
   public async Task<UpdateInfo> ForceCheckAsync()
   {
     Logger.Info("Manual update check...", "UpdateService");
+    CheckStarted?.Invoke();
     var updateInfo = await FetchAndSaveAsync(force: true);
+    CheckCompleted?.Invoke(updateInfo);
 
     if (updateInfo.IsAvailable)
     {
@@ -96,7 +100,9 @@ public sealed class UpdateService : IUpdateService, IDisposable
     try
     {
       // Стартовая проверка (in-memory throttle не даст вызвать чаще 15 мин)
-      await FetchAndSaveAsync();
+      CheckStarted?.Invoke();
+      var updateInfo = await FetchAndSaveAsync();
+      CheckCompleted?.Invoke(updateInfo);
 
       var config = _config.GetConfig();
 
@@ -128,7 +134,9 @@ public sealed class UpdateService : IUpdateService, IDisposable
 
           if (await timer!.WaitForNextTickAsync(ct))
           {
-            await FetchAndSaveAsync();
+            CheckStarted?.Invoke();
+            var result = await FetchAndSaveAsync();
+            CheckCompleted?.Invoke(result);
           }
         }
       }

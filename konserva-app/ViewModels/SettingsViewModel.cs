@@ -40,10 +40,7 @@ public partial class SettingsViewModel : ObservableObject
   private int _updateIntervalHours = 24;
 
   [ObservableProperty]
-  private bool _minimizeToTray = true;
-
-  [ObservableProperty]
-  private bool _showTrayIconAlways;
+  private string _minimizeToTrayMode = "None";
 
   [ObservableProperty]
   private string _theme = "System";
@@ -87,8 +84,7 @@ public partial class SettingsViewModel : ObservableObject
     JavaInstallations = new System.Collections.ObjectModel.ObservableCollection<JavaInstallation>(config.JavaInstallations);
     CheckUpdatesScheduled = config.CheckUpdates;
     UpdateIntervalHours = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
-    MinimizeToTray = config.MinimizeToTray;
-    ShowTrayIconAlways = config.ShowTrayIconAlways;
+    MinimizeToTrayMode = config.MinimizeToTrayMode;
     Theme = config.Theme ?? "System";
     Language = config.Language ?? "System";
     DownloadSource = config.DownloadSource ?? "VanillaApi";
@@ -108,8 +104,7 @@ public partial class SettingsViewModel : ObservableObject
 
     config.CheckUpdates = CheckUpdatesScheduled;
     config.UpdateCheckIntervalHours = UpdateIntervalHours;
-    config.MinimizeToTray = MinimizeToTray;
-    config.ShowTrayIconAlways = ShowTrayIconAlways;
+    config.MinimizeToTrayMode = MinimizeToTrayMode;
     config.DownloadSource = DownloadSource;
     config.Theme = Theme;
 

@@ -62,11 +62,12 @@ namespace Konserva.Services
                 var extractDir = Path.Combine(tempDir, "extracted");
                 await ZipFile.ExtractToDirectoryAsync(zipPath, extractDir, CancellationToken.None);
 
-                // Шаг 4: Создание батника
+                // Шаг 4: Создание батника (вне tempDir, чтобы можно было удалить всю папку)
                 UpdateLog("Creating update script...");
 
                 var appDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
-                var batchPath = CreateUpdateScript(tempDir, appDir);
+                var batchPath = Path.Combine(Path.GetTempPath(), $"KonservaUpdate_{Guid.NewGuid():N}.bat");
+                CreateUpdateScript(tempDir, appDir, batchPath);
 
                 // Шаг 5: Запуск батника и закрытие
                 progress?.Report(100);
@@ -97,16 +98,17 @@ namespace Konserva.Services
         }
 
         /// <summary>
-        /// Создаёт update.bat для замены файлов.
+        /// Создаёт batch-скрипт для замены файлов.
         /// Пути экранируются от batch-метасимволов (&, |, %, ^, ! и др.).
+        /// Батник создаётся вне tempDir, чтобы можно было удалить всю временную папку целиком.
         /// </summary>
-        private string CreateUpdateScript(string tempDir, string appDir)
+        private void CreateUpdateScript(string tempDir, string appDir, string batchPath)
         {
             var extractedDir = Path.Combine(tempDir, "extracted");
-            var batchPath = Path.Combine(tempDir, "update.bat");
 
             // Санитизируем пути для batch-скриптов — экранируем &, |, %, ^, ! и др.
-            var tempEscaped = PathValidator.SanitizeForBatch(extractedDir);
+            var extractedEscaped = PathValidator.SanitizeForBatch(extractedDir);
+            var tempDirEscaped = PathValidator.SanitizeForBatch(tempDir);
             var appEscaped = PathValidator.SanitizeForBatch(appDir);
 
             var batchContent = $@"@echo off
@@ -119,7 +121,7 @@ REM Delete i18n folder (old translations may have changed keys)
 if exist ""{appEscaped}\i18n"" rd /s /q ""{appEscaped}\i18n""
 
 REM Copy all files and folders except Servers and config.json
-for /D %%D in (""{tempEscaped}\*"") do (
+for /D %%D in (""{extractedEscaped}\*"") do (
     set ""folderName=%%~nxD""
     if /i not ""!folderName!""==""Servers"" (
         xcopy ""%%D"" ""{appEscaped}\%%~nxD\"" /E /Y /I /Q >nul
@@ -127,28 +129,30 @@ for /D %%D in (""{tempEscaped}\*"") do (
 )
 
 REM Copy individual files (skip config.json)
-for %%F in (""{tempEscaped}\*.*"") do (
+for %%F in (""{extractedEscaped}\*.*"") do (
     set ""fileName=%%~nxF""
     if /i not ""!fileName!""==""config.json"" (
         copy /y ""%%F"" ""{appEscaped}\"" >nul
     )
 )
 
-REM Clean up temp
-rd /s /q ""{tempEscaped}""
-
 REM Wait for copy to complete
 timeout /t 1 /nobreak >nul
 
+REM Delete entire temp update folder (zip + extracted + leftovers)
+if exist ""{tempDirEscaped}"" rd /s /q ""{tempDirEscaped}""
+
 REM Restart application
 start """" ""{appEscaped}\Konserva.exe""
+
+REM Self-delete this batch file
+(goto) 2>nul & del ""%~f0""
 
 endlocal
 exit
 ";
 
             File.WriteAllText(batchPath, batchContent, new System.Text.UTF8Encoding(true));
-            return batchPath;
         }
 
         /// <summary>

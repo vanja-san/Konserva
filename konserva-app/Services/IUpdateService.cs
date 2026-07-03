@@ -14,6 +14,16 @@ public interface IUpdateService
   event Action<UpdateInfo>? UpdateAvailable;
 
   /// <summary>
+  /// Событие: началась проверка обновлений (для UI — показать ProgressRing).
+  /// </summary>
+  event Action? CheckStarted;
+
+  /// <summary>
+  /// Событие: проверка обновлений завершена (для UI — скрыть ProgressRing).
+  /// </summary>
+  event Action<UpdateInfo>? CheckCompleted;
+
+  /// <summary>
   /// Запускает фоновый цикл авто-проверки обновлений.
   /// </summary>
   void Start();

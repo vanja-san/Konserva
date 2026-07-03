@@ -208,35 +208,7 @@
                         <Rectangle Height="1"
                                 Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
 
-                        <!--  Карточка: Сворачивать в трей (середина)  -->
-                        <Border
-                            Padding="16,12"
-                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
-                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
-                            BorderThickness="1,0,1,0"
-                            CornerRadius="0">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <StackPanel Grid.Column="0"
-                                        VerticalAlignment="Center">
-                                    <ui:TextBlock Style="{StaticResource SettingTitle}"
-                                            Text="{loc:Loc Settings_MinimizeToTray}"/>
-                                    <ui:TextBlock Style="{StaticResource SettingDescription}"
-                                            Text="{loc:Loc Settings_MinimizeToTray_Desc}"/>
-                                </StackPanel>
-                                <CheckBox
-                                    x:Name="MinimizeToTrayBox"
-                                    Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Checked="MinimizeToTrayBox_Checked"
-                                    Unchecked="MinimizeToTrayBox_Unchecked"/>
-                            </Grid>
-                        </Border>
-
-                        <!--  Разделитель  -->
-                        <Rectangle Height="1"
-                                Fill="{ui:ThemeResource ControlElevationBorderBrush}"/>
-
-                        <!--  Карточка: Иконка в трее всегда (нижняя — скругление снизу)  -->
+                        <!--  Карточка: Режим сворачивания в трей (нижняя — скругление снизу)  -->
                         <Border
                             Padding="16,12"
                             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -247,16 +219,40 @@
                                 <StackPanel Grid.Column="0"
                                         VerticalAlignment="Center">
                                     <ui:TextBlock Style="{StaticResource SettingTitle}"
-                                            Text="{loc:Loc Settings_ShowTrayIcon}"/>
+                                            Text="{loc:Loc Settings_MinimizeToTray}"/>
                                     <ui:TextBlock Style="{StaticResource SettingDescription}"
-                                            Text="{loc:Loc Settings_ShowTrayIcon_Desc}"/>
+                                            Text="{loc:Loc Settings_MinimizeToTray_Desc}"/>
                                 </StackPanel>
-                                <CheckBox
-                                    x:Name="ShowTrayIconBox"
+                                <ui:DropDownButton
+                                    x:Name="MinimizeToTrayModeButton"
                                     Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Checked="ShowTrayIconBox_Checked"
-                                    Unchecked="ShowTrayIconBox_Unchecked"/>
+                                    Margin="16,0,0,0"
+                                    Content="{loc:Loc Settings_MinimizeToTray_None}">
+                                    <ui:DropDownButton.Flyout>
+                                        <ContextMenu>
+                                            <MenuItem
+                                                x:Name="MinimizeToTrayNoneItem"
+                                                Click="MinimizeToTrayModeMenuItem_Click"
+                                                Header="{loc:Loc Settings_MinimizeToTray_None}"
+                                                Tag="None"/>
+                                            <MenuItem
+                                                x:Name="MinimizeToTrayOnCloseItem"
+                                                Click="MinimizeToTrayModeMenuItem_Click"
+                                                Header="{loc:Loc Settings_MinimizeToTray_OnClose}"
+                                                Tag="OnClose"/>
+                                            <MenuItem
+                                                x:Name="MinimizeToTrayOnMinimizeItem"
+                                                Click="MinimizeToTrayModeMenuItem_Click"
+                                                Header="{loc:Loc Settings_MinimizeToTray_OnMinimize}"
+                                                Tag="OnMinimize"/>
+                                            <MenuItem
+                                                x:Name="MinimizeToTrayAlwaysItem"
+                                                Click="MinimizeToTrayModeMenuItem_Click"
+                                                Header="{loc:Loc Settings_MinimizeToTray_Always}"
+                                                Tag="Always"/>
+                                        </ContextMenu>
+                                    </ui:DropDownButton.Flyout>
+                                </ui:DropDownButton>
                             </Grid>
                         </Border>
                     </StackPanel>
@@ -409,7 +405,6 @@
                                     x:Name="ThemeComboBox"
                                     Grid.Column="1"
                                     HorizontalAlignment="Left"
-                                    VerticalAlignment="Center"
                                     ContextMenu="{x:Null}"
                                     SelectionChanged="ThemeComboBox_SelectionChanged">
                                     <ComboBoxItem Content="{loc:Loc Settings_Theme_System}"
@@ -444,7 +439,6 @@
                                 <ComboBox
                                     x:Name="LanguageComboBox"
                                     Grid.Column="1"
-                                    VerticalAlignment="Center"
                                     ContextMenu="{x:Null}"
                                     SelectionChanged="LanguageComboBox_SelectionChanged">
                                     <ComboBoxItem Content="{loc:Loc Settings_Language_System}"
@@ -485,7 +479,6 @@
                                 <ComboBox
                                     x:Name="DownloadSourceComboBox"
                                     Grid.Column="1"
-                                    VerticalAlignment="Center"
                                     ContextMenu="{x:Null}"
                                     SelectionChanged="DownloadSourceComboBox_SelectionChanged">
                                     <ComboBoxItem Content="{loc:Loc Settings_DownloadSource_VanillaApi}"
@@ -539,7 +532,6 @@
                                         <ui:SymbolIcon
                                             x:Name="UpToDateIcon"
                                             Margin="0,0,6,0"
-                                            VerticalAlignment="Center"
                                             FontSize="16"
                                             Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
                                             Symbol="CheckmarkCircle24"

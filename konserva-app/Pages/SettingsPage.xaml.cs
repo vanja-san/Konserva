@@ -63,8 +63,8 @@ public partial class SettingsPage : Page
         UpdateCheckModeVisibility(_viewModel.CheckUpdatesScheduled);
         UpdateIntervalButton.Content = _viewModel.UpdateIntervalText;
 
-        MinimizeToTrayBox.IsChecked = _viewModel.MinimizeToTray;
-        ShowTrayIconBox.IsChecked = _viewModel.ShowTrayIconAlways;
+        MinimizeToTrayModeButton.Content = GetMinimizeToTrayModeText(_viewModel.MinimizeToTrayMode);
+        UpdateMinimizeToTrayMenuChecks(_viewModel.MinimizeToTrayMode);
 
         // Загрузка темы
         if (!ThemeComboBox.SelectItemByTag(_viewModel.Theme))
@@ -106,8 +106,7 @@ public partial class SettingsPage : Page
             // Синхронизируем UI → ViewModel перед сохранением
             _viewModel.CheckUpdatesScheduled = CheckUpdatesScheduledItem.IsChecked;
             _viewModel.UpdateIntervalHours = ParseIntervalFromButton();
-            _viewModel.MinimizeToTray = MinimizeToTrayBox.IsChecked ?? true;
-            _viewModel.ShowTrayIconAlways = ShowTrayIconBox.IsChecked ?? false;
+            _viewModel.MinimizeToTrayMode = GetSelectedMinimizeToTrayMode();
 
             if (DownloadSourceComboBox.SelectedItem is ComboBoxItem downloadItem)
                 _viewModel.DownloadSource = (string)downloadItem.Tag;
@@ -314,26 +313,52 @@ public partial class SettingsPage : Page
         UpdateIntervalCard.Visibility = visibility;
     }
 
-    private void MinimizeToTrayBox_Checked(object sender, RoutedEventArgs e)
+    private void MinimizeToTrayModeMenuItem_Click(object sender, RoutedEventArgs e)
     {
-        AutoSaveSettings();
+        if (sender is System.Windows.Controls.MenuItem item && item.Tag is string tag)
+        {
+            // Обновляем UI
+            MinimizeToTrayModeButton.Content = GetMinimizeToTrayModeText(tag);
+            UpdateMinimizeToTrayMenuChecks(tag);
+
+            // Сохраняем
+            _viewModel.MinimizeToTrayMode = tag;
+            AutoSaveSettings();
+        }
     }
 
-    private void MinimizeToTrayBox_Unchecked(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Возвращает локализованный текст для указанного режима трея.
+    /// </summary>
+    private string GetMinimizeToTrayModeText(string mode) => mode switch
     {
-        AutoSaveSettings();
+        "None" => LocalizationManager.Get("Settings_MinimizeToTray_None"),
+        "OnClose" => LocalizationManager.Get("Settings_MinimizeToTray_OnClose"),
+        "OnMinimize" => LocalizationManager.Get("Settings_MinimizeToTray_OnMinimize"),
+        "Always" => LocalizationManager.Get("Settings_MinimizeToTray_Always"),
+        _ => LocalizationManager.Get("Settings_MinimizeToTray_OnClose"),
+    };
+
+    /// <summary>
+    /// Обновляет галочки в меню выбора режима трея.
+    /// </summary>
+    private void UpdateMinimizeToTrayMenuChecks(string mode)
+    {
+        MinimizeToTrayNoneItem.IsChecked = mode == "None";
+        MinimizeToTrayOnCloseItem.IsChecked = mode == "OnClose";
+        MinimizeToTrayOnMinimizeItem.IsChecked = mode == "OnMinimize";
+        MinimizeToTrayAlwaysItem.IsChecked = mode == "Always";
     }
 
-    private void ShowTrayIconBox_Checked(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Возвращает выбранный режим трея по галочкам в меню.
+    /// </summary>
+    private string GetSelectedMinimizeToTrayMode()
     {
-        AutoSaveSettings();
-        Ioc.Default.GetService<MainWindow>()?.UpdateTrayIconVisibility();
-    }
-
-    private void ShowTrayIconBox_Unchecked(object sender, RoutedEventArgs e)
-    {
-        AutoSaveSettings();
-        Ioc.Default.GetService<MainWindow>()?.UpdateTrayIconVisibility();
+        if (MinimizeToTrayAlwaysItem.IsChecked) return "Always";
+        if (MinimizeToTrayOnMinimizeItem.IsChecked) return "OnMinimize";
+        if (MinimizeToTrayOnCloseItem.IsChecked) return "OnClose";
+        return "None";
     }
 
     private void UpdateIntervalMenuItem_Click(object sender, RoutedEventArgs e)

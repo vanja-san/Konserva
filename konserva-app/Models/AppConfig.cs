@@ -46,14 +46,9 @@ public class AppConfig
     public int UpdateCheckIntervalHours { get; set; } = 24;
 
     /// <summary>
-    /// Сворачивать в трей при закрытии окна
+    /// Режим сворачивания в трей: None, OnClose, OnMinimize, Always
     /// </summary>
-    public bool MinimizeToTray { get; set; } = true;
-
-    /// <summary>
-    /// Показывать иконку в трее всегда (даже когда окно развёрнуто)
-    /// </summary>
-    public bool ShowTrayIconAlways { get; set; } = false;
+    public string MinimizeToTrayMode { get; set; } = "None";
 
     /// <summary>
     /// Источник загрузки: VanillaApi (официальный) или BMCLAPI (зеркало)
