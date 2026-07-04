@@ -344,8 +344,8 @@ public class StatusToBrushConverterTests
     [InlineData("Starting", "#FFF59E0B")]
     [InlineData("Stopping", "#FFF59E0B")]
     [InlineData("Error", "#FFEF4444")]
-    [InlineData("Stopped", "#FF333333")]
-    [InlineData("Unknown", "#FF333333")]
+    [InlineData("Stopped", "#00FFFFFF")]
+    [InlineData("Unknown", "#00FFFFFF")]
     public void Convert_Status_ReturnsCorrectBrush(string status, string expectedColor)
     {
         var result = _converter.Convert(status, typeof(Brush), null, CultureInfo.InvariantCulture);
@@ -361,7 +361,7 @@ public class StatusToBrushConverterTests
         var result = _converter.Convert(null, typeof(Brush), null, CultureInfo.InvariantCulture);
         result.Should().BeOfType<SolidColorBrush>();
         var brush = (SolidColorBrush)result;
-        brush.Color.ToString().Should().Be("#FF333333");
+        brush.Color.ToString().Should().Be("#00FFFFFF");
     }
 
     [Fact]
@@ -370,7 +370,7 @@ public class StatusToBrushConverterTests
         var result = _converter.Convert(42, typeof(Brush), null, CultureInfo.InvariantCulture);
         result.Should().BeOfType<SolidColorBrush>();
         var brush = (SolidColorBrush)result;
-        brush.Color.ToString().Should().Be("#FF333333");
+        brush.Color.ToString().Should().Be("#00FFFFFF");
     }
 
     [Fact]
