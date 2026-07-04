@@ -5,20 +5,10 @@
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="">
-    <Page.Resources>
-        <!--  Без переопределения — чекбоксы используют тему по умолчанию  -->
-    </Page.Resources>
     <Grid Margin="16" RowDefinitions="Auto,*">
         <!--  Поиск и фильтры  -->
         <Border Grid.Row="0" Margin="0,0,0,8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
+            <Grid ColumnDefinitions="*, Auto, Auto, Auto">
                 <!--  Поиск с watermark  -->
                 <Grid
                     Grid.Column="0"
@@ -165,12 +155,18 @@
                 <!--  Create Server Button  -->
                 <ui:Button
                     Grid.Column="3"
-                    Width="33"
                     Height="33"
-                    Padding="0"
+                    Padding="8,0"
+                    Appearance="Primary"
                     Click="CreateServer_Click"
                     ToolTip="{loc:Loc ServersPage_Create}">
-                    <ui:SymbolIcon FontSize="13" Symbol="Add32" />
+                    <ui:Button.Icon>
+                        <ui:SymbolIcon FontSize="16" Symbol="Add24" />
+                    </ui:Button.Icon>
+                    <ui:TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Text="{loc:Loc ServersPage_Create}" />
                 </ui:Button>
             </Grid>
         </Border>
@@ -306,6 +302,8 @@
                                                 Margin="0,0,8,0"
                                                 Padding="4"
                                                 AutomationProperties.Name="Play or Stop"
+                                                Background="Transparent"
+                                                BorderThickness="0"
                                                 Command="{Binding RelativeSource={RelativeSource AncestorType=Page}, Path=DataContext.PlayCommand}"
                                                 CommandParameter="{Binding}"
                                                 Tag="{Binding}">
@@ -326,6 +324,8 @@
                                                 Margin="0,0,8,0"
                                                 Padding="4"
                                                 AutomationProperties.Name="Open folder"
+                                                Background="Transparent"
+                                                BorderThickness="0"
                                                 Command="{Binding RelativeSource={RelativeSource AncestorType=Page}, Path=DataContext.OpenFolderCommand}"
                                                 CommandParameter="{Binding}"
                                                 Tag="{Binding}"
@@ -336,6 +336,8 @@
                                                 Margin="0,0,12,0"
                                                 Padding="4"
                                                 AutomationProperties.Name="Delete server"
+                                                Background="Transparent"
+                                                BorderThickness="0"
                                                 Click="Delete_Click"
                                                 Tag="{Binding}"
                                                 ToolTip="{loc:Loc ServersPage_Delete}">

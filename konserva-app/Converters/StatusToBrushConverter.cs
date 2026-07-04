@@ -12,7 +12,7 @@ public class StatusToBrushConverter : IValueConverter
     private static readonly Brush SuccessBrush = CreateBrush(0x22, 0xC5, 0x5E);
     private static readonly Brush WarningBrush = CreateBrush(0xF5, 0x9E, 0x0B);
     private static readonly Brush ErrorBrush = CreateBrush(0xEF, 0x44, 0x44);
-    private static readonly Brush DefaultBrush = CreateBrush(0x33, 0x33, 0x33);
+    private static readonly Brush DefaultBrush = Brushes.Transparent;
 
     private static SolidColorBrush CreateBrush(byte r, byte g, byte b)
     {
