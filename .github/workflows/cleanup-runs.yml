@@ -14,8 +14,8 @@ jobs:
       - name: Delete stale workflow runs
         uses: gacts/delete-workflow-runs@v2
         with:
-          # Keep runs newer than this many days
-          retain-days: 30
+          # Keep runs newer than this many days (matches weekly schedule)
+          retain-days: 7
           # Keep at least this many recent runs per workflow
           keep-minimum-runs: 6
           # Delete runs from these workflows (omit to clean all)
