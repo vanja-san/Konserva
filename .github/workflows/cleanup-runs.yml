@@ -12,13 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Delete stale workflow runs
-        uses: gacts/delete-workflow-runs@v2
+        uses: Mattraks/delete-workflow-runs@v2
         with:
-          # Keep runs newer than this many days (matches weekly schedule)
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
           retain-days: 7
-          # Keep at least this many recent runs per workflow
           keep-minimum-runs: 6
-          # Delete runs from these workflows (omit to clean all)
-          # Exclude release builds by name pattern
-          skip-workflow-names: |
-            Build and Release
