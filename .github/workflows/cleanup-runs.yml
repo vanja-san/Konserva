@@ -1,0 +1,24 @@
+name: Cleanup old workflow runs
+
+on:
+  schedule:
+    # Run every Sunday at 00:00
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    # Allow manual trigger
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete stale workflow runs
+        uses: gacts/delete-workflow-runs@v2
+        with:
+          # Keep runs newer than this many days
+          retain-days: 30
+          # Keep at least this many recent runs per workflow
+          keep-minimum-runs: 6
+          # Delete runs from these workflows (omit to clean all)
+          # Exclude release builds by name pattern
+          skip-workflow-names: |
+            Build and Release
