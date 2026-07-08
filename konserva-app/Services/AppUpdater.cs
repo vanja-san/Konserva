@@ -1,13 +1,10 @@
-using System;
+using Konserva.Models;
+using Konserva.Utilities;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
-using Konserva.Models;
-using Konserva.Utilities;
 
 namespace Konserva.Services
 {
@@ -38,7 +35,8 @@ namespace Konserva.Services
 
             try
             {
-                var tempDir = Path.Combine(Path.GetTempPath(), "KonservaUpdate");
+                var downloadDir = Path.Combine(AppContext.BaseDirectory, "downloads");
+                var tempDir = Path.Combine(downloadDir, "KonservaUpdate");
                 var zipPath = Path.Combine(tempDir, "update.zip");
 
                 // Шаг 1: Подготовка
@@ -66,7 +64,7 @@ namespace Konserva.Services
                 UpdateLog("Creating update script...");
 
                 var appDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
-                var batchPath = Path.Combine(Path.GetTempPath(), $"KonservaUpdate_{Guid.NewGuid():N}.bat");
+                var batchPath = Path.Combine(downloadDir, $"KonservaUpdate_{Guid.NewGuid():N}.bat");
                 CreateUpdateScript(tempDir, appDir, batchPath);
 
                 // Шаг 5: Запуск батника и закрытие

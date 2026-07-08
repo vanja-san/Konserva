@@ -74,7 +74,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
         foreach (var server in servers)
         {
             server.Status = ServerStatus.Stopped;
-            server.InstallStatus = string.Empty;
+            server.LastErrorMessage = string.Empty;
         }
 
         Server.InitializeIdCounter(servers);

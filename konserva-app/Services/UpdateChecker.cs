@@ -1,12 +1,9 @@
-using System;
+using Konserva.Models;
+using Konserva.Utilities;
 using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using Konserva.Models;
-using Konserva.Utilities;
 using static Konserva.Models.ApiUrls;
 
 namespace Konserva.Services

@@ -1,7 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
 using Konserva.Utilities;
+using System.ComponentModel.DataAnnotations;
 using ObservableObject = CommunityToolkit.Mvvm.ComponentModel.ObservableObject;
 
 namespace Konserva.Models;

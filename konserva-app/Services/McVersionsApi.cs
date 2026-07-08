@@ -1,8 +1,7 @@
-﻿using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using Konserva.Utilities;
 using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -13,7 +12,7 @@ namespace Konserva.Services;
 /// <summary>
 /// API для получения версий Minecraft и модов
 /// </summary>
-public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
+public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposable
 {
     private readonly HttpClient _http;
     private string[]? _mcVersions;
@@ -23,7 +22,12 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
     private readonly SemaphoreSlim _cacheLock = new(1, 1);
     private readonly SemaphoreSlim _fileLock = new(1, 1);
     private bool _disposed;
+    private Task? _fileCacheLoadTask;
     private VersionsCache? _fileCache;
+
+    // Кэши для Quilt supported versions (загружаются один раз, persist в singleton)
+    private Task<HashSet<string>>? _quiltSupportedTask;
+    private Task<HashSet<string>>? _paperApiVersionsTask;
 
     private readonly string _cacheFolder;
     private readonly string _cacheFilePath;
@@ -46,7 +50,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
         _configService = configService;
         _cacheFolder = cacheFolder;
         _cacheFilePath = Path.Combine(_cacheFolder, "versions_cache.json");
-        _ = LoadFileCacheAsync();
+        _fileCacheLoadTask = LoadFileCacheAsync();
     }
 
     /// <summary>
@@ -591,13 +595,20 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
     {
         if (_disposed)
             return;
+        _disposed = true;
+
+        if (_fileCacheLoadTask != null)
+        {
+            try { await _fileCacheLoadTask; }
+            catch { /* Ignore cache load errors during dispose */ }
+        }
 
         _http.Dispose();
         _cacheLock.Dispose();
-        _disposed = true;
-
-        await ValueTask.CompletedTask;
+        _fileLock.Dispose();
     }
+
+    void IDisposable.Dispose() => _ = DisposeAsync().AsTask();
 
     /// <summary>
     /// Получение строки с поддержкой gzip/deflate
@@ -605,6 +616,119 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
     public async Task<string> GetStringWithDecompressionAsync(string url, CancellationToken ct = default)
     {
         return await _http.GetStringAsync(url, ct);
+    }
+
+    // ─── Quilt Supported Versions (кэшируется в singleton) ─────────
+
+    /// <summary>
+    /// Возвращает список версий Minecraft, которые поддерживает Quilt.
+    /// Результат кэшируется в памяти (McVersionsApi — singleton).
+    /// Запросы выполняются параллельно (до 5 одновременных).
+    /// </summary>
+    public async Task<HashSet<string>> GetQuiltSupportedVersionsAsync(CancellationToken ct = default)
+    {
+        if (_quiltSupportedTask != null)
+            return await _quiltSupportedTask;
+
+        _quiltSupportedTask = FetchQuiltSupportedVersionsAsync(ct);
+        return await _quiltSupportedTask;
+    }
+
+    private async Task<HashSet<string>> FetchQuiltSupportedVersionsAsync(CancellationToken ct)
+    {
+        try
+        {
+            var versions = await GetMcVersions(ct);
+            var recentVersions = versions
+                .Where(v => McVersionHelper.TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))
+                .Take(20)
+                .ToArray();
+
+            var supported = new HashSet<string>();
+            var parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 5,
+                CancellationToken = ct
+            };
+
+            var lockObj = new object();
+
+            await Parallel.ForEachAsync(recentVersions, parallelOptions, async (version, token) =>
+            {
+                try
+                {
+                    var url = $"{QuiltVersionsLoader}/{version}";
+                    using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                    using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseContentRead, token);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        await using var stream = await response.Content.ReadAsStreamAsync(token);
+                        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: token);
+                        if (doc.RootElement.EnumerateArray().Any())
+                        {
+                            lock (lockObj) { supported.Add(version); }
+                        }
+                    }
+                }
+                catch (HttpRequestException httpEx) when (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    // 404 — не поддерживается
+                }
+                catch (OperationCanceledException)
+                {
+                    // Отмена
+                }
+                catch
+                {
+                    // Игнорируем
+                }
+            });
+
+            var result = supported.Count > 0 ? supported : [.. versions];
+            Logger.Info($"Loaded {result.Count} Quilt-supported MC versions", "McVersionsApi");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Failed to load Quilt supported versions: {ex.Message}", "McVersionsApi");
+            var fallback = await GetMcVersions(ct);
+            return [.. fallback];
+        }
+    }
+
+    // ─── Paper API Versions (кэшируется в singleton) ──────────────
+
+    /// <summary>
+    /// Возвращает список версий Minecraft, доступных для Paper.
+    /// Результат кэшируется в памяти (McVersionsApi — singleton).
+    /// </summary>
+    public async Task<HashSet<string>> GetPaperApiVersionsAsync(CancellationToken ct = default)
+    {
+        if (_paperApiVersionsTask != null)
+            return await _paperApiVersionsTask;
+
+        _paperApiVersionsTask = FetchPaperApiVersionsAsync(ct);
+        return await _paperApiVersionsTask;
+    }
+
+    private async Task<HashSet<string>> FetchPaperApiVersionsAsync(CancellationToken ct)
+    {
+        try
+        {
+            var response = await _http.GetStringAsync(PaperApi + "/projects/paper", ct);
+            using var doc = JsonDocument.Parse(response);
+            var versions = doc.RootElement.GetProperty("versions")
+                .EnumerateObject()
+                .SelectMany(g => g.Value.EnumerateArray())
+                .Select(v => v.GetString()!);
+            return [.. versions];
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Failed to load Paper API versions: {ex.Message}", "McVersionsApi");
+            var fallback = await GetMcVersions(ct);
+            return [.. fallback];
+        }
     }
 
     /// <summary>
@@ -694,6 +818,11 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
 
     private string[]? GetFromFileCache(string loader, string mcVersion)
     {
+        // Если кэш ещё не загружен — не ждём, просто возвращаем null.
+        // Сетевой источник будет использован, а кэш сохранится при следующем успешном запросе.
+        if (_fileCacheLoadTask?.IsCompleted == false)
+            return null;
+
         if (_fileCache == null)
             return null;
 
@@ -727,6 +856,9 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable
 
     private string[]? GetMcVersionsFromFileCache()
     {
+        // Если кэш ещё не загружен — не ждём, возвращаем null.
+        if (_fileCacheLoadTask?.IsCompleted == false)
+            return null;
         return _fileCache?.McVersions;
     }
 

@@ -1,11 +1,9 @@
-﻿using Konserva.Controls;
 using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Utilities;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 
 namespace Konserva.Controls;
 

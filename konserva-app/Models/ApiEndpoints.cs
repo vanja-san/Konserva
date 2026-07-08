@@ -1,4 +1,4 @@
-﻿namespace Konserva.Models;
+namespace Konserva.Models;
 
 public class ApiEndpoints
 {
@@ -10,6 +10,6 @@ public class ApiEndpoints
     public string NeoForgeApi { get; set; } = "https://maven.neoforged.net/api/v1/installer";
     public string QuiltMeta { get; set; } = "https://meta.quiltmc.org/v3";
     public string QuiltInstaller { get; set; } = "https://meta.quiltmc.org/v3/versions/installer";
-    public string PaperApi { get; set; } = "https://api.papermc.io/v2";
+    public string PaperApi { get; set; } = "https://fill.papermc.io/v3";
     public string Adoptium { get; set; } = "https://adoptium.net";
 }

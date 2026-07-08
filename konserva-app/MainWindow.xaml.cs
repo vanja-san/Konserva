@@ -160,6 +160,9 @@ public partial class MainWindow : FluentWindow, IDisposable
         // Начальный заголовок (до первой навигации)
         WindowTitleText.Text = LocalizationManager.Get("MainWindow_Header");
 
+        // Подписываемся на смену языка для обновления заголовка окна
+        LocalizationManager.LanguageChanged += OnLanguageChanged;
+
         // Подписываемся на событие навигации для обновления кнопки "Назад" и заголовка
         ContentFrame.Navigated += ContentFrame_Navigated;
 
@@ -209,6 +212,23 @@ public partial class MainWindow : FluentWindow, IDisposable
             Wpf.Ui.Animations.TransitionAnimationProvider.ApplyTransition(
                 element, Wpf.Ui.Animations.Transition.FadeIn, 250);
         }
+    }
+
+    /// <summary>
+    /// Обновляет заголовок окна при смене языка.
+    /// Использует Dispatcher.InvokeAsync, чтобы дать возможность страницам
+    /// сначала обновить свой Title (через подписку на LanguageChanged),
+    /// и только затем MainWindow читает актуальный page.Title.
+    /// </summary>
+    private void OnLanguageChanged(string culture)
+    {
+        _ = Dispatcher.InvokeAsync(() =>
+        {
+            var mainTitle = LocalizationManager.Get("MainWindow_Header");
+            WindowTitleText.Text = ContentFrame.Content is System.Windows.Controls.Page page && !string.IsNullOrEmpty(page.Title?.ToString())
+                ? $"{mainTitle} — {page.Title}"
+                : mainTitle;
+        });
     }
 
     /// <summary>
@@ -504,6 +524,7 @@ public partial class MainWindow : FluentWindow, IDisposable
         _updateService.CheckCompleted -= OnUpdateCheckCompleted;
         _serverManager.OnServersChanged -= UpdateStatusBar;
         _serverManager.OnServersChanged -= UpdateTrayStatus;
+        LocalizationManager.LanguageChanged -= OnLanguageChanged;
 
         // Удаляем иконку из трея
         try { _trayIcon?.Dispose(); } catch { /* ignored */ }
@@ -707,44 +728,6 @@ public partial class MainWindow : FluentWindow, IDisposable
         });
     }
 
-    /// <summary>
-    /// Показывает минималистичный бадж «Настройки сохранены» справа сверху.
-    /// </summary>
-    public void ShowSaveBadge()
-    {
-        Dispatcher.Invoke(async () =>
-        {
-            if (SaveNotificationBadge == null) return;
-
-            // Сначала скрываем, если уже показан (перезапускаем анимацию)
-            SaveNotificationBadge.Visibility = Visibility.Visible;
-            SaveNotificationBadge.Opacity = 0;
-
-            // Плавное появление
-            var fadeIn = new System.Windows.Media.Animation.DoubleAnimation
-            {
-                From = 0,
-                To = 1,
-                Duration = TimeSpan.FromMilliseconds(200),
-                EasingFunction = new System.Windows.Media.Animation.QuadraticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
-            };
-            SaveNotificationBadge.BeginAnimation(OpacityProperty, fadeIn);
-
-            // Ждём 2 секунды
-            await Task.Delay(2000);
-
-            // Плавное исчезновение
-            var fadeOut = new System.Windows.Media.Animation.DoubleAnimation
-            {
-                From = 1,
-                To = 0,
-                Duration = TimeSpan.FromMilliseconds(300),
-                EasingFunction = new System.Windows.Media.Animation.QuadraticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn }
-            };
-            fadeOut.Completed += (_, _) => SaveNotificationBadge.Visibility = Visibility.Collapsed;
-            SaveNotificationBadge.BeginAnimation(OpacityProperty, fadeOut);
-        });
-    }
 }
 
 // Вместо TaskExtensions.FireAndForget используйте SafeFireAndForget из CommunityToolkit

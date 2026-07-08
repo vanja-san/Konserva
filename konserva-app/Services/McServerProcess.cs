@@ -3,7 +3,6 @@ using Konserva.Models;
 using Konserva.Utilities;
 using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -14,7 +13,11 @@ namespace Konserva.Services;
 /// </summary>
 public partial class McServerProcess(Server server, IConfigService? configService = null, IServerInstaller? installer = null) : IDisposable
 {
-    private readonly IServerInstaller _installer = installer ?? new McServerInstaller(new HttpClient());
+    // Храним installer как nullable — если не передан, будет выброшено исключение при первом обращении
+    private readonly IServerInstaller? _installerField = installer;
+
+    private IServerInstaller GetInstaller() => _installerField ?? throw new InvalidOperationException(
+        "IServerInstaller is not available. Ensure McServerProcess is created with an installer (e.g., via DI).");
     private Process? _process;
     private readonly StringBuilder _logs = new();
     private readonly List<string> _logLines = [];
@@ -148,12 +151,11 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             if (!Directory.Exists(Server.Path))
                 throw new DirectoryNotFoundException($"Папка сервера не найдена: {Server.Path}");
 
-            ClearOldServerLogs();
             ValidateEula();
 
             ct.ThrowIfCancellationRequested();
 
-            var launchType = _installer.GetServerLaunchType(Server.Path);
+            var launchType = GetInstaller().GetServerLaunchType(Server.Path);
 
             var jarFile = FindServerJar(Server.Path);
             if (string.IsNullOrEmpty(jarFile))
@@ -254,7 +256,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     /// </summary>
     private void ValidateJavaVersion(JavaCheckResult javaCheckResult)
     {
-        var launchType = _installer.GetServerLaunchType(Server.Path);
+        var launchType = GetInstaller().GetServerLaunchType(Server.Path);
         var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, launchType);
 
         Logger.Info($"[ValidateJavaVersion] Required Java {requiredJavaVersion}+, Found Java {javaCheckResult.MajorVersion} ({javaCheckResult.Version})", "McServerProcess");
@@ -606,7 +608,6 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     {
         Status = ServerStatus.Stopping;
         OnStatusChanged?.Invoke(Status);
-        AppendLog($" {LocalizationManager.Get("Log_StoppingWithCommand")}");
 
         try
         {
@@ -683,7 +684,8 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
         try
         {
-            AppendLog($"[Console] {string.Format(LocalizationManager.Get("Log_CommandSent"), command)}");
+            var cmdLabel = command == "stop" ? "Остановка сервера" : "Console";
+            AppendLog($"[{cmdLabel}] {string.Format(LocalizationManager.Get("Log_CommandSent"), command)}");
             Logger.Info($"[SendCommand] Запись в StandardInput: {command}", "McServerProcess");
             _process.StandardInput.WriteLine(command);
             _process.StandardInput.Flush();
@@ -700,13 +702,13 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     /// <summary>
     /// Найти jar файл сервера
     /// </summary>
-    private string FindServerJar(string path) => _installer.FindServerJar(path);
+    private string FindServerJar(string path) => GetInstaller().FindServerJar(path);
 
     /// <summary>
     /// Построить аргументы Java
     /// </summary>
     private string BuildJavaArgs(string jarFile, ServerLaunchType launchType, int javaMajorVersion) =>
-        _installer.BuildLaunchArgs(jarFile, Server.Settings, launchType, javaMajorVersion, Server.Path);
+        GetInstaller().BuildLaunchArgs(jarFile, Server.Settings, launchType, javaMajorVersion, Server.Path);
 
     private void OnOutput(object sender, DataReceivedEventArgs e)
     {
@@ -843,12 +845,20 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         }
     }
 
+    /// <summary>
+    /// Удаляет ANSI escape-последовательности и управляющие символы из строки
+    /// </summary>
+    private static string SanitizeOutput(string input) =>
+        AnsiRegex().Replace(input, "").Replace("\r", "");
+
+    [GeneratedRegex(@"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")]
+    private static partial Regex AnsiRegex();
+
     internal void AppendLog(string line)
     {
         lock (_lock)
         {
-            var timestamp = SystemTime.Now.ToString("HH:mm:ss.fff");
-            var logLine = $"[{timestamp}] {line}";
+            var logLine = SanitizeOutput(line);
 
             _logs.AppendLine(logLine);
             _logLines.Add(logLine);
@@ -906,58 +916,6 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         }
     }
 
-    /// <summary>
-    /// Очистка старых логов сервера для избежания блокировки файлов
-    /// </summary>
-    private void ClearOldServerLogs()
-    {
-        try
-        {
-            var logsDir = Path.Combine(Server.Path, "logs");
-            if (!Directory.Exists(logsDir))
-                return;
-
-            var latestLog = Path.Combine(logsDir, "latest.log");
-            if (File.Exists(latestLog))
-            {
-                try
-                {
-                    File.Delete(latestLog);
-                    AppendLog($" {LocalizationManager.Get("Log_OldLogDeleted")}");
-                }
-                catch (IOException)
-                {
-                    var backupName = Path.Combine(logsDir, $"latest.log.old-{SystemTime.Now:yyyyMMdd-HHmmss}");
-                    File.Move(latestLog, backupName);
-                    AppendLog($" {string.Format(LocalizationManager.Get("Log_LogMoved"), Path.GetFileName(backupName))}");
-                }
-            }
-
-            // Удаление старых логов — оставляем максимум 2 файла (latest.log + 1 архив)
-            var logFiles = Directory.GetFiles(logsDir, "latest.log.old-*")
-                .Concat(Directory.GetFiles(logsDir, "*.log.gz"))
-                .OrderByDescending(f => File.GetLastWriteTime(f))
-                .ToList();
-
-            // Удаляем все кроме 2 самых новых
-            foreach (var file in logFiles.Skip(2))
-            {
-                try
-                {
-                    File.Delete(file);
-                }
-                catch
-                {
-                    // Игнорируем ошибки удаления
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Log cleanup failed: {ex.Message}", "McServerProcess");
-            AppendLog($"[WARN] {string.Format(LocalizationManager.Get("Log_CleanupFailed"), ex.Message)}");
-        }
-    }
 
     private void ParseOutput(string line)
     {
@@ -1047,7 +1005,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         // Автовыбор Java по версии Minecraft
         if (Server.Settings.JavaAutoSelect)
         {
-            var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, _installer.GetServerLaunchType(Server.Path));
+            var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, GetInstaller().GetServerLaunchType(Server.Path));
             // Ищем подходящую Java среди установленных
             var suitableJava = config.JavaInstallations
                 .Where(j => j.Exists && j.MajorVersion >= requiredJavaVersion)
@@ -1121,9 +1079,8 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         OnStatusChanged = null;
         OnPlayersChanged = null;
 
-        // Dispose fallback McServerInstaller, если он был создан нами
-        if (installer == null && _installer is IDisposable disposableInstaller)
-            disposableInstaller.Dispose();
+        // Примечание: _installerField не диспозим — он получен через DI (singleton),
+        // фабрика/контейнер управляет его жизненным циклом.
 
         _disposed = true;
         GC.SuppressFinalize(this);

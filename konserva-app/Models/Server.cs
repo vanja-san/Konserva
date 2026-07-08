@@ -1,7 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
-using CommunityToolkit.Mvvm.ComponentModel;
 using Konserva.Utilities;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using ObservableObject = CommunityToolkit.Mvvm.ComponentModel.ObservableObject;
 
 namespace Konserva.Models;
@@ -31,17 +30,19 @@ public class Server : ObservableObject
     public string Id { get; init; } = GenerateShortId();
 
     /// <summary>
-    /// Название сервера (1-100 символов)
+    /// Название сервера (1-{MaxServerNameLength} символов)
     /// </summary>
     [Required]
-    [StringLength(100, MinimumLength = 1)]
+    [StringLength(Constants.MaxServerNameLength, MinimumLength = 1)]
     public string Name
     {
         get => field ?? string.Empty;
         set
         {
             var trimmed = string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
-            if (SetProperty(ref field, trimmed.Length > 100 ? trimmed[..100] : trimmed))
+            if (SetProperty(ref field, trimmed.Length > Constants.MaxServerNameLength
+                ? trimmed[..Constants.MaxServerNameLength]
+                : trimmed))
             {
                 OnPropertyChanged(nameof(Description));
             }
@@ -113,7 +114,7 @@ public class Server : ObservableObject
     }
 
     [JsonIgnore]
-    public string InstallStatus
+    public string LastErrorMessage
     {
         get => field ?? string.Empty;
         set => SetProperty(ref field, value ?? string.Empty);

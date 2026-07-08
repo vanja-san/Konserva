@@ -9,7 +9,7 @@ namespace Konserva.Services;
 /// <summary>
 /// Сервис управления серверами Minecraft
 /// </summary>
-public class McServerManager(IServerStorageService storage, IConfigService configService, IPortForwardingService? portForwarding = null) : IServerManager
+public class McServerManager(IServerStorageService storage, IConfigService configService, IServerInstaller installer, IPortForwardingService? portForwarding = null) : IServerManager
 {
     // Создаём отдельную копию списка, чтобы _servers не был привязан к
     // внутреннему кэшу FileBasedStore (_cached). Это предотвращает возможные
@@ -180,7 +180,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
         // Убиваем зависшие Java процессы из папки этого сервера (могут держать session.lock)
         KillZombieProcesses(server.Path);
 
-        var process = new McServerProcess(server, configService);
+        var process = new McServerProcess(server, configService, installer);
         _processes[server.Id] = process;
 
         server.Status = ServerStatus.Starting;
@@ -202,7 +202,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             // Если статус стал Error и мы ещё не уведовляли об ошибке — уведомляем
             if (status == ServerStatus.Error && Interlocked.CompareExchange(ref errorNotified, 1, 0) == 0 && !string.IsNullOrEmpty(process.LastError))
             {
-                server.InstallStatus = process.LastError;
+                server.LastErrorMessage = process.LastError;
                 storage.UpdateServer(server);
                 OnServerStartError?.Invoke(server, process.LastError);
             }
@@ -230,7 +230,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             {
                 Logger.Error($"[StartServerInternal] Server {server.Id} ({server.Name}) failed to start: {process.LastError}", null, "McServerManager");
                 server.Status = ServerStatus.Error;
-                server.InstallStatus = process.LastError;
+                server.LastErrorMessage = process.LastError;
                 storage.UpdateServer(server);
 
                 // Уведомляем об ошибке запуска
@@ -259,7 +259,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             {
                 Logger.Error($"[StartServerInternal] Ошибка запуска сервера {server.Id} ({server.Name}): {ex.Message}", ex, "McServerManager");
                 server.Status = ServerStatus.Error;
-                server.InstallStatus = ex.Message;
+                server.LastErrorMessage = ex.Message;
                 storage.UpdateServer(server);
 
                 // Уведомляем об ошибке запуска
@@ -344,6 +344,90 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
 
         // Уведомляем UI после выхода из блокировки
         OnServersChanged?.Invoke();
+    }
+
+    public bool RenameServerFolder(string serverId, string newName, out string? error)
+    {
+        error = null;
+
+        _serversLock.EnterWriteLock();
+        try
+        {
+            var server = _servers.FirstOrDefault(s => s.Id == serverId);
+            if (server == null)
+            {
+                error = "Server not found";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(newName))
+            {
+                error = "Name is empty";
+                return false;
+            }
+
+            var oldPath = server.Path;
+            if (string.IsNullOrEmpty(oldPath))
+            {
+                error = "Server path is empty";
+                return false;
+            }
+
+            var parentDir = Path.GetDirectoryName(oldPath);
+            if (parentDir == null)
+            {
+                error = "Cannot determine parent directory";
+                return false;
+            }
+
+            var newPath = Path.Combine(parentDir, newName);
+
+            if (string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase))
+            {
+                // Имя то же самое — просто обновляем регистр букв
+                if (!string.Equals(oldPath, newPath, StringComparison.Ordinal))
+                {
+                    // Меняем только регистр — нужно через временное имя
+                    var tempPath = Path.Combine(parentDir, newName + "_tmp_rename");
+                    Directory.Move(oldPath, tempPath);
+                    Directory.Move(tempPath, newPath);
+                }
+                server.Path = newPath;
+                storage.UpdateServer(server);
+                return true;
+            }
+
+            if (Directory.Exists(newPath))
+            {
+                error = $"Folder \"{newName}\" already exists";
+                return false;
+            }
+
+            if (!Directory.Exists(oldPath))
+            {
+                // Папка не существует — просто обновляем путь
+                server.Path = newPath;
+                server.Name = newName;
+                storage.UpdateServer(server);
+                return true;
+            }
+
+            Directory.Move(oldPath, newPath);
+            server.Path = newPath;
+            server.Name = newName;
+            storage.UpdateServer(server);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            Logger.Error($"RenameServerFolder failed: {ex.Message}", ex, "McServerManager");
+            return false;
+        }
+        finally
+        {
+            _serversLock.ExitWriteLock();
+        }
     }
 
     public async Task DeleteServerAsync(string id, CancellationToken ct = default)

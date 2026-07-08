@@ -48,6 +48,7 @@ public interface IServerManager
     Server CreateServer(string name, string mcVersion, ModLoader modLoader, string path);
     void SendCommand(string id, string command);
     void UpdateServer(Server server);
+    bool RenameServerFolder(string serverId, string newName, out string? error);
     (int total, int running, int stopped) GetStats();
     long GetTotalMemoryUsage();
     double GetTotalCpuUsage();
@@ -62,6 +63,8 @@ public interface IServerManager
 public interface IMcVersionsApi
 {
     Task<string[]> GetMcVersions(CancellationToken ct = default);
+    Task<HashSet<string>> GetQuiltSupportedVersionsAsync(CancellationToken ct = default);
+    Task<HashSet<string>> GetPaperApiVersionsAsync(CancellationToken ct = default);
     Task<string[]> GetForgeVersions(string mcVersion, CancellationToken ct = default);
     Task<string[]> GetFabricVersions(string mcVersion, CancellationToken ct = default);
     Task<string[]> GetNeoForgeVersions(string mcVersion, CancellationToken ct = default);

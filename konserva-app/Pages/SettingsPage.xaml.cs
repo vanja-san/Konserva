@@ -7,6 +7,7 @@ using Konserva.ViewModels;
 using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Wpf.Ui.Controls;
 using Button = Wpf.Ui.Controls.Button;
 
@@ -37,6 +38,19 @@ public partial class SettingsPage : Page
 
         Title = LocalizationManager.Get("Settings_Title");
         Loaded += OnLoaded;
+        Unloaded += (_, _) => LocalizationManager.LanguageChanged -= OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged(string culture)
+    {
+        Title = LocalizationManager.Get("Settings_Title");
+        // Обновляем текст кнопок/заголовков, которые установлены в коде
+        CheckUpdatesModeButton.Content = _viewModel.CheckUpdatesModeText;
+        UpdateIntervalButton.Content = _viewModel.UpdateIntervalText;
+        MinimizeToTrayModeButton.Content = GetMinimizeToTrayModeText(_viewModel.MinimizeToTrayMode);
+        ScanJavaButton.ToolTip = LocalizationManager.Get("Settings_Java_Scan");
+        // Сбрасываем текст кнопки проверки обновлений на значение по умолчанию
+        CheckUpdatesButtonText.Text = LocalizationManager.Get("Settings_CheckForUpdates");
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -44,8 +58,8 @@ public partial class SettingsPage : Page
         _viewModel.LoadSettings();
         RefreshUI();
 
-        // Скрываем InfoBar при загрузке
-        LanguageChangeInfoBar.IsOpen = false;
+        // Подписываемся на смену языка для обновления код-бихайнд текста
+        LocalizationManager.LanguageChanged += OnLanguageChanged;
     }
 
     /// <summary>
@@ -79,7 +93,6 @@ public partial class SettingsPage : Page
             DownloadSourceComboBox.SelectedIndex = 0;
 
         _isLoading = false;
-        LanguageChangeInfoBar.IsOpen = false;
     }
 
     /// <summary>
@@ -95,7 +108,7 @@ public partial class SettingsPage : Page
     /// <summary>
     /// Автосохранение настроек
     /// </summary>
-    private void AutoSaveSettings()
+    private void AutoSaveSettings(Wpf.Ui.Controls.TextBlock? statusText = null)
     {
         if (_isLoading || _isUpdating) return; // Защита от сохранения при загрузке и рекурсии
 
@@ -128,16 +141,16 @@ public partial class SettingsPage : Page
                 _viewModel.Language = (string)languageItem.Tag;
             }
 
-            var languageChanged = _viewModel.SaveSettings();
-
-            // Показываем InfoBar только если язык изменился
-            if (languageChanged)
-            {
-                LanguageChangeInfoBar.IsOpen = true;
-            }
+            _viewModel.SaveSettings();
 
             // Показ уведомления об успешном сохранении
-            ShowSaveNotification();
+            ShowSaveNotification(statusText);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"AutoSaveSettings error: {ex.Message}", ex, "SettingsPage");
+            if (statusText != null)
+                _ = ShowSaveStatus(statusText, isError: true);
         }
         finally
         {
@@ -163,11 +176,56 @@ public partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Показ уведомления об успешном сохранении (через бадж справа сверху)
+    /// Показ уведомления об успешном сохранении рядом с заголовком группы
     /// </summary>
-    private void ShowSaveNotification()
+    private void ShowSaveNotification(Wpf.Ui.Controls.TextBlock? statusText = null)
     {
-        Ioc.Default.GetService<MainWindow>()?.ShowSaveBadge();
+        if (statusText != null)
+        {
+            _ = ShowSaveStatus(statusText, isError: false);
+        }
+    }
+
+    /// <summary>
+    /// Показывает временный статус сохранения (зелёный — успех, красный — ошибка)
+    /// с автоматическим скрытием через 2 секунды.
+    /// </summary>
+    private async Task ShowSaveStatus(Wpf.Ui.Controls.TextBlock statusText, bool isError)
+    {
+        if (statusText == null) return;
+
+        statusText.Text = isError
+            ? LocalizationManager.Get("Props_SaveError")
+            : LocalizationManager.Get("Message_SettingsSaved");
+        statusText.Foreground = isError
+            ? new SolidColorBrush(Colors.Red)
+            : (System.Windows.Media.Brush)FindResource("SystemFillColorSuccessBrush");
+        statusText.Visibility = Visibility.Visible;
+        statusText.Opacity = 0;
+
+        // Плавное появление
+        var fadeIn = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            From = 0,
+            To = 1,
+            Duration = TimeSpan.FromMilliseconds(200),
+            EasingFunction = new System.Windows.Media.Animation.QuadraticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+        };
+        statusText.BeginAnimation(OpacityProperty, fadeIn);
+
+        // Ждём 2 секунды
+        await Task.Delay(2000);
+
+        // Плавное исчезновение
+        var fadeOut = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            From = 1,
+            To = 0,
+            Duration = TimeSpan.FromMilliseconds(300),
+            EasingFunction = new System.Windows.Media.Animation.QuadraticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+        };
+        fadeOut.Completed += (_, _) => statusText.Visibility = Visibility.Collapsed;
+        statusText.BeginAnimation(OpacityProperty, fadeOut);
     }
 
     /// <summary>
@@ -198,7 +256,7 @@ public partial class SettingsPage : Page
         {
             _viewModel.SetServersDirectory(dialog.FolderName);
             ServersFolderPath.Text = dialog.FolderName;
-            ShowSaveNotification();
+            ShowSaveNotification(ServersSaveStatus);
         }
     }
 
@@ -329,12 +387,12 @@ public partial class SettingsPage : Page
 
     private void DefaultRamMin_TextChanged(object sender, TextChangedEventArgs e)
     {
-        AutoSaveSettings();
+        AutoSaveSettings(ServersSaveStatus);
     }
 
     private void DefaultRamMax_TextChanged(object sender, TextChangedEventArgs e)
     {
-        AutoSaveSettings();
+        AutoSaveSettings(ServersSaveStatus);
     }
 
     private void CheckUpdatesModeMenuItem_Click(object sender, RoutedEventArgs e)
@@ -351,7 +409,7 @@ public partial class SettingsPage : Page
             CheckUpdatesModeButton.Content = _viewModel.CheckUpdatesModeText;
             UpdateCheckModeVisibility(isScheduled);
 
-            AutoSaveSettings();
+            AutoSaveSettings(ServersSaveStatus);
 
             // Перезапускаем фоновый цикл проверки обновлений
             Ioc.Default.GetService<MainWindow>()?.StartUpdateCheckLoop();
@@ -378,7 +436,7 @@ public partial class SettingsPage : Page
 
             // Сохраняем
             _viewModel.MinimizeToTrayMode = tag;
-            AutoSaveSettings();
+            AutoSaveSettings(ServersSaveStatus);
         }
     }
 
@@ -422,7 +480,7 @@ public partial class SettingsPage : Page
         {
             _viewModel.SetUpdateInterval(hours);
             UpdateIntervalButton.Content = _viewModel.UpdateIntervalText;
-            AutoSaveSettings();
+            AutoSaveSettings(ServersSaveStatus);
         }
     }
 
@@ -488,7 +546,7 @@ public partial class SettingsPage : Page
 
         if (ThemeComboBox.SelectedItem is ComboBoxItem)
         {
-            AutoSaveSettings(); // AutoSaveSettings сам применит тему
+            AutoSaveSettings(AppearanceSaveStatus); // AutoSaveSettings сам применит тему
         }
     }
 
@@ -496,13 +554,13 @@ public partial class SettingsPage : Page
     {
         if (_isLoading) return;
 
-        AutoSaveSettings();
+        AutoSaveSettings(AppearanceSaveStatus);
     }
 
     private void DownloadSourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isLoading) return;
 
-        AutoSaveSettings();
+        AutoSaveSettings(DownloadsSaveStatus);
     }
 }

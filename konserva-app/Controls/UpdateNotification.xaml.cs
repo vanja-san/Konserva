@@ -1,11 +1,10 @@
-using System;
-using System.Windows;
-using System.Windows.Controls;
 using CommunityToolkit.Mvvm.DependencyInjection;
+using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
-using Konserva.Localization;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace Konserva.Controls
 {

@@ -1,4 +1,5 @@
-﻿using Konserva.Models;
+﻿using Konserva.Localization;
+using Konserva.Models;
 using Konserva.Utilities;
 using System.Diagnostics;
 using System.IO;
@@ -39,7 +40,11 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
         // HttpClient получен из IHttpClientFactory — не диспозим, фабрика управляет его жизнью
     }
 
-    private HttpClient GetHttpClient() => _http;
+    private HttpClient GetHttpClient()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _http;
+    }
 
     /// <summary>
     /// Информация о версии Minecraft
@@ -145,7 +150,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     {
         try
         {
-            progress?.Report($"Скачивание {fileName}...");
+            progress?.Report(string.Format(LocalizationManager.Get("Installer_Downloading"), fileName));
             Directory.CreateDirectory(destinationPath);
             var filePath = Path.Combine(destinationPath, fileName);
 
@@ -337,7 +342,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
             foreach (var url in urlsToTry)
             {
                 Logger.Info($"Downloading Fabric server from: {url}");
-                progress?.Report("Скачивание сервера...");
+                progress?.Report(LocalizationManager.Get("Installer_DownloadingServer"));
 
                 var (success, error) = await DownloadFile(url, destinationPath, "fabric-server-launch.jar", progress, ct);
 
@@ -346,16 +351,16 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                     Logger.Info("Fabric server downloaded successfully");
 
                     // Создаем eula.txt
-                    progress?.Report("Создание конфигурации...");
+                    progress?.Report(LocalizationManager.Get("Installer_CreatingConfig"));
                     CreateEula(destinationPath);
 
                     Logger.Info("Fabric server installation completed");
-                    progress?.Report("Завершение...");
+                    progress?.Report(LocalizationManager.Get("Installer_Finishing"));
                     return true;
                 }
 
                 Logger.Warning($"Primary Fabric URL failed, trying BMCLAPI fallback: {error}");
-                progress?.Report("Смена источника...");
+                progress?.Report(LocalizationManager.Get("Installer_ChangingSource"));
             }
 
             Logger.Error("All Fabric download URLs failed");
@@ -624,14 +629,16 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                 return false;
 
             // 1. Скачиваем installer
-            var installerPath = Path.Combine(destinationPath, "forge-installer.jar");
-            progress?.Report("Скачивание установщика...");
-            var downloadResult = await DownloadFile(installerUrl, destinationPath, "forge-installer.jar", progress, ct);
+            var downloadsDir = Utilities.Constants.DownloadsPath;
+            Directory.CreateDirectory(downloadsDir);
+            var installerPath = Path.Combine(downloadsDir, "forge-installer.jar");
+            progress?.Report(LocalizationManager.Get("Installer_DownloadingInstaller"));
+            var downloadResult = await DownloadFile(installerUrl, downloadsDir, "forge-installer.jar", progress, ct);
             if (!downloadResult.success)
                 return false;
 
             // 2. Запускаем installer
-            progress?.Report("Установка Forge...");
+            progress?.Report(string.Format(LocalizationManager.Get("Installer_RunningInstaller"), "Forge"));
             var success = await RunForgeInstaller(installerPath, destinationPath, ct, progress);
 
             // 3. Удаляем installer
@@ -646,7 +653,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
 
                 // Ждём пока завершатся все файловые операции
                 Logger.Info("Waiting for file operations to complete...", "McServerInstaller");
-                progress?.Report("Финализация...");
+                progress?.Report(LocalizationManager.Get("Installer_Finishing"));
 
                 var waitStartTime = SystemTime.Now;
                 var maxWaitTime = TimeSpan.FromSeconds(60);
@@ -788,11 +795,13 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
         var startInfo = new ProcessStartInfo
         {
             FileName = javaPath,
-            Arguments = $"-jar \"{installerPath}\" --installServer",
+            Arguments = $"-Dfile.encoding=UTF-8 -jar \"{installerPath}\" --installServer",
             WorkingDirectory = destinationPath,
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
             CreateNoWindow = true
         };
 
@@ -830,17 +839,11 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                         libraryCount++;
                     if (line.Contains("Patching "))
                         patchCount++;
-
-                    // Обновляем статус
-                    if (line.Contains("Downloading") || line.Contains("Extracting"))
-                        progress?.Report("Распаковка и загрузка...");
-                    else if (line.Contains("Patching "))
-                    {
-                        if (patchCount % 1000 == 0)
-                            progress?.Report($"Применение патчей ({patchCount / 1000}K)...");
-                    }
-                    else if (line.Contains("installed successfully"))
+                    if (line.Contains("installed successfully"))
                         installedSuccessfully = true;
+
+                    // Передаём реальный вывод процесса в прогресс (показываем пользователю)
+                    progress?.Report(line);
                 }
             }, ct);
 
@@ -852,6 +855,9 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                 {
                     lock (errorLines) errorLines.Add(line);
                     Logger.Info($"[Forge] {line}", "McServerInstaller");
+
+                    // stderr тоже передаём — там могут быть предупреждения
+                    progress?.Report(line);
                 }
             }, ct);
 
@@ -1078,11 +1084,13 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
             }
 
             // 1. Скачиваем installer
-            var installerPath = Path.Combine(destinationPath, "neoforge-installer.jar");
-            progress?.Report("Скачивание установщика...");
+            var downloadsDir = Utilities.Constants.DownloadsPath;
+            Directory.CreateDirectory(downloadsDir);
+            var installerPath = Path.Combine(downloadsDir, "neoforge-installer.jar");
+            progress?.Report(LocalizationManager.Get("Installer_DownloadingInstaller"));
 
             Logger.Info($"Downloading NeoForge installer from: {installerUrl}");
-            var downloadResult = await DownloadFile(installerUrl, destinationPath, "neoforge-installer.jar", progress, ct);
+            var downloadResult = await DownloadFile(installerUrl, downloadsDir, "neoforge-installer.jar", progress, ct);
 
             if (!downloadResult.success)
             {
@@ -1093,7 +1101,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
             Logger.Info("NeoForge installer downloaded, running installer...");
 
             // 2. Запускаем installer
-            progress?.Report("Установка NeoForge...");
+            progress?.Report(string.Format(LocalizationManager.Get("Installer_RunningInstaller"), "NeoForge"));
             var success = await RunForgeInstaller(installerPath, destinationPath, ct, progress);
 
             if (success && File.Exists(installerPath))
@@ -1105,7 +1113,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
             {
                 // Ждём стабилизации файлов
                 Logger.Info("Waiting for NeoForge file operations to complete...", "McServerInstaller");
-                progress?.Report("Финализация...");
+                progress?.Report(LocalizationManager.Get("Installer_Finishing"));
 
                 var waitStartTime = SystemTime.Now;
                 var maxWaitTime = TimeSpan.FromSeconds(60);
@@ -1185,7 +1193,6 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                 }
 
                 Logger.Info("NeoForge server installed successfully");
-                progress?.Report("Завершение...");
             }
             else
             {
@@ -1257,9 +1264,11 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
 
             Logger.Info($"Got Quilt installer: {installerInfo.Value.version}", "McServerInstaller");
 
-            var installerPath = Path.Combine(destinationPath, "quilt-installer.jar");
-            progress?.Report("Скачивание установщика...");
-            var downloadResult = await DownloadFile(installerInfo.Value.url, destinationPath, "quilt-installer.jar", progress, ct);
+            var downloadsDir = Utilities.Constants.DownloadsPath;
+            Directory.CreateDirectory(downloadsDir);
+            var installerPath = Path.Combine(downloadsDir, "quilt-installer.jar");
+            progress?.Report(LocalizationManager.Get("Installer_DownloadingInstaller"));
+            var downloadResult = await DownloadFile(installerInfo.Value.url, downloadsDir, "quilt-installer.jar", progress, ct);
             if (!downloadResult.success)
             {
                 Logger.Error($"Failed to download Quilt installer: {downloadResult.error}", null, "McServerInstaller");
@@ -1270,6 +1279,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
 
             // 2. Запускаем installer с флагом --download-server (30-90%)
             // Quilt installer сам скачивает server.jar и установит loader
+            progress?.Report(string.Format(LocalizationManager.Get("Installer_RunningInstaller"), "Quilt"));
             var success = await RunQuiltInstaller(installerPath, mcVersion, destinationPath, ct, progress);
 
             // 3. Если Quilt создал подпапку "server" - перемещаем файлы в корень
@@ -1315,11 +1325,13 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                 }
             }
 
-            if (success && File.Exists(installerPath))
+            // Удаляем установщик в любом случае (успех или ошибка)
+            try
             {
-                try { File.Delete(installerPath); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[McServerInstaller] Cleanup delete failed: {ex.Message}"); }
+                if (File.Exists(installerPath))
+                    File.Delete(installerPath);
             }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[McServerInstaller] Cleanup delete failed: {ex.Message}"); }
 
             if (success)
             {
@@ -1362,7 +1374,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                     await Task.Delay(500, ct);
                 }
 
-                progress?.Report("Завершение...");
+                progress?.Report(LocalizationManager.Get("Installer_Finishing"));
                 Logger.Info("Quilt file operations completed", "McServerInstaller");
             }
 
@@ -1397,11 +1409,13 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
         var startInfo = new ProcessStartInfo
         {
             FileName = javaPath,
-            Arguments = $"-jar \"{installerPath}\" install server {mcVersion} --download-server",
+            Arguments = $"-Dfile.encoding=UTF-8 -jar \"{installerPath}\" install server {mcVersion} --download-server",
             WorkingDirectory = destinationPath,
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
             CreateNoWindow = true
         };
 
@@ -1414,27 +1428,66 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                 return false;
             }
 
-            // Читаем вывод для отладки
+            progress?.Report(LocalizationManager.Get("Installer_Running"));
+
+            // Читаем вывод синхронно построчно (как в Forge) — надёжнее, чем BeginOutputReadLine
             var output = new List<string>();
             var error = new List<string>();
 
-            process.OutputDataReceived += (s, e) => { if (e.Data != null) output.Add(e.Data); };
-            process.ErrorDataReceived += (s, e) => { if (e.Data != null) error.Add(e.Data); };
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromMinutes(5));
+            var combinedToken = timeoutCts.Token;
 
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-
-            // Ждём завершения процесса
-            var timeout = TimeSpan.FromMinutes(5);
-            var processExited = process.WaitForExit((int)timeout.TotalMilliseconds);
-            if (!processExited)
+            try
             {
-                Logger.Warning($"Quilt installer timeout after {timeout.TotalMinutes} minutes", "McServerInstaller");
-                try { process.Kill(); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[McServerInstaller] Process kill failed: {ex.Message}"); }
-            }
+                // Читаем stdout в фоновом потоке
+                var stdoutTask = Task.Run(() =>
+                {
+                    string? line;
+                    while ((line = process.StandardOutput.ReadLine()) != null)
+                    {
+                        lock (output) output.Add(line);
+                        Logger.Info($"[Quilt] {line}", "McServerInstaller");
+                        progress?.Report(line);
+                    }
+                }, combinedToken);
 
-            await process.WaitForExitAsync(ct);
+                // Читаем stderr в фоновом потоке
+                var stderrTask = Task.Run(() =>
+                {
+                    string? line;
+                    while ((line = process.StandardError.ReadLine()) != null)
+                    {
+                        lock (error) error.Add(line);
+                        Logger.Info($"[Quilt/stderr] {line}", "McServerInstaller");
+                        progress?.Report(line);
+                    }
+                }, combinedToken);
+
+                // Ждём завершения процесса
+                await process.WaitForExitAsync(combinedToken);
+
+                // Ждём завершения чтения вывода
+                await Task.WhenAll(stdoutTask, stderrTask);
+
+                // Синхронный WaitForExit для гарантии сброса буферов
+                process.WaitForExit();
+            }
+            catch (OperationCanceledException)
+            {
+                // Принудительно убиваем процесс (true = убить всё дерево дочерних процессов)
+                try { process.Kill(true); } catch { }
+
+                if (ct.IsCancellationRequested)
+                {
+                    Logger.Info("Quilt installer cancelled by user", "McServerInstaller");
+                }
+                else
+                {
+                    Logger.Warning("Quilt installer timeout after 5 minutes", "McServerInstaller");
+                }
+                return false;
+            }
 
             // Логируем вывод для отладки
             if (output.Count > 0)
@@ -1761,7 +1814,8 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
 
         // Подавляем "Advanced terminal features are not available in this environment"
         // Сервер запущен без реального терминала (через GUI), это ожидаемо
-        args.Append("-Dterminal.jline=false -Dterminal.ansi=true ");
+        // ANSI выключен, чтобы escape-последовательности не засоряли лог
+        args.Append("-Dterminal.jline=false -Dterminal.ansi=false ");
 
         // Пользовательские JVM аргументы (GC оптимизации и т.п. — настраивается в настройках сервера)
         foreach (var arg in settings.JavaArgs)
@@ -1937,7 +1991,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
 
         try
         {
-            progress?.Report("Подготовка...");
+            progress?.Report(LocalizationManager.Get("Installer_Preparing"));
             result.Status = InstallStatus.Installing;
 
             // Для Paper используем InstallResult, для остальных — bool
@@ -1975,12 +2029,12 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
             }
 
             // Создание конфигурационных файлов (server.properties создастся при запуске)
-            progress?.Report("Настройка сервера...");
+            progress?.Report(LocalizationManager.Get("Installer_Configuring"));
             result.Status = InstallStatus.Configuring;
             CreateEula(serverPath);
             // server.properties создаётся автоматически при первом запуске сервера
 
-            progress?.Report("Завершение...");
+            progress?.Report(LocalizationManager.Get("Installer_Success"));
             result.Success = true;
             result.Status = InstallStatus.Completed;
             return result;
@@ -2204,31 +2258,11 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     }
 
     /// <summary>
-    /// Распарсить версию Minecraft на major и minor компоненты
+    /// Распарсить версию Minecraft на major и minor компоненты.
+    /// Делегирует в <see cref="McVersionHelper.TryParseMcVersion"/>.
     /// </summary>
     public bool TryParseMcVersion(string version, out int major, out int minor)
-    {
-        major = 0;
-        minor = 0;
-
-        try
-        {
-            // Формат: "1.XX" или "1.XX.Y"
-            var parts = version.Split('.');
-            if (parts.Length >= 2)
-            {
-                major = int.Parse(parts[0]);
-                minor = int.Parse(parts[1]);
-                return true;
-            }
-        }
-        catch
-        {
-            // Игнорируем ошибки парсинга
-        }
-
-        return false;
-    }
+        => McVersionHelper.TryParseMcVersion(version, out major, out minor);
 
     /// <summary>
     /// Конвертировать версию Minecraft в формат NeoForge

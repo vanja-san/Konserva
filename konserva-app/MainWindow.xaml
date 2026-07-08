@@ -189,18 +189,18 @@
                     <!--  ProgressRing — виден только во время проверки обновлений  -->
                     <ui:ProgressRing
                         x:Name="UpdateProgressRing"
-                        VerticalAlignment="Center"
                         Width="16"
                         Height="16"
                         Margin="6,0,0,0"
+                        VerticalAlignment="Center"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         IsIndeterminate="True"
                         Visibility="Collapsed"/>
                     <!--  Checkmark — виден, когда версия актуальна  -->
                     <ui:SymbolIcon
                         x:Name="UpdateCheckmarkIcon"
-                        VerticalAlignment="Center"
                         Margin="4,0,0,0"
+                        VerticalAlignment="Center"
                         FontSize="16"
                         Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
                         Symbol="CheckmarkCircle24"
@@ -219,38 +219,6 @@
             HorizontalAlignment="Stretch"
             VerticalAlignment="Bottom"
             Panel.ZIndex="100"/>
-
-        <!--  Уведомление об успешном сохранении (бадж, справа сверху в контенте)  -->
-        <Border
-            x:Name="SaveNotificationBadge"
-            Grid.Row="1"
-            Height="32"
-            Margin="0,8,12,0"
-            Padding="8,0"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Top"
-            Panel.ZIndex="150"
-            Background="{ui:ThemeResource SystemFillColorSuccessBackgroundBrush}"
-            BorderBrush="{ui:ThemeResource SystemFillColorSuccessBrush}"
-            BorderThickness="1"
-            CornerRadius="16"
-            IsHitTestVisible="False"
-            Opacity="0"
-            Visibility="Collapsed">
-            <StackPanel Orientation="Horizontal">
-                <ui:SymbolIcon
-                    FontSize="14"
-                    Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
-                    Symbol="CheckmarkCircle24"/>
-                <ui:TextBlock
-                    x:Name="SaveNotificationText"
-                    Margin="6,0,0,0"
-                    VerticalAlignment="Center"
-                    FontSize="13"
-                    Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
-                    Text="{loc:Loc Message_SettingsSaved}"/>
-            </StackPanel>
-        </Border>
 
         <!--  ContentDialog Host — для модальных диалогов  -->
         <ui:ContentDialogHost

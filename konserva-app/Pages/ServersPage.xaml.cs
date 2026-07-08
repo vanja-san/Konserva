@@ -1,10 +1,7 @@
-﻿using Konserva.Localization;
+using CommunityToolkit.Mvvm.DependencyInjection;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using CommunityToolkit.Mvvm.DependencyInjection;
 using Konserva.ViewModels;
 using System.Windows;
 using System.Windows.Controls;

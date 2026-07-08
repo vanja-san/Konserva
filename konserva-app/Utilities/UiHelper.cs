@@ -1,10 +1,11 @@
-﻿using CommunityToolkit.Mvvm.DependencyInjection;
+using CommunityToolkit.Mvvm.DependencyInjection;
 using Konserva.Localization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
+using Button = Wpf.Ui.Controls.Button;
 using TextBlock = Wpf.Ui.Controls.TextBlock;
 
 namespace Konserva.Utilities;
@@ -138,6 +139,24 @@ public static class UiHelper
         var service = GetDialogService();
         if (service == null) return ContentDialogResult.None;
 
+        var tcs = new TaskCompletionSource<ContentDialogResult>();
+
+        var deleteButton = new Button
+        {
+            Content = LocalizationManager.Get("MsgBtn_Delete") ?? "Delete",
+            Icon = new SymbolIcon(SymbolRegular.Delete24),
+            Appearance = ControlAppearance.Danger,
+            MinWidth = 100,
+            Margin = new Thickness(0, 0, 8, 0)
+        };
+
+        var cancelButton = new Button
+        {
+            Content = LocalizationManager.Get("MsgBtn_Cancel") ?? "Cancel",
+            MinWidth = 100,
+            Appearance = ControlAppearance.Secondary
+        };
+
         var dialog = new ContentDialog
         {
             Title = LocalizationManager.Get("MsgDel_Title") ?? "Delete Server",
@@ -172,15 +191,42 @@ public static class UiHelper
                                 FontWeight = FontWeights.Bold
                             }
                         }
+                    },
+                    new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        HorizontalAlignment = HorizontalAlignment.Right,
+                        Margin = new Thickness(0, 16, 0, 0),
+                        Children =
+                        {
+                            deleteButton,
+                            cancelButton
+                        }
                     }
                 }
             },
-            PrimaryButtonText = LocalizationManager.Get("MsgBtn_Delete") ?? "Delete",
-            PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Delete24),
-            CloseButtonText = LocalizationManager.Get("MsgBtn_Cancel") ?? "Cancel",
-            DefaultButton = ContentDialogButton.Close
+            // Не используем встроенные кнопки ContentDialog — они создают стандартные Button,
+            // чьи стили WPF-UI пытаются привязать PressedForeground и выдают binding errors.
+            // Вместо этого используем ui:Button напрямую в Content.
+            PrimaryButtonText = "",
+            CloseButtonText = ""
         };
 
-        return await service.ShowAsync(dialog, CancellationToken.None);
+        deleteButton.Click += (_, _) =>
+        {
+            tcs.TrySetResult(ContentDialogResult.Primary);
+            dialog.Hide();
+        };
+
+        cancelButton.Click += (_, _) =>
+        {
+            tcs.TrySetResult(ContentDialogResult.None);
+            dialog.Hide();
+        };
+
+        // Показываем диалог (без кнопок, они внутри Content)
+        _ = service.ShowAsync(dialog, CancellationToken.None);
+
+        return await tcs.Task;
     }
 }

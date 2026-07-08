@@ -1,16 +1,15 @@
+using CommunityToolkit.Mvvm.DependencyInjection;
+using Konserva.Controls;
 using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
-using CommunityToolkit.Mvvm.DependencyInjection;
 using Konserva.ViewModels;
-using static Konserva.Models.ApiUrls;
 using Microsoft.Win32;
 using System.IO;
-using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Wpf.Ui.Controls;
 
 namespace Konserva.Pages;
@@ -36,6 +35,8 @@ public partial class CreateServerPage : Page
     private bool _isLoadingInProgress;
     private CancellationTokenSource? _loaderLoadingCts;
     private readonly SelectionChangedEventHandler _loaderVersionChangedHandler; // for clean unsubscribe
+    private readonly List<string> _installLog = [];
+    private InstallLogWindow? _installLogWindow;
 
     public CreateServerPage()
     {
@@ -56,6 +57,13 @@ public partial class CreateServerPage : Page
         Title = LocalizationManager.Get("CreateServer_Title");
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        LocalizationManager.LanguageChanged += OnLanguageChanged;
+        Unloaded += (_, _) => LocalizationManager.LanguageChanged -= OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged(string culture)
+    {
+        Title = LocalizationManager.Get("CreateServer_Title");
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -149,6 +157,7 @@ public partial class CreateServerPage : Page
 
         _isUpdating = true;
         _isChangingModLoader = true;
+        LoaderProgressRing.Visibility = Visibility.Visible;
         try
         {
             var showSnapshots = ShowSnapshotsBox.IsChecked ?? false;
@@ -225,46 +234,45 @@ public partial class CreateServerPage : Page
                 return;
             }
 
+            // Если версии загрузчика не загружены или нужна проверка стабильности
+            var modLoader = _viewModel.SelectedModLoader;
+            if (!string.IsNullOrEmpty(modLoader) && modLoader is "Forge" or "NeoForge" or "Fabric" or "Quilt" or "Paper")
+            {
+                var selectedMcVersion = (McVersionBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
+                var showSnapshotsLocal = ShowSnapshotsBox?.IsChecked ?? false;
 
+                // Для Quilt без снапшотов — проверяем, есть ли стабильные версии
+                if (!string.IsNullOrEmpty(selectedMcVersion) &&
+                    !showSnapshotsLocal && modLoader == "Quilt")
+                {
+                    var compatibleVersion = await FindLastCompatibleMcVersionAsync(modLoader, selectedMcVersion, showSnapshotsLocal);
+                    if (compatibleVersion != null && compatibleVersion != selectedMcVersion)
+                    {
+                        Logger.Info($"Switching to compatible MC version for {modLoader}: {compatibleVersion}", "CreateServerPage");
+                        var matchingItem = McVersionBox.Items.Cast<ComboBoxItem>()
+                            .FirstOrDefault(item => item.Content?.ToString() == compatibleVersion);
+                        if (matchingItem != null)
+                        {
+                            McVersionBox.SelectedItem = matchingItem;
+                            selectedMcVersion = compatibleVersion;
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(selectedMcVersion))
+                {
+                    LoaderVersionBox.Items.Clear();
+                    Logger.Info($"Calling LoadLoaderVersions manually: {modLoader} for MC {selectedMcVersion}", "CreateServerPage");
+                    await LoadLoaderVersions(modLoader, selectedMcVersion);
+                }
+            }
         }
         finally
         {
             _isUpdating = false;
             _isChangingModLoader = false;
+            LoaderProgressRing.Visibility = Visibility.Collapsed;
             Logger.Info("FilterMcVersionsAsync completed", "CreateServerPage");
-        }
-
-        // Если версии загрузчика не загружены или нужна проверка стабильности
-        var modLoader = _viewModel.SelectedModLoader;
-        if (!string.IsNullOrEmpty(modLoader) && modLoader is "Forge" or "NeoForge" or "Fabric" or "Quilt" or "Paper")
-        {
-            var selectedMcVersion = (McVersionBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
-            var showSnapshots = ShowSnapshotsBox?.IsChecked ?? false;
-
-            // Для Quilt без снапшотов — проверяем, есть ли стабильные версии
-            if (!string.IsNullOrEmpty(selectedMcVersion) &&
-                !showSnapshots && modLoader == "Quilt")
-            {
-                var compatibleVersion = await FindLastCompatibleMcVersionAsync(modLoader, selectedMcVersion, showSnapshots);
-                if (compatibleVersion != null && compatibleVersion != selectedMcVersion)
-                {
-                    Logger.Info($"Switching to compatible MC version for {modLoader}: {compatibleVersion}", "CreateServerPage");
-                    var matchingItem = McVersionBox.Items.Cast<ComboBoxItem>()
-                        .FirstOrDefault(item => item.Content?.ToString() == compatibleVersion);
-                    if (matchingItem != null)
-                    {
-                        McVersionBox.SelectedItem = matchingItem;
-                        selectedMcVersion = compatibleVersion;
-                    }
-                }
-            }
-
-            if (!string.IsNullOrEmpty(selectedMcVersion))
-            {
-                LoaderVersionBox.Items.Clear();
-                Logger.Info($"Calling LoadLoaderVersions manually: {modLoader} for MC {selectedMcVersion}", "CreateServerPage");
-                _ = LoadLoaderVersions(modLoader, selectedMcVersion);
-            }
         }
     }
 
@@ -371,6 +379,22 @@ public partial class CreateServerPage : Page
         {
             ValidationIcon.ToolTip = null;
         }
+
+        // ─── Per-field валидация ────────────────────────────────────
+        // ServerName: предупреждение показывается только после потери фокуса (ServerNameBox_LostFocus)
+        if (!string.IsNullOrWhiteSpace(ServerNameBox.Text))
+            ServerNameValidation.Visibility = Visibility.Collapsed;
+
+        // ServerPath: read-only, предупреждение показываем если путь пуст
+        if (string.IsNullOrWhiteSpace(ServerPathBox.Text))
+        {
+            ServerPathValidation.Text = LocalizationManager.Get("CreateServer_Validation_NoFolder");
+            ServerPathValidation.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            ServerPathValidation.Visibility = Visibility.Collapsed;
+        }
     }
 
     // Статические методы TryParseMcVersion, IsSnapshot, IsNeoForgeSnapshot, IsQuiltSnapshot
@@ -413,6 +437,22 @@ public partial class CreateServerPage : Page
         }
 
         UpdateCreateButtonState();
+    }
+
+    private void ServerNameBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing)
+            return;
+
+        if (string.IsNullOrWhiteSpace(ServerNameBox.Text))
+        {
+            ServerNameValidation.Text = LocalizationManager.Get("CreateServer_Validation_NoName");
+            ServerNameValidation.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            ServerNameValidation.Visibility = Visibility.Collapsed;
+        }
     }
 
     private async void ModLoaderBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -495,7 +535,6 @@ public partial class CreateServerPage : Page
         }
 
         _isLoadingInProgress = true;
-        LoaderProgressRing.Visibility = Visibility.Visible;
 
         try
         {
@@ -597,7 +636,6 @@ public partial class CreateServerPage : Page
         finally
         {
             _isLoadingInProgress = false;
-            LoaderProgressRing.Visibility = Visibility.Collapsed;
             this.Invoke(() => UpdateCreateButtonState());
         }
     }
@@ -787,7 +825,8 @@ public partial class CreateServerPage : Page
             if (isInstalling)
             {
                 ProgressPanel.Visibility = Visibility.Visible;
-                ProgressText.Text = LocalizationManager.Get("CreateServer_Installing_Preparing");
+                ProgressText.Text = LocalizationManager.Get("Installer_Preparing");
+                ShowLogButton.Visibility = Visibility.Visible;
 
                 ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Cancel");
                 ActionOrCancelButton.Appearance = ControlAppearance.Danger;
@@ -799,6 +838,7 @@ public partial class CreateServerPage : Page
             else
             {
                 ProgressPanel.Visibility = Visibility.Collapsed;
+                ShowLogButton.Visibility = Visibility.Collapsed;
 
                 ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Create");
                 ActionOrCancelButton.Appearance = ControlAppearance.Success;
@@ -911,37 +951,48 @@ public partial class CreateServerPage : Page
         }
     }
 
-    private void UpdateStatus(string statusText)
+    private void ShowLogButton_Click(object sender, RoutedEventArgs e)
     {
-        Dispatcher.Invoke(() =>
+        if (_installLogWindow != null && _installLogWindow.IsVisible)
         {
-            ProgressText.Text = statusText;
-        });
+            _installLogWindow.Activate();
+            return;
+        }
+
+        _installLogWindow = new InstallLogWindow(_installLog)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        _installLogWindow.Closed += (_, _) => _installLogWindow = null;
+        _installLogWindow.Show();
     }
 
     private async Task InstallServerInBackground(Server server, ModLoaderType modLoaderType,
         string mcVersion, string loaderVersion, string serverPath)
     {
+        _installLog.Clear();
+        _installLogWindow = null;
         _wasCancelled = false;
         _installCts = new CancellationTokenSource();
+
+        _installLog.Add($"[{DateTime.Now:HH:mm:ss}] {string.Format(LocalizationManager.Get("CreateServer_Installing_Progress"), server.Name)}");
+        _installLog.Add($"[{DateTime.Now:HH:mm:ss}] {LocalizationManager.Get("Installer_DownloadingServer")}");
 
         try
         {
             Dispatcher.Invoke(() =>
             {
                 ProgressPanel.Visibility = Visibility.Visible;
-                ProgressText.Text = LocalizationManager.Get("CreateServer_Installing_Preparing");
+                ProgressText.Text = LocalizationManager.Get("Installer_Preparing");
+                ShowLogButton.Visibility = Visibility.Visible;
             });
 
-            server.InstallStatus = string.Format(LocalizationManager.Get("CreateServer_Installing_Progress"), server.Name);
+            server.LastErrorMessage = string.Format(LocalizationManager.Get("CreateServer_Installing_Progress"), server.Name);
             Ioc.Default.GetService<IServerManager>()!.UpdateServer(server);
 
-            var progress = new Progress<string>(statusText =>
-            {
-                UpdateStatus(statusText);
-                server.InstallStatus = statusText;
-                Ioc.Default.GetService<IServerManager>()!.UpdateServer(server);
-            });
+            // Используем Dispatcher напрямую вместо Progress<T>,
+            // чтобы гарантированно доставлять обновления на UI-поток
+            var uiDispatcher = Dispatcher;
 
             var installResult = await _installer.InstallServer(
                 modLoaderType,
@@ -951,14 +1002,23 @@ public partial class CreateServerPage : Page
                 server.Port,
                 server.Settings.RamMin,
                 server.Settings.RamMax,
-                progress,
+                new DispatcherProgress<string>(statusText =>
+                {
+                    var timestamped = $"[{DateTime.Now:HH:mm:ss}] {statusText}";
+                    Logger.Info($"Install progress: {statusText}", "CreateServerPage");
+                    _installLog.Add(timestamped);
+                    ProgressText.Text = statusText;
+                    _installLogWindow?.AppendLog(timestamped);
+                    server.LastErrorMessage = statusText;
+                    Ioc.Default.GetService<IServerManager>()!.UpdateServer(server);
+                }, uiDispatcher),
                 _installCts.Token);
 
             if (!installResult.Success)
             {
                 if (!_wasCancelled)
                 {
-                    server.InstallStatus = string.Format(LocalizationManager.Get("CreateServer_Install_Error"), installResult.Error);
+                    server.LastErrorMessage = string.Format(LocalizationManager.Get("CreateServer_Install_Error"), installResult.Error);
                     server.Status = ServerStatus.Error;
                     Logger.Error($"Server install failed: {installResult.Error}");
 
@@ -970,7 +1030,7 @@ public partial class CreateServerPage : Page
                 }
                 else
                 {
-                    server.InstallStatus = LocalizationManager.Get("CreateServer_Install_Cancelled");
+                    server.LastErrorMessage = LocalizationManager.Get("CreateServer_Install_Cancelled");
                     server.Status = ServerStatus.Stopped;
                     Logger.Info("Server install cancelled by user");
 
@@ -996,7 +1056,7 @@ public partial class CreateServerPage : Page
             }
             else
             {
-                server.InstallStatus = LocalizationManager.Get("CreateServer_Install_Ready");
+                server.LastErrorMessage = LocalizationManager.Get("CreateServer_Install_Ready");
                 server.Status = ServerStatus.Stopped;
                 Logger.Info($"Server install completed: {server.Name}");
 
@@ -1006,15 +1066,22 @@ public partial class CreateServerPage : Page
                     Logger.Info($"Server build number saved: {server.ServerBuild}", "CreateServerPage");
                 }
 
-                Dispatcher.Invoke(() =>
+                // Задержка, чтобы пользователь увидел зелёное сообщение "Сервер успешно установлен!"
+                await Dispatcher.InvokeAsync(async () =>
                 {
+                    // Красим текст прогресса в зелёный (Installer_Success уже показан)
+                    if (ProgressText.TryFindResource("SystemFillColorSuccessBrush") is Brush successBrush)
+                        ProgressText.Foreground = successBrush;
+
+                    await Task.Delay(2000);
+
                     NavigateBackToServers();
                 });
             }
         }
         catch (OperationCanceledException)
         {
-            server.InstallStatus = LocalizationManager.Get("CreateServer_Install_Cancelled");
+            server.LastErrorMessage = LocalizationManager.Get("CreateServer_Install_Cancelled");
             server.Status = ServerStatus.Error;
             Logger.Info("Server install cancelled");
 
@@ -1025,7 +1092,7 @@ public partial class CreateServerPage : Page
         }
         catch (Exception ex)
         {
-            server.InstallStatus = string.Format(LocalizationManager.Get("CreateServer_Install_Error"), ex.Message);
+            server.LastErrorMessage = string.Format(LocalizationManager.Get("CreateServer_Install_Error"), ex.Message);
             server.Status = ServerStatus.Error;
             Logger.Error($"Server install exception: {ex}");
 

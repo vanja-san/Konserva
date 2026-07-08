@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
@@ -11,205 +10,205 @@ namespace Konserva.ViewModels;
 /// </summary>
 public partial class SettingsViewModel : ObservableObject
 {
-  private readonly IConfigService _configService;
-  private readonly IJavaManagementService _javaService;
-  private readonly IUpdateService _updateService;
+    private readonly IConfigService _configService;
+    private readonly IJavaManagementService _javaService;
+    private readonly IUpdateService _updateService;
 
-  private bool _isLoading;
+    private bool _isLoading;
 
-  public SettingsViewModel(IConfigService configService, IJavaManagementService javaService, IUpdateService updateService)
-  {
-    _configService = configService;
-    _javaService = javaService;
-    _updateService = updateService;
-  }
-
-  // ─── Свойства конфига ───────────────────────────────────────────
-
-  [ObservableProperty]
-  private string _serversDirectory = string.Empty;
-
-  [ObservableProperty]
-  [NotifyPropertyChangedFor(nameof(CheckUpdatesOnLaunch))]
-  [NotifyPropertyChangedFor(nameof(CheckUpdatesModeText))]
-  [NotifyPropertyChangedFor(nameof(IsScheduledModeVisible))]
-  private bool _checkUpdatesScheduled;
-
-  [ObservableProperty]
-  [NotifyPropertyChangedFor(nameof(UpdateIntervalText))]
-  private int _updateIntervalHours = 24;
-
-  [ObservableProperty]
-  private string _minimizeToTrayMode = "None";
-
-  [ObservableProperty]
-  private string _theme = "System";
-
-  [ObservableProperty]
-  private string _language = "System";
-
-  [ObservableProperty]
-  private string _downloadSource = "VanillaApi";
-
-  [ObservableProperty]
-  [NotifyPropertyChangedFor(nameof(IsJavaEmpty))]
-  private System.Collections.ObjectModel.ObservableCollection<JavaInstallation> _javaInstallations = new();
-
-  // ─── Производные свойства ───────────────────────────────────────
-
-  public bool IsJavaEmpty => JavaInstallations.Count == 0;
-
-  public bool CheckUpdatesOnLaunch => !CheckUpdatesScheduled;
-
-  public bool IsScheduledModeVisible => CheckUpdatesScheduled;
-
-  public string CheckUpdatesModeText => CheckUpdatesScheduled
-      ? LocalizationManager.Get("Settings_CheckUpdates_Scheduled")
-      : LocalizationManager.Get("Settings_CheckUpdates_OnLaunch");
-
-  public string UpdateIntervalText => FormatInterval(UpdateIntervalHours);
-
-  // ─── Загрузка / Сохранение ──────────────────────────────────────
-
-  /// <summary>
-  /// Загружает настройки из конфига
-  /// </summary>
-  public void LoadSettings()
-  {
-    _isLoading = true;
-
-    var config = _configService.GetConfig();
-
-    ServersDirectory = config.ServersDirectory;
-    JavaInstallations = new System.Collections.ObjectModel.ObservableCollection<JavaInstallation>(config.JavaInstallations);
-    CheckUpdatesScheduled = config.CheckUpdates;
-    UpdateIntervalHours = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
-    MinimizeToTrayMode = config.MinimizeToTrayMode;
-    Theme = config.Theme ?? "System";
-    Language = config.Language ?? "System";
-    DownloadSource = config.DownloadSource ?? "VanillaApi";
-
-    _isLoading = false;
-  }
-
-  /// <summary>
-  /// Сохраняет настройки. Возвращает true, если язык был изменён.
-  /// </summary>
-  public bool SaveSettings()
-  {
-    if (_isLoading) return false;
-
-    var config = _configService.GetConfig();
-    var languageChanged = false;
-
-    config.CheckUpdates = CheckUpdatesScheduled;
-    config.UpdateCheckIntervalHours = UpdateIntervalHours;
-    config.MinimizeToTrayMode = MinimizeToTrayMode;
-    config.DownloadSource = DownloadSource;
-    config.Theme = Theme;
-
-    if (config.Language != Language)
+    public SettingsViewModel(IConfigService configService, IJavaManagementService javaService, IUpdateService updateService)
     {
-      config.Language = Language;
-      languageChanged = true;
+        _configService = configService;
+        _javaService = javaService;
+        _updateService = updateService;
     }
 
-    config.ServersDirectory = ServersDirectory;
-    config.JavaInstallations = new System.Collections.ObjectModel.ObservableCollection<JavaInstallation>(JavaInstallations);
+    // ─── Свойства конфига ───────────────────────────────────────────
 
-    _configService.SaveConfig(config);
+    [ObservableProperty]
+    private string _serversDirectory = string.Empty;
 
-    // Применяем язык немедленно, без перезапуска
-    if (languageChanged)
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CheckUpdatesOnLaunch))]
+    [NotifyPropertyChangedFor(nameof(CheckUpdatesModeText))]
+    [NotifyPropertyChangedFor(nameof(IsScheduledModeVisible))]
+    private bool _checkUpdatesScheduled;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateIntervalText))]
+    private int _updateIntervalHours = 24;
+
+    [ObservableProperty]
+    private string _minimizeToTrayMode = "None";
+
+    [ObservableProperty]
+    private string _theme = "System";
+
+    [ObservableProperty]
+    private string _language = "System";
+
+    [ObservableProperty]
+    private string _downloadSource = "VanillaApi";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsJavaEmpty))]
+    private System.Collections.ObjectModel.ObservableCollection<JavaInstallation> _javaInstallations = new();
+
+    // ─── Производные свойства ───────────────────────────────────────
+
+    public bool IsJavaEmpty => JavaInstallations.Count == 0;
+
+    public bool CheckUpdatesOnLaunch => !CheckUpdatesScheduled;
+
+    public bool IsScheduledModeVisible => CheckUpdatesScheduled;
+
+    public string CheckUpdatesModeText => CheckUpdatesScheduled
+        ? LocalizationManager.Get("Settings_CheckUpdates_Scheduled")
+        : LocalizationManager.Get("Settings_CheckUpdates_OnLaunch");
+
+    public string UpdateIntervalText => FormatInterval(UpdateIntervalHours);
+
+    // ─── Загрузка / Сохранение ──────────────────────────────────────
+
+    /// <summary>
+    /// Загружает настройки из конфига
+    /// </summary>
+    public void LoadSettings()
     {
-      LocalizationManager.SetLanguage(Language);
+        _isLoading = true;
+
+        var config = _configService.GetConfig();
+
+        ServersDirectory = config.ServersDirectory;
+        JavaInstallations = new System.Collections.ObjectModel.ObservableCollection<JavaInstallation>(config.JavaInstallations);
+        CheckUpdatesScheduled = config.CheckUpdates;
+        UpdateIntervalHours = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
+        MinimizeToTrayMode = config.MinimizeToTrayMode;
+        Theme = config.Theme ?? "System";
+        Language = config.Language ?? "System";
+        DownloadSource = config.DownloadSource ?? "VanillaApi";
+
+        _isLoading = false;
     }
 
-    return languageChanged;
-  }
-
-  /// <summary>
-  /// Устанавливает режим проверки обновлений
-  /// </summary>
-  public void SetCheckUpdatesMode(bool isScheduled)
-  {
-    CheckUpdatesScheduled = isScheduled;
-  }
-
-  /// <summary>
-  /// Устанавливает интервал проверки обновлений
-  /// </summary>
-  public void SetUpdateInterval(int hours)
-  {
-    UpdateIntervalHours = hours;
-  }
-
-  /// <summary>
-  /// Меняет папку серверов
-  /// </summary>
-  public void SetServersDirectory(string path)
-  {
-    ServersDirectory = path;
-    var config = _configService.GetConfig();
-    config.ServersDirectory = path;
-    _configService.SaveConfig(config);
-  }
-
-  // ─── Java ───────────────────────────────────────────────────────
-
-  /// <summary>
-  /// Добавляет Java-установку по пути к java.exe
-  /// </summary>
-  public JavaInstallation? AddJava(string javaPath)
-  {
-    var java = _javaService.AddJava(javaPath);
-    if (java != null)
+    /// <summary>
+    /// Сохраняет настройки. Возвращает true, если язык был изменён.
+    /// </summary>
+    public bool SaveSettings()
     {
-      LoadSettings(); // перезагружаем список
-    }
-    return java;
-  }
+        if (_isLoading) return false;
 
-  /// <summary>
-  /// Удаляет Java-установку по Id
-  /// </summary>
-  public bool RemoveJava(string javaId)
-  {
-    var removed = _javaService.RemoveJava(javaId);
-    if (removed)
+        var config = _configService.GetConfig();
+        var languageChanged = false;
+
+        config.CheckUpdates = CheckUpdatesScheduled;
+        config.UpdateCheckIntervalHours = UpdateIntervalHours;
+        config.MinimizeToTrayMode = MinimizeToTrayMode;
+        config.DownloadSource = DownloadSource;
+        config.Theme = Theme;
+
+        if (config.Language != Language)
+        {
+            config.Language = Language;
+            languageChanged = true;
+        }
+
+        config.ServersDirectory = ServersDirectory;
+        config.JavaInstallations = new System.Collections.ObjectModel.ObservableCollection<JavaInstallation>(JavaInstallations);
+
+        _configService.SaveConfig(config);
+
+        // Применяем язык немедленно, без перезапуска
+        if (languageChanged)
+        {
+            LocalizationManager.SetLanguage(Language);
+        }
+
+        return languageChanged;
+    }
+
+    /// <summary>
+    /// Устанавливает режим проверки обновлений
+    /// </summary>
+    public void SetCheckUpdatesMode(bool isScheduled)
     {
-      LoadSettings();
+        CheckUpdatesScheduled = isScheduled;
     }
-    return removed;
-  }
 
-  /// <summary>
-  /// Сканирует систему на наличие установленных Java и добавляет новые
-  /// </summary>
-  public int ScanJava()
-  {
-    var installations = _javaService.ScanAndAddJava();
-    JavaInstallations = new System.Collections.ObjectModel.ObservableCollection<JavaInstallation>(installations);
-    return installations.Count;
-  }
+    /// <summary>
+    /// Устанавливает интервал проверки обновлений
+    /// </summary>
+    public void SetUpdateInterval(int hours)
+    {
+        UpdateIntervalHours = hours;
+    }
 
-  // ─── Проверка обновлений ────────────────────────────────────────
+    /// <summary>
+    /// Меняет папку серверов
+    /// </summary>
+    public void SetServersDirectory(string path)
+    {
+        ServersDirectory = path;
+        var config = _configService.GetConfig();
+        config.ServersDirectory = path;
+        _configService.SaveConfig(config);
+    }
 
-  /// <summary>
-  /// Принудительная проверка обновлений
-  /// </summary>
-  public async Task<UpdateInfo> ForceCheckUpdatesAsync()
-  {
-    return await _updateService.ForceCheckAsync();
-  }
+    // ─── Java ───────────────────────────────────────────────────────
 
-  // ─── Helpers ────────────────────────────────────────────────────
+    /// <summary>
+    /// Добавляет Java-установку по пути к java.exe
+    /// </summary>
+    public JavaInstallation? AddJava(string javaPath)
+    {
+        var java = _javaService.AddJava(javaPath);
+        if (java != null)
+        {
+            LoadSettings(); // перезагружаем список
+        }
+        return java;
+    }
 
-  private static string FormatInterval(int hours)
-  {
-    if (hours <= 24)
-      return $"{hours} ч";
-    else
-      return $"{hours / 24} д";
-  }
+    /// <summary>
+    /// Удаляет Java-установку по Id
+    /// </summary>
+    public bool RemoveJava(string javaId)
+    {
+        var removed = _javaService.RemoveJava(javaId);
+        if (removed)
+        {
+            LoadSettings();
+        }
+        return removed;
+    }
+
+    /// <summary>
+    /// Сканирует систему на наличие установленных Java и добавляет новые
+    /// </summary>
+    public int ScanJava()
+    {
+        var installations = _javaService.ScanAndAddJava();
+        JavaInstallations = new System.Collections.ObjectModel.ObservableCollection<JavaInstallation>(installations);
+        return installations.Count;
+    }
+
+    // ─── Проверка обновлений ────────────────────────────────────────
+
+    /// <summary>
+    /// Принудительная проверка обновлений
+    /// </summary>
+    public async Task<UpdateInfo> ForceCheckUpdatesAsync()
+    {
+        return await _updateService.ForceCheckAsync();
+    }
+
+    // ─── Helpers ────────────────────────────────────────────────────
+
+    private static string FormatInterval(int hours)
+    {
+        if (hours <= 24)
+            return $"{hours} ч";
+        else
+            return $"{hours / 24} д";
+    }
 }

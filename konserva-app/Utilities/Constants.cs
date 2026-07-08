@@ -100,9 +100,19 @@ public static class Constants
     /// </summary>
     public static string ServersPath => Path.Combine(AppContext.BaseDirectory, "Servers");
 
+    /// <summary>
+    /// Директория для временных загрузок (установщики, обновления) рядом с приложением
+    /// </summary>
+    public static string DownloadsPath => Path.Combine(AppContext.BaseDirectory, "downloads");
+
     #endregion
 
     #region Ограничения настроек
+
+    /// <summary>
+    /// Максимальная длина названия сервера (ограничение файловой системы)
+    /// </summary>
+    public const int MaxServerNameLength = 50;
 
     /// <summary>
     /// Максимальная задержка авто-рестарта (3600 сек = 1 час)

@@ -8,17 +8,17 @@ namespace Konserva.Converters;
 /// </summary>
 public class BoolToOpacityConverter : IValueConverter
 {
-  public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-  {
-    if (value is bool boolValue)
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-      return boolValue ? 1.0 : 0.55;
+        if (value is bool boolValue)
+        {
+            return boolValue ? 1.0 : 0.55;
+        }
+        return 1.0;
     }
-    return 1.0;
-  }
 
-  public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-  {
-    throw new NotImplementedException();
-  }
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
 }

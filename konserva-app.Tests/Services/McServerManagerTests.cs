@@ -43,6 +43,7 @@ public class McServerManagerTests : IDisposable
 {
     private readonly FakeServerStorageService _storage;
     private readonly Mock<IConfigService> _configMock;
+    private readonly Mock<IServerInstaller> _installerMock;
     private readonly McServerManager _manager;
     private readonly string _testServerPath;
     private bool _disposed;
@@ -55,8 +56,9 @@ public class McServerManagerTests : IDisposable
         _storage = new FakeServerStorageService();
         _configMock = new Mock<IConfigService>();
         _configMock.Setup(c => c.GetConfig()).Returns(new AppConfig());
+        _installerMock = new Mock<IServerInstaller>();
 
-        _manager = new McServerManager(_storage, _configMock.Object);
+        _manager = new McServerManager(_storage, _configMock.Object, _installerMock.Object);
     }
 
     #region GetServers Tests

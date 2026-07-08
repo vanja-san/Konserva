@@ -1,4 +1,5 @@
 using Konserva.Models;
+using Konserva.Utilities;
 using Xunit;
 
 namespace Konserva.Tests.Models;
@@ -19,7 +20,7 @@ public class ServerTests
             Port = 25565,
             ModLoader = new ModLoader { Type = ModLoaderType.Vanilla }
         };
-        
+
         // Assert
         server.Name.Should().Be("TestServer");
         server.McVersion.Should().Be("1.21.1");
@@ -27,34 +28,34 @@ public class ServerTests
         server.Status.Should().Be(ServerStatus.Stopped);
         server.ModLoader.Type.Should().Be(ModLoaderType.Vanilla);
     }
-    
+
     [Fact]
     public void Name_TrimsWhitespace()
     {
         // Arrange
         var server = new Server();
-        
+
         // Act
         server.Name = "  Test Server  ";
-        
+
         // Assert
         server.Name.Should().Be("Test Server");
     }
-    
+
     [Fact]
-    public void Name_TruncatesTo100Characters()
+    public void Name_TruncatesToMaxLength()
     {
         // Arrange
         var server = new Server();
         var longName = new string('A', 150);
-        
+
         // Act
         server.Name = longName;
-        
+
         // Assert
-        server.Name.Length.Should().Be(100);
+        server.Name.Length.Should().Be(Constants.MaxServerNameLength);
     }
-    
+
     [Theory]
     [InlineData(0, 1)]
     [InlineData(-100, 1)]
@@ -64,14 +65,14 @@ public class ServerTests
     {
         // Arrange
         var server = new Server();
-        
+
         // Act
         server.Port = input;
-        
+
         // Assert
         server.Port.Should().Be(expected);
     }
-    
+
     [Fact]
     public void Clone_CreatesIndependentCopy()
     {
@@ -82,16 +83,16 @@ public class ServerTests
             McVersion = "1.21.1",
             Port = 25565
         };
-        
+
         // Act
         var clone = original.Clone();
         clone.Name = "Clone";
-        
+
         // Assert
         original.Name.Should().Be("Original");
         clone.Name.Should().Be("Clone");
     }
-    
+
     [Fact]
     public void Validate_ReturnsTrueForValidServer()
     {
@@ -101,14 +102,14 @@ public class ServerTests
             Name = "ValidServer",
             Port = 25565
         };
-        
+
         // Act
         var result = server.Validate();
-        
+
         // Assert
         result.Should().BeTrue();
     }
-    
+
     [Fact]
     public void Validate_ReturnsFalseForInvalidName()
     {
@@ -118,10 +119,10 @@ public class ServerTests
             Name = "",
             Port = 25565
         };
-        
+
         // Act
         var result = server.Validate();
-        
+
         // Assert
         result.Should().BeFalse();
     }

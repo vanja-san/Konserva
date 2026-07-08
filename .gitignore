@@ -54,3 +54,6 @@ Desktop.ini
 *.sarif
 *-extracted.csv
 *.Backup.tmp
+
+# Others
+*.py

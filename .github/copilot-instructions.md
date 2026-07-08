@@ -1,38 +1,38 @@
-# Konserva — инструкции для Copilot
+# Konserva — Copilot Instructions
 
-## 📋 О проекте
-Konserva — WPF (.NET 10) менеджер Minecraft-серверов. FluentWindow (WPF-UI), MVVM.
+## 📋 About the Project
+Konserva — WPF (.NET 10) Minecraft server manager. FluentWindow (WPF-UI), MVVM.
 
-## 🏗️ Архитектура
+## 🏗️ Architecture
 
-### Технологии
+### Technology Stack
 - **.NET 10.0-windows** (WinExe), Nullable=enable, ImplicitUsings=enable
 - **WPF-UI 4.3.0** (lepoco) — FluentWindow, CardControl, CardExpander, Button (Appearance=Primary/Success/Caution/Danger), SymbolIcon, ThemeResource, NotifyIcon, ContentDialogHost, TitleBar, NavigationView
 - **SharpOpenNat 4.0.17** — UPnP/NAT-PMP
-- **DI**: Microsoft.Extensions.DependencyInjection (все сервисы singleton)
+- **DI**: Microsoft.Extensions.DependencyInjection (all services singleton)
 - **HTTP**: HttpClientFactory + Polly retry (exponential + jitter)
-- **Локализация**: собственная (словари `Localization/EnglishStrings.cs`, `Localization/RussianStrings.cs`)
-- **Тесты**: xUnit v3 (343+), Moq 4.20.72, FluentAssertions 8.10.0, Coverlet 10.0.1
+- **Localization**: custom (dictionaries `Localization/EnglishStrings.cs`, `Localization/RussianStrings.cs`)
+- **Tests**: xUnit v3 (343+), Moq 4.20.72, FluentAssertions 8.10.0, Coverlet 10.0.1
 - **Single-instance**: Mutex + named pipe IPC
 
-### Структура
+### Structure
 ```
 konserva-app/
-├── App.xaml.cs              — точка входа, DI, single-instance, pipe-сервер
-├── MainWindow.xaml.cs       — главное окно: трей, навигация, обновления (~700 строк)
-├── Pages/                   — страницы: ServersPage, ServerDetailPage, SettingsPage, CreateServerPage
-├── Services/                — бизнес-логика (сервисы + интерфейсы)
-├── Models/                  — модели данных (Server, AppConfig, ModItem и др.)
-├── ViewModels/              — ViewModel (пока только ServersViewModel)
-├── Controls/                — кастомные контролы (UpdateNotification, ServerPropertiesEditor)
-├── Converters/              — конвертеры WPF
-├── Localization/            — словари локализации
-├── Utilities/               — ObservableObject, RelayCommand, Logger, FileBasedStore и др.
-└── Dialogs/                 — (пока пусто)
+├── App.xaml.cs              — entry point, DI, single-instance, pipe server
+├── MainWindow.xaml.cs       — main window: tray, navigation, updates (~700 lines)
+├── Pages/                   — pages: ServersPage, ServerDetailPage, SettingsPage, CreateServerPage
+├── Services/                — business logic (services + interfaces)
+├── Models/                  — data models (Server, AppConfig, ModItem, etc.)
+├── ViewModels/              — ViewModels (currently ServersViewModel only)
+├── Controls/                — custom controls (UpdateNotification, ServerPropertiesEditor)
+├── Converters/              — WPF converters
+├── Localization/            — localization dictionaries
+├── Utilities/               — ObservableObject, RelayCommand, Logger, FileBasedStore, etc.
+└── Dialogs/                 — (empty for now)
 ```
 
-### DI-контейнер (App.xaml.cs)
-Все сервисы регистрируются как singleton:
+### DI Container (App.xaml.cs)
+All services registered as singleton:
 ```csharp
 services.AddSingleton<IConfigService, ConfigService>();
 services.AddSingleton<IServerManager, McServerManager>();
@@ -41,7 +41,7 @@ services.AddSingleton<IMcVersionsApi, McVersionsApi>();
 services.AddSingleton<IJavaManagementService, JavaManagementService>();
 services.AddSingleton<IPortForwardingService, PortForwardingService>();
 services.AddSingleton<MainWindow>();
-// HttpClient'ы: UpdateChecker, AppUpdater, McServerInstaller, PortForwardingService
+// HttpClients: UpdateChecker, AppUpdater, McServerInstaller, PortForwardingService
 ```
 
 ### Service Locator (App.xaml.cs)
@@ -52,69 +52,131 @@ App.MainWindow          // MainWindow
 App.ServiceProvider     // IServiceProvider?
 ```
 
-## 🚀 Команды
+## 🚀 Commands
 
-### Сборка
+### Build
 ```powershell
 dotnet build konserva-app/konserva-app.csproj --nologo
 ```
 
-### Тесты
+### Tests
 ```powershell
 dotnet test konserva-app.Tests/konserva-app.Tests.csproj --nologo
 ```
 
-### Публикация
+### Publish
 ```powershell
-# Full (self-contained, ~60 МБ)
+# Full (self-contained, ~60 MB)
 dotnet publish konserva-app/konserva-app.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/Full
 
-# Deps (framework-dependent, ~9 МБ)
+# Deps (framework-dependent, ~9 MB)
 dotnet publish konserva-app/konserva-app.csproj -c Release -r win-x64 --self-contained false -o publish/Deps
 ```
 
-## 📐 Соглашения
+## 📐 Conventions
 
-### Код
-- **Nullable** включён на уровне проекта — используйте `?` для nullable-типов
-- **ImplicitUsings** включены
-- `TreatWarningsAsErrors=true` — без предупреждений
-- Проверяйте аргументы через `ArgumentNullException.ThrowIfNull()` или `?? throw`
-- `async void` только для event-handlers (Button_Click и т.п.)
-- CancellationToken пробрасывайте везде
-- Logger используйте вместо Console.WriteLine/ Debug.WriteLine
+### Code
+- **Nullable** enabled at project level — use `?` for nullable types
+- **ImplicitUsings** enabled
+- `TreatWarningsAsErrors=true` — no warnings allowed
+- Validate arguments via `ArgumentNullException.ThrowIfNull()` or `?? throw`
+- `async void` only for event handlers (Button_Click, etc.)
+- Propagate `CancellationToken` everywhere
+- Use `Logger` instead of Console.WriteLine / Debug.WriteLine
 
-### Именование
-- **Классы**: PascalCase
-- **Поля**: `_camelCase` (private)
-- **Свойства**: PascalCase
-- **Локальные переменные**: camelCase
-- **Интерфейсы**: `I`-префикс
-- **Async-методы**: суффикс `Async`
+### Naming
+- **Classes**: PascalCase
+- **Fields**: `_camelCase` (private)
+- **Properties**: PascalCase
+- **Local variables**: camelCase
+- **Interfaces**: `I` prefix
+- **Async methods**: `Async` suffix
+
+### Language
+- All user-facing communication, descriptions, explanations, and review conclusions must be written **in Russian**
+- Code, code comments, XML-doc summaries, variable/class/method names, identifiers, API references, tool names, and technical terms **must always be in English**
+- Inline code comments (`// comment`) and XML-doc (`/// <summary>`) should be in English — the codebase is bilingual (RU/EN), but the code itself and its documentation in code are English
 
 ### WPF-UI
-- Используйте `SymbolIcon` с корректными иконками: Wifi120, CheckmarkCircle24, MoreHorizontal20 и т.д.
-- Иконки в WPF-UI имеют суффикс размера (20, 24, 48, 120)
-- Для кнопок используйте `Appearance` вместо переопределения стилей
-- `CardExpander` для раскрывающихся панелей
-- `ContentDialogService` для диалогов
-- `SnackbarService` для всплывающих уведомлений
+- Use `SymbolIcon` with correct icons: Wifi120, CheckmarkCircle24, MoreHorizontal20, etc.
+- Icons in WPF-UI have a size suffix (20, 24, 48, 120)
+- Use `Appearance` for buttons instead of overriding styles
+- `CardExpander` for expandable panels
+- `ContentDialogService` for dialogs
+- `SnackbarService` for toast notifications
 
 ## 🔄 Update Check Flow
 1. `App.xaml.cs` → `InitializeServicesAsync()` → `UpdateChecker.Initialize(httpClient)`
 2. `MainWindow_Loaded` → `InitializeMainWindow()` → `StartUpdateCheckLoop()`
 3. `UpdateCheckLoopAsync()` → `UpdateService.Start()` → `LoopAsync()`
-4. `LoopAsync()` → сразу `FetchAndSaveAsync()` → `UpdateChecker.CheckAsync()`
-5. `UpdateChecker.CheckAsync()` → читает **`version.json`** через `raw.githubusercontent.com` (CDN, без rate limit)
-6. `version.json` лежит в `.github/`: `latestVersion`, `downloads` (full/deps), `releaseNotes`, `changelogUrl`
-7. Если `config.CheckUpdates == false` (On Launch) — после первой проверки завершается
-8. Если `config.CheckUpdates == true` (Scheduled) — `PeriodicTimer` с интервалом из конфига
-9. In-memory throttle 15 мин между реальными HTTP-запросами (защита от частых перезапусков)
+4. `LoopAsync()` → immediately `FetchAndSaveAsync()` → `UpdateChecker.CheckAsync()`
+5. `UpdateChecker.CheckAsync()` → reads **`version.json`** via `raw.githubusercontent.com` (CDN, no rate limit)
+6. `version.json` lives in `.github/`: `latestVersion`, `downloads` (full/deps), `releaseNotes`, `changelogUrl`
+7. If `config.CheckUpdates == false` (On Launch) — exits after first check
+8. If `config.CheckUpdates == true` (Scheduled) — `PeriodicTimer` with configurable interval
+9. In-memory throttle 15 min between real HTTP requests (protection against frequent restarts)
 
-## 🧪 Тестирование
-- Используйте `[Theory]` + `[InlineData]` для параметризованных тестов
-- Moq для моков: `new Mock<T>()`
-- FluentAssertions: `.Should().Be()`, `.Should().NotBeNull()` и т.д.
-- Для тестов с конфигом используйте `TestConfigFixture` (ICollectionFixture)
-- Тесты сервисов — unit-тесты с Moq
-- CancellationToken в тестах: `TestContext.Current.CancellationToken`
+## 🧪 Testing
+- Use `[Theory]` + `[InlineData]` for parameterized tests
+- Moq for mocking: `new Mock<T>()`
+- FluentAssertions: `.Should().Be()`, `.Should().NotBeNull()`, etc.
+- For config-related tests use `TestConfigFixture` (ICollectionFixture)
+- Service tests are unit tests with Moq
+- CancellationToken in tests: `TestContext.Current.CancellationToken`
+
+## 🤖 Code Review Agent (`.github/agents/code-review.agent.md`)
+
+A specialized `@code-review` agent is set up for deep code analysis. Delegation rules:
+
+### When to automatically delegate to `@code-review`
+- **User explicitly asks for code review**: "review the code", "find issues", "code review", "audit"
+- **PR/MR is pushed or discussed**: delegate review of changes to this agent
+- **Architecture analysis**: questions about DI, MVVM, patterns, startup flow
+- **Security review**: path traversal, shell injection, file handling
+- **Performance optimization**: async patterns, memory, threading
+
+### When NOT to delegate
+- Simple language or syntax questions (answer directly)
+- Fixing a single function or bug (do it yourself and show the result)
+- Creating new files or features (if no existing code review is required)
+
+### How to use
+- In chat: `@code-review analyze MainWindow.xaml.cs for WPF-UI best practices`
+- Via subagent: use `runSubagent` with agentName: `code-review` for automatic delegation
+
+### Prompt templates for `@code-review`
+
+**Full project review:**
+```
+@code-review Do a full project review across all dimensions (architecture, C# 13+, WPF-UI, perf, security, testing, localization)
+```
+
+**Single file review:**
+```
+@code-review Check {filePath} for {topics: arch-di | csharp13 | wpf-ui | perf | security | error-handling | testing | localization}
+```
+
+**PR review:**
+```
+@code-review Analyze the changes in this PR for regressions and code quality
+```
+
+## 🤖 Созданные агенты
+
+В `.github/agents/` созданы специализированные агенты. Delegation rules:
+
+| Агент | Назначение | Когда делегировать |
+|-------|-----------|-------------------|
+| `@code-review` | Полное ревью кода | Архитектура, DI, C# 13+, WPF-UI, perf, security, testing, localization |
+| `@xaml-designer` | WPF-UI / XAML дизайн | Вёрстка, стили, DataTemplate, binding, SymbolIcon, конвертеры, анимации |
+| `@test-runner` | Unit-тесты | Написание/фикс тестов, улучшение coverage, xUnit v3, Moq, FluentAssertions |
+| `@localization-manager` | Локализация | Добавление/синхронизация ключей en/ru, аудит перевода |
+| `@mc-api` | Minecraft API | Версии, загрузчики (Forge/Fabric/NeoForge/Quilt/Paper), установка серверов |
+| `@build-publisher` | Сборка и CI | dotnet build/publish, GitHub Actions, publish profiles |
+| `@packages-gardener` | NuGet-зависимости | Обновление пакетов, проверка совместимости, уязвимости |
+| `@process-debugger` | Процессы и Java | Отладка запуска Java-серверов, парсинг логов, CPU/RAM |
+
+### Общие правила делегирования
+- Если запрос попадает в область одного из агентов — **делегируй через `runSubagent`**
+- Если запрос комплексный (например, ревью + тесты) — делай сам, привлекая агентов по подзадачам
+- Простые вопросы (синтаксис, односложный ответ) — отвечай без делегирования

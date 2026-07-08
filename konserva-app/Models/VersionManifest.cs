@@ -8,20 +8,20 @@ namespace Konserva.Models;
 /// </summary>
 public class VersionManifest
 {
-  [JsonPropertyName("latestVersion")]
-  public string LatestVersion { get; set; } = string.Empty;
+    [JsonPropertyName("latestVersion")]
+    public string LatestVersion { get; set; } = string.Empty;
 
-  [JsonPropertyName("minRequiredVersion")]
-  public string MinRequiredVersion { get; set; } = string.Empty;
+    [JsonPropertyName("minRequiredVersion")]
+    public string MinRequiredVersion { get; set; } = string.Empty;
 
-  [JsonPropertyName("downloads")]
-  public Dictionary<string, VersionDownload>? Downloads { get; set; }
+    [JsonPropertyName("downloads")]
+    public Dictionary<string, VersionDownload>? Downloads { get; set; }
 
-  [JsonPropertyName("releaseNotes")]
-  public string ReleaseNotes { get; set; } = string.Empty;
+    [JsonPropertyName("releaseNotes")]
+    public string ReleaseNotes { get; set; } = string.Empty;
 
-  [JsonPropertyName("changelogUrl")]
-  public string ChangelogUrl { get; set; } = string.Empty;
+    [JsonPropertyName("changelogUrl")]
+    public string ChangelogUrl { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -29,12 +29,12 @@ public class VersionManifest
 /// </summary>
 public class VersionDownload
 {
-  [JsonPropertyName("url")]
-  public string Url { get; set; } = string.Empty;
+    [JsonPropertyName("url")]
+    public string Url { get; set; } = string.Empty;
 
-  [JsonPropertyName("sizeBytes")]
-  public long SizeBytes { get; set; }
+    [JsonPropertyName("sizeBytes")]
+    public long SizeBytes { get; set; }
 
-  [JsonPropertyName("assetName")]
-  public string AssetName { get; set; } = string.Empty;
+    [JsonPropertyName("assetName")]
+    public string AssetName { get; set; } = string.Empty;
 }

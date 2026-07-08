@@ -185,7 +185,7 @@ public class McServerProcessTests : IDisposable
 
         // Act & Assert
         await process.Awaiting(p => p.StartAsync()).Should().ThrowAsync<DirectoryNotFoundException>();
-        
+
         // Статус должен быть Error
         process.Status.Should().Be(ServerStatus.Error);
         process.LastError.Should().NotBeNullOrEmpty();
@@ -471,7 +471,7 @@ public class McServerProcessTests : IDisposable
     #region AppendLog Tests
 
     [Fact]
-    public void AppendLog_AddsTimestamp()
+    public void AppendLog_AddsMessage()
     {
         // Arrange
         var server = new Server { Name = "Test", Path = _testServerPath };
@@ -483,8 +483,7 @@ public class McServerProcessTests : IDisposable
 
         // Assert
         logs.Should().HaveCount(1);
-        logs[0].Should().Contain("Test message");
-        logs[0].Should().MatchRegex(@"\[\d{2}:\d{2}:\d{2}\.\d{3}\]");
+        logs[0].Should().Be("Test message");
     }
 
     [Fact]
@@ -547,7 +546,7 @@ public class McServerProcessTests : IDisposable
 
             // Start (должно завершиться ошибкой из-за отсутствия jar/eula)
             await process.Awaiting(p => p.StartAsync()).Should().ThrowAsync<Exception>();
-            
+
             // Статус должен быть Error
             process.Status.Should().Be(ServerStatus.Error);
 

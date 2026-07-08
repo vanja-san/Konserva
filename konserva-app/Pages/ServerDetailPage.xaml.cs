@@ -1,10 +1,13 @@
-﻿using CommunityToolkit.Mvvm.DependencyInjection;
+using CommunityToolkit.Mvvm.DependencyInjection;
+using ICSharpCode.AvalonEdit.Document;
+using ICSharpCode.AvalonEdit.Rendering;
 using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
 using Konserva.ViewModels;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -12,7 +15,6 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using Wpf.Ui.Controls;
 using WpfButton = Wpf.Ui.Controls.Button;
-using WpfMenuItem = Wpf.Ui.Controls.MenuItem;
 
 namespace Konserva.Pages;
 
@@ -29,6 +31,7 @@ public partial class ServerDetailPage : Page, IDisposable
     private bool _isBusy;
     private CancellationTokenSource? _statusCts;
     private CancellationTokenSource? _errorResetCts;
+    private bool _colorizerInitialized;
 
     private static readonly Brush SuccessBrush = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
     private static readonly Brush WarningBrush = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
@@ -62,9 +65,6 @@ public partial class ServerDetailPage : Page, IDisposable
         // Подписываемся на событие ошибки запуска
         Ioc.Default.GetService<IServerManager>()!.OnServerStartError += OnServerStartError;
 
-        // Обновляем PageWidth лога при изменении размера
-        LogBox.SizeChanged += LogBox_SizeChanged;
-
         StartStatusTimer();
         LoadServer();
 
@@ -76,7 +76,6 @@ public partial class ServerDetailPage : Page, IDisposable
     {
         // Отписываемся от события ошибки запуска
         Ioc.Default.GetService<IServerManager>()!.OnServerStartError -= OnServerStartError;
-        LogBox.SizeChanged -= LogBox_SizeChanged;
         PropertiesEditor.PropertiesSaved -= OnPropertiesSaved;
         StopStatusTimer();
         Dispose();
@@ -91,55 +90,23 @@ public partial class ServerDetailPage : Page, IDisposable
         _viewModel.SavePort(newPort);
     }
 
-    private double _maxContentWidth = 0;
-
-    private void LogBox_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        // При ресайзе: если контент уже шире новой ширины — не трогаем PageWidth
-        // Если контент уже (или пустой) — ставим PageWidth = ActualWidth
-        if (LogDocument != null && e.NewSize.Width > 0 && _maxContentWidth <= e.NewSize.Width)
-        {
-            // Контент помещается — скролл скрыт
-            LogDocument.PageWidth = e.NewSize.Width;
-        }
-        // Иначе: контент шире — оставляем как есть, скролл виден
-    }
-
     /// <summary>
-    /// Обновляет PageWidth документа если строка длиннее видимой области
+    /// Инициализация Colorizer при первом появлении TextEditor (TextView должен быть готов)
     /// </summary>
-    private void UpdatePageWidthForText(string text)
+    private void LogBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (LogDocument == null || string.IsNullOrEmpty(text)) return;
-
-        try
+        if (LogBox.IsVisible && !_colorizerInitialized && LogBox.TextArea?.TextView != null)
         {
-            // Consolas — моноширинный шрифт. Измеряем ширину строки.
-            var formattedText = new System.Windows.Media.FormattedText(
-                text,
-                System.Globalization.CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight,
-                new System.Windows.Media.Typeface("Consolas"),
-                12,
-                System.Windows.Media.Brushes.Black,
-                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+            // Удаляем встроенный LinkElementGenerator — он создаёт VisualLineLinkText
+            // с тёмно-синим цветом по умолчанию, поверх которого наша раскраска не работает
+            var linkGen = LogBox.TextArea.TextView.ElementGenerators
+                .OfType<ICSharpCode.AvalonEdit.Rendering.LinkElementGenerator>()
+                .FirstOrDefault();
+            if (linkGen != null)
+                LogBox.TextArea.TextView.ElementGenerators.Remove(linkGen);
 
-            // Учитываем padding RichTextBox (8px с каждой стороны)
-            var neededWidth = formattedText.Width + 16;
-
-            if (neededWidth > _maxContentWidth)
-            {
-                _maxContentWidth = neededWidth;
-            }
-
-            // Если контент шире видимой области — расширяем PageWidth
-            LogDocument.PageWidth = _maxContentWidth > LogBox.ActualWidth
-                ? _maxContentWidth
-                : LogBox.ActualWidth;
-        }
-        catch
-        {
-            // Suppress UI layout adjustment errors
+            LogBox.TextArea.TextView.LineTransformers.Add(new LogColorizer());
+            _colorizerInitialized = true;
         }
     }
 
@@ -248,6 +215,25 @@ public partial class ServerDetailPage : Page, IDisposable
         }
     }
 
+    /// <summary>
+    /// Обновляет баннер-предупреждение и доступность настроек
+    /// в зависимости от статуса сервера
+    /// </summary>
+    private void UpdateSettingsAvailability()
+    {
+        var isRunning = _server?.IsRunning ?? false;
+
+        SettingsRunningBanner.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
+
+        // Настройки, которые требуют перезапуска сервера
+        SettingName.IsEnabled = !isRunning;
+        SettingRamMin.IsEnabled = !isRunning;
+        SettingRamMax.IsEnabled = !isRunning;
+        SettingJavaAutoSelect.IsEnabled = !isRunning;
+        JavaSelectionGrid.IsEnabled = !isRunning;
+        SettingJvmArgs.IsEnabled = !isRunning;
+    }
+
     private void LoadExistingLogs()
     {
         if (_process == null)
@@ -257,49 +243,18 @@ public partial class ServerDetailPage : Page, IDisposable
 
         this.Invoke(() =>
         {
-            var document = LogBox.Document;
-            document.Blocks.Clear();
-            _maxContentWidth = 0;
-
             if (logs.Count > 0)
             {
-                var paragraph = new System.Windows.Documents.Paragraph();
-
-                foreach (var logLine in logs)
-                {
-                    var run = new System.Windows.Documents.Run(logLine + "\n");
-                    ApplyLogColor(run, logLine);
-                    paragraph.Inlines.Add(run);
-                }
-
-                document.Blocks.Add(paragraph);
+                LogBox.Document.Text = string.Join("\n", logs) + "\n";
                 ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
-                var longestLine = logs.OrderByDescending(l => l.Length).FirstOrDefault();
-                if (!string.IsNullOrEmpty(longestLine))
-                    UpdatePageWidthForText(longestLine);
             }
             else
             {
+                LogBox.Clear();
                 ConsolePlaceholder.Visibility = System.Windows.Visibility.Visible;
-                LogDocument.PageWidth = LogBox.ActualWidth;
             }
             LogBox.ScrollToEnd();
         });
-    }
-
-    private static void ApplyLogColor(System.Windows.Documents.Run run, string line)
-    {
-        if (line.Contains("[ERROR]"))
-        {
-            run.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 100, 100));
-            run.FontWeight = System.Windows.FontWeights.Bold;
-        }
-        else if (line.Contains(LocalizationManager.Get("Log_ServerStarted")) ||
-                 line.Contains(LocalizationManager.Get("Log_ServerStoppedSuccessfully")))
-        {
-            run.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(80, 200, 80));
-            run.FontWeight = System.Windows.FontWeights.Bold;
-        }
     }
 
     private async void UpdateLog(string line)
@@ -308,20 +263,8 @@ public partial class ServerDetailPage : Page, IDisposable
         {
             await this.InvokeAsync(() =>
             {
-                var document = LogBox.Document;
-                var run = new System.Windows.Documents.Run(line + "\n");
-                ApplyLogColor(run, line);
-
-                if (document.Blocks.LastBlock is System.Windows.Documents.Paragraph lastParagraph)
-                {
-                    lastParagraph.Inlines.Add(run);
-                }
-                else
-                {
-                    document.Blocks.Add(new System.Windows.Documents.Paragraph(run));
-                }
+                LogBox.Document.Insert(LogBox.Document.TextLength, line + "\n");
                 ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
-                UpdatePageWidthForText(line);
                 LogBox.ScrollToEnd();
             });
         }
@@ -374,9 +317,10 @@ public partial class ServerDetailPage : Page, IDisposable
             if (status is ServerStatus.Stopped or ServerStatus.Error)
             {
                 _isBusy = false;
-                // Не удаляем _process здесь, чтобы можно было перезапустить
-                // Потом при следующем запуске переподключимся
             }
+
+            // Обновляем баннер и доступность настроек
+            UpdateSettingsAvailability();
 
             await this.InvokeAsync(() =>
             {
@@ -520,6 +464,130 @@ public partial class ServerDetailPage : Page, IDisposable
         catch (Exception ex)
         {
             Logger.Warning($"[UpdatePlayers] Error: {ex.Message}", "ServerDetailPage");
+        }
+    }
+
+    /// <summary>
+    /// Раскраска элементов строки консоли: таймштампы серым, [LEVEL] — своим цветом,
+    /// остальной текст без изменений.
+    /// </summary>
+    private sealed class LogColorizer : DocumentColorizingTransformer
+    {
+        private static readonly Brush TimestampBrush =
+            new SolidColorBrush(Color.FromRgb(140, 140, 140));
+        private static readonly Brush InfoBrush =
+            new SolidColorBrush(Color.FromRgb(100, 170, 255));
+        private static readonly Brush WarnBrush =
+            new SolidColorBrush(Color.FromRgb(255, 200, 80));
+        private static readonly Brush ErrorBrush =
+            new SolidColorBrush(Color.FromRgb(220, 100, 100));
+        private static readonly Brush DebugBrush =
+            new SolidColorBrush(Color.FromRgb(160, 120, 200));
+        private static readonly Brush SuccessBrush =
+            new SolidColorBrush(Color.FromRgb(80, 200, 80));
+
+        private static readonly Regex TimestampRegex =
+            new Regex(@"^\[\d{2}:\d{2}:\d{2}\]", RegexOptions.Compiled);
+        private static readonly Regex LevelTagRegex =
+            new Regex(@"\[(?:[^\]/]*/)?(INFO|WARN(?:ING)?|ERROR|FATAL|DEBUG)\]", RegexOptions.Compiled);
+        private static readonly Regex StderrTagRegex =
+            new Regex(@"^\[STDERR\]", RegexOptions.Compiled);
+        private static readonly Regex StderrLevelRegex =
+            new Regex(@"(WARNING|ERROR|INFO|FATAL|DEBUG):", RegexOptions.Compiled);
+        private static readonly Regex UrlRegex =
+            new Regex(@"https?://[^\s\]\)<>]+", RegexOptions.Compiled);
+
+        protected override void ColorizeLine(DocumentLine line)
+        {
+            var lineText = CurrentContext.Document.GetText(line);
+
+            // 1. Таймштамп [HH:MM:SS] — серым
+            var tsMatch = TimestampRegex.Match(lineText);
+            if (tsMatch.Success)
+            {
+                ChangeLinePart(
+                    line.Offset + tsMatch.Index,
+                    line.Offset + tsMatch.Index + tsMatch.Length,
+                    e => e.TextRunProperties.SetForegroundBrush(TimestampBrush));
+            }
+
+            // 2. [STDERR] — оранжевым
+            var stderrMatch = StderrTagRegex.Match(lineText);
+            if (stderrMatch.Success)
+            {
+                ChangeLinePart(
+                    line.Offset + stderrMatch.Index,
+                    line.Offset + stderrMatch.Index + stderrMatch.Length,
+                    e => e.TextRunProperties.SetForegroundBrush(WarnBrush));
+            }
+
+            // 2a. Уровневое слово (WARNING:, ERROR:, etc.) после [STDERR]
+            foreach (Match slMatch in StderrLevelRegex.Matches(lineText))
+            {
+                var slTag = slMatch.Groups[1].Value;
+                var slBrush = slTag switch
+                {
+                    "ERROR" or "FATAL" => ErrorBrush,
+                    "WARNING" => WarnBrush,
+                    "INFO" => InfoBrush,
+                    "DEBUG" => DebugBrush,
+                    _ => null
+                };
+
+                if (slBrush != null)
+                {
+                    ChangeLinePart(
+                        line.Offset + slMatch.Index,
+                        line.Offset + slMatch.Index + slMatch.Groups[1].Length,
+                        e => e.TextRunProperties.SetForegroundBrush(slBrush));
+                }
+            }
+
+            // 3. Уровневый блок [LEVEL] или [thread/LEVEL] — своим цветом
+            var levelMatch = LevelTagRegex.Match(lineText);
+            if (levelMatch.Success)
+            {
+                var tag = levelMatch.Groups[1].Value;
+                var brush = tag switch
+                {
+                    "ERROR" or "FATAL" => ErrorBrush,
+                    "WARN" or "WARNING" => WarnBrush,
+                    "INFO" => InfoBrush,
+                    "DEBUG" => DebugBrush,
+                    _ => null
+                };
+
+                if (brush != null)
+                {
+                    ChangeLinePart(
+                        line.Offset + levelMatch.Index,
+                        line.Offset + levelMatch.Index + levelMatch.Length,
+                        e => e.TextRunProperties.SetForegroundBrush(brush));
+                }
+            }
+
+            // 4. URL-адреса — красивым голубым (поверх стандартного тёмно-синего)
+            foreach (Match urlMatch in UrlRegex.Matches(lineText))
+            {
+                ChangeLinePart(
+                    line.Offset + urlMatch.Index,
+                    line.Offset + urlMatch.Index + urlMatch.Length,
+                    e => e.TextRunProperties.SetForegroundBrush(InfoBrush));
+            }
+
+            // 5. Строки без спецтегов — проверяем старт/стоп целиком
+            if (!tsMatch.Success && !levelMatch.Success && !stderrMatch.Success)
+            {
+                var text = lineText.AsSpan();
+                if (text.Contains(LocalizationManager.Get("Log_ServerStarted").AsSpan(), StringComparison.Ordinal) ||
+                    text.Contains(LocalizationManager.Get("Log_ServerStoppedSuccessfully").AsSpan(), StringComparison.Ordinal))
+                {
+                    ChangeLinePart(
+                        line.Offset,
+                        line.EndOffset,
+                        e => e.TextRunProperties.SetForegroundBrush(SuccessBrush));
+                }
+            }
         }
     }
 
@@ -738,9 +806,28 @@ public partial class ServerDetailPage : Page, IDisposable
     /// <summary>
     /// Автосохранение настроек при изменении
     /// </summary>
+    /// <summary>
+    /// Определяет, к какому экспандеру относится контрол-отправитель
+    /// </summary>
+    private Wpf.Ui.Controls.TextBlock? GetSaveStatusTarget(object? sender)
+    {
+        if (sender is FrameworkElement element)
+        {
+            return element.Name switch
+            {
+                nameof(SettingName) => GeneralSaveStatus,
+                nameof(SettingRamMin) or nameof(SettingRamMax) => RamSaveStatus,
+                nameof(SettingAutoRestart) or nameof(SettingAutoRestartDelay) => AutoRestartSaveStatus,
+                nameof(SettingJavaAutoSelect) => JavaSaveStatus,
+                _ => null
+            };
+        }
+        return null;
+    }
+
     private void Setting_Click(object sender, RoutedEventArgs e)
     {
-        AutoSaveSettings();
+        AutoSaveSettings(GetSaveStatusTarget(sender));
     }
 
     /// <summary>
@@ -748,37 +835,165 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private void Setting_LostFocus(object sender, RoutedEventArgs e)
     {
-        AutoSaveSettings();
+        AutoSaveSettings(GetSaveStatusTarget(sender));
     }
 
     /// <summary>
     /// Автоматическое сохранение настроек сервера
     /// </summary>
-    private void AutoSaveSettings()
+    private void AutoSaveSettings(Wpf.Ui.Controls.TextBlock? statusText = null)
     {
         if (_server == null)
             return;
 
-        var newName = SettingName.Text.Trim();
-        var ramMinStr = SettingRamMin.Text;
-        var ramMaxStr = SettingRamMax.Text;
-        var autoRestart = SettingAutoRestart.IsChecked;
-        var autoRestartDelayStr = SettingAutoRestartDelay.Text;
-        var javaAutoSelect = SettingJavaAutoSelect.IsChecked ?? true;
-        var javaId = SettingJavaComboBox.SelectedItem is ComboBoxItem selectedItem
-            ? selectedItem.Tag as string
-            : null;
-        var jvmArgs = SettingJvmArgs.Text;
-
-        _viewModel.SaveSettings(newName, ramMinStr, ramMaxStr, autoRestart, autoRestartDelayStr,
-            javaAutoSelect, javaId, jvmArgs);
-
-        // Обновляем UI если имя изменилось
-        if (!string.IsNullOrEmpty(newName) && newName != ServerNameText.Text)
+        try
         {
-            ServerNameText.Text = newName;
+            var newName = SettingName.Text.Trim();
+            var ramMinStr = SettingRamMin.Text;
+            var ramMaxStr = SettingRamMax.Text;
+            var autoRestart = SettingAutoRestart.IsChecked;
+            var autoRestartDelayStr = SettingAutoRestartDelay.Text;
+            var javaAutoSelect = SettingJavaAutoSelect.IsChecked ?? true;
+            var javaId = SettingJavaComboBox.SelectedItem is ComboBoxItem selectedItem
+                ? selectedItem.Tag as string
+                : null;
+            var jvmArgs = SettingJvmArgs.Text;
+
+            // ─── Валидация ──────────────────────────────────────────
+            if (statusText != null)
+            {
+                string? validationError = null;
+
+                if (statusText == GeneralSaveStatus && string.IsNullOrWhiteSpace(newName))
+                    validationError = LocalizationManager.Get("Validation_NameRequired");
+                else if (statusText == RamSaveStatus && string.IsNullOrWhiteSpace(ramMinStr))
+                    validationError = LocalizationManager.Get("Validation_RamMinRequired");
+                else if (statusText == RamSaveStatus && string.IsNullOrWhiteSpace(ramMaxStr))
+                    validationError = LocalizationManager.Get("Validation_RamMaxRequired");
+                else if (statusText == AutoRestartSaveStatus && string.IsNullOrWhiteSpace(autoRestartDelayStr))
+                    validationError = LocalizationManager.Get("Validation_AutoRestartDelayRequired");
+
+                if (validationError != null)
+                {
+                    _ = ShowValidationWarning(statusText, validationError);
+                    return;
+                }
+            }
+
+            _viewModel.SaveSettings(newName, ramMinStr, ramMaxStr, autoRestart, autoRestartDelayStr,
+                javaAutoSelect, javaId, jvmArgs);
+
+            // Проверяем ошибку переименования папки
+            if (_viewModel.LastRenameError != null)
+            {
+                if (statusText != null)
+                {
+                    statusText.Text = _viewModel.LastRenameError;
+                    _ = ShowSaveStatus(statusText, isError: true);
+                }
+                // Возвращаем старое имя в поле ввода
+                SettingName.Text = _viewModel.Server?.Name ?? newName;
+                ServerNameText.Text = _viewModel.Server?.Name ?? newName;
+            }
+            else
+            {
+                // Обновляем UI если имя изменилось
+                if (!string.IsNullOrEmpty(newName) && newName != ServerNameText.Text)
+                {
+                    ServerNameText.Text = newName;
+                }
+
+                // Показываем статус сохранения
+                if (statusText != null)
+                    _ = ShowSaveStatus(statusText, isError: false);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"AutoSaveSettings error: {ex.Message}", ex, "ServerDetailPage");
+            if (statusText != null)
+                _ = ShowSaveStatus(statusText, isError: true);
         }
     }
+
+    /// <summary>
+    /// Показывает предупреждение валидации (красный текст, автоматическое скрытие)
+    /// </summary>
+    private async Task ShowValidationWarning(Wpf.Ui.Controls.TextBlock statusText, string message)
+    {
+        if (statusText == null) return;
+
+        statusText.Text = message;
+        statusText.Foreground = new SolidColorBrush(Color.FromRgb(220, 80, 80)); // мягкий красный
+        statusText.Visibility = Visibility.Visible;
+        statusText.Opacity = 0;
+
+        var fadeIn = new DoubleAnimation
+        {
+            From = 0,
+            To = 1,
+            Duration = TimeSpan.FromMilliseconds(200),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+        };
+        statusText.BeginAnimation(OpacityProperty, fadeIn);
+
+        await Task.Delay(2500);
+
+        var fadeOut = new DoubleAnimation
+        {
+            From = 1,
+            To = 0,
+            Duration = TimeSpan.FromMilliseconds(300),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+        };
+        statusText.BeginAnimation(OpacityProperty, fadeOut);
+
+        await Task.Delay(300);
+        statusText.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Показывает временный статус сохранения (зелёный — успех, красный — ошибка)
+    /// с автоматическим скрытием через 2 секунды.
+    /// </summary>
+    private async Task ShowSaveStatus(Wpf.Ui.Controls.TextBlock statusText, bool isError)
+    {
+        if (statusText == null) return;
+
+        statusText.Text = isError
+            ? LocalizationManager.Get("Props_SaveError")
+            : LocalizationManager.Get("Message_SettingsSaved");
+        statusText.Foreground = isError
+            ? new SolidColorBrush(Colors.Red)
+            : (System.Windows.Media.Brush)FindResource("SystemFillColorSuccessBrush");
+        statusText.Visibility = Visibility.Visible;
+        statusText.Opacity = 0;
+
+        // Плавное появление
+        var fadeIn = new DoubleAnimation
+        {
+            From = 0,
+            To = 1,
+            Duration = TimeSpan.FromMilliseconds(200),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+        };
+        statusText.BeginAnimation(OpacityProperty, fadeIn);
+
+        // Ждём 2 секунды
+        await Task.Delay(2000);
+
+        // Плавное исчезновение
+        var fadeOut = new DoubleAnimation
+        {
+            From = 1,
+            To = 0,
+            Duration = TimeSpan.FromMilliseconds(300),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+        };
+        fadeOut.Completed += (_, _) => statusText.Visibility = Visibility.Collapsed;
+        statusText.BeginAnimation(OpacityProperty, fadeOut);
+    }
+
     /// <summary>
     /// Обновление видимости ComboBox Java
     /// </summary>
@@ -810,6 +1025,8 @@ public partial class ServerDetailPage : Page, IDisposable
 
         var enable = SettingEnableUpnp.IsChecked ?? false;
         _viewModel.SaveUpnpSetting(enable);
+
+        _ = ShowSaveStatus(UpnpSaveStatus, isError: false);
     }
 
     /// <summary>
@@ -1034,7 +1251,7 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private void SettingJavaComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        AutoSaveSettings();
+        AutoSaveSettings(JavaSaveStatus);
     }
 
     /// <summary>
@@ -1042,7 +1259,7 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private void SettingJvmArgs_LostFocus(object sender, RoutedEventArgs e)
     {
-        AutoSaveSettings();
+        AutoSaveSettings(JavaSaveStatus);
     }
 
     private void LoadProperties()

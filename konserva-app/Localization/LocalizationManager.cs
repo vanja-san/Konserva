@@ -1,9 +1,12 @@
-﻿using Konserva.Utilities;
+using Konserva.Utilities;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Windows;
+using System.Windows.Data;
 using System.Windows.Markup;
 
 namespace Konserva.Localization;
@@ -12,8 +15,9 @@ public static class LocalizationManager
 {
     private static readonly ConcurrentDictionary<string, Dictionary<string, string>> _translations = new();
     private static readonly string _i18nPath = Path.Combine(AppContext.BaseDirectory, "i18n");
-    private static CultureInfo _currentCulture = new("ru");
+    private static CultureInfo _currentCulture = new(CultureInfo.InstalledUICulture.TwoLetterISOLanguageName == "ru" ? "ru" : "en");
     private static readonly Lock _lock = new();
+    private static readonly string _systemCultureName = CultureInfo.InstalledUICulture.TwoLetterISOLanguageName;
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -140,8 +144,9 @@ public static class LocalizationManager
 
         if (culture == "System")
         {
-            var systemLanguage = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-            actualCulture = systemLanguage == "ru" ? "ru" : "en";
+            // Используем сохранённую при старте системную культуру, а не CurrentUICulture
+            // (которая уже могла быть изменена предыдущим вызовом SetLanguage)
+            actualCulture = _systemCultureName == "ru" ? "ru" : "en";
         }
         else if (!SupportedCultures.Contains(culture))
         {
@@ -152,6 +157,9 @@ public static class LocalizationManager
         var cultureInfo = new CultureInfo(actualCulture);
         CurrentCulture = cultureInfo;
         LoadCulture(actualCulture);
+
+        // Оповещаем Binding-источник — все XAML-привязки обновятся автоматически
+        LocalizationResource.Instance.NotifyLanguageChanged();
 
         LanguageChanged?.Invoke(actualCulture);
 
@@ -201,6 +209,52 @@ public static class LocalizationManager
     }
 }
 
+/// <summary>
+/// Синглтон-источник для динамических привязок локализации.
+/// При смене языка вызывает PropertyChanged, что обновляет все привязанные элементы UI.
+/// </summary>
+public class LocalizationResource : INotifyPropertyChanged
+{
+    public static LocalizationResource Instance { get; } = new();
+    private LocalizationResource() { }
+
+    /// <summary>
+    /// Свойство-триггер — меняется при каждом переключении языка,
+    /// заставляя все Binding'и пересчитаться.
+    /// </summary>
+    public string Culture => LocalizationManager.CurrentCulture.TwoLetterISOLanguageName;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public void NotifyLanguageChanged()
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Culture)));
+    }
+}
+
+/// <summary>
+/// Конвертер для Binding-локализации: на входе значение Culture, на выходе — перевод по ключу.
+/// </summary>
+public class LocValueConverter : IValueConverter
+{
+    private readonly string _key;
+
+    public LocValueConverter(string key)
+    {
+        _key = key;
+    }
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return LocalizationManager.Get(_key);
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotSupportedException();
+    }
+}
+
 [MarkupExtensionReturnType(typeof(string))]
 public class LocExtension : MarkupExtension
 {
@@ -218,28 +272,19 @@ public class LocExtension : MarkupExtension
         if (string.IsNullOrEmpty(Key))
             return Key;
 
-        return GetTranslation();
-    }
-
-    private string GetTranslation()
-    {
-        if (LocalizationManager.TryGetTranslation(Key, out var value))
+        // Создаём Binding, который обновляется при смене языка.
+        // WPF сам применит его к целевому свойству в любом контексте:
+        // как напрямую, так и внутри DataTemplate/Style.
+        var binding = new Binding
         {
-            return value;
-        }
+            Source = LocalizationResource.Instance,
+            Path = new PropertyPath(nameof(LocalizationResource.Culture)),
+            Converter = new LocValueConverter(Key),
+            Mode = BindingMode.OneWay
+        };
 
-        var defaultTranslations = LocalizationManager.GetDefaultTranslationsForCulture(LocalizationManager.CurrentCulture.TwoLetterISOLanguageName);
-        if (defaultTranslations != null && defaultTranslations.TryGetValue(Key, out var defaultValue))
-        {
-            return defaultValue;
-        }
-
-        var enTranslations = LocalizationManager.GetDefaultTranslationsForCulture("en");
-        if (enTranslations != null && enTranslations.TryGetValue(Key, out var enValue))
-        {
-            return enValue;
-        }
-
-        return Key;
+        // Binding реализует MarkupExtension — делегируем ему создание выражения.
+        // Это стандартный способ вернуть Binding из кастомного MarkupExtension.
+        return binding.ProvideValue(serviceProvider);
     }
 }
