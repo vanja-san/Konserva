@@ -580,6 +580,8 @@ public partial class ServerDetailPage : Page, IDisposable
             {
                 var text = lineText.AsSpan();
                 if (text.Contains(LocalizationManager.Get("Log_ServerStarted").AsSpan(), StringComparison.Ordinal) ||
+                    text.Contains(LocalizationManager.Get("Log_ServerReady").AsSpan(), StringComparison.Ordinal) ||
+                    text.Contains(LocalizationManager.Get("Log_ServerReady_Commands").AsSpan(), StringComparison.Ordinal) ||
                     text.Contains(LocalizationManager.Get("Log_ServerStoppedSuccessfully").AsSpan(), StringComparison.Ordinal))
                 {
                     ChangeLinePart(
@@ -1676,7 +1678,10 @@ public partial class ServerDetailPage : Page, IDisposable
         if (_server == null)
             return;
 
-        var result = await UiHelper.ShowDeleteServerConfirm(_server.Name);
+        var result = await Dialogs.ConfirmDeleteDialog.ShowAsync(
+                _server.Name,
+                title: LocalizationManager.Get("MsgDel_Title") ?? "Delete Server",
+                messageFormat: LocalizationManager.Get("MsgDel_Confirm") ?? "Are you sure you want to delete server \"{0}\"?");
 
         if (result != ContentDialogResult.Primary)
             return;

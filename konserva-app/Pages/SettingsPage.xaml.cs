@@ -361,9 +361,10 @@ public partial class SettingsPage : Page
         {
             if (sender is Button { Tag: JavaInstallation java })
             {
-                var result = await UiHelper.ShowConfirm(
-                    $"{LocalizationManager.Get("Settings_Java_Delete_Confirm_Message")}\n\n{java.DisplayName}",
-                    LocalizationManager.Get("Settings_Java_Delete_Confirm_Title"));
+                var result = await Dialogs.ConfirmDeleteDialog.ShowAsync(
+                    java.DisplayName,
+                    title: LocalizationManager.Get("Settings_Java_Delete_Confirm_Title"),
+                    messageFormat: LocalizationManager.Get("Settings_Java_Delete_Confirm_Message"));
 
                 if (result == ContentDialogResult.Primary)
                 {

@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.DependencyInjection;
+using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
@@ -105,7 +106,10 @@ public partial class ServersPage : Page, IDisposable
     {
         if (sender is WpfButton { Tag: Server server })
         {
-            var result = await UiHelper.ShowDeleteServerConfirm(server.Name);
+            var result = await Dialogs.ConfirmDeleteDialog.ShowAsync(
+                server.Name,
+                title: LocalizationManager.Get("MsgDel_Title") ?? "Delete Server",
+                messageFormat: LocalizationManager.Get("MsgDel_Confirm") ?? "Are you sure you want to delete server \"{0}\"?");
             if (result == ContentDialogResult.Primary)
             {
                 if (_viewModel.DeleteCommand.CanExecute(server))

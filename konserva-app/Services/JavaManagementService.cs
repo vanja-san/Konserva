@@ -59,35 +59,32 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
 
     /// <summary>
     /// Определяет, является ли сообщение об ошибке Java-крашем, даже если в нём нет
-    /// явного упоминания требуемой версии (например, InvocationTargetException,
-    /// ClassNotFoundException, stack trace от jdk.internal).
+    /// явного упоминания требуемой версии (например, <see cref="System.TypeInitializationException"/>,
+    /// <see cref="System.Reflection.TargetInvocationException"/>).
+    /// Используется только как fallback для <see cref="HandleServerStartError"/> — если
+    /// не удалось извлечь версию из текста, но это явно Java-краш, то считаем ошибкой
+    /// Java-совместимости, чтобы показать информативный snackbar со списком Java.
     /// </summary>
     private static bool IsJavaCrashError(string message)
     {
         if (string.IsNullOrEmpty(message))
             return false;
 
-        // Паттерны, указывающие на проблемы с Java или запуском Java-приложения
-        var javaErrorPatterns = new[]
+        // Паттерны, которые точно указывают на внутреннюю ошибку Java/JVM,
+        // а не на problems с classpath, jar-файлами или аргументами.
+        // "Could not find or load main class", "Unable to access jarfile" и т.п.
+        // НЕ включены — они могут быть вызваны разными причинами (не только версией Java),
+        // и для них нужно показывать исходный текст ошибки, а не snackbar о несовместимости.
+        var javaCrashPatterns = new[]
         {
             "InvocationTargetException",
             "Exception in thread",
             "at java.base/",
             "java.lang.reflect",
-            "java.lang.NoClassDefFoundError",
-            "java.lang.ExceptionInInitializerError",
             "java.lang.UnsupportedClassVersionError",
-            "Could not find or load main class",
-            "Unable to access jarfile",
-            "Error: Unable to initialize main class",
-            "JavaVM",
-            "Unrecognized Java VM option",
-            "Unrecognized option",
-            "Error occurred during initialization of VM",
-            "Could not reserve enough space",
         };
 
-        return javaErrorPatterns.Any(p => message.Contains(p, StringComparison.OrdinalIgnoreCase));
+        return javaCrashPatterns.Any(p => message.Contains(p, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

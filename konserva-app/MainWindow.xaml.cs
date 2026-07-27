@@ -272,30 +272,38 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Авто-поиск установленных Java
+    /// Авто-поиск установленных Java.
+    /// При каждом запуске сканирует систему и добавляет только новые установки (по пути).
     /// </summary>
     private void AutoDetectJava()
     {
         var config = _config.GetConfig();
 
-        if (config.JavaInstallations.Count > 0)
-            return;
-
-        var foundJava = _javaService.FindInstalledJava();
-        foreach (var java in foundJava)
+        // Если в конфиге ещё нет ни одной Java — первый запуск, делаем полную настройку
+        if (config.JavaInstallations.Count == 0)
         {
-            config.JavaInstallations.Add(java);
-        }
+            var foundJava = _javaService.FindInstalledJava();
+            foreach (var java in foundJava)
+            {
+                config.JavaInstallations.Add(java);
+            }
 
-        if (config.JavaInstallations.Count > 0 && string.IsNullOrEmpty(config.DefaultJavaId))
+            if (config.JavaInstallations.Count > 0 && string.IsNullOrEmpty(config.DefaultJavaId))
+            {
+                var firstJava = config.JavaInstallations.First();
+                firstJava.IsDefault = true;
+                config.DefaultJavaId = firstJava.Id;
+            }
+
+            _config.SaveConfig(config);
+            UpdateStatusBar();
+        }
+        else
         {
-            var firstJava = config.JavaInstallations.First();
-            firstJava.IsDefault = true;
-            config.DefaultJavaId = firstJava.Id;
+            // Уже есть Java — просто добавляем новые (без перезаписи существующих)
+            _javaService.ScanAndAddJava();
+            UpdateStatusBar();
         }
-
-        _config.SaveConfig(config);
-        UpdateStatusBar();
     }
 
     /// <summary>

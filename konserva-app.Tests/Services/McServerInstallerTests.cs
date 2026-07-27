@@ -1,6 +1,7 @@
 using Konserva.Models;
 using Konserva.Services;
 using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
 using Xunit;
 
@@ -89,7 +90,7 @@ public class McServerInstallerTests : IDisposable
     [Fact]
     public void FindServerJar_ReturnsForgeJar_WhenExists()
     {
-        File.WriteAllText(Path.Combine(_testDir, "forge-1.21.1-52.0.1.jar"), "fake");
+        CreateFakeJar(Path.Combine(_testDir, "forge-1.21.1-52.0.1.jar"));
         var result = _installer.FindServerJar(_testDir);
         result.Should().Contain("forge-");
     }
@@ -97,25 +98,27 @@ public class McServerInstallerTests : IDisposable
     [Fact]
     public void FindServerJar_ReturnsShimJar_WhenExists()
     {
-        File.WriteAllText(Path.Combine(_testDir, "minecraft-shim.jar"), "fake");
+        CreateFakeJar(Path.Combine(_testDir, "minecraft-shim.jar"));
         var result = _installer.FindServerJar(_testDir);
         result.Should().EndWith("-shim.jar");
     }
 
     [Fact]
-    public void FindServerJar_ReturnsNeoforgeJar_WhenExists()
+    public void FindServerJar_ReturnsEmpty_ForNeoforgeJar()
     {
-        File.WriteAllText(Path.Combine(_testDir, "neoforge-1.21.1.jar"), "fake");
+        // NeoForge не использует -jar, запускается через @args файлы
+        CreateFakeJar(Path.Combine(_testDir, "neoforge-1.21.1.jar"));
         var result = _installer.FindServerJar(_testDir);
-        result.Should().Contain("neoforge-");
+        result.Should().BeEmpty();
     }
 
     [Fact]
-    public void FindServerJar_ReturnsAnyJar_WhenNoPriorityJarExists()
+    public void FindServerJar_ReturnsEmpty_WhenNoPriorityJarExists()
     {
-        File.WriteAllText(Path.Combine(_testDir, "custom-server.jar"), "fake");
+        // Without server.jar, fabric, quilt, paper or forge-*.jar with Main-Class — empty
+        CreateFakeJar(Path.Combine(_testDir, "custom-server.jar"));
         var result = _installer.FindServerJar(_testDir);
-        result.Should().EndWith("custom-server.jar");
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -294,4 +297,17 @@ public class McServerInstallerTests : IDisposable
     }
 
     #endregion
+
+    /// <summary>
+    /// Создать fake jar файл с MANIFEST.MF содержащим Main-Class
+    /// </summary>
+    private static void CreateFakeJar(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Create);
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Create);
+        var entry = archive.CreateEntry("META-INF/MANIFEST.MF");
+        using var writer = new StreamWriter(entry.Open());
+        writer.WriteLine("Manifest-Version: 1.0");
+        writer.WriteLine("Main-Class: com.example.Main");
+    }
 }

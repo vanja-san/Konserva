@@ -30,7 +30,7 @@ public static class EnglishStrings
         { "Settings_Java_Add", "Add Java" },
         { "Settings_Java_Delete", "Delete" },
         { "Settings_Java_Delete_Confirm_Title", "Delete Java?" },
-        { "Settings_Java_Delete_Confirm_Message", "Are you sure you want to remove this Java installation?" },
+        { "Settings_Java_Delete_Confirm_Message", "Are you sure you want to delete the following Java installation?\n\n{0}" },
         { "Settings_Java_Delete_Failed", "Failed to delete Java" },
         { "Settings_Java_Scan", "Scan" },
         { "Settings_Java_Scanning", "Scanning..." },
@@ -162,6 +162,8 @@ public static class EnglishStrings
         { "MsgDel_Title", "Delete Server" },
         { "MsgDel_Confirm", "Are you sure you want to delete server \"{0}\"?" },
         { "MsgDel_Irreversible", "This action is irreversible!" },
+        { "MsgDelete_Title", "Confirm Deletion" },
+        { "MsgDelete_Confirm", "Are you sure you want to delete \"{0}\"?" },
         { "ServerDetail_Console", "Console" },
         { "ServerDetail_Properties", "File server.properties" },
         { "ServerDetail_Settings", "Server Settings" },
@@ -493,6 +495,10 @@ public static class EnglishStrings
         { "ServerDetail_Upnp_CopyAddress", "Copy" },
         { "ServerDetail_Settings_RunningWarning", "Some settings cannot be changed while the server is running" },
         { "ServerDetail_Settings_RenameError", "Failed to rename server folder: {0}" },
-        { "ServerDetail_Settings_RenameSuccess", "Server folder renamed to \"{0}\"" }
+        { "ServerDetail_Settings_RenameSuccess", "Server folder renamed to \"{0}\"" },
+        { "Log_JavaTooNewWarning", "Java {0} (v{1}) is much newer than required ({2}+). The server may not work correctly. Consider installing Java {2} or {2}+4." },
+        { "Log_JavaClassFileVersionError", "Java {0} (v{1}) is too new for this server. The Forge version used here was compiled for Java 17.\nTry installing Java 17 or 21 and restarting the server." },
+        { "Log_ServerReady", "Server started successfully" },
+        { "Log_ServerReady_Commands", "Use the console below to send commands" }
     };
 }

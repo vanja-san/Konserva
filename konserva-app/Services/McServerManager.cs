@@ -226,7 +226,9 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             await Task.Delay(500);
 
             // Проверяем, не произошла ли ошибка при запуске (thread-safe через Interlocked)
-            if (Interlocked.CompareExchange(ref errorNotified, 1, 0) == 0 && process.Status == ServerStatus.Error && !string.IsNullOrEmpty(process.LastError))
+            bool errorAlreadyHandled = Interlocked.CompareExchange(ref errorNotified, 1, 0) != 0;
+
+            if (!errorAlreadyHandled && process.Status == ServerStatus.Error && !string.IsNullOrEmpty(process.LastError))
             {
                 Logger.Error($"[StartServerInternal] Server {server.Id} ({server.Name}) failed to start: {process.LastError}", null, "McServerManager");
                 server.Status = ServerStatus.Error;
@@ -240,6 +242,12 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
                 {
                     OnServersChanged?.Invoke();
                 });
+            }
+            else if (errorAlreadyHandled)
+            {
+                // Ошибка уже была обработана через onStatusChanged колбэк (MonitorProcessExitAsync).
+                // Статус уже ServerStatus.Error — не дублируем уведомление.
+                Logger.Info($"[StartServerInternal] Server {server.Id} ({server.Name}) start error already handled via status callback", "McServerManager");
             }
             else
             {

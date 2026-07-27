@@ -32,7 +32,7 @@ public static class RussianStrings
         { "Settings_Java_Add", "Добавить Java" },
         { "Settings_Java_Delete", "Удалить" },
         { "Settings_Java_Delete_Confirm_Title", "Удалить Java?" },
-        { "Settings_Java_Delete_Confirm_Message", "Вы уверены, что хотите удалить эту установку Java?" },
+        { "Settings_Java_Delete_Confirm_Message", "Вы уверены, что хотите удалить эту установку Java?\n\n{0}" },
         { "Settings_Java_Delete_Failed", "Не удалось удалить Java" },
         { "Settings_Java_Scan", "Сканировать" },
         { "Settings_Java_Scanning", "Сканирование..." },
@@ -163,6 +163,8 @@ public static class RussianStrings
         { "MsgDel_Title", "Удаление сервера" },
         { "MsgDel_Confirm", "Вы уверены, что хотите удалить сервер \"{0}\"?" },
         { "MsgDel_Irreversible", "Это действие необратимо!" },
+        { "MsgDelete_Title", "Подтверждение удаления" },
+        { "MsgDelete_Confirm", "Вы уверены, что хотите удалить \"{0}\"?" },
         { "ServerDetail_Console", "Консоль" },
         { "ServerDetail_Properties", "Файл server.properties" },
         { "ServerDetail_Settings", "Настройки сервера" },
@@ -469,5 +471,9 @@ public static class RussianStrings
         { "ServerDetail_Settings_RunningWarning", "Некоторые настройки нельзя изменить пока сервер запущен" },
         { "ServerDetail_Settings_RenameError", "Не удалось переименовать папку сервера: {0}" },
         { "ServerDetail_Settings_RenameSuccess", "Папка сервера переименована в \"{0}\"" },
+        { "Log_JavaTooNewWarning", "Java {0} (v{1}) намного новее требуемой ({2}+). Сервер может работать некорректно. Рекомендуется установить Java {2} или {2}+4." },
+        { "Log_JavaClassFileVersionError", "Java {0} (v{1}) слишком новая для этого сервера. Используемая версия Forge скомпилирована для Java 17.\nУстановите Java 17 или 21 и перезапустите сервер." },
+        { "Log_ServerReady", "Сервер успешно запущен" },
+        { "Log_ServerReady_Commands", "Используйте консоль ниже для отправки команд" }
     };
 }
