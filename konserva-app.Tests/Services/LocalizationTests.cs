@@ -248,7 +248,7 @@ public class LocalizationTests : IDisposable
         LocalizationManager.Initialize();
         
         // Act
-        var hasKey = LocalizationManager.HasKey("MainWindow_Title");
+        var hasKey = LocalizationManager.HasKey("MainWindow_Header");
 
         // Assert
         Assert.True(hasKey);
