@@ -28,8 +28,6 @@ public partial class ServersPage : Page, IDisposable
         // Подписываемся на события ViewModel для UI-действий
         _viewModel.NavigateToServerRequested += OnNavigateToServer;
         _viewModel.OpenFolderRequested += OnOpenFolder;
-        _viewModel.ShowErrorRequested += OnShowError;
-
         DataContext = _viewModel;
 
         Loaded += OnLoaded;
@@ -62,11 +60,6 @@ public partial class ServersPage : Page, IDisposable
     private void OnOpenFolder(Server server)
     {
         UiHelper.OpenFolder(server.Path);
-    }
-
-    private async void OnShowError(Server server, string errorMessage)
-    {
-        await UiHelper.ShowError(errorMessage);
     }
 
     // ========== Обработчики UI (поиск, фильтры, навигация) ==========

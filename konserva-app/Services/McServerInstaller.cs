@@ -150,7 +150,8 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     {
         try
         {
-            progress?.Report(string.Format(LocalizationManager.Get("Installer_Downloading"), fileName));
+            var downloadingStatus = string.Format(LocalizationManager.Get("Installer_Downloading"), fileName);
+            progress?.Report(downloadingStatus);
             Directory.CreateDirectory(destinationPath);
             var filePath = Path.Combine(destinationPath, fileName);
 
@@ -167,12 +168,24 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
 
             var buffer = new byte[8192];
             int bytesRead;
+            var lastReportedPercent = -1;
 
             while ((bytesRead = await decompressedStream.ReadAsync(buffer, ct)) > 0)
             {
                 ct.ThrowIfCancellationRequested();
                 await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct);
                 downloadedBytes += bytesRead;
+
+                // Сообщаем прогресс при каждом новом проценте
+                if (totalBytes > 0)
+                {
+                    var percent = (int)(downloadedBytes * 100 / totalBytes);
+                    if (percent != lastReportedPercent)
+                    {
+                        lastReportedPercent = percent;
+                        progress?.Report($"{downloadingStatus} ({percent}%)");
+                    }
+                }
             }
 
             await fileStream.FlushAsync(ct);
@@ -826,6 +839,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
             int libraryCount = 0;
 
             // Читаем stdout построчно — блокирует пока есть вывод
+            var lastReportedLibraryCount = 0;
             await Task.Run(() =>
             {
                 string? line;
@@ -842,8 +856,12 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                     if (line.Contains("installed successfully"))
                         installedSuccessfully = true;
 
-                    // Передаём реальный вывод процесса в прогресс (показываем пользователю)
-                    progress?.Report(line);
+                    // Сообщаем прогресс раз в 50 библиотек
+                    if (libraryCount > 0 && libraryCount - lastReportedLibraryCount >= 50)
+                    {
+                        lastReportedLibraryCount = libraryCount;
+                        progress?.Report($"{LocalizationManager.Get("Installer_Installing")} ({libraryCount} libraries)");
+                    }
                 }
             }, ct);
 
@@ -855,9 +873,6 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                 {
                     lock (errorLines) errorLines.Add(line);
                     Logger.Info($"[Forge] {line}", "McServerInstaller");
-
-                    // stderr тоже передаём — там могут быть предупреждения
-                    progress?.Report(line);
                 }
             }, ct);
 
@@ -1448,7 +1463,6 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                     {
                         lock (output) output.Add(line);
                         Logger.Info($"[Quilt] {line}", "McServerInstaller");
-                        progress?.Report(line);
                     }
                 }, combinedToken);
 
@@ -1460,7 +1474,6 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                     {
                         lock (error) error.Add(line);
                         Logger.Info($"[Quilt/stderr] {line}", "McServerInstaller");
-                        progress?.Report(line);
                     }
                 }, combinedToken);
 
@@ -2191,32 +2204,15 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     }
 
     /// <summary>
-    /// Найти Java путь для конкретной версии Minecraft
-    /// Требования Java:
-    /// - MC 1.20.5+ в†’ Java 21
-    /// - MC 1.18-1.20.4 в†’ Java 17
-    /// - MC 1.17 в†’ Java 16
-    /// - MC 1.16 Рё РЅРёР¶Рµ в†’ Java 8
+    /// Найти Java путь для конкретной версии Minecraft.
+    /// Использует централизованный <see cref="JavaVersionParser.GetRequiredJavaVersion"/>.
     /// </summary>
     private string? FindJavaPathForVersion(string mcVersion)
     {
         Logger.Info($"Finding Java for Minecraft version {mcVersion}", "McServerInstaller");
 
-        // Парсим версию Minecraft
-        if (!TryParseMcVersion(mcVersion, out var major, out var minor))
-        {
-            Logger.Warning($"Failed to parse MC version {mcVersion}, using default Java", "McServerInstaller");
-            return FindJavaPath();
-        }
-
-        // Определяем требуемую версию Java
-        int requiredJavaVersion = (major, minor) switch
-        {
-            ( >= 1, >= 20) when minor >= 5 => 21,      // 1.20.5+
-            ( >= 1, >= 18) => 17,                       // 1.18-1.20.4
-            (1, 17) => 16,                             // 1.17
-            _ => 8                                     // 1.16 и ниже
-        };
+        // Определяем требуемую версию Java через централизованный парсер
+        int requiredJavaVersion = JavaVersionParser.GetRequiredJavaVersion(mcVersion, ServerLaunchType.Standard);
 
         Logger.Info($"Minecraft {mcVersion} requires Java {requiredJavaVersion}", "McServerInstaller");
 
@@ -2226,9 +2222,9 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
             var config = _configService?.GetConfig();
             if (config != null)
             {
-                // Ищем Java с точным совпадением версии
+                // Ищем Java с точным совпадением major-версии (используем MajorVersion, а не строку Version)
                 var matchingJava = config.JavaInstallations
-                    .FirstOrDefault(j => j.Exists && j.Version == requiredJavaVersion.ToString());
+                    .FirstOrDefault(j => j.Exists && j.MajorVersion == requiredJavaVersion);
 
                 if (matchingJava != null)
                 {
@@ -2238,11 +2234,11 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
 
                 // Если не нашли точное совпадение, пробуем найти Java с большей версией
                 var newerJava = config.JavaInstallations
-                    .FirstOrDefault(j => j.Exists && int.TryParse(j.Version, out var v) && v >= requiredJavaVersion);
+                    .FirstOrDefault(j => j.Exists && j.MajorVersion >= requiredJavaVersion);
 
                 if (newerJava != null)
                 {
-                    Logger.Info($"Using newer Java {newerJava.Version} (required {requiredJavaVersion}) at {newerJava.Path}", "McServerInstaller");
+                    Logger.Info($"Using newer Java {newerJava.MajorVersion} (required {requiredJavaVersion}) at {newerJava.Path}", "McServerInstaller");
                     return newerJava.Path;
                 }
             }

@@ -76,20 +76,23 @@ public static partial class JavaVersionParser
             int.TryParse(parts[0], out var major) &&
             int.TryParse(parts[1], out var minor))
         {
-            // MC 26.1+ — требует Java 25 (и все будущие мажорные версии 27+, 28+ и т.д.)
+            // MC 26.2 (Chaos Cubed) подтверждённо требует Java SE 25.
+            // Все будущие мажорные версии (27+, 28+ и т.д.) также идут на Java 25+.
             if (major >= 26) return 25;
 
-            // MC 1.x
-            if (major == 1 && minor >= 21) return 21;
-            if (major == 1 && minor == 20 && parts.Length >= 3 && int.TryParse(parts[2], out var build) && build >= 5) return 21;
-            if (major == 1 && minor >= 18) return 17;
-            if (major == 1 && minor == 17) return 16;
+            // MC 1.x — классический формат версий
+            if (major == 1 && minor >= 21) return 21;                   // 1.21+ (Tricky Trials) → Java 21
+            if (major == 1 && minor == 20 && parts.Length >= 3 &&        // 1.20.5+ (Armored Paws) → Java 21
+                int.TryParse(parts[2], out var build) && build >= 5)
+                return 21;
+            if (major == 1 && minor >= 18) return 17;                   // 1.18+ (Caves & Cliffs Pt2) и 1.19, 1.20.0-4 → Java 17
+            if (major == 1 && minor == 17) return 16;                    // 1.17 (Caves & Cliffs Pt1) → Java 16
         }
 
-        // Forge/NeoForge: для старых версий MC повышаем минимум
-        if (launchType is ServerLaunchType.Forge or ServerLaunchType.NeoForge)
-            return 17;
-
+        // Для MC версий, не подходящих под условия выше, используем Java 8.
+        // Примечание: Forge/NeoForge для старых MC (1.16 и ниже) тоже работают на Java 8 —
+        // их установщики и серверы скомпилированы под Java 8. Современные Forge/NeoForge
+        // (MC 1.18+) уже покрыты условиями minor >= 18 → 17.
         return 8;
     }
 

@@ -178,7 +178,7 @@ public class JavaVersionParserTests
     [InlineData("27.0.0", ServerLaunchType.Forge, 25)]       // MC 27+ требует Java 25
     [InlineData("26.1.1", ServerLaunchType.Standard, 25)]    // MC 26.1.1 Vanilla требует Java 25
     // Старые версии
-    [InlineData("1.12.2", ServerLaunchType.Forge, 17)]       // Forge старая версия требует Java 17
+    [InlineData("1.12.2", ServerLaunchType.Forge, 8)]        // Forge 1.12.2 работает на Java 8 (сервер скомпилирован под Java 8)
     [InlineData("1.12.2", ServerLaunchType.Standard, 8)]     // Vanilla 1.12 требует Java 8
     public void GetRequiredJavaVersion_AllCombinations_ReturnsCorrectVersion(string mcVersion, ServerLaunchType launchType, int expected)
     {

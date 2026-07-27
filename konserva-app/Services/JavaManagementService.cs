@@ -21,15 +21,25 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         var requiredVersion = JavaVersionParser.ParseRequiredJavaVersion(errorMessage);
         var foundVersion = JavaVersionParser.ParseFoundJavaVersion(errorMessage);
 
-        // Считаем ошибкой Java-совместимости, только если удалось извлечь требуемую версию
-        // или сообщение содержит явный паттерн несовместимости
+        // Считаем ошибкой Java-совместимости, если удалось извлечь требуемую версию,
+        // сообщение содержит явный паттерн несовместимости,
+        // или это Java-краш без явного указания версии (например, InvocationTargetException)
         bool isJavaVersionError = requiredVersion > 0 ||
                                   errorMessage.Contains("Требуется Java", StringComparison.OrdinalIgnoreCase) ||
                                   errorMessage.Contains("class file version", StringComparison.OrdinalIgnoreCase) ||
-                                  errorMessage.Contains("Unsupported class file major version", StringComparison.OrdinalIgnoreCase);
+                                  errorMessage.Contains("Unsupported class file major version", StringComparison.OrdinalIgnoreCase) ||
+                                  IsJavaCrashError(errorMessage);
 
         if (isJavaVersionError)
         {
+            // Если не удалось извлечь версию из сообщения — вычисляем требуемую по версии Minecraft
+            if (requiredVersion <= 0)
+            {
+                requiredVersion = JavaVersionParser.GetRequiredJavaVersion(
+                    server.McVersion,
+                    GetLaunchType(server.ModLoader.Type));
+            }
+
             // Получаем все установленные Java
             var cfg = configService ?? Ioc.Default.GetService<IConfigService>()!;
             var allJava = cfg?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
@@ -46,6 +56,51 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
             _ = UiHelper.ShowError(errorMessage);
         }
     }
+
+    /// <summary>
+    /// Определяет, является ли сообщение об ошибке Java-крашем, даже если в нём нет
+    /// явного упоминания требуемой версии (например, InvocationTargetException,
+    /// ClassNotFoundException, stack trace от jdk.internal).
+    /// </summary>
+    private static bool IsJavaCrashError(string message)
+    {
+        if (string.IsNullOrEmpty(message))
+            return false;
+
+        // Паттерны, указывающие на проблемы с Java или запуском Java-приложения
+        var javaErrorPatterns = new[]
+        {
+            "InvocationTargetException",
+            "Exception in thread",
+            "at java.base/",
+            "java.lang.reflect",
+            "java.lang.NoClassDefFoundError",
+            "java.lang.ExceptionInInitializerError",
+            "java.lang.UnsupportedClassVersionError",
+            "Could not find or load main class",
+            "Unable to access jarfile",
+            "Error: Unable to initialize main class",
+            "JavaVM",
+            "Unrecognized Java VM option",
+            "Unrecognized option",
+            "Error occurred during initialization of VM",
+            "Could not reserve enough space",
+        };
+
+        return javaErrorPatterns.Any(p => message.Contains(p, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Преобразует ModLoaderType в ServerLaunchType для вычисления требуемой версии Java.
+    /// </summary>
+    private static ServerLaunchType GetLaunchType(ModLoaderType modLoaderType) => modLoaderType switch
+    {
+        ModLoaderType.Fabric => ServerLaunchType.Fabric,
+        ModLoaderType.Quilt => ServerLaunchType.Quilt,
+        ModLoaderType.Forge => ServerLaunchType.Forge,
+        ModLoaderType.NeoForge => ServerLaunchType.NeoForge,
+        _ => ServerLaunchType.Standard, // Vanilla, Paper
+    };
 
     /// <summary>
     /// Поиск установленных Java на компьютере

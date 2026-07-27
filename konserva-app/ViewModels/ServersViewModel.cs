@@ -23,7 +23,6 @@ public partial class ServersViewModel : ObservableObject, IDisposable
         _serverManager = serverManager;
 
         _serverManager.OnServersChanged += OnServersChanged;
-        _serverManager.OnServerStartError += OnServerStartError;
 
         RefreshList();
     }
@@ -34,7 +33,6 @@ public partial class ServersViewModel : ObservableObject, IDisposable
         _disposed = true;
 
         _serverManager.OnServersChanged -= OnServersChanged;
-        _serverManager.OnServerStartError -= OnServerStartError;
     }
 
     /// <summary>
@@ -68,7 +66,6 @@ public partial class ServersViewModel : ObservableObject, IDisposable
     // События для UI (страница подписывается на них)
     public event Action<Server>? NavigateToServerRequested;
     public event Action<Server>? OpenFolderRequested;
-    public event Action<Server, string>? ShowErrorRequested;
 
     partial void OnSearchTextChanged(string value) => ApplyFilters();
     partial void OnFilterTypeChanged(string value) => ApplyFilters();
@@ -229,6 +226,6 @@ public partial class ServersViewModel : ObservableObject, IDisposable
     private void OnServerStartError(Server server, string errorMessage)
     {
         Logger.Info($"[ServersViewModel] Error for server {server.Name}: {errorMessage}", "ServersViewModel");
-        ShowErrorRequested?.Invoke(server, errorMessage);
+        // UI-обработка выполняется в ServersPage.OnServerStartError через HandleServerStartError
     }
 }

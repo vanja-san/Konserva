@@ -1006,14 +1006,28 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         if (Server.Settings.JavaAutoSelect)
         {
             var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, GetInstaller().GetServerLaunchType(Server.Path));
-            // Ищем подходящую Java среди установленных
+            Logger.Info($"[GetJavaPathForServer] Auto-select: required Java {requiredJavaVersion}+ for {Server.McVersion}", "McServerProcess");
+
+            // Сначала ищем точное совпадение major-версии (например, Java 8 для MC 1.12.2)
+            var exactMatch = config.JavaInstallations
+                .FirstOrDefault(j => j.Exists && j.MajorVersion == requiredJavaVersion);
+
+            if (exactMatch != null)
+            {
+                Logger.Info($"[GetJavaPathForServer] Found exact match: {exactMatch.DisplayName}", "McServerProcess");
+                _lastJavaDisplayName = exactMatch.DisplayName;
+                return exactMatch.Path;
+            }
+
+            // Если точное совпадение не найдено — берём ближайшую старшую версию
             var suitableJava = config.JavaInstallations
-                .Where(j => j.Exists && j.MajorVersion >= requiredJavaVersion)
-                .OrderByDescending(j => j.MajorVersion)
+                .Where(j => j.Exists && j.MajorVersion > requiredJavaVersion)
+                .OrderBy(j => j.MajorVersion)
                 .FirstOrDefault();
 
             if (suitableJava != null)
             {
+                Logger.Info($"[GetJavaPathForServer] Using newer Java {suitableJava.MajorVersion} (required {requiredJavaVersion})", "McServerProcess");
                 _lastJavaDisplayName = suitableJava.DisplayName;
                 return suitableJava.Path;
             }

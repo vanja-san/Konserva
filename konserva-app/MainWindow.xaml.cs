@@ -639,12 +639,16 @@ public partial class MainWindow : FluentWindow, IDisposable
         if (isServersPage)
         {
             title = server.Name;
-            message = LocalizationManager.Get("Snackbar_JavaIncompatible_Message_Plural", server.McVersion, requiredVersion, javaVersionsText);
+            message = allJava is { Count: 1 }
+                ? LocalizationManager.Get("Snackbar_JavaIncompatible_Message", server.McVersion, requiredVersion, javaVersionsText)
+                : LocalizationManager.Get("Snackbar_JavaIncompatible_Message_Plural", server.McVersion, requiredVersion, javaVersionsText);
         }
         else if (isDetailPage)
         {
             title = LocalizationManager.Get("Snackbar_JavaIncompatible_Title");
-            message = LocalizationManager.Get("Snackbar_JavaIncompatible_Message_Plural", server.McVersion, requiredVersion, javaVersionsText);
+            message = allJava is { Count: 1 }
+                ? LocalizationManager.Get("Snackbar_JavaIncompatible_Message", server.McVersion, requiredVersion, javaVersionsText)
+                : LocalizationManager.Get("Snackbar_JavaIncompatible_Message_Plural", server.McVersion, requiredVersion, javaVersionsText);
         }
         else
         {
