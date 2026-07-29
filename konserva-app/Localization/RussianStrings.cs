@@ -387,6 +387,7 @@ public static class RussianStrings
         { "Log_ForceKillAttempt", "Попытка принудительного завершения..." },
         { "Log_ServerNotRunning", "Попытка отправки команды на остановленный сервер: {0}" },
         { "Log_JavaFromSettingsNotFound", "Java из настроек сервера не найдена: {0}" },
+        { "Log_Java8UpdateTooNew", "Сборка Java 8 ≥ 8u400 несовместима с Forge. Используйте Java 8 ≤ 8u302." },
         { "Log_JavaVersionNotFound_TryDefault", "Не найдена Java {0}+, пробуем Java по умолчанию" },
         { "Log_JavaDefaultNotFound", "Java по умолчанию не найдена: {0}" },
         { "Log_JarFile", "JAR файл: {0} ({1} MB)" },
@@ -422,8 +423,8 @@ public static class RussianStrings
         { "Common_Close", "Закрыть" },
         { "Common_Copy", "Копировать" },
         { "Settings_SelectServerFolder", "Выберите папку для серверов" },
-        { "Settings_SelectJava", "Выберите java.exe или javaw.exe" },
-        { "Settings_JavaFilter", "Java executable|java.exe|JavaW executable|javaw.exe" },
+        { "Settings_SelectJava", "Выберите javaw.exe" },
+        { "Settings_JavaFilter", "JavaW executable|javaw.exe" },
         { "Settings_JavaAdded", "Java добавлена" },
         { "Settings_JavaVersion", "Версия" },
         { "Settings_JavaPath", "Путь" },
@@ -474,6 +475,14 @@ public static class RussianStrings
         { "Log_JavaTooNewWarning", "Java {0} (v{1}) намного новее требуемой ({2}+). Сервер может работать некорректно. Рекомендуется установить Java {2} или {2}+4." },
         { "Log_JavaClassFileVersionError", "Java {0} (v{1}) слишком новая для этого сервера. Используемая версия Forge скомпилирована для Java 17.\nУстановите Java 17 или 21 и перезапустите сервер." },
         { "Log_ServerReady", "Сервер успешно запущен" },
-        { "Log_ServerReady_Commands", "Используйте консоль ниже для отправки команд" }
+        { "Log_ServerReady_Commands", "Используйте консоль ниже для отправки команд" },
+        { "Log_JavaNoModulePath", "Выбранная Java не поддерживает module-path (-p). Forge/NeoForge могут работать некорректно." },
+        { "Snackbar_JavaWarning_Title", "Версия Java" },
+        { "Snackbar_JavaWarning_Message", "Выбранная Java не поддерживает module-path (-p). Forge/NeoForge могут работать некорректно. Рекомендуется Java 8 (< 8u400), 11 или 17." },
+        { "Snackbar_Java8Broken_Title", "Несовместимая сборка Java 8" },
+        { "Snackbar_Java8Broken_Message", "Java 8 ≥ 8u400 (8.0.400+) несовместима с Forge/NeoForge на Minecraft {0}. Установите Java 8 ≤ 8u302 (8.0.302)." },
+        { "Log_JavaInfo", "Java: {0} ({1}+)" },
+        { "Log_JavaVersionFallback", "Java: {0}" },
+        { "Log_ServerInfo", "ID: {0} · {1} {2} · Minecraft {3}" }
     };
 }

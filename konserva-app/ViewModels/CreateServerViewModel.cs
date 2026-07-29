@@ -15,6 +15,7 @@ public partial class CreateServerViewModel : ObservableObject
 {
     private readonly IConfigService _configService;
     private readonly IMcVersionsApi _versionsApi;
+    private readonly IModLoaderService _modLoaderService;
     private readonly IServerInstaller _installer;
     private readonly IServerManager _serverManager;
 
@@ -33,11 +34,13 @@ public partial class CreateServerViewModel : ObservableObject
     public CreateServerViewModel(
         IConfigService configService,
         IMcVersionsApi versionsApi,
+        IModLoaderService modLoaderService,
         IServerInstaller installer,
         IServerManager serverManager)
     {
         _configService = configService;
         _versionsApi = versionsApi;
+        _modLoaderService = modLoaderService;
         _installer = installer;
         _serverManager = serverManager;
     }
@@ -104,24 +107,8 @@ public partial class CreateServerViewModel : ObservableObject
     public void FilterMcVersions(string? modLoaderOverride = null)
     {
         var modLoader = modLoaderOverride ?? SelectedModLoader;
-
-        HashSet<string> supportedVersions;
-
-        if (modLoader == "Paper")
-            supportedVersions = _paperVersions.Count > 0 ? _paperVersions : [.. _allMcVersions];
-        else if (modLoader == "NeoForge")
-            supportedVersions = [.. _allMcVersions.Where(v =>
-                McVersionHelper.TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
-        else if (modLoader == "Quilt" && _quiltSupportedVersions != null)
-            supportedVersions = _quiltSupportedVersions;
-        else
-            supportedVersions = [.. _allMcVersions];
-
-        var versions = _allMcVersions
-            .Where(v => supportedVersions.Contains(v))
-            .Where(v => ShowSnapshots || !McVersionHelper.IsSnapshot(v))
-            .ToArray();
-
+        var versions = _modLoaderService.FilterMcVersions(
+            _allMcVersions, modLoader, _paperVersions, _quiltSupportedVersions, ShowSnapshots);
         McVersions = new System.Collections.ObjectModel.ObservableCollection<string>(versions);
     }
 
@@ -145,6 +132,9 @@ public partial class CreateServerViewModel : ObservableObject
 
     public HashSet<string>? GetQuiltSupportedVersions() => _quiltSupportedVersions;
 
+    public Task<string[]> GetLoaderVersions(string modLoaderType, string mcVersion, bool showSnapshots)
+        => _modLoaderService.GetLoaderVersionsAsync(modLoaderType, mcVersion, showSnapshots);
+
     // ─── Загрузка версий загрузчика ─────────────────────────────────
 
     public async Task LoadLoaderVersions(string modLoaderType, string mcVersion)
@@ -165,31 +155,12 @@ public partial class CreateServerViewModel : ObservableObject
 
         try
         {
-            string[] versions = modLoaderType switch
-            {
-                "Forge" => await _versionsApi.GetForgeVersions(mcVersion),
-                "NeoForge" => await _versionsApi.GetNeoForgeVersions(mcVersion),
-                "Fabric" => await _versionsApi.GetFabricVersions(mcVersion),
-                "Quilt" => await _versionsApi.GetQuiltVersions(mcVersion),
-                "Paper" => await _versionsApi.GetPaperVersions(mcVersion),
-                _ => []
-            };
+            var versions = await _modLoaderService.GetLoaderVersionsAsync(modLoaderType, mcVersion, ShowSnapshots);
 
             if (cts.IsCancellationRequested) return;
 
             _lastLoadedModLoader = modLoaderType;
             _lastLoadedMcVersion = mcVersion;
-
-            if (!ShowSnapshots)
-            {
-                versions = modLoaderType switch
-                {
-                    "NeoForge" => [.. versions.Where(v => !McVersionHelper.IsNeoForgeSnapshot(v))],
-                    "Quilt" => [.. versions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))],
-                    "Paper" => [.. versions.Where(v => !v.Contains("(ALPHA)", StringComparison.OrdinalIgnoreCase))],
-                    _ => versions
-                };
-            }
 
             LoaderVersions = new System.Collections.ObjectModel.ObservableCollection<string>(versions.Length > 0 ? versions : []);
             IsLoaderVersionEnabled = versions.Length > 0;
@@ -209,70 +180,9 @@ public partial class CreateServerViewModel : ObservableObject
 
     // ─── Поиск совместимой версии ───────────────────────────────────
 
-    public async Task<string?> FindLastCompatibleMcVersionAsync(string modLoaderType, string currentMcVersion)
+    public Task<string?> FindLastCompatibleMcVersionAsync(string modLoaderType, string currentMcVersion)
     {
-        string[] currentVersions = modLoaderType switch
-        {
-            "Forge" => await _versionsApi.GetForgeVersions(currentMcVersion),
-            "NeoForge" => await _versionsApi.GetNeoForgeVersions(currentMcVersion),
-            "Fabric" => await _versionsApi.GetFabricVersions(currentMcVersion),
-            "Quilt" => await _versionsApi.GetQuiltVersions(currentMcVersion),
-            "Paper" => await _versionsApi.GetPaperVersions(currentMcVersion),
-            _ => []
-        };
-
-        if (!ShowSnapshots)
-        {
-            currentVersions = modLoaderType switch
-            {
-                "NeoForge" => [.. currentVersions.Where(v => !McVersionHelper.IsNeoForgeSnapshot(v))],
-                "Quilt" => [.. currentVersions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))],
-                "Paper" => [.. currentVersions.Where(v => !v.Contains("(ALPHA)", StringComparison.OrdinalIgnoreCase))],
-                _ => currentVersions
-            };
-        }
-
-        if (currentVersions.Length > 0 && currentVersions[0] != "latest")
-            return currentMcVersion;
-
-        var mcVersions = _allMcVersions
-            .Where(v => ShowSnapshots || !McVersionHelper.IsSnapshot(v))
-            .Take(10)
-            .ToList();
-
-        foreach (var version in mcVersions)
-        {
-            if (version == currentMcVersion) continue;
-            try
-            {
-                string[] versions = modLoaderType switch
-                {
-                    "Forge" => await _versionsApi.GetForgeVersions(version),
-                    "NeoForge" => await _versionsApi.GetNeoForgeVersions(version),
-                    "Fabric" => await _versionsApi.GetFabricVersions(version),
-                    "Quilt" => await _versionsApi.GetQuiltVersions(version),
-                    "Paper" => await _versionsApi.GetPaperVersions(version),
-                    _ => []
-                };
-
-                if (!ShowSnapshots)
-                {
-                    versions = modLoaderType switch
-                    {
-                        "NeoForge" => [.. versions.Where(v => !McVersionHelper.IsNeoForgeSnapshot(v))],
-                        "Quilt" => [.. versions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))],
-                        "Paper" => [.. versions.Where(v => !v.Contains("(ALPHA)", StringComparison.OrdinalIgnoreCase))],
-                        _ => versions
-                    };
-                }
-
-                if (versions.Length > 0 && versions[0] != "latest")
-                    return version;
-            }
-            catch { /* skip */ }
-        }
-
-        return null;
+        return _modLoaderService.FindCompatibleMcVersionAsync(modLoaderType, currentMcVersion, _allMcVersions, ShowSnapshots);
     }
 
     // ─── Валидация ──────────────────────────────────────────────────
@@ -305,17 +215,16 @@ public partial class CreateServerViewModel : ObservableObject
         try
         {
             var config = _configService.GetConfig();
-            if (!string.IsNullOrEmpty(config.ServersDirectory))
-            {
-                Directory.CreateDirectory(config.ServersDirectory);
-                return config.ServersDirectory;
-            }
+            var dir = config.ServersDirectory;
+            Directory.CreateDirectory(dir);
+            return dir;
         }
-        catch { /* ignore */ }
-
-        var serversDir = Path.Combine(AppContext.BaseDirectory, "Servers");
-        Directory.CreateDirectory(serversDir);
-        return serversDir;
+        catch
+        {
+            var serversDir = Path.Combine(AppContext.BaseDirectory, "Servers");
+            Directory.CreateDirectory(serversDir);
+            return serversDir;
+        }
     }
 
     public void SaveServersPath(string path)
@@ -327,21 +236,6 @@ public partial class CreateServerViewModel : ObservableObject
             _configService.SaveConfig(config);
         }
         catch { /* ignore */ }
-    }
-
-    public string GetDefaultFolderPath()
-    {
-        try
-        {
-            var config = _configService.GetConfig();
-            if (!string.IsNullOrEmpty(config.ServersDirectory))
-                return config.ServersDirectory;
-        }
-        catch { /* ignore */ }
-
-        var serversDir = Path.Combine(AppContext.BaseDirectory, "Servers");
-        Directory.CreateDirectory(serversDir);
-        return serversDir;
     }
 
     // ─── Импорт сервера ─────────────────────────────────────────────

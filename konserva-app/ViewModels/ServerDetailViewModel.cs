@@ -166,26 +166,23 @@ public partial class ServerDetailViewModel : ObservableObject
     /// <summary>
     /// Автосохранение настроек сервера
     /// </summary>
-    public void SaveSettings(string? name, string? ramMinStr, string? ramMaxStr,
-        bool? autoRestart, string? autoRestartDelayStr,
-        bool javaAutoSelect, string? javaId,
-        string jvmArgs)
+    public void SaveSettings(ServerSettingsRequest request)
     {
         if (_server == null)
             return;
 
         // Название + переименование папки
-        if (!string.IsNullOrEmpty(name) && name != _server.Name)
+        if (!string.IsNullOrEmpty(request.Name) && request.Name != _server.Name)
         {
             var oldName = _server.Name;
-            _server.Name = name;
-            ServerName = name;
+            _server.Name = request.Name;
+            ServerName = request.Name;
 
             // Если сервер не запущен — переименовываем папку
             if (!_server.IsRunning)
             {
                 LastRenameError = null;
-                if (!_serverManager.RenameServerFolder(_server.Id, name, out var error))
+                if (!_serverManager.RenameServerFolder(_server.Id, request.Name, out var error))
                 {
                     LastRenameError = error;
                     // Откатываем имя обратно
@@ -200,31 +197,31 @@ public partial class ServerDetailViewModel : ObservableObject
         }
 
         // RAM
-        if (int.TryParse(ramMinStr, out var ramMin) && ramMin >= Constants.MinRamMb && ramMin != _server.Settings.RamMin)
+        if (int.TryParse(request.RamMinStr, out var ramMin) && ramMin >= Constants.MinRamMb && ramMin != _server.Settings.RamMin)
             _server.Settings.RamMin = ramMin;
 
-        if (int.TryParse(ramMaxStr, out var ramMax) && ramMax >= ramMin && ramMax != _server.Settings.RamMax)
+        if (int.TryParse(request.RamMaxStr, out var ramMax) && ramMax >= ramMin && ramMax != _server.Settings.RamMax)
             _server.Settings.RamMax = ramMax;
 
         // Авто-рестарт
-        if (autoRestart.HasValue && autoRestart.Value != _server.Settings.AutoRestart)
-            _server.Settings.AutoRestart = autoRestart.Value;
+        if (request.AutoRestart.HasValue && request.AutoRestart.Value != _server.Settings.AutoRestart)
+            _server.Settings.AutoRestart = request.AutoRestart.Value;
 
         // Задержка авто-рестарта
-        if (int.TryParse(autoRestartDelayStr, out var delay) && delay >= 0 && delay != _server.Settings.AutoRestartDelay)
+        if (int.TryParse(request.AutoRestartDelayStr, out var delay) && delay >= 0 && delay != _server.Settings.AutoRestartDelay)
             _server.Settings.AutoRestartDelay = delay;
 
         // Java
-        if (javaAutoSelect != _server.Settings.JavaAutoSelect)
-            _server.Settings.JavaAutoSelect = javaAutoSelect;
+        if (request.JavaAutoSelect != _server.Settings.JavaAutoSelect)
+            _server.Settings.JavaAutoSelect = request.JavaAutoSelect;
 
-        if (!javaAutoSelect && javaId != _server.Settings.JavaId)
-            _server.Settings.JavaId = javaId;
-        else if (javaAutoSelect && _server.Settings.JavaId != null)
+        if (!request.JavaAutoSelect && request.JavaId != _server.Settings.JavaId)
+            _server.Settings.JavaId = request.JavaId;
+        else if (request.JavaAutoSelect && _server.Settings.JavaId != null)
             _server.Settings.JavaId = null;
 
         // JVM аргументы
-        _server.Settings.JvmArgsText = jvmArgs;
+        _server.Settings.JvmArgsText = request.JvmArgs;
 
         _serverManager.UpdateServer(_server);
     }
@@ -352,38 +349,10 @@ public partial class ServerDetailViewModel : ObservableObject
     public void LoadMods()
     {
         if (_server == null) return;
-
         try
         {
-            var modsDir = Path.Combine(_server.Path, "mods");
-            if (!Directory.Exists(modsDir))
-            {
-                Mods = new();
-                ModsVisible = false;
-                return;
-            }
-
-            var mods = new List<ModItem>();
-            foreach (var pattern in new[] { "*.jar", "*.jar.disabled" })
-            {
-                foreach (var path in Directory.GetFiles(modsDir, pattern))
-                {
-                    var fileName = Path.GetFileName(path);
-                    var isDisabled = fileName.EndsWith(".disabled");
-                    var cleanName = isDisabled ? fileName.Replace(".jar.disabled", ".jar") : fileName;
-                    mods.Add(new ModItem
-                    {
-                        Name = Path.GetFileNameWithoutExtension(cleanName),
-                        Version = ParseVersion(cleanName),
-                        FileName = cleanName,
-                        FilePath = path,
-                        FileSize = new FileInfo(path).Length,
-                        Enabled = !isDisabled
-                    });
-                }
-            }
-
-            Mods = new System.Collections.ObjectModel.ObservableCollection<ModItem>(mods.OrderBy(m => m.Name));
+            var items = ScanItemFiles<ModItem>("mods");
+            Mods = new(items);
             ModsVisible = Mods.Count > 0;
         }
         catch (Exception ex)
@@ -395,38 +364,10 @@ public partial class ServerDetailViewModel : ObservableObject
     public void LoadPlugins()
     {
         if (_server == null) return;
-
         try
         {
-            var pluginsDir = Path.Combine(_server.Path, "plugins");
-            if (!Directory.Exists(pluginsDir))
-            {
-                Plugins = new();
-                PluginsVisible = false;
-                return;
-            }
-
-            var plugins = new List<PluginItem>();
-            foreach (var pattern in new[] { "*.jar", "*.jar.disabled" })
-            {
-                foreach (var path in Directory.GetFiles(pluginsDir, pattern))
-                {
-                    var fileName = Path.GetFileName(path);
-                    var isDisabled = fileName.EndsWith(".disabled");
-                    var cleanName = isDisabled ? fileName.Replace(".jar.disabled", ".jar") : fileName;
-                    plugins.Add(new PluginItem
-                    {
-                        Name = Path.GetFileNameWithoutExtension(cleanName),
-                        Version = ParseVersion(cleanName),
-                        FileName = cleanName,
-                        FilePath = path,
-                        FileSize = new FileInfo(path).Length,
-                        Enabled = !isDisabled
-                    });
-                }
-            }
-
-            Plugins = new System.Collections.ObjectModel.ObservableCollection<PluginItem>(plugins.OrderBy(p => p.Name));
+            var items = ScanItemFiles<PluginItem>("plugins");
+            Plugins = new(items);
             PluginsVisible = Plugins.Count > 0;
         }
         catch (Exception ex)
@@ -435,185 +376,140 @@ public partial class ServerDetailViewModel : ObservableObject
         }
     }
 
-    public async Task ToggleModAsync(ModItem mod)
+    public async Task ToggleModAsync(ModItem mod) =>
+        await ToggleItemInternal(mod, LoadMods, "ServerDetail_ModToggleError");
+
+    public async Task TogglePluginAsync(PluginItem plugin) =>
+        await ToggleItemInternal(plugin, LoadPlugins, "ServerDetail_PluginToggleError");
+
+    public void ToggleAllMods() =>
+        ToggleAllItemsInternal(Mods, LoadMods);
+
+    public void ToggleAllPlugins() =>
+        ToggleAllItemsInternal(Plugins, LoadPlugins);
+
+    public async Task DeleteModAsync(ModItem mod) =>
+        await DeleteItemInternal(mod, LoadMods, "ServerDetail_ModDeleteError");
+
+    public async Task DeletePluginAsync(PluginItem plugin) =>
+        await DeleteItemInternal(plugin, LoadPlugins, "ServerDetail_PluginDeleteError");
+
+    // ─── Generic helpers ────────────────────────────────────────────
+
+    private List<T> ScanItemFiles<T>(string subDir) where T : IItemEntry, new()
+    {
+        var dir = Path.Combine(_server!.Path, subDir);
+        if (!Directory.Exists(dir)) return new();
+
+        var items = new List<T>();
+        foreach (var pattern in new[] { "*.jar", "*.jar.disabled" })
+        {
+            foreach (var path in Directory.GetFiles(dir, pattern))
+            {
+                var fileName = Path.GetFileName(path);
+                var isDisabled = fileName.EndsWith(".disabled");
+                var cleanName = isDisabled ? fileName.Replace(".jar.disabled", ".jar") : fileName;
+                items.Add(new T
+                {
+                    Name = Path.GetFileNameWithoutExtension(cleanName),
+                    Version = ParseVersion(cleanName),
+                    FileName = cleanName,
+                    FilePath = path,
+                    FileSize = new FileInfo(path).Length,
+                    Enabled = !isDisabled
+                });
+            }
+        }
+        return [.. items.OrderBy(m => m.Name)];
+    }
+
+    private async Task ToggleItemInternal<T>(T item, Action reload, string errorKey) where T : IItemEntry
     {
         try
         {
-            if (mod.Enabled)
+            if (item.Enabled)
             {
-                var disabledPath = mod.FilePath + ".disabled";
-                if (File.Exists(mod.FilePath))
+                var disabledPath = item.FilePath + ".disabled";
+                if (File.Exists(item.FilePath))
                 {
-                    File.Move(mod.FilePath, disabledPath);
-                    mod.FilePath = disabledPath;
-                    mod.Enabled = false;
+                    File.Move(item.FilePath, disabledPath);
+                    item.FilePath = disabledPath;
+                    item.Enabled = false;
                 }
             }
             else
             {
-                if (File.Exists(mod.FilePath))
+                if (File.Exists(item.FilePath))
                 {
-                    var enabledPath = mod.FilePath.Replace(".jar.disabled", ".jar");
-                    File.Move(mod.FilePath, enabledPath);
-                    mod.FilePath = enabledPath;
-                    mod.Enabled = true;
+                    var enabledPath = item.FilePath.Replace(".jar.disabled", ".jar");
+                    File.Move(item.FilePath, enabledPath);
+                    item.FilePath = enabledPath;
+                    item.Enabled = true;
                 }
             }
-            LoadMods();
+            reload();
         }
         catch (Exception ex)
         {
-            Logger.Error($"ToggleMod error: {ex.Message}", ex, "ServerDetailViewModel");
-            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_ModToggleError")}: {ex.Message}");
+            Logger.Error($"ToggleItem error: {ex.Message}", ex, "ServerDetailViewModel");
+            await UiHelper.ShowError($"{LocalizationManager.Get(errorKey)}: {ex.Message}");
         }
     }
 
-    public async Task TogglePluginAsync(PluginItem plugin)
+    private void ToggleAllItemsInternal<T>(IList<T> items, Action reload) where T : IItemEntry
     {
-        try
-        {
-            if (plugin.Enabled)
-            {
-                var disabledPath = plugin.FilePath + ".disabled";
-                if (File.Exists(plugin.FilePath))
-                {
-                    File.Move(plugin.FilePath, disabledPath);
-                    plugin.FilePath = disabledPath;
-                    plugin.Enabled = false;
-                }
-            }
-            else
-            {
-                if (File.Exists(plugin.FilePath))
-                {
-                    var enabledPath = plugin.FilePath.Replace(".jar.disabled", ".jar");
-                    File.Move(plugin.FilePath, enabledPath);
-                    plugin.FilePath = enabledPath;
-                    plugin.Enabled = true;
-                }
-            }
-            LoadPlugins();
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"TogglePlugin error: {ex.Message}", ex, "ServerDetailViewModel");
-            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_PluginToggleError")}: {ex.Message}");
-        }
-    }
+        if (_server == null || items.Count == 0) return;
 
-    public void ToggleAllMods()
-    {
-        if (_server == null || Mods.Count == 0) return;
+        var targetEnabled = !items.Any(m => m.Enabled);
 
-        var anyEnabled = Mods.Any(m => m.Enabled);
-        var targetEnabled = !anyEnabled;
-
-        foreach (var mod in Mods)
+        foreach (var item in items)
         {
-            if (mod.Enabled == targetEnabled) continue;
+            if (item.Enabled == targetEnabled) continue;
             try
             {
                 if (targetEnabled)
                 {
-                    var enabledPath = mod.FilePath.Replace(".jar.disabled", ".jar");
-                    if (File.Exists(mod.FilePath))
+                    var enabledPath = item.FilePath.Replace(".jar.disabled", ".jar");
+                    if (File.Exists(item.FilePath))
                     {
-                        File.Move(mod.FilePath, enabledPath);
-                        mod.FilePath = enabledPath;
-                        mod.Enabled = true;
+                        File.Move(item.FilePath, enabledPath);
+                        item.FilePath = enabledPath;
+                        item.Enabled = true;
                     }
                 }
                 else
                 {
-                    var disabledPath = mod.FilePath + ".disabled";
-                    if (File.Exists(mod.FilePath))
+                    var disabledPath = item.FilePath + ".disabled";
+                    if (File.Exists(item.FilePath))
                     {
-                        File.Move(mod.FilePath, disabledPath);
-                        mod.FilePath = disabledPath;
-                        mod.Enabled = false;
+                        File.Move(item.FilePath, disabledPath);
+                        item.FilePath = disabledPath;
+                        item.Enabled = false;
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"ToggleAllMods error: {ex.Message}", ex, "ServerDetailViewModel");
+                Logger.Error($"ToggleAllItems error: {ex.Message}", ex, "ServerDetailViewModel");
             }
         }
-        LoadMods();
+        reload();
     }
 
-    public void ToggleAllPlugins()
-    {
-        if (_server == null || Plugins.Count == 0) return;
-
-        var anyEnabled = Plugins.Any(p => p.Enabled);
-        var targetEnabled = !anyEnabled;
-
-        foreach (var plugin in Plugins)
-        {
-            if (plugin.Enabled == targetEnabled) continue;
-            try
-            {
-                if (targetEnabled)
-                {
-                    var enabledPath = plugin.FilePath.Replace(".jar.disabled", ".jar");
-                    if (File.Exists(plugin.FilePath))
-                    {
-                        File.Move(plugin.FilePath, enabledPath);
-                        plugin.FilePath = enabledPath;
-                        plugin.Enabled = true;
-                    }
-                }
-                else
-                {
-                    var disabledPath = plugin.FilePath + ".disabled";
-                    if (File.Exists(plugin.FilePath))
-                    {
-                        File.Move(plugin.FilePath, disabledPath);
-                        plugin.FilePath = disabledPath;
-                        plugin.Enabled = false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"ToggleAllPlugins error: {ex.Message}", ex, "ServerDetailViewModel");
-            }
-        }
-        LoadPlugins();
-    }
-
-    public async Task DeleteModAsync(ModItem mod)
+    private async Task DeleteItemInternal<T>(T item, Action reload, string errorKey) where T : IItemEntry
     {
         try
         {
-            if (File.Exists(mod.FilePath))
+            if (File.Exists(item.FilePath))
             {
-                File.Delete(mod.FilePath);
-                LoadMods();
+                File.Delete(item.FilePath);
+                reload();
             }
         }
         catch (Exception ex)
         {
-            Logger.Error($"DeleteMod error: {ex.Message}", ex, "ServerDetailViewModel");
-            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_ModDeleteError")}: {ex.Message}");
-        }
-    }
-
-    public async Task DeletePluginAsync(PluginItem plugin)
-    {
-        try
-        {
-            if (File.Exists(plugin.FilePath))
-            {
-                File.Delete(plugin.FilePath);
-                LoadPlugins();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"DeletePlugin error: {ex.Message}", ex, "ServerDetailViewModel");
-            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_PluginDeleteError")}: {ex.Message}");
+            Logger.Error($"DeleteItem error: {ex.Message}", ex, "ServerDetailViewModel");
+            await UiHelper.ShowError($"{LocalizationManager.Get(errorKey)}: {ex.Message}");
         }
     }
 
@@ -680,15 +576,10 @@ public partial class ServerDetailViewModel : ObservableObject
         return parts.Length > 1 ? parts[^1] : LocalizationManager.Get("Common_Unknown");
     }
 
-    public bool CheckAllModsDisabled()
-    {
-        return Mods.Count > 0 && Mods.All(m => !m.Enabled);
-    }
+    public bool CheckAllModsDisabled() => CheckAllDisabled(Mods);
 
-    public bool CheckAllPluginsDisabled()
-    {
-        return Plugins.Count > 0 && Plugins.All(p => !p.Enabled);
-    }
+    public bool CheckAllPluginsDisabled() => CheckAllDisabled(Plugins);
 
-
+    private static bool CheckAllDisabled<T>(IList<T> items) where T : IItemEntry =>
+        items.Count > 0 && items.All(m => !m.Enabled);
 }

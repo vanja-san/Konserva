@@ -1,8 +1,4 @@
 using Konserva.Utilities;
-using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text.Json;
 
 namespace Konserva.Services;
 
@@ -30,19 +26,7 @@ public partial class McServerInstaller
 
             Logger.Info($"Found version entry, fetching from {versionEntry.Url}", "McServerInstaller");
 
-            using var request = new HttpRequestMessage(HttpMethod.Get, versionEntry.Url);
-            request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
-            request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
-
-            using var response = await GetHttpClient().SendAsync(request, ct);
-            response.EnsureSuccessStatusCode();
-
-            var contentStream = await response.Content.ReadAsStreamAsync(ct);
-            using var decompressedStream = StreamUtilities.GetDecompressedStream(contentStream, response.Content.Headers);
-            using var reader = new StreamReader(decompressedStream);
-            var responseText = await reader.ReadToEndAsync(ct);
-
-            using var doc = JsonDocument.Parse(responseText);
+            using var doc = await FetchJsonAsync(versionEntry.Url, ct);
 
             var downloads = doc.RootElement.GetProperty("downloads");
             if (downloads.TryGetProperty("server", out var server))

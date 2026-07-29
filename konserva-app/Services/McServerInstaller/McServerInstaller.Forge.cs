@@ -156,10 +156,41 @@ public partial class McServerInstaller
 
             if (success)
             {
-                await WaitForForgeStabilityAsync(destinationPath, forgeVersion, ct, progress);
+                await WaitForFileStabilityAsync(destinationPath, "forge", ct, progress);
+
+                // Копируем forge universal jar из libraries в корень
+                try
+                {
+                    var librariesPath = Path.Combine(destinationPath, "libraries");
+                    if (Directory.Exists(librariesPath))
+                    {
+                        var forgeJars = Directory.GetFiles(librariesPath, "forge-*-universal.jar", SearchOption.AllDirectories);
+                        if (forgeJars.Length == 0)
+                            forgeJars = Directory.GetFiles(librariesPath, "forge-*.jar", SearchOption.AllDirectories);
+                        if (forgeJars.Length > 0)
+                        {
+                            var srcJar = forgeJars[0];
+                            var jarName = $"forge-{forgeVersion}.jar";
+                            var dstJar = Path.Combine(destinationPath, jarName);
+                            if (!File.Exists(dstJar))
+                            {
+                                File.Copy(srcJar, dstJar);
+                                Logger.Info($"Copied universal jar to {jarName}", "McServerInstaller");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning($"Failed to copy Forge universal jar: {ex.Message}", "McServerInstaller");
+                }
             }
 
             return success;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {
@@ -196,14 +227,22 @@ public partial class McServerInstaller
             CreateNoWindow = true
         };
 
+        Process? process = null;
         try
         {
-            using var process = Process.Start(startInfo);
+            process = Process.Start(startInfo);
             if (process == null)
             {
                 Logger.Error("Failed to start Forge/NeoForge installer process");
                 return false;
             }
+
+            // При отмене убиваем процесс, чтобы ReadLine() завершился
+            using var cancellationRegistration = ct.Register(() =>
+            {
+                try { if (!process.HasExited) process.Kill(); }
+                catch { }
+            });
 
             Logger.Info($"Installer process started, PID: {process.Id}");
 
@@ -223,6 +262,8 @@ public partial class McServerInstaller
                 string? line;
                 while ((line = process.StandardOutput.ReadLine()) != null)
                 {
+                    ct.ThrowIfCancellationRequested();
+
                     lock (outputLines) outputLines.Add(line);
                     Logger.Info($"[Forge] {line}", "McServerInstaller");
 
@@ -249,12 +290,13 @@ public partial class McServerInstaller
                 string? line;
                 while ((line = process.StandardError.ReadLine()) != null)
                 {
+                    ct.ThrowIfCancellationRequested();
                     lock (errorLines) errorLines.Add(line);
                     Logger.Info($"[Forge] {line}", "McServerInstaller");
                 }
             }, ct);
 
-            // Ждём завершения процесса
+            // Ждём завершения процесса (после Kill() вернётся сразу)
             process.WaitForExit();
 
             var elapsed = SystemTime.Now - startTime;
@@ -276,126 +318,22 @@ public partial class McServerInstaller
 
             return success;
         }
+        catch (OperationCanceledException)
+        {
+            // Убиваем процесс, если он ещё работает (страховка — ct.Register уже вызвал Kill)
+            if (process != null) { try { if (!process.HasExited) process.Kill(); } catch { } }
+            throw;
+        }
         catch (Exception ex)
         {
             Logger.Error($"Forge/NeoForge installer exception: {ex.Message}", ex, "McServerInstaller");
             return false;
         }
+        finally
+        {
+            process?.Dispose();
+        }
     }
 
-    /// <summary>
-    /// Ожидание стабилизации файлов после установки Forge
-    /// </summary>
-    private async Task WaitForForgeStabilityAsync(string destinationPath, string forgeVersion, CancellationToken ct, IProgress<string>? progress = null)
-    {
-        Logger.Info("Waiting for file operations to complete...", "McServerInstaller");
-        progress?.Report(LocalizationManager.Get("Installer_Finishing"));
 
-        var waitStartTime = SystemTime.Now;
-        var maxWaitTime = TimeSpan.FromSeconds(60);
-        var minWait = TimeSpan.FromSeconds(3);
-        var hasMinWaitElapsed = false;
-
-        while ((SystemTime.Now - waitStartTime) < maxWaitTime)
-        {
-            var hasForgeJarInRoot = Directory.GetFiles(destinationPath, "forge-*.jar").Any() ||
-                                   Directory.GetFiles(destinationPath, "neoforge-*.jar").Any();
-            var librariesPathCheck = Path.Combine(destinationPath, "libraries");
-            var hasUniversalInLibraries = false;
-            if (Directory.Exists(librariesPathCheck))
-            {
-                hasUniversalInLibraries = Directory.GetFiles(librariesPathCheck, "forge-*-universal.jar", SearchOption.AllDirectories).Any() ||
-                                          Directory.GetFiles(librariesPathCheck, "neoforge-*-universal.jar", SearchOption.AllDirectories).Any();
-            }
-            var hasLibraries = Directory.Exists(librariesPathCheck);
-            var hasRunBat = File.Exists(Path.Combine(destinationPath, "run.bat"));
-
-            if ((!hasForgeJarInRoot && !hasUniversalInLibraries) || !hasLibraries)
-            {
-                await Task.Delay(500, ct);
-                continue;
-            }
-
-            if (!hasMinWaitElapsed && (SystemTime.Now - waitStartTime) < minWait)
-            {
-                await Task.Delay(500, ct);
-                continue;
-            }
-            hasMinWaitElapsed = true;
-
-            var keyFiles = Directory.GetFiles(destinationPath, "*.jar")
-                .Concat(Directory.GetFiles(Path.Combine(destinationPath, "libraries"), "*.jar", SearchOption.AllDirectories))
-                .Take(50)
-                .ToArray();
-
-            if (keyFiles.Length == 0)
-            {
-                await Task.Delay(500, ct);
-                continue;
-            }
-
-            var allUnlocked = keyFiles.All(IsFileUnlocked);
-
-            if (allUnlocked && hasRunBat)
-            {
-                await Task.Delay(1000, ct);
-                Logger.Info($"Forge files unlocked and stable ({keyFiles.Length} checked, run.bat present)", "McServerInstaller");
-                break;
-            }
-            else if (allUnlocked)
-            {
-                Logger.Info($"Forge files unlocked but no run.bat, waiting for more files...", "McServerInstaller");
-                await Task.Delay(1000, ct);
-                if ((SystemTime.Now - waitStartTime) > TimeSpan.FromSeconds(10))
-                {
-                    Logger.Info("Exiting Forge stability wait (10s elapsed, files unlocked)", "McServerInstaller");
-                    break;
-                }
-            }
-
-            await Task.Delay(500, ct);
-        }
-
-        // Копируем forge universal jar из libraries в корень
-        try
-        {
-            var librariesPath = Path.Combine(destinationPath, "libraries");
-            if (Directory.Exists(librariesPath))
-            {
-                var forgeJars = Directory.GetFiles(librariesPath, "forge-*-universal.jar", SearchOption.AllDirectories);
-                if (forgeJars.Length > 0)
-                {
-                    var srcJar = forgeJars[0];
-                    var jarName = $"forge-{forgeVersion}.jar";
-                    var dstJar = Path.Combine(destinationPath, jarName);
-                    if (!File.Exists(dstJar))
-                    {
-                        File.Copy(srcJar, dstJar);
-                        Logger.Info($"Copied universal jar to {jarName}", "McServerInstaller");
-                    }
-                }
-                else
-                {
-                    var anyForgeJars = Directory.GetFiles(librariesPath, "forge-*.jar", SearchOption.AllDirectories);
-                    if (anyForgeJars.Length > 0)
-                    {
-                        var srcJar = anyForgeJars[0];
-                        var jarName = $"forge-{forgeVersion}.jar";
-                        var dstJar = Path.Combine(destinationPath, jarName);
-                        if (!File.Exists(dstJar))
-                        {
-                            File.Copy(srcJar, dstJar);
-                            Logger.Info($"Copied jar to {jarName} (fallback)", "McServerInstaller");
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Failed to copy Forge universal jar: {ex.Message}", "McServerInstaller");
-        }
-
-        Logger.Info("File operations completed", "McServerInstaller");
-    }
 }

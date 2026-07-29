@@ -228,7 +228,7 @@ public partial class McServerInstaller
 
             if (success)
             {
-                await WaitForNeoForgeStabilityAsync(destinationPath, ct, progress);
+                await WaitForFileStabilityAsync(destinationPath, "neoforge", ct, progress);
 
                 // Сохраняем конфигурацию запуска NeoForge (classpath + main class)
                 try
@@ -256,77 +256,5 @@ public partial class McServerInstaller
         }
     }
 
-    /// <summary>
-    /// Ожидание стабилизации файлов после установки NeoForge
-    /// </summary>
-    private async Task WaitForNeoForgeStabilityAsync(string destinationPath, CancellationToken ct, IProgress<string>? progress = null)
-    {
-        Logger.Info("Waiting for NeoForge file operations to complete...", "McServerInstaller");
-        progress?.Report(LocalizationManager.Get("Installer_Finishing"));
 
-        var waitStartTime = SystemTime.Now;
-        var maxWaitTime = TimeSpan.FromSeconds(60);
-        var librariesPath = Path.Combine(destinationPath, "libraries");
-        var minWait = TimeSpan.FromSeconds(3);
-        var hasMinWaitElapsed = false;
-
-        while ((SystemTime.Now - waitStartTime) < maxWaitTime)
-        {
-            var hasForgeJarInRoot = Directory.GetFiles(destinationPath, "forge-*.jar").Any() ||
-                                   Directory.GetFiles(destinationPath, "neoforge-*.jar").Any();
-            var hasUniversalInLibraries = false;
-            if (Directory.Exists(librariesPath))
-            {
-                hasUniversalInLibraries = Directory.GetFiles(librariesPath, "neoforge-*-universal.jar", SearchOption.AllDirectories).Any() ||
-                                          Directory.GetFiles(librariesPath, "forge-*-universal.jar", SearchOption.AllDirectories).Any();
-            }
-            var hasLibraries = Directory.Exists(librariesPath);
-            var hasRunBat = File.Exists(Path.Combine(destinationPath, "run.bat"));
-
-            if ((!hasForgeJarInRoot && !hasUniversalInLibraries) || !hasLibraries)
-            {
-                await Task.Delay(500, ct);
-                continue;
-            }
-
-            if (!hasMinWaitElapsed && (SystemTime.Now - waitStartTime) < minWait)
-            {
-                await Task.Delay(500, ct);
-                continue;
-            }
-            hasMinWaitElapsed = true;
-
-            var keyFiles = Directory.GetFiles(destinationPath, "*.jar")
-                .Concat(Directory.GetFiles(librariesPath, "*.jar", SearchOption.AllDirectories))
-                .Take(50)
-                .ToArray();
-
-            if (keyFiles.Length == 0)
-            {
-                await Task.Delay(500, ct);
-                continue;
-            }
-
-            var allUnlocked = keyFiles.All(IsFileUnlocked);
-
-            if (allUnlocked && hasRunBat)
-            {
-                await Task.Delay(1000, ct);
-                Logger.Info($"NeoForge files unlocked and stable ({keyFiles.Length} checked, run.bat present)", "McServerInstaller");
-                break;
-            }
-            else if (allUnlocked)
-            {
-                Logger.Info($"NeoForge files unlocked but no run.bat yet, waiting...", "McServerInstaller");
-                await Task.Delay(1000, ct);
-                if ((SystemTime.Now - waitStartTime) > TimeSpan.FromSeconds(10))
-                {
-                    Logger.Info("Exiting NeoForge stability wait (10s elapsed, files unlocked)", "McServerInstaller");
-                    break;
-                }
-            }
-
-            await Task.Delay(500, ct);
-        }
-    }
 }

@@ -207,23 +207,15 @@
                         x:Name="ProgressRing"
                         Width="16"
                         Height="16"
-                        Margin="0,0,8,0"
+                        Margin="0,0,16,0"
                         IsIndeterminate="True" />
                     <ui:TextBlock
                         x:Name="ProgressText"
+                        Cursor="Hand"
                         FontSize="12"
+                        MouseDown="ProgressText_MouseDown"
                         Text="{loc:Loc Common_Preparing}"
                         TextTrimming="CharacterEllipsis" />
-                    <ui:Button
-                        x:Name="ShowLogButton"
-                        MinWidth="0"
-                        Margin="8,0,0,0"
-                        Padding="4,0"
-                        Appearance="Secondary"
-                        Click="ShowLogButton_Click"
-                        Content="{loc:Loc Installer_ShowLog}"
-                        FontSize="11"
-                        Visibility="Collapsed" />
                 </StackPanel>
 
                 <!--  Кнопка Создать/Отмена  -->

@@ -2,7 +2,6 @@ using Konserva.Localization;
 using Konserva.Utilities;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -18,52 +17,23 @@ public partial class McServerInstaller
     /// </summary>
     public async Task<(string url, string version)?> GetFabricInstallerInfo(CancellationToken ct = default)
     {
-        // Пробуем 3 раза с задержкой
-        for (int attempt = 1; attempt <= 3; attempt++)
+        return await RetryHelper.RetryAsync(async () =>
         {
-            try
+            Logger.Info("Fetching Fabric installer info");
+            using var doc = await FetchJsonAsync("https://meta.fabricmc.net/v2/versions/installer", ct);
+            var array = doc.RootElement.EnumerateArray();
+            if (!array.MoveNext())
             {
-                Logger.Info($"Fetching Fabric installer info (attempt {attempt}/3): https://meta.fabricmc.net/v2/versions/installer");
-
-                using var request = new HttpRequestMessage(HttpMethod.Get, "https://meta.fabricmc.net/v2/versions/installer");
-                var response = await GetHttpClient().SendAsync(request, ct);
-                response.EnsureSuccessStatusCode();
-
-                var responseContent = await response.Content.ReadAsStringAsync(ct);
-                Logger.Info($"Fabric API response: {responseContent[..Math.Min(Constants.LogTruncationLength, responseContent.Length)]}...");
-
-                using var doc = JsonDocument.Parse(responseContent);
-                var array = doc.RootElement.EnumerateArray();
-
-                if (!array.MoveNext())
-                {
-                    Logger.Error("Fabric API returned empty array");
-                    return null;
-                }
-
-                var latest = array.Current;
-                var url = latest.GetProperty("url").GetString()!;
-                var version = latest.GetProperty("version").GetString()!;
-
-                Logger.Info($"Found Fabric installer: version={version}, url={url}");
-                return (url, version);
+                Logger.Error("Fabric API returned empty array");
+                return ((string url, string version)?)null;
             }
-            catch (OperationCanceledException) when (attempt < 3)
-            {
-                Logger.Info($"Fabric API request canceled (attempt {attempt}), retrying in 2 seconds...");
-                await Task.Delay(2000, ct);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Failed to get Fabric installer info (attempt {attempt}): {ex.GetType().Name} - {ex.Message}");
-                if (attempt >= 3)
-                    return null;
 
-                await Task.Delay(2000, ct);
-            }
-        }
-
-        return null;
+            var latest = array.Current;
+            var url = latest.GetProperty("url").GetString()!;
+            var version = latest.GetProperty("version").GetString()!;
+            Logger.Info($"Found Fabric installer: version={version}");
+            return (url, version);
+        }, operationName: "GetFabricInstallerInfo", ct: ct);
     }
 
     /// <summary>
@@ -98,23 +68,9 @@ public partial class McServerInstaller
 
             // Получаем версию installer Fabric
             Logger.Info("Getting Fabric installer version...");
-            string? installerVersion = null;
-            for (int attempt = 1; attempt <= 3; attempt++)
-            {
-                try
-                {
-                    installerVersion = await GetFabricInstallerVersion(ct);
-                    if (!string.IsNullOrEmpty(installerVersion))
-                    {
-                        Logger.Info($"Fabric installer version: {installerVersion}");
-                        break;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warning($"Fabric installer version attempt {attempt}/3 failed: {ex.Message}");
-                }
-            }
+            var installerVersion = await RetryHelper.RetryAsync(
+                () => GetFabricInstallerVersion(ct),
+                operationName: "GetFabricInstallerVersion", ct: ct);
 
             // Fallback, если не удалось получить версию installer
             if (string.IsNullOrEmpty(installerVersion))
@@ -254,33 +210,11 @@ public partial class McServerInstaller
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, "https://meta.fabricmc.net/v2/versions/installer");
-            request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
-            request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
-            using var response = await GetHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-            response.EnsureSuccessStatusCode();
-
-            var bytes = await response.Content.ReadAsByteArrayAsync(ct);
-            var responseContent = Encoding.UTF8.GetString(bytes);
-
-            // Check for GZip magic bytes
-            if (bytes.Length >= 2 && bytes[0] == 0x1F && bytes[1] == 0x8B)
-            {
-                using var gzipStream = new System.IO.Compression.GZipStream(
-                    new MemoryStream(bytes),
-                    System.IO.Compression.CompressionMode.Decompress);
-                using var reader = new StreamReader(gzipStream, Encoding.UTF8);
-                responseContent = await reader.ReadToEndAsync(ct);
-            }
-
-            using var doc = JsonDocument.Parse(responseContent);
+            using var doc = await FetchJsonAsync("https://meta.fabricmc.net/v2/versions/installer", ct);
             var array = doc.RootElement.EnumerateArray();
-
             if (!array.MoveNext())
                 return null;
-
-            var latest = array.Current;
-            return latest.GetProperty("version").GetString();
+            return array.Current.GetProperty("version").GetString();
         }
         catch (OperationCanceledException)
         {

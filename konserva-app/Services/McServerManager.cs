@@ -9,7 +9,7 @@ namespace Konserva.Services;
 /// <summary>
 /// Сервис управления серверами Minecraft
 /// </summary>
-public class McServerManager(IServerStorageService storage, IConfigService configService, IServerInstaller installer, IPortForwardingService? portForwarding = null) : IServerManager
+public class McServerManager(IDispatcher dispatcher, IServerStorageService storage, IConfigService configService, IServerInstaller installer, IPortForwardingService? portForwarding = null) : IServerManager
 {
     // Создаём отдельную копию списка, чтобы _servers не был привязан к
     // внутреннему кэшу FileBasedStore (_cached). Это предотвращает возможные
@@ -18,6 +18,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
     private readonly ConcurrentDictionary<string, McServerProcess> _processes = new();
     private readonly ConcurrentDictionary<string, Action<ServerStatus>> _statusHandlers = new();
     private readonly ReaderWriterLockSlim _serversLock = new();
+    private readonly IDispatcher _dispatcher = dispatcher;
     private readonly IPortForwardingService? _portForwarding = portForwarding;
 
     // CPU tracking
@@ -208,7 +209,7 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             }
 
             // Обновляем UI при любом изменении статуса (неблокирующе)
-            System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
+            _dispatcher.Post(() =>
             {
                 OnServersChanged?.Invoke();
             });
@@ -222,43 +223,13 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
             Logger.Info($"[StartServerInternal] Calling process.StartAsync() for {server.Name}", "McServerManager");
             await process.StartAsync(ct);
 
-            // Ждём немного для проверки статуса (ошибка может произойти асинхронно)
-            await Task.Delay(500);
+            Logger.Info($"[StartServerInternal] process.Start() completed for {server.Name}", "McServerManager");
 
-            // Проверяем, не произошла ли ошибка при запуске (thread-safe через Interlocked)
-            bool errorAlreadyHandled = Interlocked.CompareExchange(ref errorNotified, 1, 0) != 0;
-
-            if (!errorAlreadyHandled && process.Status == ServerStatus.Error && !string.IsNullOrEmpty(process.LastError))
+            // UPnP: автоматический проброс порта, если включено
+            if (_portForwarding != null && server.Settings.EnableUpnp)
             {
-                Logger.Error($"[StartServerInternal] Server {server.Id} ({server.Name}) failed to start: {process.LastError}", null, "McServerManager");
-                server.Status = ServerStatus.Error;
-                server.LastErrorMessage = process.LastError;
-                storage.UpdateServer(server);
-
-                // Уведомляем об ошибке запуска
-                OnServerStartError?.Invoke(server, process.LastError);
-
-                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
-                {
-                    OnServersChanged?.Invoke();
-                });
-            }
-            else if (errorAlreadyHandled)
-            {
-                // Ошибка уже была обработана через onStatusChanged колбэк (MonitorProcessExitAsync).
-                // Статус уже ServerStatus.Error — не дублируем уведомление.
-                Logger.Info($"[StartServerInternal] Server {server.Id} ({server.Name}) start error already handled via status callback", "McServerManager");
-            }
-            else
-            {
-                Logger.Info($"[StartServerInternal] process.Start() completed for {server.Name}", "McServerManager");
-
-                // UPnP: автоматический проброс порта, если включено
-                if (_portForwarding != null && server.Settings.EnableUpnp)
-                {
-                    var port = server.Port;
-                    _ = TryCreateUpnpMappingAsync(port, server.Name, server.Id);
-                }
+                var port = server.Port;
+                _ = TryCreateUpnpMappingAsync(port, server.Name, server.Id);
             }
         }
         catch (Exception ex)
@@ -270,23 +241,14 @@ public class McServerManager(IServerStorageService storage, IConfigService confi
                 server.LastErrorMessage = ex.Message;
                 storage.UpdateServer(server);
 
-                // Уведомляем об ошибке запуска
                 OnServerStartError?.Invoke(server, ex.Message);
 
-                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+                _ = _dispatcher.InvokeAsync(() =>
                 {
                     OnServersChanged?.Invoke();
                 });
             }
         }
-
-        storage.UpdateServer(server);
-
-        // Обновляем UI в потоке UI
-        System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
-        {
-            OnServersChanged?.Invoke();
-        });
     }
 
     public async Task StopServerAsync(string id, CancellationToken ct = default)

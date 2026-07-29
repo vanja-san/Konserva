@@ -882,8 +882,16 @@ public partial class ServerDetailPage : Page, IDisposable
                 }
             }
 
-            _viewModel.SaveSettings(newName, ramMinStr, ramMaxStr, autoRestart, autoRestartDelayStr,
-                javaAutoSelect, javaId, jvmArgs);
+            _viewModel.SaveSettings(new ServerSettingsRequest(
+                Name: newName,
+                RamMinStr: ramMinStr,
+                RamMaxStr: ramMaxStr,
+                AutoRestart: autoRestart,
+                AutoRestartDelayStr: autoRestartDelayStr,
+                JavaAutoSelect: javaAutoSelect,
+                JavaId: javaId,
+                JvmArgs: jvmArgs
+            ));
 
             // Проверяем ошибку переименования папки
             if (_viewModel.LastRenameError != null)
@@ -1283,197 +1291,78 @@ public partial class ServerDetailPage : Page, IDisposable
 
     private void LoadMods()
     {
-        if (_server == null)
-            return;
-
+        if (_server == null) return;
         _viewModel.LoadMods();
-
-        ModsList.ItemsSource = _viewModel.Mods;
-        ModsCountBadge.Value = _viewModel.ModsCount;
-        ModsCountBadge.Visibility = _viewModel.Mods.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        UpdateToggleAllModsButton();
+        ReloadItemsPanel(ModsList, ModsCountBadge, _viewModel.Mods.Count, () => UpdateToggleBtn(ToggleAllModsBtn, _viewModel.CheckAllModsDisabled, "ServerDetail_Mods_ToggleAll_Enable", "ServerDetail_Mods_ToggleAll_Disable"));
     }
 
     private void LoadPlugins()
     {
-        if (_server == null)
-            return;
-
+        if (_server == null) return;
         _viewModel.LoadPlugins();
-
-        PluginsList.ItemsSource = _viewModel.Plugins;
-        PluginsCountBadge.Value = _viewModel.PluginsCount;
-        PluginsCountBadge.Visibility = _viewModel.Plugins.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        UpdateToggleAllPluginsButton();
+        ReloadItemsPanel(PluginsList, PluginsCountBadge, _viewModel.Plugins.Count, () => UpdateToggleBtn(ToggleAllPluginsBtn, _viewModel.CheckAllPluginsDisabled, "ServerDetail_Plugins_ToggleAll_Enable", "ServerDetail_Plugins_ToggleAll_Disable"));
     }
 
     private void RefreshMods_Click(object sender, RoutedEventArgs e) => LoadMods();
     private void RefreshPlugins_Click(object sender, RoutedEventArgs e) => LoadPlugins();
 
-    /// <summary>
-    /// Обновить состояние кнопки «Отключить/Включить все моды»
-    /// </summary>
-    private void UpdateToggleAllModsButton()
+    private static void ReloadItemsPanel(ItemsControl list, InfoBadge badge, int count, Action updateToggle)
     {
-        if (_viewModel.Mods.Count == 0)
-        {
-            ToggleAllModsBtn.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        ToggleAllModsBtn.Visibility = Visibility.Visible;
-        var allDisabled = _viewModel.CheckAllModsDisabled();
-        if (allDisabled)
-        {
-            // Все выключены — кнопка «Включить все»
-            ToggleAllModsBtn.Content = LocalizationManager.Get("ServerDetail_Mods_ToggleAll_Enable");
-        }
-        else
-        {
-            // Есть включённые (все или часть) — кнопка «Отключить все»
-            ToggleAllModsBtn.Content = LocalizationManager.Get("ServerDetail_Mods_ToggleAll_Disable");
-        }
+        badge.Value = count > 0 ? count.ToString() : string.Empty;
+        badge.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        updateToggle();
     }
 
-    /// <summary>
-    /// Обновить состояние кнопки «Отключить/Включить все плагины»
-    /// </summary>
-    private void UpdateToggleAllPluginsButton()
+    private void UpdateToggleBtn(WpfButton toggleBtn, Func<bool> checkAllDisabled, string enableKey, string disableKey)
     {
-        if (_viewModel.Plugins.Count == 0)
-        {
-            ToggleAllPluginsBtn.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        ToggleAllPluginsBtn.Visibility = Visibility.Visible;
-        var allDisabled = _viewModel.CheckAllPluginsDisabled();
-        if (allDisabled)
-        {
-            ToggleAllPluginsBtn.Content = LocalizationManager.Get("ServerDetail_Plugins_ToggleAll_Enable");
-        }
-        else
-        {
-            ToggleAllPluginsBtn.Content = LocalizationManager.Get("ServerDetail_Plugins_ToggleAll_Disable");
-        }
+        toggleBtn.Visibility = Visibility.Visible;
+        toggleBtn.Content = LocalizationManager.Get(checkAllDisabled() ? enableKey : disableKey);
     }
 
-    private void OpenModsFolder_Click(object sender, RoutedEventArgs e)
-    {
-        if (_server == null)
-            return;
 
-        var modsDir = Path.Combine(_server.Path, "mods");
-        if (Directory.Exists(modsDir))
-        {
-            UiHelper.OpenFolder(modsDir);
-        }
-        else
-        {
-            ShowWarningSafe(LocalizationManager.Get("ServerDetail_ModsFolderNotFound"));
-        }
+
+    private void OpenModsFolder_Click(object sender, RoutedEventArgs e) => OpenItemFolder("mods", "ServerDetail_ModsFolderNotFound");
+    private void OpenPluginsFolder_Click(object sender, RoutedEventArgs e) => OpenItemFolder("plugins", "ServerDetail_PluginsFolderNotFound");
+
+    private void OpenItemFolder(string subDir, string notFoundKey)
+    {
+        if (_server == null) return;
+        var dir = Path.Combine(_server.Path, subDir);
+        if (Directory.Exists(dir)) UiHelper.OpenFolder(dir);
+        else ShowWarningSafe(LocalizationManager.Get(notFoundKey));
     }
 
-    private void OpenPluginsFolder_Click(object sender, RoutedEventArgs e)
+    private void ShowItemMoreMenu(WpfButton btn, IItemEntry item, string enableKey, string disableKey, string deleteKey,
+        RoutedEventHandler toggleHandler, RoutedEventHandler deleteHandler)
     {
-        if (_server == null)
-            return;
-
-        var pluginsDir = Path.Combine(_server.Path, "plugins");
-        if (Directory.Exists(pluginsDir))
-        {
-            UiHelper.OpenFolder(pluginsDir);
-        }
-        else
-        {
-            ShowWarningSafe(LocalizationManager.Get("ServerDetail_PluginsFolderNotFound"));
-        }
-    }
-
-    /// <summary>
-    /// Открыть контекстное меню мода (три точки)
-    /// </summary>
-    private void ModMoreMenu_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not WpfButton btn || btn.Tag is not ModItem mod)
-            return;
-
         var contextMenu = new ContextMenu
         {
             PlacementTarget = btn,
             Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
             MinWidth = btn.ActualWidth
         };
-
-        BuildModToggleMenuItem(contextMenu, mod);
+        contextMenu.Items.Add(BuildToggleItem(item, enableKey, disableKey, toggleHandler));
         contextMenu.Items.Add(new Separator());
-        BuildDeleteModMenuItem(contextMenu, mod);
-
+        contextMenu.Items.Add(BuildDeleteItem(deleteKey, deleteHandler));
         contextMenu.IsOpen = true;
     }
 
-    /// <summary>
-    /// Открыть контекстное меню плагина (три точки)
-    /// </summary>
-    private void PluginMoreMenu_Click(object sender, RoutedEventArgs e)
+    private void BuildItemContextMenu(CardControl card, IItemEntry item, string enableKey, string disableKey, string deleteKey,
+        RoutedEventHandler toggleHandler, RoutedEventHandler deleteHandler)
     {
-        if (sender is not WpfButton btn || btn.Tag is not PluginItem plugin)
-            return;
-
-        var contextMenu = new ContextMenu
-        {
-            PlacementTarget = btn,
-            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
-            MinWidth = btn.ActualWidth
-        };
-
-        BuildPluginToggleMenuItem(contextMenu, plugin);
-        contextMenu.Items.Add(new Separator());
-        BuildDeletePluginMenuItem(contextMenu, plugin);
-
-        contextMenu.IsOpen = true;
-    }
-
-    /// <summary>
-    /// Динамическое построение контекстного меню мода (правый клик)
-    /// </summary>
-    private void ModCard_ContextMenuOpening(object sender, ContextMenuEventArgs e)
-    {
-        if (sender is not CardControl card || card.DataContext is not ModItem mod)
-            return;
-
-        // Перестраиваем контекстное меню динамически
         card.ContextMenu = new ContextMenu();
-        BuildModToggleMenuItem(card.ContextMenu, mod);
+        card.ContextMenu.Items.Add(BuildToggleItem(item, enableKey, disableKey, toggleHandler));
         card.ContextMenu.Items.Add(new Separator());
-        BuildDeleteModMenuItem(card.ContextMenu, mod);
+        card.ContextMenu.Items.Add(BuildDeleteItem(deleteKey, deleteHandler));
     }
 
-    /// <summary>
-    /// Динамическое построение контекстного меню плагина (правый клик)
-    /// </summary>
-    private void PluginCard_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    private System.Windows.Controls.MenuItem BuildToggleItem(IItemEntry item, string enableKey, string disableKey, RoutedEventHandler clickHandler)
     {
-        if (sender is not CardControl card || card.DataContext is not PluginItem plugin)
-            return;
-
-        // Перестраиваем контекстное меню динамически
-        card.ContextMenu = new ContextMenu();
-        BuildPluginToggleMenuItem(card.ContextMenu, plugin);
-        card.ContextMenu.Items.Add(new Separator());
-        BuildDeletePluginMenuItem(card.ContextMenu, plugin);
-    }
-
-    /// <summary>
-    /// Создаёт пункт меню переключения мода и добавляет его в указанное меню
-    /// </summary>
-    private void BuildModToggleMenuItem(ItemsControl menu, ModItem mod)
-    {
-        var isEnabled = mod.Enabled;
+        var isEnabled = item.Enabled;
         var toggleItem = new System.Windows.Controls.MenuItem
         {
-            Header = LocalizationManager.Get(isEnabled ? "ServerDetail_Mods_Disable" : "ServerDetail_Mods_Enable"),
-            Tag = mod
+            Header = LocalizationManager.Get(isEnabled ? disableKey : enableKey),
+            Tag = item
         };
         var toggleIcon = new SymbolIcon
         {
@@ -1481,196 +1370,88 @@ public partial class ServerDetailPage : Page, IDisposable
             Symbol = isEnabled ? SymbolRegular.CheckboxChecked20 : SymbolRegular.CheckboxUnchecked20
         };
         if (isEnabled)
-        {
             toggleIcon.Foreground = (Brush)FindResource("SystemFillColorCriticalBrush");
-        }
         toggleItem.Icon = toggleIcon;
-        toggleItem.Click += ToggleMod_Click;
-        menu.Items.Add(toggleItem);
+        toggleItem.Click += clickHandler;
+        return toggleItem;
     }
 
-    /// <summary>
-    /// Создаёт пункт меню удаления мода и добавляет его в указанное меню
-    /// </summary>
-    private void BuildDeleteModMenuItem(ItemsControl menu, ModItem mod)
+    private System.Windows.Controls.MenuItem BuildDeleteItem(string deleteKey, RoutedEventHandler clickHandler)
     {
         var deleteItem = new System.Windows.Controls.MenuItem
         {
-            Header = LocalizationManager.Get("ServerDetail_Mods_Delete"),
-            Tag = mod
+            Header = LocalizationManager.Get(deleteKey)
         };
         deleteItem.Icon = new SymbolIcon
         {
+            FontSize = 16,
             Symbol = SymbolRegular.Delete20,
             Foreground = (Brush)FindResource("SystemFillColorCriticalBrush")
         };
-        deleteItem.Click += DeleteMod_Click;
-        menu.Items.Add(deleteItem);
+        deleteItem.Click += clickHandler;
+        return deleteItem;
     }
 
-    /// <summary>
-    /// Создаёт пункт меню переключения плагина и добавляет его в указанное меню
-    /// </summary>
-    private void BuildPluginToggleMenuItem(ItemsControl menu, PluginItem plugin)
+    private void ModMoreMenu_Click(object sender, RoutedEventArgs e)
     {
-        var isEnabled = plugin.Enabled;
-        var toggleItem = new System.Windows.Controls.MenuItem
-        {
-            Header = LocalizationManager.Get(isEnabled ? "ServerDetail_Plugins_Disable" : "ServerDetail_Plugins_Enable"),
-            Tag = plugin
-        };
-        var toggleIcon = new SymbolIcon
-        {
-            Symbol = isEnabled ? SymbolRegular.CheckboxChecked20 : SymbolRegular.CheckboxUnchecked20
-        };
-        if (isEnabled)
-        {
-            toggleIcon.Foreground = (Brush)FindResource("SystemFillColorCriticalBrush");
-        }
-        toggleItem.Icon = toggleIcon;
-        toggleItem.Click += TogglePlugin_Click;
-        menu.Items.Add(toggleItem);
+        if (sender is not WpfButton btn || btn.Tag is not ModItem mod) return;
+        ShowItemMoreMenu(btn, mod, "ServerDetail_Mods_Enable", "ServerDetail_Mods_Disable", "ServerDetail_Mods_Delete", ToggleMod_Click, DeleteMod_Click);
     }
 
-    /// <summary>
-    /// Создаёт пункт меню удаления плагина и добавляет его в указанное меню
-    /// </summary>
-    private void BuildDeletePluginMenuItem(ItemsControl menu, PluginItem plugin)
+    private void PluginMoreMenu_Click(object sender, RoutedEventArgs e)
     {
-        var deleteItem = new System.Windows.Controls.MenuItem
-        {
-            Header = LocalizationManager.Get("ServerDetail_Plugins_Delete"),
-            Tag = plugin
-        };
-        deleteItem.Icon = new SymbolIcon
-        {
-            FontSize = 16,
-            Foreground = (Brush)FindResource("SystemFillColorCriticalBrush")
-        };
-        deleteItem.Click += DeletePlugin_Click;
-        menu.Items.Add(deleteItem);
+        if (sender is not WpfButton btn || btn.Tag is not PluginItem plugin) return;
+        ShowItemMoreMenu(btn, plugin, "ServerDetail_Plugins_Enable", "ServerDetail_Plugins_Disable", "ServerDetail_Plugins_Delete", TogglePlugin_Click, DeletePlugin_Click);
     }
 
-    /// <summary>
-    /// Переключить состояние одного мода (вкл/выкл) через переименование файла
-    /// </summary>
-    private async void ToggleMod_Click(object sender, RoutedEventArgs e)
+    private void ModCard_ContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
-        if (_server == null)
-            return;
-
-        ModItem? mod = null;
-        if (sender is WpfButton btn && btn.Tag is ModItem bt)
-            mod = bt;
-        else if (sender is System.Windows.Controls.MenuItem mi && mi.Tag is ModItem mt)
-            mod = mt;
-
-        if (mod == null) return;
-
-        await ToggleModItem(mod);
+        if (sender is not CardControl card || card.DataContext is not ModItem mod) return;
+        BuildItemContextMenu(card, mod, "ServerDetail_Mods_Enable", "ServerDetail_Mods_Disable", "ServerDetail_Mods_Delete", ToggleMod_Click, DeleteMod_Click);
     }
 
-    /// <summary>
-    /// Переключить состояние одного плагина (вкл/выкл) через переименование файла
-    /// </summary>
-    private async void TogglePlugin_Click(object sender, RoutedEventArgs e)
+    private void PluginCard_ContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
-        if (_server == null)
-            return;
-
-        PluginItem? plugin = null;
-        if (sender is WpfButton btn && btn.Tag is PluginItem bt)
-            plugin = bt;
-        else if (sender is System.Windows.Controls.MenuItem mi && mi.Tag is PluginItem mt)
-            plugin = mt;
-
-        if (plugin == null) return;
-
-        await TogglePluginItem(plugin);
+        if (sender is not CardControl card || card.DataContext is not PluginItem plugin) return;
+        BuildItemContextMenu(card, plugin, "ServerDetail_Plugins_Enable", "ServerDetail_Plugins_Disable", "ServerDetail_Plugins_Delete", TogglePlugin_Click, DeletePlugin_Click);
     }
 
-    private async Task ToggleModItem(ModItem mod)
+    private async void ToggleMod_Click(object sender, RoutedEventArgs e) => await ToggleItemAsync<ModItem>(sender, _viewModel.ToggleModAsync, LoadMods);
+    private async void TogglePlugin_Click(object sender, RoutedEventArgs e) => await ToggleItemAsync<PluginItem>(sender, _viewModel.TogglePluginAsync, LoadPlugins);
+
+    private async Task ToggleItemAsync<T>(object sender, Func<T, Task> toggleAsync, Action reload) where T : class, IItemEntry
     {
-        await _viewModel.ToggleModAsync(mod);
-        LoadMods();
+        if (_server == null) return;
+        var item = ExtractSender<T>(sender);
+        if (item == null) return;
+        await toggleAsync(item);
+        reload();
     }
 
-    private async Task TogglePluginItem(PluginItem plugin)
+    private async void ToggleAllMods_Click(object sender, RoutedEventArgs e) { _viewModel.ToggleAllMods(); LoadMods(); }
+    private async void ToggleAllPlugins_Click(object sender, RoutedEventArgs e) { _viewModel.ToggleAllPlugins(); LoadPlugins(); }
+
+    private async void DeleteMod_Click(object sender, RoutedEventArgs e) => await DeleteItemAsync<ModItem>(sender, _viewModel.DeleteModAsync, LoadMods, "ServerDetail_DeleteModConfirm", "ServerDetail_DeleteModTitle");
+    private async void DeletePlugin_Click(object sender, RoutedEventArgs e) => await DeleteItemAsync<PluginItem>(sender, _viewModel.DeletePluginAsync, LoadPlugins, "ServerDetail_DeletePluginConfirm", "ServerDetail_DeletePluginTitle");
+
+    private async Task DeleteItemAsync<T>(object sender, Func<T, Task> deleteAsync, Action reload, string confirmKey, string titleKey) where T : class, IItemEntry
     {
-        await _viewModel.TogglePluginAsync(plugin);
-        LoadPlugins();
-    }
-
-    /// <summary>
-    /// Включить/отключить все моды
-    /// </summary>
-    private async void ToggleAllMods_Click(object sender, RoutedEventArgs e)
-    {
-        if (_server == null)
-            return;
-
-        _viewModel.ToggleAllMods();
-        LoadMods();
-    }
-
-    /// <summary>
-    /// Включить/отключить все плагины
-    /// </summary>
-    private async void ToggleAllPlugins_Click(object sender, RoutedEventArgs e)
-    {
-        if (_server == null)
-            return;
-
-        _viewModel.ToggleAllPlugins();
-        LoadPlugins();
-    }
-
-    private async void DeleteMod_Click(object sender, RoutedEventArgs e)
-    {
-        if (_server == null)
-            return;
-
-        ModItem? mod = null;
-        if (sender is WpfButton btn && btn.Tag is ModItem bt)
-            mod = bt;
-        else if (sender is System.Windows.Controls.MenuItem mi && mi.Tag is ModItem mt)
-            mod = mt;
-
-        if (mod == null) return;
-
+        if (_server == null) return;
+        var item = ExtractSender<T>(sender);
+        if (item == null) return;
         var result = await UiHelper.ShowConfirm(
-            string.Format(LocalizationManager.Get("ServerDetail_DeleteModConfirm"), mod.Name, mod.FileName),
-            LocalizationManager.Get("ServerDetail_DeleteModTitle"));
-
-        if (result != ContentDialogResult.Primary)
-            return;
-
-        await _viewModel.DeleteModAsync(mod);
-        LoadMods();
+            string.Format(LocalizationManager.Get(confirmKey), item.Name, item.FileName),
+            LocalizationManager.Get(titleKey));
+        if (result != ContentDialogResult.Primary) return;
+        await deleteAsync(item);
+        reload();
     }
 
-    private async void DeletePlugin_Click(object sender, RoutedEventArgs e)
+    private static T? ExtractSender<T>(object sender) where T : class, IItemEntry
     {
-        if (_server == null)
-            return;
-
-        PluginItem? plugin = null;
-        if (sender is WpfButton btn && btn.Tag is PluginItem bt)
-            plugin = bt;
-        else if (sender is System.Windows.Controls.MenuItem mi && mi.Tag is PluginItem mt)
-            plugin = mt;
-
-        if (plugin == null) return;
-
-        var result = await UiHelper.ShowConfirm(
-            string.Format(LocalizationManager.Get("ServerDetail_DeletePluginConfirm"), plugin.Name, plugin.FileName),
-            LocalizationManager.Get("ServerDetail_DeletePluginTitle"));
-
-        if (result != ContentDialogResult.Primary)
-            return;
-
-        await _viewModel.DeletePluginAsync(plugin);
-        LoadPlugins();
+        if (sender is WpfButton btn && btn.Tag is T bt) return bt;
+        if (sender is System.Windows.Controls.MenuItem mi && mi.Tag is T mt) return mt;
+        return null;
     }
 
     private async void Delete_Click(object sender, RoutedEventArgs e)

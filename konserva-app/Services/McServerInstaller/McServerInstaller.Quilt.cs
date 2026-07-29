@@ -101,7 +101,7 @@ public partial class McServerInstaller
 
             if (success)
             {
-                await WaitForQuiltStabilityAsync(destinationPath, ct);
+                await WaitForFileStabilityAsync(destinationPath, "quilt", ct, maxWaitSeconds: 30, checkRunBat: false);
                 progress?.Report(LocalizationManager.Get("Installer_Finishing"));
                 Logger.Info("Quilt file operations completed", "McServerInstaller");
             }
@@ -259,47 +259,5 @@ public partial class McServerInstaller
         }
     }
 
-    /// <summary>
-    /// Ожидание стабилизации файлов после установки Quilt
-    /// </summary>
-    private async Task WaitForQuiltStabilityAsync(string destinationPath, CancellationToken ct)
-    {
-        Logger.Info("Waiting for Quilt file operations to complete...", "McServerInstaller");
 
-        var waitStartTime = SystemTime.Now;
-        var maxWaitTime = TimeSpan.FromSeconds(30);
-        var librariesPath = Path.Combine(destinationPath, "libraries");
-
-        while ((SystemTime.Now - waitStartTime) < maxWaitTime)
-        {
-            var hasServerJar = Directory.GetFiles(destinationPath, "quilt-server-*.jar").Length > 0;
-            if (!hasServerJar)
-            {
-                await Task.Delay(500, ct);
-                continue;
-            }
-
-            var keyFiles = Directory.GetFiles(destinationPath, "*.jar")
-                .Concat(Directory.GetFiles(librariesPath, "*.jar", SearchOption.AllDirectories))
-                .Take(50)
-                .ToArray();
-
-            if (keyFiles.Length == 0)
-            {
-                await Task.Delay(500, ct);
-                continue;
-            }
-
-            var allUnlocked = keyFiles.All(IsFileUnlocked);
-
-            if (allUnlocked)
-            {
-                await Task.Delay(1000, ct);
-                Logger.Info($"Quilt files unlocked and stable ({keyFiles.Length} checked)", "McServerInstaller");
-                break;
-            }
-
-            await Task.Delay(500, ct);
-        }
-    }
 }

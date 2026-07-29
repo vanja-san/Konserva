@@ -58,7 +58,7 @@ public class McServerManagerTests : IDisposable
         _configMock.Setup(c => c.GetConfig()).Returns(new AppConfig());
         _installerMock = new Mock<IServerInstaller>();
 
-        _manager = new McServerManager(_storage, _configMock.Object, _installerMock.Object);
+        _manager = new McServerManager(Mock.Of<IDispatcher>(), _storage, _configMock.Object, _installerMock.Object);
     }
 
     #region GetServers Tests

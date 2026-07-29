@@ -1,7 +1,4 @@
 using Konserva.Utilities;
-using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text.Json;
 
 namespace Konserva.Services;
@@ -25,21 +22,8 @@ public partial class McServerInstaller
             var apiUrl = $"https://fill.papermc.io/v3/projects/paper/versions/{version}/builds";
             Logger.Info($"Fetching Paper builds for {version}: {apiUrl}", "McServerInstaller");
 
-            using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
-            request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
-            request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
-
-            using var response = await GetHttpClient().SendAsync(request, ct);
-            response.EnsureSuccessStatusCode();
-
-            var contentStream = await response.Content.ReadAsStreamAsync(ct);
-            using var decompressedStream = StreamUtilities.GetDecompressedStream(contentStream, response.Content.Headers);
-            using var reader = new StreamReader(decompressedStream);
-            var responseText = await reader.ReadToEndAsync(ct);
-
-            Logger.Info($"Paper API response: {responseText.Length} bytes", "McServerInstaller");
-
-            using var doc = JsonDocument.Parse(responseText);
+            using var doc = await FetchJsonAsync(apiUrl, ct);
+            Logger.Info($"Paper API response: doc loaded", "McServerInstaller");
             // v3 возвращает JSON-массив build'ов в порядке убывания (новейший — первый)
             var builds = doc.RootElement.EnumerateArray().ToArray();
 

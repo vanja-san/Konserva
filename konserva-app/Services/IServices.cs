@@ -97,8 +97,10 @@ public interface IJavaManagementService
     Task<JavaInstallation?> GetCompatibleJavaAsync(string mcVersion, IServerInstaller installer, string serverPath, CancellationToken ct = default);
 
     /// <summary>
-    /// Scans the system for all installed Java runtimes and adds new ones to config.
-    /// Skips paths already present in the configuration.
+    /// Scans the system for all installed Java runtimes.
+    /// Removes config entries whose Java file no longer exists.
+    /// Updates existing entries to use javaw.exe when available.
+    /// Adds new installations not yet in the configuration.
     /// Returns the full updated list of Java installations from config.
     /// </summary>
     List<JavaInstallation> ScanAndAddJava();

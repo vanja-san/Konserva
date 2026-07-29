@@ -5,7 +5,7 @@ namespace Konserva.Models;
 /// <summary>
 /// Информация о плагине
 /// </summary>
-public partial class PluginItem : ObservableObject
+public partial class PluginItem : ObservableObject, IItemEntry
 {
     /// <summary>
     /// Имя плагина (без расширения)

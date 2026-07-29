@@ -85,6 +85,7 @@
 
         <!--  Status Bar  -->
         <Border
+            x:Name="StatusBarPanel"
             Grid.Row="2"
             Padding="8"
             Background="{ui:ThemeResource LayerFillColorDefaultBrush}"

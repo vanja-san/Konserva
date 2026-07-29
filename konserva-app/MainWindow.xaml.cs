@@ -75,9 +75,9 @@ public partial class MainWindow : FluentWindow, IDisposable
 
             showItem.Click += (_, _) =>
             {
-                Show();
-                Activate();
+                ShowInTaskbar = true;
                 WindowState = WindowState.Normal;
+                Activate();
             };
 
             exitItem.Click += (_, _) =>
@@ -101,7 +101,7 @@ public partial class MainWindow : FluentWindow, IDisposable
                     new Uri("pack://application:,,,/Assets/app-icon.ico")),
                 TooltipText = "Konserva — Minecraft Server Manager",
                 MenuOnRightClick = true,
-                FocusOnLeftClick = true,
+                FocusOnLeftClick = false,
                 Menu = contextMenu
             };
 
@@ -120,9 +120,12 @@ public partial class MainWindow : FluentWindow, IDisposable
 
     private void OnTrayLeftClick(NotifyIcon sender, RoutedEventArgs e)
     {
-        Show();
-        Activate();
+        ShowInTaskbar = true;
         WindowState = WindowState.Normal;
+        Activate();
+        Topmost = true;
+        Topmost = false;
+        _ = Focus();
     }
 
     /// <summary>
@@ -182,6 +185,11 @@ public partial class MainWindow : FluentWindow, IDisposable
         {
             BackButton.Visibility = ContentFrame.CanGoBack ? Visibility.Visible : Visibility.Collapsed;
         }
+
+        // Скрываем статусбар на странице создания сервера
+        StatusBarPanel.Visibility = e.Content is Pages.CreateServerPage
+            ? Visibility.Collapsed
+            : Visibility.Visible;
 
         // Обновляем заголовок окна: "Konserva Manager — <page title>"
         var mainTitle = LocalizationManager.Get("MainWindow_Header");
@@ -377,8 +385,12 @@ public partial class MainWindow : FluentWindow, IDisposable
             var mode = Enum.TryParse<MinimizeToTrayMode>(config.MinimizeToTrayMode, out var m) ? m : MinimizeToTrayMode.OnClose;
             if (mode is MinimizeToTrayMode.OnMinimize or MinimizeToTrayMode.Always)
             {
-                Hide();
+                ShowInTaskbar = false;
             }
+        }
+        else
+        {
+            ShowInTaskbar = true;
         }
 
         UpdateTrayIconVisibility();
@@ -398,8 +410,7 @@ public partial class MainWindow : FluentWindow, IDisposable
             var mode = Enum.TryParse<MinimizeToTrayMode>(config.MinimizeToTrayMode, out var m) ? m : MinimizeToTrayMode.None;
             var isTrayActive = mode != MinimizeToTrayMode.None;
 
-            // Иконка показывается только если трей активен И окно свёрнуто или скрыто
-            if (isTrayActive && (WindowState == WindowState.Minimized || !IsVisible))
+            if (isTrayActive && WindowState == WindowState.Minimized)
             {
                 if (!_trayIcon.IsRegistered)
                     _trayIcon.Register();
@@ -428,8 +439,7 @@ public partial class MainWindow : FluentWindow, IDisposable
         if (mode is MinimizeToTrayMode.OnClose or MinimizeToTrayMode.Always)
         {
             e.Cancel = true;
-            Hide();
-            // После Hide обновляем видимость иконки
+            WindowState = WindowState.Minimized;
             UpdateTrayIconVisibility();
         }
     }
@@ -475,7 +485,8 @@ public partial class MainWindow : FluentWindow, IDisposable
     {
         if (parameter is string serverId)
         {
-            Ioc.Default.GetService<MainWindow>()?.NavigateToServer(serverId);
+            if (Application.Current.MainWindow is MainWindow mainWindow)
+                mainWindow.NavigateToServer(serverId);
         }
     }
 
@@ -549,12 +560,12 @@ public partial class MainWindow : FluentWindow, IDisposable
 
     private void OnUpdateAvailable(UpdateInfo updateInfo)
     {
-        Dispatcher.Invoke(() => UpdateNotificationControl.Show(updateInfo));
+        _ = Dispatcher.InvokeAsync(() => UpdateNotificationControl.Show(updateInfo));
     }
 
     private void OnUpdateCheckStarted()
     {
-        Dispatcher.Invoke(() =>
+        _ = Dispatcher.InvokeAsync(() =>
         {
             UpdateProgressRing.Visibility = Visibility.Visible;
             UpdateCheckmarkIcon.Visibility = Visibility.Collapsed;
@@ -563,7 +574,7 @@ public partial class MainWindow : FluentWindow, IDisposable
 
     private void OnUpdateCheckCompleted(UpdateInfo updateInfo)
     {
-        Dispatcher.Invoke(async () =>
+        _ = Dispatcher.InvokeAsync(async () =>
         {
             UpdateProgressRing.Visibility = Visibility.Collapsed;
 
@@ -614,132 +625,4 @@ public partial class MainWindow : FluentWindow, IDisposable
             return _snackbarService;
         }
     }
-
-    /// <summary>
-    /// Показывает Snackbar с ошибкой несовместимости Java.
-    /// </summary>
-    public void ShowJavaErrorSnackbar(Server server, string errorMessage, int requiredVersion, int foundVersion, List<JavaInstallation>? allJava = null)
-    {
-        var isServersPage = ContentFrame.Content is Pages.ServersPage;
-        var isDetailPage = ContentFrame.Content is Pages.ServerDetailPage;
-
-        Logger.Info($"[ShowJavaErrorSnackbar] server={server.Name}, required={requiredVersion}, found={foundVersion}, isServersPage={isServersPage}, isDetailPage={isDetailPage}", "MainWindow");
-
-        string title, message;
-
-        // Формируем строку с найденными Java версиями
-        string javaVersionsText;
-        if (allJava != null && allJava.Count > 0)
-        {
-            // Собираем уникальные версии Java через запятую
-            var versions = allJava
-                .Where(j => j.Exists)
-                .Select(j => j.MajorVersion > 0 ? j.MajorVersion.ToString() : j.Version)
-                .Distinct()
-                .OrderBy(v => int.TryParse(v, out var n) ? n : 999);
-            javaVersionsText = string.Join(", ", versions);
-        }
-        else
-        {
-            javaVersionsText = foundVersion > 0 ? foundVersion.ToString() : "—";
-        }
-
-        if (isServersPage)
-        {
-            title = server.Name;
-            message = allJava is { Count: 1 }
-                ? LocalizationManager.Get("Snackbar_JavaIncompatible_Message", server.McVersion, requiredVersion, javaVersionsText)
-                : LocalizationManager.Get("Snackbar_JavaIncompatible_Message_Plural", server.McVersion, requiredVersion, javaVersionsText);
-        }
-        else if (isDetailPage)
-        {
-            title = LocalizationManager.Get("Snackbar_JavaIncompatible_Title");
-            message = allJava is { Count: 1 }
-                ? LocalizationManager.Get("Snackbar_JavaIncompatible_Message", server.McVersion, requiredVersion, javaVersionsText)
-                : LocalizationManager.Get("Snackbar_JavaIncompatible_Message_Plural", server.McVersion, requiredVersion, javaVersionsText);
-        }
-        else
-        {
-            title = LocalizationManager.Get("Snackbar_JavaIncompatible_Title");
-            message = errorMessage;
-        }
-
-        Dispatcher.Invoke(() =>
-        {
-            if (SnackbarPresenter == null)
-            {
-                Logger.Error("[ShowJavaErrorSnackbar] SnackbarPresenter is null!", null, "MainWindow");
-                return;
-            }
-
-            Logger.Info($"[ShowJavaErrorSnackbar] Showing snackbar: title='{title}'", "MainWindow");
-
-            var snackbar = new Snackbar(SnackbarPresenter)
-            {
-                Title = title,
-                Content = message,
-                Icon = new SymbolIcon(SymbolRegular.ErrorCircle24) { FontSize = 28 },
-                Timeout = TimeSpan.FromSeconds(10),
-                Appearance = ControlAppearance.Danger,
-                Padding = new Thickness(12, 8, 12, 8),
-                Height = 32
-            };
-
-            SnackbarPresenter.AddToQue(snackbar);
-        });
-    }
-
-    /// <summary>
-    /// Скрывает Snackbar с ошибкой Java.
-    /// </summary>
-    public void HideJavaErrorSnackbar()
-    {
-        Dispatcher.InvokeAsync(async () =>
-        {
-            if (SnackbarPresenter != null)
-            {
-                await SnackbarPresenter.HideCurrent();
-            }
-        });
-    }
-
-    /// <summary>
-    /// Универсальный метод показа Snackbar (Success, Info, Warning, Danger)
-    /// </summary>
-    public void ShowSnackbar(string title, string message, ControlAppearance appearance = ControlAppearance.Info, int timeoutSeconds = 3)
-    {
-        Dispatcher.Invoke(() =>
-        {
-            if (SnackbarPresenter == null)
-            {
-                Logger.Warning("[ShowSnackbar] SnackbarPresenter is null!", "MainWindow");
-                return;
-            }
-
-            var symbol = appearance switch
-            {
-                ControlAppearance.Success => SymbolRegular.CheckmarkCircle20,
-                ControlAppearance.Caution => SymbolRegular.Warning20,
-                ControlAppearance.Danger => SymbolRegular.ErrorCircle20,
-                _ => SymbolRegular.Info20
-            };
-
-            var snackbar = new Snackbar(SnackbarPresenter)
-            {
-                Title = title,
-                Content = message,
-                Icon = new SymbolIcon(symbol) { FontSize = 20 },
-                Timeout = TimeSpan.FromSeconds(timeoutSeconds),
-                Appearance = appearance,
-                Padding = new Thickness(12, 10, 12, 10),
-                MinHeight = 44,
-                VerticalContentAlignment = VerticalAlignment.Center
-            };
-
-            SnackbarPresenter.AddToQue(snackbar);
-        });
-    }
-
 }
-
-// Вместо TaskExtensions.FireAndForget используйте SafeFireAndForget из CommunityToolkit

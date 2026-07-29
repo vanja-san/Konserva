@@ -1,10 +1,13 @@
 using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Utilities;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Windows;
+using Wpf.Ui.Controls;
 
 namespace Konserva.Services;
 
@@ -25,11 +28,25 @@ public partial class McServerProcess
         if (_modulePathSupportCache.TryGetValue(javaPath, out var cached))
             return cached;
 
+        // javaw.exe не поддерживает перенаправление stdout/stderr —
+        // используем java.exe для проверки
+        var checkPath = javaPath;
+        if (checkPath.EndsWith("javaw.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            var dir = Path.GetDirectoryName(checkPath);
+            if (dir != null)
+            {
+                var javaExe = Path.Combine(dir, "java.exe");
+                if (File.Exists(javaExe))
+                    checkPath = javaExe;
+            }
+        }
+
         try
         {
             var startInfo = new ProcessStartInfo
             {
-                FileName = javaPath,
+                FileName = checkPath,
                 Arguments = "-p . -version",
                 UseShellExecute = false,
                 RedirectStandardError = true,
@@ -59,6 +76,39 @@ public partial class McServerProcess
             _modulePathSupportCache[javaPath] = false;
             return false;
         }
+    }
+
+    /// <summary>
+    /// Проверяет, является ли Java 8 сборкой с update >= 400.
+    /// Начиная с Java 8u400, конструктор ManifestEntryVerifier(Manifest) был удалён,
+    /// что приводит к NoSuchMethodError при запуске Forge (ModLauncher SecureJarHandler).
+    /// </summary>
+    private static bool IsBrokenJava8(JavaInstallation java)
+    {
+        if (java.MajorVersion != 8)
+            return false;
+
+        var version = java.Version;
+        if (string.IsNullOrEmpty(version))
+            return false;
+
+        // Формат "1.8.0_502" — извлекаем update (число после _)
+        if (version.StartsWith("1.8."))
+        {
+            var parts = version.Split('_');
+            if (parts.Length >= 2 && int.TryParse(parts[^1], out var update) && update >= 400)
+                return true;
+        }
+
+        // Формат "8.0.4020.8" для некоторых сборок
+        if (version.StartsWith("8."))
+        {
+            var segments = version.Split('.');
+            if (segments.Length >= 3 && int.TryParse(segments[2], out var third) && third >= 400)
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -94,13 +144,21 @@ public partial class McServerProcess
             var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, launchType);
             Logger.Info($"[GetJavaPathForServer] Auto-select: required Java {requiredJavaVersion}+, launch type {launchType}", "McServerProcess");
 
-            // Forge/NeoForge требуют module-path (-p) — отфильтровываем Java, которые его не поддерживают
-            bool needsModulePath = launchType is ServerLaunchType.Forge or ServerLaunchType.NeoForge;
+            // NeoForge использует module-path (-p) — отфильтровываем Java, которые его не поддерживают.
+            // Forge использует -jar, модули не нужны.
+            bool needsModulePath = launchType is ServerLaunchType.NeoForge;
+
+            var maxJavaVersion = GetMaxJavaVersion(Server.McVersion, launchType);
+
+            // Forge/NeoForge: только exact match (как в FluentLauncher).
+            // Forge modlauncher собран под конкретную версию Java — при несовпадении NoSuchMethodError / IllegalAccessError.
+            bool isForgeOrNeoForge = launchType == ServerLaunchType.Forge || launchType == ServerLaunchType.NeoForge;
 
             var exactMatch = config.JavaInstallations
-                .Where(j => j.Exists && j.MajorVersion == requiredJavaVersion)
+                .Where(j => j.Exists && j.MajorVersion == requiredJavaVersion && !IsBrokenJava8(j))
                 .OrderByDescending(j => j.MajorVersion)
-                .FirstOrDefault(j => !needsModulePath || SupportsModulePath(j.Path));
+                .FirstOrDefault(j => (!needsModulePath || SupportsModulePath(j.Path))
+                                  && (maxJavaVersion <= 0 || j.MajorVersion <= maxJavaVersion));
 
             if (exactMatch != null)
             {
@@ -109,31 +167,68 @@ public partial class McServerProcess
                 return exactMatch.Path;
             }
 
-            var suitableJava = config.JavaInstallations
-                .Where(j => j.Exists && j.MajorVersion > requiredJavaVersion)
-                .OrderBy(j => j.MajorVersion)
-                .FirstOrDefault(j => !needsModulePath || SupportsModulePath(j.Path));
-
-            if (suitableJava != null)
+            // Forge/NeoForge: если exact match не найден — пробуем новее
+            if (isForgeOrNeoForge)
             {
-                Logger.Info($"[GetJavaPathForServer] Using newer Java {suitableJava.MajorVersion} (required {requiredJavaVersion})", "McServerProcess");
-                _lastJavaDisplayName = suitableJava.DisplayName;
+                // Проверяем, есть ли Java 8 >= update 400, которые мы отфильтровали
+                var hasBrokenJava8 = config.JavaInstallations
+                    .Any(j => j.Exists && j.MajorVersion == requiredJavaVersion && IsBrokenJava8(j));
 
-                if (suitableJava.MajorVersion - requiredJavaVersion > 4)
+                if (hasBrokenJava8)
                 {
-                    var warnMsg = string.Format(
-                        LocalizationManager.Get("Log_JavaTooNewWarning"),
-                        suitableJava.DisplayName,
-                        suitableJava.MajorVersion,
-                        requiredJavaVersion);
-                    AppendLog($"[WARN] {warnMsg}");
+                    var msg = LocalizationManager.Get("Log_Java8UpdateTooNew");
+                    AppendLog($"[ERROR] {msg}");
+                    (Application.Current.MainWindow as MainWindow)?.ShowSnackbar(
+                        LocalizationManager.Get("Snackbar_Java8Broken_Title"),
+                        string.Format(LocalizationManager.Get("Snackbar_Java8Broken_Message"), Server.McVersion),
+                        ControlAppearance.Danger, 12);
+                    throw new InvalidOperationException(msg);
                 }
 
-                return suitableJava.Path;
-            }
+                var newerMatch = config.JavaInstallations
+                    .Where(j => j.Exists && j.MajorVersion > requiredJavaVersion && !IsBrokenJava8(j))
+                    .OrderBy(j => j.MajorVersion)
+                    .FirstOrDefault(j => (!needsModulePath || SupportsModulePath(j.Path))
+                                      && (maxJavaVersion <= 0 || j.MajorVersion <= maxJavaVersion));
 
-            // Если ничего не подошло — пробуем без фильтра module-path (возможно, пользователь вручную выбрал)
-            AppendLog($"[WARN] {LocalizationManager.Get("Log_JavaVersionNotFound_TryDefault", requiredJavaVersion)}");
+                if (newerMatch != null)
+                {
+                    Logger.Info($"[GetJavaPathForServer] Forge/NeoForge fallback to newer Java {newerMatch.MajorVersion} (required {requiredJavaVersion})", "McServerProcess");
+                    _lastJavaDisplayName = newerMatch.DisplayName;
+                    return newerMatch.Path;
+                }
+
+                AppendLog($"[WARN] {LocalizationManager.Get("Log_JavaVersionNotFound_TryDefault", requiredJavaVersion)}");
+            }
+            else
+            {
+                var suitableJava = config.JavaInstallations
+                    .Where(j => j.Exists && j.MajorVersion > requiredJavaVersion)
+                    .OrderBy(j => j.MajorVersion)
+                    .FirstOrDefault(j => (!needsModulePath || SupportsModulePath(j.Path))
+                                      && (maxJavaVersion <= 0 || j.MajorVersion <= maxJavaVersion));
+
+                if (suitableJava != null)
+                {
+                    Logger.Info($"[GetJavaPathForServer] Using newer Java {suitableJava.MajorVersion} (required {requiredJavaVersion})", "McServerProcess");
+                    _lastJavaDisplayName = suitableJava.DisplayName;
+
+                    if (suitableJava.MajorVersion - requiredJavaVersion > 4)
+                    {
+                        var warnMsg = string.Format(
+                            LocalizationManager.Get("Log_JavaTooNewWarning"),
+                            suitableJava.DisplayName,
+                            suitableJava.MajorVersion,
+                            requiredJavaVersion);
+                        AppendLog($"[WARN] {warnMsg}");
+                    }
+
+                    return suitableJava.Path;
+                }
+
+                // Если ничего не подошло — пробуем без фильтра module-path (возможно, пользователь вручную выбрал)
+                AppendLog($"[WARN] {LocalizationManager.Get("Log_JavaVersionNotFound_TryDefault", requiredJavaVersion)}");
+            }
         }
 
         var defaultJava = config.GetDefaultJava();
@@ -156,6 +251,32 @@ public partial class McServerProcess
     /// </summary>
     private static int GetRequiredJavaVersion(string mcVersion, ServerLaunchType launchType) =>
         JavaVersionParser.GetRequiredJavaVersion(mcVersion, launchType);
+
+    /// <summary>
+    /// Максимальная версия Java, совместимая с данной версией Minecraft + модлоадером.
+    /// 0 = без ограничения.
+    /// Forge до 1.17 ломается на Java 17+ (module system не экспортит sun.security.util).
+    /// </summary>
+    private static int GetMaxJavaVersion(string mcVersion, ServerLaunchType launchType)
+    {
+        if (launchType is ServerLaunchType.Forge or ServerLaunchType.NeoForge or ServerLaunchType.Fabric or ServerLaunchType.Quilt or ServerLaunchType.Standard)
+        {
+            var parts = mcVersion.Split('.');
+            if (parts.Length >= 2 && int.TryParse(parts[0], out var major) && int.TryParse(parts[1], out var minor))
+            {
+                if (major == 1)
+                {
+                    // MC 1.16.x и ниже — Forge modlauncher несовместим с Java 17+
+                    // Java 11 тоже не имеет ManifestEntryVerifier(Manifest) — нужна Java 8 < 8u400
+                    if (minor <= 16) return 8;
+
+                    // MC 1.17 использует Java 16, максимум 17
+                    if (minor == 17) return 17;
+                }
+            }
+        }
+        return 0; // без ограничения
+    }
 
     /// <summary>
     /// Результат проверки Java

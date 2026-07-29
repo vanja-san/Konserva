@@ -27,8 +27,11 @@ public partial class App : Application
     private static Mutex? _instanceMutex;
     private static CancellationTokenSource? _pipeCts;
 
-    // Приватная ссылка для очистки DI при завершении
-    private static IServiceProvider? _serviceProvider;
+    /// <summary>
+    /// Провайдер DI для доступа к сервисам.
+    /// Используйте Ioc.Default.GetService&lt;T&gt;() в остальных частях приложения.
+    /// </summary>
+    public static IServiceProvider Services { get; private set; } = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -89,8 +92,8 @@ public partial class App : Application
 
             // Настройка DI
             var services = ConfigureServices();
-            _serviceProvider = services.BuildServiceProvider();
-            Ioc.Default.ConfigureServices(_serviceProvider);
+            Services = services.BuildServiceProvider();
+            Ioc.Default.ConfigureServices(Services);
 
             Logger.Info("DI container built", "App");
 
@@ -102,7 +105,7 @@ public partial class App : Application
             // Применяем язык из конфига
             try
             {
-                var config = Ioc.Default.GetService<IConfigService>()!.GetConfig();
+                var config = Services.GetRequiredService<IConfigService>().GetConfig();
                 var language = config.Language ?? "System"; // По умолчанию - язык системы
 
                 // Определяем фактический язык
@@ -126,7 +129,7 @@ public partial class App : Application
             }
 
             // Показываем главное окно (создаётся через DI)
-            var mainWindow = Ioc.Default.GetService<MainWindow>()!;
+            var mainWindow = Services.GetRequiredService<MainWindow>();
             mainWindow.Show();
 
             // Запускаем pipe-сервер для single-instance IPC
@@ -146,6 +149,10 @@ public partial class App : Application
     private static IServiceCollection ConfigureServices()
     {
         var services = new ServiceCollection();
+
+        // Базовые сервисы
+        services.AddSingleton<IDispatcher, WpfDispatcher>();
+        services.AddSingleton<IModLoaderService, ModLoaderService>();
 
         // Сервисы (Singleton)
         services.AddSingleton<IConfigService, ConfigService>();
@@ -307,6 +314,8 @@ public partial class App : Application
                             var window = Current.MainWindow;
                             if (window == null) return;
 
+                            window.ShowInTaskbar = true;
+
                             if (window.WindowState == WindowState.Minimized)
                                 window.WindowState = WindowState.Normal;
 
@@ -376,7 +385,7 @@ public partial class App : Application
         try
         {
             // Остановка всех серверов
-            if (Ioc.Default.GetService<IServerManager>() is McServerManager serverManager)
+            if (Services.GetRequiredService<IServerManager>() is McServerManager serverManager)
             {
                 var servers = serverManager.GetServers();
                 var runningServers = servers.Where(s => s.IsRunning).ToList();
@@ -414,16 +423,14 @@ public partial class App : Application
             }
 
             // Очистка DI контейнера
-            if (_serviceProvider is IAsyncDisposable asyncDisposable)
+            if (Services is IAsyncDisposable asyncDisposable)
             {
                 await asyncDisposable.DisposeAsync();
             }
-            else if (_serviceProvider is IDisposable disposable)
+            else if (Services is IDisposable disposable)
             {
                 disposable.Dispose();
             }
-
-            _serviceProvider = null;
         }
         catch (Exception ex)
         {

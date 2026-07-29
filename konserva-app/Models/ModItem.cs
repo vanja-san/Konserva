@@ -5,7 +5,7 @@ namespace Konserva.Models;
 /// <summary>
 /// Информация о моде
 /// </summary>
-public partial class ModItem : ObservableObject
+public partial class ModItem : ObservableObject, IItemEntry
 {
     /// <summary>
     /// Имя мода (без расширения)

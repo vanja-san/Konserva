@@ -36,6 +36,7 @@ public partial class CreateServerPage : Page
     private CancellationTokenSource? _loaderLoadingCts;
     private readonly SelectionChangedEventHandler _loaderVersionChangedHandler; // for clean unsubscribe
     private readonly List<string> _installLog = [];
+    private string? _lastSignificantProgressMessage;
     private InstallLogWindow? _installLogWindow;
 
     public CreateServerPage()
@@ -44,6 +45,7 @@ public partial class CreateServerPage : Page
             ?? new CreateServerViewModel(
                 Ioc.Default.GetService<IConfigService>()!,
                 Ioc.Default.GetService<IMcVersionsApi>()!,
+                Ioc.Default.GetService<IModLoaderService>()!,
                 Ioc.Default.GetService<IServerInstaller>()!,
                 Ioc.Default.GetService<IServerManager>()!);
         _configService = Ioc.Default.GetService<IConfigService>();
@@ -245,7 +247,7 @@ public partial class CreateServerPage : Page
                 if (!string.IsNullOrEmpty(selectedMcVersion) &&
                     !showSnapshotsLocal && modLoader == "Quilt")
                 {
-                    var compatibleVersion = await FindLastCompatibleMcVersionAsync(modLoader, selectedMcVersion, showSnapshotsLocal);
+                    var compatibleVersion = await _viewModel.FindLastCompatibleMcVersionAsync(modLoader, selectedMcVersion);
                     if (compatibleVersion != null && compatibleVersion != selectedMcVersion)
                     {
                         Logger.Info($"Switching to compatible MC version for {modLoader}: {compatibleVersion}", "CreateServerPage");
@@ -274,71 +276,6 @@ public partial class CreateServerPage : Page
             LoaderProgressRing.Visibility = Visibility.Collapsed;
             Logger.Info("FilterMcVersionsAsync completed", "CreateServerPage");
         }
-    }
-
-    /// <summary>
-    /// Ищет последнюю совместимую версию Minecraft для загрузчика (строгая фильтрация снапшотов)
-    /// </summary>
-    private async Task<string?> FindLastCompatibleMcVersionAsync(string modLoaderType, string currentMcVersion, bool showSnapshots)
-    {
-        // Проверяем сначала текущую версию
-        string[] currentVersions = modLoaderType switch
-        {
-            "Forge" => await _versionsApi.GetForgeVersions(currentMcVersion),
-            "NeoForge" => await _versionsApi.GetNeoForgeVersions(currentMcVersion),
-            "Fabric" => await _versionsApi.GetFabricVersions(currentMcVersion),
-            "Quilt" => await _versionsApi.GetQuiltVersions(currentMcVersion),
-            "Paper" => await _versionsApi.GetPaperVersions(currentMcVersion),
-            _ => []
-        };
-
-        // Строгая фильтрация: только стабильные версии считаются совместимыми
-        if (modLoaderType == "NeoForge" && !showSnapshots)
-            currentVersions = [.. currentVersions.Where(v => !McVersionHelper.IsNeoForgeSnapshot(v))];
-        else if (modLoaderType == "Quilt" && !showSnapshots)
-            currentVersions = [.. currentVersions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))];
-        else if (modLoaderType == "Paper" && !showSnapshots)
-            currentVersions = [.. currentVersions.Where(v => !v.Contains("(ALPHA)", StringComparison.OrdinalIgnoreCase))];
-
-        if (currentVersions.Length > 0 && currentVersions[0] != "latest")
-            return currentMcVersion;
-
-        // Текущая не подходит — ищем среди последних 10
-        var mcVersions = _viewModel.McVersionList
-            .Where(v => showSnapshots || !McVersionHelper.IsSnapshot(v))
-            .Take(10)
-            .ToList();
-
-        foreach (var version in mcVersions)
-        {
-            if (version == currentMcVersion) continue;
-
-            try
-            {
-                string[] versions = modLoaderType switch
-                {
-                    "Forge" => await _versionsApi.GetForgeVersions(version),
-                    "NeoForge" => await _versionsApi.GetNeoForgeVersions(version),
-                    "Fabric" => await _versionsApi.GetFabricVersions(version),
-                    "Quilt" => await _versionsApi.GetQuiltVersions(version),
-                    "Paper" => await _versionsApi.GetPaperVersions(version),
-                    _ => []
-                };
-
-                if (modLoaderType == "NeoForge" && !showSnapshots)
-                    versions = [.. versions.Where(v => !McVersionHelper.IsNeoForgeSnapshot(v))];
-                else if (modLoaderType == "Quilt" && !showSnapshots)
-                    versions = [.. versions.Where(v => !v.Contains("-beta", StringComparison.OrdinalIgnoreCase))];
-                else if (modLoaderType == "Paper" && !showSnapshots)
-                    versions = [.. versions.Where(v => !v.Contains("(ALPHA)", StringComparison.OrdinalIgnoreCase))];
-
-                if (versions.Length > 0 && versions[0] != "latest")
-                    return version;
-            }
-            catch { /* skip on error */ }
-        }
-
-        return null;
     }
 
     /// <summary>
@@ -538,15 +475,8 @@ public partial class CreateServerPage : Page
 
         try
         {
-            string[] versions = modLoaderType switch
-            {
-                "Forge" => await _versionsApi.GetForgeVersions(mcVersion),
-                "NeoForge" => await _versionsApi.GetNeoForgeVersions(mcVersion),
-                "Fabric" => await _versionsApi.GetFabricVersions(mcVersion),
-                "Quilt" => await _versionsApi.GetQuiltVersions(mcVersion),
-                "Paper" => await _versionsApi.GetPaperVersions(mcVersion),
-                _ => []
-            };
+            var showSnapshots = ShowSnapshotsBox?.IsChecked ?? false;
+            var versions = await _viewModel.GetLoaderVersions(modLoaderType, mcVersion, showSnapshots);
 
             if (cts.IsCancellationRequested)
             {
@@ -554,30 +484,8 @@ public partial class CreateServerPage : Page
                 return;
             }
 
-            Logger.Info($"Loaded {versions.Length} {modLoaderType} versions", "CreateServerPage");
-
             _lastLoadedModLoader = modLoaderType;
             _lastLoadedMcVersion = mcVersion;
-
-            var showSnapshots = ShowSnapshotsBox?.IsChecked ?? false;
-            if (modLoaderType == "NeoForge" && !showSnapshots)
-            {
-                versions = [.. versions.Where(v => !McVersionHelper.IsNeoForgeSnapshot(v))];
-                Logger.Info($"Filtered NeoForge versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerPage");
-            }
-
-            if (modLoaderType == "Quilt" && !showSnapshots)
-            {
-                versions = [.. versions.Where(v => !McVersionHelper.IsQuiltSnapshot(v))];
-                Logger.Info($"Filtered Quilt versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerPage");
-            }
-
-            // Фильтруем ALPHA-сборки для Paper
-            if (modLoaderType == "Paper" && !showSnapshots)
-            {
-                versions = [.. versions.Where(v => !v.Contains("(ALPHA)", StringComparison.OrdinalIgnoreCase))];
-                Logger.Info($"Filtered Paper versions: {versions.Length} (showSnapshots={showSnapshots})", "CreateServerPage");
-            }
 
             LoaderVersionBox.Items.Clear();
 
@@ -679,7 +587,7 @@ public partial class CreateServerPage : Page
         var dialog = new OpenFolderDialog
         {
             Title = LocalizationManager.Get("CreateServer_Browse_Title"),
-            InitialDirectory = GetDefaultFolderPath()
+            InitialDirectory = _viewModel.GetDefaultServerPath()
         };
 
         if (dialog.ShowDialog() == true)
@@ -705,27 +613,6 @@ public partial class CreateServerPage : Page
         {
             // Игнорируем ошибки сохранения
         }
-    }
-
-    private string GetDefaultFolderPath()
-    {
-        try
-        {
-            var config = _configService?.GetConfig();
-            if (config != null && !string.IsNullOrEmpty(config.ServersDirectory))
-            {
-                return config.ServersDirectory;
-            }
-        }
-        catch
-        {
-            // Suppress config load errors
-        }
-
-        var exeDir = AppContext.BaseDirectory;
-        var serversDir = Path.Combine(exeDir, "Servers");
-        Directory.CreateDirectory(serversDir);
-        return serversDir;
     }
 
     // ======================== Импорт сервера ========================
@@ -826,7 +713,6 @@ public partial class CreateServerPage : Page
             {
                 ProgressPanel.Visibility = Visibility.Visible;
                 ProgressText.Text = LocalizationManager.Get("Installer_Preparing");
-                ShowLogButton.Visibility = Visibility.Visible;
 
                 ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Cancel");
                 ActionOrCancelButton.Appearance = ControlAppearance.Danger;
@@ -838,7 +724,6 @@ public partial class CreateServerPage : Page
             else
             {
                 ProgressPanel.Visibility = Visibility.Collapsed;
-                ShowLogButton.Visibility = Visibility.Collapsed;
 
                 ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Create");
                 ActionOrCancelButton.Appearance = ControlAppearance.Success;
@@ -857,6 +742,9 @@ public partial class CreateServerPage : Page
             if (_isInstalling)
             {
                 _wasCancelled = true;
+                ProgressText.Text = $"{LocalizationManager.Get("CreateServer_Cancel")}...";
+                _installLog.Add($"[{DateTime.Now:HH:mm:ss}] {LocalizationManager.Get("CreateServer_Cancel")}...");
+                ActionOrCancelButton.IsEnabled = false;
                 _installCts?.Cancel();
             }
             else
@@ -951,7 +839,7 @@ public partial class CreateServerPage : Page
         }
     }
 
-    private void ShowLogButton_Click(object sender, RoutedEventArgs e)
+    private void ProgressText_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (_installLogWindow != null && _installLogWindow.IsVisible)
         {
@@ -984,7 +872,6 @@ public partial class CreateServerPage : Page
             {
                 ProgressPanel.Visibility = Visibility.Visible;
                 ProgressText.Text = LocalizationManager.Get("Installer_Preparing");
-                ShowLogButton.Visibility = Visibility.Visible;
             });
 
             server.LastErrorMessage = string.Format(LocalizationManager.Get("CreateServer_Installing_Progress"), server.Name);
@@ -1004,13 +891,14 @@ public partial class CreateServerPage : Page
                 server.Settings.RamMax,
                 new DispatcherProgress<string>(statusText =>
                 {
-                    var timestamped = $"[{DateTime.Now:HH:mm:ss}] {statusText}";
-                    Logger.Info($"Install progress: {statusText}", "CreateServerPage");
-                    _installLog.Add(timestamped);
                     ProgressText.Text = statusText;
-                    _installLogWindow?.AppendLog(timestamped);
-                    server.LastErrorMessage = statusText;
-                    Ioc.Default.GetService<IServerManager>()!.UpdateServer(server);
+
+                    var significantPart = System.Text.RegularExpressions.Regex.Replace(statusText, @" \d+%$", "");
+                    if (significantPart != _lastSignificantProgressMessage)
+                    {
+                        _installLog.Add($"[{DateTime.Now:HH:mm:ss}] {significantPart}");
+                        _lastSignificantProgressMessage = significantPart;
+                    }
                 }, uiDispatcher),
                 _installCts.Token);
 

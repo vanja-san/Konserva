@@ -3,6 +3,8 @@ using Konserva.Models;
 using Konserva.Utilities;
 using System.Diagnostics;
 using System.IO;
+using System.Windows;
+using Wpf.Ui.Controls;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -143,7 +145,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         try
         {
             LogHeader(string.Format(LocalizationManager.Get("Log_ServerStarting"), Server.Name));
-            AppendLog($" ID: {Server.Id} · {Server.ModLoader.Type} {Server.ModLoader.LoaderVersion ?? ""} · Minecraft {Server.McVersion}");
+            AppendLog($" {string.Format(LocalizationManager.Get("Log_ServerInfo"), Server.Id, Server.ModLoader.Type, Server.ModLoader.LoaderVersion ?? "", Server.McVersion)}");
             AppendLog("========================================");
 
             Logger.Info($"[StartInternalAsync] Checking directory for {Server.Path}", "McServerProcess");
@@ -188,19 +190,13 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             _lastJavaMajorVersion = javaCheckResult.MajorVersion;
 
-            // Для Forge/NeoForge проверяем поддержку module-path (-p)
-            if (launchType is ServerLaunchType.Forge or ServerLaunchType.NeoForge && javaCheckResult.SupportsModulePath == false)
-            {
-                Logger.Warning($"[StartInternalAsync] Selected Java does not support -p (module path), Forge/NeoForge may fail", "McServerProcess");
-            }
-
             var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, launchType);
             if (_lastJavaDisplayName != null)
             {
-                AppendLog($" Java: {_lastJavaDisplayName} ({requiredJavaVersion}+)");
+                AppendLog($" {LocalizationManager.Get("Log_JavaInfo", _lastJavaDisplayName, requiredJavaVersion)}");
             }
             else
-                AppendLog($" Java: {javaCheckResult.Version}");
+                AppendLog($" {LocalizationManager.Get("Log_JavaVersionFallback", javaCheckResult.Version)}");
 
             ct.ThrowIfCancellationRequested();
 

@@ -2,8 +2,11 @@
 using Konserva.Models;
 using Konserva.Utilities;
 using Microsoft.Win32;
+using Microsoft.Win32.SafeHandles;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Konserva.Services;
 
@@ -12,6 +15,8 @@ namespace Konserva.Services;
 /// </summary>
 public class JavaManagementService(IConfigService configService) : IJavaManagementService
 {
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern uint GetFinalPathNameByHandle(SafeFileHandle hFile, [Out] StringBuilder lpszFilePath, uint cchFilePath, uint dwFlags);
     /// <summary>
     /// Проверяет является ли ошибка ошибкой Java-совместимости и показывает snackbar.
     /// Общий метод для ServersPage, ServerDetailPage и MainWindow.
@@ -38,6 +43,27 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
                 requiredVersion = JavaVersionParser.GetRequiredJavaVersion(
                     server.McVersion,
                     GetLaunchType(server.ModLoader.Type));
+            }
+
+            // Forge modloader: NoSuchMethodError на ManifestEntryVerifier —
+            // свежие сборки Java 8 (≥ 8u400) удалили конструктор ManifestEntryVerifier(Manifest).
+            // Нужна старая сборка: Zulu JRE 8u302b08 или аналогичная.
+            if (errorMessage.Contains("NoSuchMethodError", StringComparison.OrdinalIgnoreCase) &&
+                errorMessage.Contains("ManifestEntryVerifier", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.Warning("═══════════════════════════════════════════════════════════════", "JavaManagementService");
+                Logger.Warning("Forge modloader requires ManifestEntryVerifier(Manifest) constructor", "JavaManagementService");
+                Logger.Warning("which was removed in Java 8 builds >= 8u400 (Temurin 8u492, Zulu 8u502, etc.)", "JavaManagementService");
+                Logger.Warning("Install Zulu JRE 8u302b08 or older Java 8 build.", "JavaManagementService");
+                Logger.Warning("═══════════════════════════════════════════════════════════════", "JavaManagementService");
+            }
+
+            // Ошибка от нашего собственного пре-стартового детекта сломанной Java 8 (≥ 8u400):
+            // снекбар уже был показан в GetJavaPathForServer, второй показывать не нужно.
+            if (errorMessage.Contains("8u400", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.Info("[HandleServerStartError] Broken Java 8 (≥ 8u400) snackbar already shown, skipping generic error.", "JavaManagementService");
+                return;
             }
 
             // Получаем все установленные Java
@@ -84,6 +110,14 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
             "java.lang.UnsupportedClassVersionError",
         };
 
+        // Forge modlauncher: NoSuchMethodError на ManifestEntryVerifier —
+        // свежие сборки Java 8 (≥ 8u400) удалили конструктор, нужен Zulu 8u302b08 или older
+        if (message.Contains("NoSuchMethodError", StringComparison.OrdinalIgnoreCase) &&
+            message.Contains("ManifestEntryVerifier", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
         return javaCrashPatterns.Any(p => message.Contains(p, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -100,7 +134,8 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     };
 
     /// <summary>
-    /// Поиск установленных Java на компьютере
+    /// Поиск установленных Java на компьютере.
+    /// Только PATH (where java) + реестр Windows — без сканирования файловой системы.
     /// </summary>
     public List<JavaInstallation> FindInstalledJava()
     {
@@ -110,25 +145,14 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         // 1. Все java.exe из PATH (покрывает Scoop, Chocolatey, ручные установки)
         foreach (var java in FindAllJavaInPath())
         {
-            if (seenPaths.Add(java.Path))
+            if (seenPaths.Add(ResolveRealPath(java.Path)))
                 javaInstallations.Add(java);
         }
 
-        // 2. Из реестра Windows
+        // 2. Из реестра Windows (64-bit и 32-bit view)
         foreach (var path in FindJavaInRegistry())
         {
-            if (seenPaths.Add(path))
-            {
-                var java = GetJavaInfo(path);
-                if (java != null)
-                    javaInstallations.Add(java);
-            }
-        }
-
-        // 3. Рекурсивный поиск в Program Files, Program Files (x86), LocalAppData
-        foreach (var path in FindJavaInProgramFiles())
-        {
-            if (seenPaths.Add(path))
+            if (seenPaths.Add(ResolveRealPath(path)))
             {
                 var java = GetJavaInfo(path);
                 if (java != null)
@@ -141,39 +165,59 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Поиск всех Java в PATH (where выводит все совпадения)
+    /// Поиск всех Java в PATH через реестр (всегда свежий, без перезапуска).
     /// </summary>
     private List<JavaInstallation> FindAllJavaInPath()
     {
         var results = new List<JavaInstallation>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         try
         {
-            var startInfo = new ProcessStartInfo
+            var pathDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Системный PATH (HKLM)
+            var systemPath = Registry.GetValue(
+                @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+                "Path", "") as string;
+            if (!string.IsNullOrEmpty(systemPath))
             {
-                FileName = "where",
-                Arguments = "java",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true
-            };
+                foreach (var dir in systemPath.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    if (!string.IsNullOrEmpty(dir))
+                        pathDirs.Add(Environment.ExpandEnvironmentVariables(dir));
+            }
 
-            using var process = Process.Start(startInfo);
-            if (process == null)
-                return results;
-
-            var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit(Constants.JavaPathCheckTimeoutMs);
-
-            var paths = output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                              .Select(p => p.Trim())
-                              .Where(p => !string.IsNullOrEmpty(p));
-
-            foreach (var javaPath in paths)
+            // Пользовательский PATH (HKCU)
+            var userPath = Registry.GetValue(
+                @"HKEY_CURRENT_USER\Environment",
+                "Path", "") as string;
+            if (!string.IsNullOrEmpty(userPath))
             {
-                var java = GetJavaInfo(javaPath);
-                if (java != null)
-                    results.Add(java);
+                foreach (var dir in userPath.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    if (!string.IsNullOrEmpty(dir))
+                        pathDirs.Add(Environment.ExpandEnvironmentVariables(dir));
+            }
+
+            // Ищем javaw.exe (предпочтительно) или java.exe в каждой директории PATH.
+            // Если есть javaw.exe — java.exe в той же папке не проверяем (дубликат).
+            foreach (var dir in pathDirs)
+            {
+                if (!Directory.Exists(dir)) continue;
+
+                var javawPath = Path.Combine(dir, "javaw.exe");
+                if (File.Exists(javawPath) && seen.Add(javawPath))
+                {
+                    var java = GetJavaInfo(javawPath);
+                    if (java != null) results.Add(java);
+                    continue;
+                }
+
+                var javaExePath = Path.Combine(dir, "java.exe");
+                if (File.Exists(javaExePath) && seen.Add(javaExePath))
+                {
+                    var java = GetJavaInfo(javaExePath);
+                    if (java != null) results.Add(java);
+                }
             }
         }
         catch (Exception ex)
@@ -188,11 +232,13 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     /// Стандартные пути к Java
     /// </summary>
     /// <summary>
-    /// Поиск Java в реестре Windows через прямой RegistryKey API (вместо PowerShell)
+    /// Поиск Java в реестре Windows.
+    /// Проверяет 64-bit и 32-bit (Wow6432Node) view для каждого ключа.
     /// </summary>
     private static List<string> FindJavaInRegistry()
     {
         var paths = new List<string>();
+        var seenRealPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // (registryHive, subKey) пары для поиска JavaHome
         var registryRoots = new[]
@@ -205,19 +251,22 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
             (RegistryHive.LocalMachine, @"SOFTWARE\Amazon Corretto"),
         };
 
-        foreach (var (hive, keyPath) in registryRoots)
+        foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
         {
-            try
+            foreach (var (hive, keyPath) in registryRoots)
             {
-                using var baseKey = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64);
-                using var key = baseKey.OpenSubKey(keyPath);
-                if (key == null) continue;
+                try
+                {
+                    using var baseKey = RegistryKey.OpenBaseKey(hive, view);
+                    using var key = baseKey.OpenSubKey(keyPath);
+                    if (key == null) continue;
 
-                CollectJavaHomes(key, paths);
-            }
-            catch
-            {
-                // Hive недоступен — пропускаем
+                    CollectJavaHomes(key, paths, seenRealPaths);
+                }
+                catch
+                {
+                    // Hive недоступен — пропускаем
+                }
             }
         }
 
@@ -227,16 +276,16 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     /// <summary>
     /// Рекурсивно собирает все JavaHome из указанной ветки реестра
     /// </summary>
-    private static void CollectJavaHomes(RegistryKey key, List<string> paths)
+    private static void CollectJavaHomes(RegistryKey key, List<string> paths, HashSet<string> seenRealPaths)
     {
         try
         {
             // Пробуем получить JavaHome в текущем ключе
             var javaHome = key.GetValue("JavaHome") as string;
-            if (!string.IsNullOrEmpty(javaHome) && !paths.Contains(javaHome, StringComparer.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(javaHome))
             {
-                var javaPath = Path.Combine(javaHome, "bin", "java.exe");
-                if (File.Exists(javaPath))
+                var javaPath = FindJavaExeInBin(Path.Combine(javaHome, "bin"));
+                if (javaPath != null && seenRealPaths.Add(ResolveRealPath(javaPath)))
                     paths.Add(javaPath);
             }
 
@@ -247,7 +296,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
                 {
                     using var subKey = key.OpenSubKey(subKeyName);
                     if (subKey != null)
-                        CollectJavaHomes(subKey, paths);
+                        CollectJavaHomes(subKey, paths, seenRealPaths);
                 }
                 catch
                 {
@@ -261,69 +310,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         }
     }
 
-    /// <summary>
-    /// Поиск Java в Program Files
-    /// </summary>
-    private static List<string> FindJavaInProgramFiles()
-    {
-        var paths = new List<string>();
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-        var searchRoots = new List<string>
-        {
-            programFiles,
-            programFilesX86,
-            localAppData,
-            Path.Combine(localAppData, "Programs"),
-        };
-
-        // Scoop: проверяем переменную окружения SCOOP и стандартный путь
-        var scoopEnv = Environment.GetEnvironmentVariable("SCOOP");
-        if (!string.IsNullOrEmpty(scoopEnv) && Directory.Exists(scoopEnv))
-            searchRoots.Add(Path.Combine(scoopEnv, "apps"));
-        var defaultScoop = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "scoop", "apps");
-        if (Directory.Exists(defaultScoop))
-            searchRoots.Add(defaultScoop);
-
-        var keywords = new[] { "jdk", "jre", "java", "temurin", "corretto", "zulu",
-                               "liberica", "graalvm", "jbr", "openjdk", "adopt", "jetbrains" };
-
-        foreach (var root in searchRoots)
-        {
-            if (!Directory.Exists(root)) continue;
-
-            try
-            {
-                var javaDirs = Directory.EnumerateDirectories(root, "*", new EnumerationOptions
-                {
-                    RecurseSubdirectories = true,
-                    MaxRecursionDepth = 4,
-                    IgnoreInaccessible = true
-                })
-                .Where(d =>
-                {
-                    var name = Path.GetFileName(d).ToLowerInvariant();
-                    return keywords.Any(k => name.Contains(k));
-                });
-
-                foreach (var dir in javaDirs)
-                {
-                    var javaPath = Path.Combine(dir, "bin", "java.exe");
-                    if (File.Exists(javaPath))
-                        paths.Add(javaPath);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"Failed to search {root}: {ex.Message}", "JavaManagementService");
-            }
-        }
-
-        return paths;
-    }
 
     /// <summary>
     /// Получение информации о Java
@@ -340,6 +327,10 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
             }
 
             var actualPath = File.Exists(javaPath) ? javaPath : javaPath + ".exe";
+
+            // Предпочитаем javaw.exe (без консольного окна) для запуска сервера
+            actualPath = ResolvePreferredJavaPath(actualPath);
+
             Logger.Info($"Checking Java: {actualPath}", "JavaManagementService");
 
             // Для javaw.exe используем java.exe для получения версии
@@ -430,6 +421,72 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
+    /// Если рядом с java.exe есть javaw.exe — возвращает путь к javaw.exe.
+    /// Иначе возвращает исходный путь.
+    /// </summary>
+    private static string ResolvePreferredJavaPath(string javaPath)
+    {
+        if (string.IsNullOrEmpty(javaPath))
+            return javaPath;
+
+        if (javaPath.EndsWith("javaw.exe", StringComparison.OrdinalIgnoreCase))
+            return javaPath;
+
+        var dir = Path.GetDirectoryName(javaPath);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            var javawPath = Path.Combine(dir, "javaw.exe");
+            if (File.Exists(javawPath))
+                return javawPath;
+        }
+
+        return javaPath;
+    }
+
+    /// <summary>
+    /// Ищет java.exe или javaw.exe в указанной bin-папке.
+    /// Возвращает null, если ни один не найден.
+    /// </summary>
+    private static string? FindJavaExeInBin(string binDir)
+    {
+        var javawPath = Path.Combine(binDir, "javaw.exe");
+        if (File.Exists(javawPath))
+            return javawPath;
+        var javaPath = Path.Combine(binDir, "java.exe");
+        if (File.Exists(javaPath))
+            return javaPath;
+        return null;
+    }
+
+    /// <summary>
+    /// Разрешает все junction/symlink в пути через Win32 GetFinalPathNameByHandle.
+    /// Надёжно работает для Scoop current → version и любых других перенаправлений.
+    /// </summary>
+    private static string ResolveRealPath(string path)
+    {
+        try
+        {
+            using var handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, FileOptions.None);
+            var sb = new StringBuilder(1024);
+            var len = GetFinalPathNameByHandle(handle, sb, (uint)sb.Capacity, 0);
+            if (len > 0 && len < sb.Capacity)
+            {
+                var result = sb.ToString();
+                if (result.StartsWith(@"\\?\"))
+                    result = result.Substring(4);
+                return result;
+            }
+        }
+        catch
+        {
+            // не удалось открыть файл — fallback на обычную нормализацию
+        }
+
+        try { return Path.GetFullPath(path); }
+        catch { return path; }
+    }
+
+    /// <summary>
     /// Добавление Java в конфигурацию
     /// </summary>
     public JavaInstallation? AddJava(string javaPath)
@@ -440,9 +497,9 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
 
         var config = configService.GetConfig();
 
-        // Проверка на дубликат
-        if (config.JavaInstallations.Any(j => j.Path == java.Path))
-            return config.JavaInstallations.First(j => j.Path == java.Path);
+        // Проверка на дубликат (case-insensitive для Windows)
+        if (config.JavaInstallations.Any(j => string.Equals(j.Path, java.Path, StringComparison.OrdinalIgnoreCase)))
+            return config.JavaInstallations.First(j => string.Equals(j.Path, java.Path, StringComparison.OrdinalIgnoreCase));
 
         // Если это первая Java, делаем её стандартной
         if (config.JavaInstallations.Count == 0)
@@ -505,32 +562,69 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Scans the system for all installed Java runtimes and adds new ones to config.
-    /// Skips paths already present in the configuration.
+    /// Scans the system for all installed Java runtimes.
+    /// Removes config entries whose Java file no longer exists.
+    /// Updates existing entries to use javaw.exe when available.
+    /// Adds new installations not yet in the configuration.
     /// </summary>
     public List<JavaInstallation> ScanAndAddJava()
     {
         var config = configService.GetConfig();
         var foundJava = FindInstalledJava();
-        var addedCount = 0;
+        var changed = false;
 
+        // 1. Clean up missing entries and update paths to javaw.exe
+        var toRemove = new List<string>();
+        foreach (var existing in config.JavaInstallations)
+        {
+            if (!existing.Exists)
+            {
+                toRemove.Add(existing.Id);
+                continue;
+            }
+
+            var preferredPath = ResolvePreferredJavaPath(existing.Path);
+            if (!string.Equals(existing.Path, preferredPath, StringComparison.OrdinalIgnoreCase))
+            {
+                var updated = GetJavaInfo(preferredPath);
+                if (updated != null)
+                {
+                    existing.Path = updated.Path;
+                    existing.Version = updated.Version;
+                    existing.MajorVersion = updated.MajorVersion;
+                    existing.Name = updated.Name;
+                    changed = true;
+                }
+            }
+        }
+
+        foreach (var id in toRemove)
+        {
+            config.JavaInstallations.Remove(config.JavaInstallations.First(j => j.Id == id));
+            if (config.DefaultJavaId == id)
+            {
+                var newDefault = config.JavaInstallations.FirstOrDefault();
+                config.DefaultJavaId = newDefault?.Id;
+                if (newDefault != null) newDefault.IsDefault = true;
+            }
+            changed = true;
+        }
+
+        // 2. Add new installations (paths are already resolved to javaw.exe by GetJavaInfo)
         foreach (var java in foundJava)
         {
-            // Skip if already in config (by path)
             if (config.JavaInstallations.Any(j => string.Equals(j.Path, java.Path, StringComparison.OrdinalIgnoreCase)))
                 continue;
 
-            // If this is the first Java, make it default
-            if (config.JavaInstallations.Count == 0 && addedCount == 0)
+            if (config.JavaInstallations.Count == 0)
                 java.IsDefault = true;
 
             config.JavaInstallations.Add(java);
-            addedCount++;
+            changed = true;
         }
 
-        if (addedCount > 0)
+        if (changed)
         {
-            // If a default Java was added, update DefaultJavaId
             var newDefault = config.JavaInstallations.FirstOrDefault(j => j.IsDefault);
             if (newDefault != null)
                 config.DefaultJavaId = newDefault.Id;
@@ -538,7 +632,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
             configService.SaveConfig(config);
         }
 
-        Logger.Info($"ScanAndAddJava: found {foundJava.Count} total, added {addedCount} new", "JavaManagementService");
+        Logger.Info($"ScanAndAddJava: found {foundJava.Count} total, config has {config.JavaInstallations.Count} after cleanup", "JavaManagementService");
         return [.. config.JavaInstallations];
     }
 

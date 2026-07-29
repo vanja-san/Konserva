@@ -64,19 +64,8 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
         var url = "https://launchermeta.mojang.com/mc/game/version_manifest.json";
         Logger.Info($"Fetching version manifest from: {url}", "McServerInstaller");
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        using var response = await GetHttpClient().SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
-
-        var contentStream = await response.Content.ReadAsStreamAsync(ct);
-        var decompressedStream = StreamUtilities.GetDecompressedStream(contentStream, response.Content.Headers);
-
-        using var reader = new StreamReader(decompressedStream);
-        var responseText = await reader.ReadToEndAsync(ct);
-
-        Logger.Info($"Got manifest response: {responseText.Length} bytes", "McServerInstaller");
-
-        using var doc = JsonDocument.Parse(responseText);
+        using var doc = await FetchJsonAsync(url, ct);
+        Logger.Info($"Got manifest response", "McServerInstaller");
         var versions = doc.RootElement.GetProperty("versions")
             .EnumerateArray()
             .Select(v => new VersionInfo
@@ -132,7 +121,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                     if (percent != lastReportedPercent)
                     {
                         lastReportedPercent = percent;
-                        progress?.Report($"{downloadingStatus} ({percent}%)");
+                        progress?.Report($"{downloadingStatus} {percent}%");
                     }
                 }
             }
@@ -234,6 +223,105 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     }
 
     #region Общие методы
+
+    /// <summary>
+    /// Выполнить HTTP GET и прочитать ответ как строку с decompression.
+    /// </summary>
+    private async Task<string> FetchStringAsync(string url, CancellationToken ct = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var response = await GetHttpClient().SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+        var contentStream = await response.Content.ReadAsStreamAsync(ct);
+        using var decompressed = StreamUtilities.GetDecompressedStream(contentStream, response.Content.Headers);
+        using var reader = new StreamReader(decompressed);
+        return await reader.ReadToEndAsync(ct);
+    }
+
+    /// <summary>
+    /// Выполнить HTTP GET и распарсить JSON-ответ.
+    /// </summary>
+    private async Task<JsonDocument> FetchJsonAsync(string url, CancellationToken ct = default)
+    {
+        var text = await FetchStringAsync(url, ct);
+        return JsonDocument.Parse(text);
+    }
+
+    /// <summary>
+    /// Ожидание стабилизации файлов после установки (Forge / NeoForge / Quilt).
+    /// </summary>
+    private async Task WaitForFileStabilityAsync(string destinationPath, string loaderPrefix, CancellationToken ct,
+        IProgress<string>? progress = null, int maxWaitSeconds = 60, bool checkRunBat = true)
+    {
+        Logger.Info($"Waiting for {loaderPrefix} file operations to complete...", "McServerInstaller");
+        progress?.Report(LocalizationManager.Get("Installer_Finishing"));
+
+        var waitStartTime = SystemTime.Now;
+        var maxWait = TimeSpan.FromSeconds(maxWaitSeconds);
+        var minWait = TimeSpan.FromSeconds(3);
+        var hasMinWaitElapsed = false;
+        var librariesPath = Path.Combine(destinationPath, "libraries");
+        var serverJarPattern = $"{loaderPrefix}-*.jar";
+        var universalPattern = $"{loaderPrefix}-*-universal.jar";
+
+        while ((SystemTime.Now - waitStartTime) < maxWait)
+        {
+            var hasLoaderJarInRoot = Directory.GetFiles(destinationPath, serverJarPattern).Any();
+            var hasUniversalInLibraries = false;
+            if (Directory.Exists(librariesPath))
+            {
+                hasUniversalInLibraries = Directory.GetFiles(librariesPath, universalPattern, SearchOption.AllDirectories).Any() ||
+                                          Directory.GetFiles(librariesPath, "forge-*-universal.jar", SearchOption.AllDirectories).Any();
+            }
+            var hasLibraries = Directory.Exists(librariesPath);
+            var hasRunBat = !checkRunBat || File.Exists(Path.Combine(destinationPath, "run.bat"));
+
+            if ((!hasLoaderJarInRoot && !hasUniversalInLibraries) || !hasLibraries)
+            {
+                await Task.Delay(500, ct);
+                continue;
+            }
+
+            if (!hasMinWaitElapsed && (SystemTime.Now - waitStartTime) < minWait)
+            {
+                await Task.Delay(500, ct);
+                continue;
+            }
+            hasMinWaitElapsed = true;
+
+            var keyFiles = Directory.GetFiles(destinationPath, "*.jar")
+                .Concat(Directory.GetFiles(librariesPath, "*.jar", SearchOption.AllDirectories))
+                .Take(50)
+                .ToArray();
+
+            if (keyFiles.Length == 0)
+            {
+                await Task.Delay(500, ct);
+                continue;
+            }
+
+            var allUnlocked = keyFiles.All(IsFileUnlocked);
+
+            if (allUnlocked && hasRunBat)
+            {
+                await Task.Delay(1000, ct);
+                Logger.Info($"{loaderPrefix} files unlocked and stable ({keyFiles.Length} checked)", "McServerInstaller");
+                return;
+            }
+            else if (allUnlocked)
+            {
+                Logger.Info($"{loaderPrefix} files unlocked but run.bat not ready, waiting...", "McServerInstaller");
+                await Task.Delay(1000, ct);
+                if ((SystemTime.Now - waitStartTime) > TimeSpan.FromSeconds(10))
+                {
+                    Logger.Info($"Exiting {loaderPrefix} stability wait (10s elapsed, files unlocked)", "McServerInstaller");
+                    return;
+                }
+            }
+
+            await Task.Delay(500, ct);
+        }
+    }
 
     /// <summary>
     /// Проверить что файл не заблокирован другим процессом
