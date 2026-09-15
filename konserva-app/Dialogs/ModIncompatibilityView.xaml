@@ -1,0 +1,171 @@
+<UserControl
+    x:Class="Konserva.Dialogs.ModIncompatibilityView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:dialogs="clr-namespace:Konserva.Dialogs"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <UserControl.Resources>
+        <Style x:Key="RowIconStyle" TargetType="ui:SymbolIcon">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IconKind}" Value="Success">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IconKind}" Value="Critical">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IconKind}" Value="Caution">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IconKind}" Value="Accent">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <DataTemplate DataType="{x:Type dialogs:SolutionItem}">
+            <ui:Card Padding="12,9" Margin="0,0,0,8">
+                <Grid ColumnDefinitions="Auto,*"  VerticalAlignment="Center">
+
+                    <ui:SymbolIcon
+                        Grid.Column="0"
+                        Symbol="{Binding Icon}"
+                        FontSize="18"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource RowIconStyle}" />
+
+                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                        <ui:TextBlock
+                            Text="{Binding Name}"
+                            FontFamily="Consolas"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            TextWrapping="Wrap"
+                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <ui:TextBlock
+                            Text="{Binding Detail}"
+                            FontSize="12.5"
+                            TextWrapping="Wrap"
+                            Margin="0,2,0,0"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </Grid>
+            </ui:Card>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type dialogs:IssueItem}">
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <ui:SymbolIcon
+                    Grid.Column="0"
+                    Symbol="{Binding Icon}"
+                    FontSize="16"
+                    VerticalAlignment="Top"
+                    Margin="0,2,8,0"
+                    Style="{StaticResource RowIconStyle}" />
+
+                <StackPanel Grid.Column="1">
+                    <ui:TextBlock
+                        Text="{Binding Name}"
+                        FontFamily="Consolas"
+                        FontSize="12.5"
+                        FontWeight="SemiBold"
+                        TextWrapping="Wrap"
+                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+
+                    <ItemsControl ItemsSource="{Binding Segments}" Margin="0,2,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ui:TextBlock Text="{Binding Text}" FontSize="12.5" TextWrapping="Wrap">
+                                    <ui:TextBlock.Style>
+                                        <Style TargetType="ui:TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAccent}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                    <Setter Property="FontFamily" Value="Consolas" />
+                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                    <Setter Property="TextDecorations" Value="Underline" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:TextBlock.Style>
+                                </ui:TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type dialogs:RawItem}">
+            <Grid ColumnDefinitions="Auto,*"  Margin="0,0,0,6">
+
+                <ui:SymbolIcon
+                    Grid.Column="0"
+                    Symbol="{Binding Icon}"
+                    FontSize="16"
+                    VerticalAlignment="Top"
+                    Margin="0,2,8,0"
+                    Style="{StaticResource RowIconStyle}" />
+
+                <ui:TextBlock
+                    Grid.Column="1"
+                    Text="{Binding Text}"
+                    FontSize="12.5"
+                    TextWrapping="Wrap"
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer
+        MaxHeight="420"
+        VerticalScrollBarVisibility="Auto"
+        HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+            <StackPanel Visibility="{Binding HasSolutions, Converter={StaticResource BoolToVisibility}}">
+                <ui:TextBlock
+                    Text="{Binding DepsHeader}"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Margin="0,0,0,8"
+                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                <ItemsControl ItemsSource="{Binding Solutions}" />
+            </StackPanel>
+
+            <Border
+                Height="1"
+                Margin="0,2,0,12"
+                Background="{DynamicResource DividerStrokeColorDefaultBrush}"
+                Visibility="{Binding ShowDivider, Converter={StaticResource BoolToVisibility}}" />
+
+            <StackPanel Visibility="{Binding HasDetails, Converter={StaticResource BoolToVisibility}}">
+                <ui:TextBlock
+                    Text="{Binding DetailsHeader}"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Margin="0,0,0,8"
+                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                <ItemsControl ItemsSource="{Binding Issues}" />
+
+                <ui:TextBlock
+                    Text="{Binding MoreDetailsText}"
+                    FontSize="12"
+                    Margin="0,4,0,0"
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                    Visibility="{Binding HasMoreDetails, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

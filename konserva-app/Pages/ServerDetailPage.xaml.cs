@@ -32,6 +32,8 @@ public partial class ServerDetailPage : Page, IDisposable
     private CancellationTokenSource? _statusCts;
     private CancellationTokenSource? _errorResetCts;
     private bool _colorizerInitialized;
+    private bool _consoleAutoScroll;
+    private bool _consoleWordWrap;
 
     private static readonly Brush SuccessBrush = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
     private static readonly Brush WarningBrush = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
@@ -65,6 +67,8 @@ public partial class ServerDetailPage : Page, IDisposable
         // Подписываемся на событие ошибки запуска
         Ioc.Default.GetService<IServerManager>()!.OnServerStartError += OnServerStartError;
 
+        ApplyConsoleSettings();
+
         StartStatusTimer();
         LoadServer();
 
@@ -88,6 +92,20 @@ public partial class ServerDetailPage : Page, IDisposable
 
         var newPort = PropertiesEditor.CurrentPort;
         _viewModel.SavePort(newPort);
+    }
+
+    /// <summary>
+    /// Применяет настройки консоли из конфига приложения
+    /// </summary>
+    private void ApplyConsoleSettings()
+    {
+        var config = Ioc.Default.GetService<IConfigService>()?.GetConfig();
+        if (config == null)
+            return;
+
+        _consoleAutoScroll = config.ConsoleAutoScroll;
+        _consoleWordWrap = config.ConsoleWordWrap;
+        LogBox.WordWrap = _consoleWordWrap;
     }
 
     /// <summary>
@@ -166,20 +184,8 @@ public partial class ServerDetailPage : Page, IDisposable
         if (_server == null)
             return;
 
-        // Проверяем существующий процесс
-        if (_process != null)
-        {
-            // Сначала отписываемся от старого процесса (если был)
-            UnsubscribeFromProcess();
-
-            // Загружаем существующие логи
-            LoadExistingLogs();
-
-            // Подписываемся на события нового процесса
-            _process.OnLog += UpdateLog;
-            _process.OnStatusChanged += UpdateStatus;
-            _process.OnPlayersChanged += UpdatePlayers;
-        }
+        // Подключаемся к процессу сервера (если он есть)
+        ConnectToProcess();
 
         // Заполняем UI
         ServerNameText.Text = _viewModel.ServerName;
@@ -216,6 +222,47 @@ public partial class ServerDetailPage : Page, IDisposable
     }
 
     /// <summary>
+    /// Получает актуальный процесс сервера из менеджера и подписывается
+    /// на его события. Загружает уже накопленные логи.
+    /// Возвращает true, если процесс найден и подключение выполнено.
+    /// </summary>
+    private bool ConnectToProcess()
+    {
+        if (_serverId == null)
+            return false;
+
+        var manager = Ioc.Default.GetService<IServerManager>();
+        if (manager == null)
+            return false;
+
+        var newProcess = manager.GetProcess(_serverId);
+
+        // Если это тот же процесс, к которому уже подключены — не перезагружаем консоль.
+        // Иначе LoadExistingLogs полностью пересоздаёт документ (Document.Text = ...),
+        // сбрасывая ручную прокрутку пользователя при каждом цикле опроса (статусы Error/Stopped).
+        if (ReferenceEquals(newProcess, _process) && newProcess != null)
+            return true;
+
+        // Отписываемся от старого процесса (если был)
+        UnsubscribeFromProcess();
+        _process = null;
+
+        _process = newProcess;
+        if (_process == null)
+            return false;
+
+        // Загружаем существующие логи
+        LoadExistingLogs();
+
+        // Подписываемся на события процесса
+        _process.OnLog += UpdateLog;
+        _process.OnStatusChanged += UpdateStatus;
+        _process.OnPlayersChanged += UpdatePlayers;
+
+        return true;
+    }
+
+    /// <summary>
     /// Обновляет баннер-предупреждение и доступность настроек
     /// в зависимости от статуса сервера
     /// </summary>
@@ -243,6 +290,8 @@ public partial class ServerDetailPage : Page, IDisposable
 
         this.Invoke(() =>
         {
+            double oldOffset = LogBox.VerticalOffset;
+
             if (logs.Count > 0)
             {
                 LogBox.Document.Text = string.Join("\n", logs) + "\n";
@@ -253,7 +302,11 @@ public partial class ServerDetailPage : Page, IDisposable
                 LogBox.Clear();
                 ConsolePlaceholder.Visibility = System.Windows.Visibility.Visible;
             }
-            LogBox.ScrollToEnd();
+
+            if (_consoleAutoScroll)
+                LogBox.ScrollToEnd();
+            else
+                LogBox.ScrollToVerticalOffset(oldOffset);
         });
     }
 
@@ -263,9 +316,19 @@ public partial class ServerDetailPage : Page, IDisposable
         {
             await this.InvokeAsync(() =>
             {
-                LogBox.Document.Insert(LogBox.Document.TextLength, line + "\n");
-                ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
-                LogBox.ScrollToEnd();
+                if (_consoleAutoScroll)
+                {
+                    LogBox.Document.Insert(LogBox.Document.TextLength, line + "\n");
+                    ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
+                    LogBox.ScrollToEnd();
+                }
+                else
+                {
+                    double oldOffset = LogBox.VerticalOffset;
+                    LogBox.Document.Insert(LogBox.Document.TextLength, line + "\n");
+                    ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
+                    LogBox.ScrollToVerticalOffset(oldOffset);
+                }
             });
         }
         catch (TaskCanceledException)
@@ -288,29 +351,12 @@ public partial class ServerDetailPage : Page, IDisposable
                 _server.ResetErrorDialog();
             }
 
-            // Если статус изменился на запущенный или останавливается и процесс не актуален - переподключаемся
-            if (status is ServerStatus.Starting or ServerStatus.Running or ServerStatus.Stopping)
+            // Если процесс не актуален — переподключаемся к свежему.
+            // Покрывает и ошибки запуска: даже если сервер упал до поллинга,
+            // подключаемся и загружаем уже накопленные логи.
+            if (status is not ServerStatus.Stopped && _process is null or { Status: ServerStatus.Stopped or ServerStatus.Error })
             {
-                // При переходе в рабочие состояния проверяем актуальность процесса и подписываемся
-                if (_process == null || _process.Status == ServerStatus.Stopped || _process.Status == ServerStatus.Error)
-                {
-                    // Отписываемся от старого процесса
-                    UnsubscribeFromProcess();
-                    _process = null;
-
-                    // Получаем свежий процесс
-                    _process = Ioc.Default.GetService<IServerManager>()!.GetProcess(_serverId!);
-
-                    // Загружаем существующие логи и подписываемся на события
-                    if (_process == null) return;
-
-                    LoadExistingLogs();
-
-                    // Подписываемся на события
-                    _process.OnLog += UpdateLog;
-                    _process.OnStatusChanged += UpdateStatus;
-                    _process.OnPlayersChanged += UpdatePlayers;
-                }
+                ConnectToProcess();
             }
 
             // Для остановленных или ошибочных снимаем флаг занятости
@@ -643,6 +689,10 @@ public partial class ServerDetailPage : Page, IDisposable
         try
         {
             await _viewModel.StartStopCommand.ExecuteAsync(null);
+
+            // Сразу подключаемся к новому процессу, чтобы консоль
+            // отображалась мгновенно (в т.ч. при ошибке запуска)
+            ConnectToProcess();
         }
         catch (Exception ex)
         {
@@ -1293,6 +1343,7 @@ public partial class ServerDetailPage : Page, IDisposable
     {
         if (_server == null) return;
         _viewModel.LoadMods();
+        ModsList.ItemsSource = _viewModel.Mods;
         ReloadItemsPanel(ModsList, ModsCountBadge, _viewModel.Mods.Count, () => UpdateToggleBtn(ToggleAllModsBtn, _viewModel.CheckAllModsDisabled, "ServerDetail_Mods_ToggleAll_Enable", "ServerDetail_Mods_ToggleAll_Disable"));
     }
 
@@ -1300,6 +1351,7 @@ public partial class ServerDetailPage : Page, IDisposable
     {
         if (_server == null) return;
         _viewModel.LoadPlugins();
+        PluginsList.ItemsSource = _viewModel.Plugins;
         ReloadItemsPanel(PluginsList, PluginsCountBadge, _viewModel.Plugins.Count, () => UpdateToggleBtn(ToggleAllPluginsBtn, _viewModel.CheckAllPluginsDisabled, "ServerDetail_Plugins_ToggleAll_Enable", "ServerDetail_Plugins_ToggleAll_Disable"));
     }
 

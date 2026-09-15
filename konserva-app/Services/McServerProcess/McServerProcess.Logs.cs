@@ -12,18 +12,34 @@ namespace Konserva.Services;
 /// </summary>
 public partial class McServerProcess
 {
+    private bool _captureModIncompatibility;
+
     private void OnOutput(object sender, DataReceivedEventArgs e)
     {
         if (string.IsNullOrEmpty(e.Data))
             return;
 
-        if (e.Data.Contains("error", StringComparison.OrdinalIgnoreCase) ||
-            e.Data.Contains("exception", StringComparison.OrdinalIgnoreCase) ||
-            e.Data.Contains("failed", StringComparison.OrdinalIgnoreCase))
+        var trimmed = e.Data.TrimStart();
+        bool isStackTraceLine = trimmed.StartsWith("at ", StringComparison.Ordinal);
+
+        // Обнаружили несовместимость модов — захватываем весь блок (заголовок, решения,
+        // подробности) до стек-трейса, а не только строки с ключевыми словами.
+        if (ModIncompatibilityParser.IsModIncompatibility(e.Data))
+            _captureModIncompatibility = true;
+
+        bool capture = (_captureModIncompatibility && !isStackTraceLine)
+            || e.Data.Contains("error", StringComparison.OrdinalIgnoreCase)
+            || e.Data.Contains("exception", StringComparison.OrdinalIgnoreCase)
+            || e.Data.Contains("failed", StringComparison.OrdinalIgnoreCase);
+
+        if (capture)
         {
             _pendingErrorOutput ??= "";
             _pendingErrorOutput += e.Data + "\n";
         }
+
+        if (_captureModIncompatibility && isStackTraceLine)
+            _captureModIncompatibility = false;
 
         AppendLog(e.Data);
         ParseOutput(e.Data);
@@ -66,32 +82,7 @@ public partial class McServerProcess
                 if (!string.IsNullOrEmpty(_pendingErrorOutput))
                 {
                     var lines = _pendingErrorOutput.Trim().Split(Constants.NewLineChars, StringSplitOptions.RemoveEmptyEntries);
-                    foreach (var line in lines)
-                    {
-                        var trimmed = line.Trim();
-                        if (trimmed.Contains("class file version", StringComparison.OrdinalIgnoreCase))
-                        {
-                            classVersionLine = trimmed;
-                            break;
-                        }
-                    }
-
-                    if (classVersionLine != null)
-                        errorDetails = classVersionLine;
-                    else
-                    {
-                        var takeCount = Math.Min(2, lines.Length);
-                        if (takeCount > 0)
-                        {
-                            var sb = new StringBuilder();
-                            for (int i = 0; i < takeCount; i++)
-                            {
-                                if (i > 0) sb.Append('\n');
-                                sb.Append(lines[i].Trim());
-                            }
-                            errorDetails = sb.ToString().Trim();
-                        }
-                    }
+                    errorDetails = ExtractErrorBlock(lines, out classVersionLine);
                 }
 
                 LastError = errorDetails;
@@ -143,6 +134,63 @@ public partial class McServerProcess
             Logger.Error($"Monitor exit error for {Server.Name}: {ex.Message}", ex, "McServerProcess");
             AppendLog($"[ERROR] {string.Format(LocalizationManager.Get("Log_MonitorError"), ex.Message)}");
         }
+    }
+
+    /// <summary>
+    /// Формирует блок текста ошибки для окна сообщения.
+    /// 1) class file version — специфичная Java-ошибка (одна строка);
+    /// 2) несовместимость модов — весь блок (заголовок + решения + подробности) до стек-трейса;
+    /// 3) иначе — первые 2 строки вывода как раньше.
+    /// </summary>
+    private static string ExtractErrorBlock(string[] lines, out string? classVersionLine)
+    {
+        classVersionLine = null;
+
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Contains("class file version", StringComparison.OrdinalIgnoreCase))
+            {
+                classVersionLine = trimmed;
+                return trimmed;
+            }
+        }
+
+        int start = -1;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (ModIncompatibilityParser.IsModIncompatibility(lines[i]))
+            {
+                start = i;
+                break;
+            }
+        }
+
+        if (start >= 0)
+        {
+            var block = new StringBuilder();
+            for (int i = start; i < lines.Length; i++)
+            {
+                var trimmed = lines[i].Trim();
+                if (trimmed.StartsWith("at ", StringComparison.Ordinal))
+                    break;
+                if (block.Length > 0) block.Append('\n');
+                block.Append(trimmed);
+            }
+            return block.ToString().Trim();
+        }
+
+        var takeCount = Math.Min(2, lines.Length);
+        if (takeCount <= 0)
+            return "";
+
+        var sb = new StringBuilder();
+        for (int i = 0; i < takeCount; i++)
+        {
+            if (i > 0) sb.Append('\n');
+            sb.Append(lines[i].Trim());
+        }
+        return sb.ToString().Trim();
     }
 
     /// <summary>

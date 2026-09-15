@@ -54,6 +54,12 @@ public partial class SettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsJavaEmpty))]
     private System.Collections.ObjectModel.ObservableCollection<JavaInstallation> _javaInstallations = new();
 
+    [ObservableProperty]
+    private bool _consoleAutoScroll = true;
+
+    [ObservableProperty]
+    private bool _consoleWordWrap;
+
     // ─── Производные свойства ───────────────────────────────────────
 
     public bool IsJavaEmpty => JavaInstallations.Count == 0;
@@ -87,6 +93,8 @@ public partial class SettingsViewModel : ObservableObject
         Theme = config.Theme ?? "System";
         Language = config.Language ?? "System";
         DownloadSource = config.DownloadSource ?? "VanillaApi";
+        ConsoleAutoScroll = config.ConsoleAutoScroll;
+        ConsoleWordWrap = config.ConsoleWordWrap;
 
         _isLoading = false;
     }
@@ -115,6 +123,8 @@ public partial class SettingsViewModel : ObservableObject
 
         config.ServersDirectory = ServersDirectory;
         config.JavaInstallations = new System.Collections.ObjectModel.ObservableCollection<JavaInstallation>(JavaInstallations);
+        config.ConsoleAutoScroll = ConsoleAutoScroll;
+        config.ConsoleWordWrap = ConsoleWordWrap;
 
         _configService.SaveConfig(config);
 

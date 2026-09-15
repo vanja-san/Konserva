@@ -124,7 +124,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     {
         var useBmclapiFirst = DownloadSource == "BMCLAPI";
 
-        return await FetchLoaderVersionsAsync("forge", mcVersion, ["latest", "recommended"], ct,
+        return await FetchLoaderVersionsAsync("forge", mcVersion, [], ct,
             useBmclapiFirst
                 ? ct2 => TryGetForgeFromBmclapi(mcVersion, ct2)
                 : ct2 => TryGetForgeFromMaven(mcVersion, ct2),
@@ -235,7 +235,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     {
         var primaryUrl = DownloadSource == "BMCLAPI" ? BmclapiFabricVersionsLoader : FabricVersionsLoader;
 
-        return await FetchLoaderVersionsAsync("fabric", mcVersion, ["latest"], ct,
+        return await FetchLoaderVersionsAsync("fabric", mcVersion, [], ct,
             ct2 => TryGetFabricFromSource(primaryUrl, mcVersion, ct2),
             DownloadSource == "BMCLAPI"
                 ? ct2 => TryGetFabricFromSource(FabricVersionsLoader, mcVersion, ct2)
@@ -311,7 +311,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
             catch (SemaphoreFullException) { /* Already released */ }
         }
 
-        var result = await FetchLoaderVersionsAsync("neoforge", mcVersion, ["latest"], ct,
+        var result = await FetchLoaderVersionsAsync("neoforge", mcVersion, [], ct,
             ct2 => TryGetNeoForgeFromBmclapi(mcVersion, ct2),
             ct2 => TryGetNeoForgeFromMaven(mcVersion, ct2),
             ct2 => TryGetNeoForgeFromLauncherMeta(ct2));
@@ -465,7 +465,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     /// </summary>
     public async Task<string[]> GetQuiltVersions(string mcVersion, CancellationToken ct = default)
     {
-        return await FetchLoaderVersionsAsync("quilt", mcVersion, ["latest"], ct,
+        return await FetchLoaderVersionsAsync("quilt", mcVersion, [], ct,
             ct2 => TryGetQuiltVersions(mcVersion, ct2));
     }
 

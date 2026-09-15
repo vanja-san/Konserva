@@ -1,4 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.DependencyInjection;
+using Konserva.Dialogs;
+using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Utilities;
 using Microsoft.Win32;
@@ -23,6 +25,15 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     /// </summary>
     public static void HandleServerStartError(Server server, string errorMessage, IConfigService? configService = null)
     {
+        // Несовместимость модов (Fabric "Incompatible mods found!" и аналогичные) —
+        // показываем понятное локализованное окно вместо сырых строк из консоли.
+        var modInfo = ModIncompatibilityParser.TryParse(errorMessage);
+        if (modInfo != null)
+        {
+            ShowModIncompatibilityDialog(modInfo);
+            return;
+        }
+
         var requiredVersion = JavaVersionParser.ParseRequiredJavaVersion(errorMessage);
         var foundVersion = JavaVersionParser.ParseFoundJavaVersion(errorMessage);
 
@@ -81,6 +92,19 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
             // Не Java-ошибка (или неизвестный формат) — делегируем стандартному обработчику
             _ = UiHelper.ShowError(errorMessage);
         }
+    }
+
+    /// <summary>
+    /// Показывает локализованное окно о несовместимости модов
+    /// (недостающие зависимости и подробности из вывода модлоадера).
+    /// </summary>
+    private static void ShowModIncompatibilityDialog(ModIncompatibilityInfo info)
+    {
+        var mainWindow = Ioc.Default.GetService<MainWindow>();
+        mainWindow?.Dispatcher.Invoke(() =>
+        {
+            _ = ModIncompatibilityDialog.ShowAsync(info);
+        });
     }
 
     /// <summary>

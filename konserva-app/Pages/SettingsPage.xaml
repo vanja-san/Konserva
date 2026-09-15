@@ -451,7 +451,73 @@
                 </StackPanel>
 
                 <!--  =========================================================  -->
-                <!--  Группа 4: Загрузки (Downloads)  -->
+                <!--  Группа 4: Консоль  -->
+                <!--  =========================================================  -->
+                <StackPanel Margin="0,0,0,24">
+                    <Grid Margin="0,0,0,8" ColumnDefinitions="*,Auto">
+                        <ui:TextBlock
+                            VerticalAlignment="Center"
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Text="{loc:Loc Settings_Console}" />
+                        <ui:TextBlock
+                            x:Name="ConsoleSaveStatus"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            FontSize="12"
+                            Opacity="0"
+                            Visibility="Collapsed" />
+                    </Grid>
+
+                    <StackPanel>
+                        <!--  Карточка: Автопрокрутка (верхняя — скругление сверху)  -->
+                        <Border
+                            Padding="16,12"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                            BorderThickness="1,1,1,0"
+                            CornerRadius="8,8,0,0">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock Style="{StaticResource SettingTitle}" Text="{loc:Loc Settings_Console_AutoScroll}" />
+                                    <ui:TextBlock Style="{StaticResource SettingDescription}" Text="{loc:Loc Settings_Console_AutoScroll_Desc}" />
+                                </StackPanel>
+                                <CheckBox
+                                    x:Name="ConsoleAutoScrollBox"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Click="ConsoleSetting_Click" />
+                            </Grid>
+                        </Border>
+
+                        <!--  Разделитель  -->
+                        <Rectangle Height="1" Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
+
+                        <!--  Карточка: Перенос строк (нижняя — скругление снизу)  -->
+                        <Border
+                            Padding="16,12"
+                            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
+                            BorderThickness="1,0,1,1"
+                            CornerRadius="0,0,8,8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <ui:TextBlock Style="{StaticResource SettingTitle}" Text="{loc:Loc Settings_Console_WordWrap}" />
+                                    <ui:TextBlock Style="{StaticResource SettingDescription}" Text="{loc:Loc Settings_Console_WordWrap_Desc}" />
+                                </StackPanel>
+                                <CheckBox
+                                    x:Name="ConsoleWordWrapBox"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Click="ConsoleSetting_Click" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
+                <!--  =========================================================  -->
+                <!--  Группа 5: Загрузки (Downloads)  -->
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <Grid Margin="0,0,0,8" ColumnDefinitions="*,Auto">
@@ -497,7 +563,7 @@
                 </StackPanel>
 
                 <!--  =========================================================  -->
-                <!--  Группа 5: О программе  -->
+                <!--  Группа 6: О программе  -->
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <ui:TextBlock Style="{StaticResource CardGroupHeader}" Text="{loc:Loc Settings_About}" />

@@ -56,6 +56,16 @@ public class AppConfig
     public string DownloadSource { get; set; } = "VanillaApi";
 
     /// <summary>
+    /// Автопрокрутка консоли к последней строке при появлении новых логов
+    /// </summary>
+    public bool ConsoleAutoScroll { get; set; } = true;
+
+    /// <summary>
+    /// Перенос строк в консоли сервера
+    /// </summary>
+    public bool ConsoleWordWrap { get; set; }
+
+    /// <summary>
     /// Последняя проверка обновлений (UTC).
     /// </summary>
     public DateTime? LastUpdateCheck { get; set; }

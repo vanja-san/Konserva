@@ -82,13 +82,12 @@ public class McVersionsApiTests : IDisposable
     }
 
     [Fact]
-    public async Task GetFabricVersions_ReturnsLatest_OnFailure()
+    public async Task GetFabricVersions_ReturnsEmpty_OnFailure()
     {
         var api = CreateApiWithMockHandler("invalid");
         var versions = await api.GetFabricVersions("1.20.4");
 
-        Assert.Single(versions);
-        Assert.Equal("latest", versions[0]);
+        Assert.Empty(versions);
     }
 
     [Fact]
@@ -109,14 +108,13 @@ public class McVersionsApiTests : IDisposable
     }
 
     [Fact]
-    public async Task GetQuiltVersions_ReturnsLatest_On404()
+    public async Task GetQuiltVersions_ReturnsEmpty_On404()
     {
-        // API возвращает ["latest"] при 404 как fallback
+        // API возвращает пустой массив при 404 — версий нет
         var api = CreateApiWithMockHandler("Not Found", HttpStatusCode.NotFound);
         var versions = await api.GetQuiltVersions("1.0.0");
 
-        Assert.Single(versions);
-        Assert.Equal("latest", versions[0]);
+        Assert.Empty(versions);
     }
 
     private McVersionsApi CreateApiWithMockHandler(string responseContent, HttpStatusCode statusCode = HttpStatusCode.OK)

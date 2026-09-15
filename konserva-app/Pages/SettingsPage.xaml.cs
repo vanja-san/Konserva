@@ -89,6 +89,10 @@ public partial class SettingsPage : Page
         if (!DownloadSourceComboBox.SelectItemByTag(_viewModel.DownloadSource))
             DownloadSourceComboBox.SelectedIndex = 0;
 
+        // Настройки консоли
+        ConsoleAutoScrollBox.IsChecked = _viewModel.ConsoleAutoScroll;
+        ConsoleWordWrapBox.IsChecked = _viewModel.ConsoleWordWrap;
+
         _isLoading = false;
     }
 
@@ -107,6 +111,8 @@ public partial class SettingsPage : Page
             _viewModel.CheckUpdatesScheduled = CheckUpdatesScheduledItem.IsChecked;
             _viewModel.UpdateIntervalHours = ParseIntervalFromButton();
             _viewModel.MinimizeToTrayMode = GetSelectedMinimizeToTrayMode();
+            _viewModel.ConsoleAutoScroll = ConsoleAutoScrollBox.IsChecked == true;
+            _viewModel.ConsoleWordWrap = ConsoleWordWrapBox.IsChecked == true;
 
             if (DownloadSourceComboBox.SelectedItem is ComboBoxItem downloadItem)
                 _viewModel.DownloadSource = (string)downloadItem.Tag;
@@ -424,5 +430,12 @@ public partial class SettingsPage : Page
         if (_isLoading) return;
 
         AutoSaveSettings(DownloadsSaveStatus);
+    }
+
+    private void ConsoleSetting_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isLoading) return;
+
+        AutoSaveSettings(ConsoleSaveStatus);
     }
 }
