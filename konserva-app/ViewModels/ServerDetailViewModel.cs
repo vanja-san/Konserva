@@ -95,6 +95,9 @@ public partial class ServerDetailViewModel : ObservableObject
     private bool _settingsEnableUpnp;
 
     [ObservableProperty]
+    private bool _settingsEnableUpdateNotification = true;
+
+    [ObservableProperty]
     private string _settingsJvmArgs = string.Empty;
 
     [ObservableProperty]
@@ -156,6 +159,7 @@ public partial class ServerDetailViewModel : ObservableObject
         SettingsAutoRestartDelay = server.Settings.AutoRestartDelay;
         SettingsJavaAutoSelect = server.Settings.JavaAutoSelect;
         SettingsEnableUpnp = server.Settings.EnableUpnp;
+        SettingsEnableUpdateNotification = server.Settings.EnableUpdateNotification;
         SettingsJvmArgs = server.Settings.JvmArgsText;
 
         UpdateServerAddressDisplay();
@@ -241,6 +245,20 @@ public partial class ServerDetailViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Сохранение настройки уведомлений об обновлениях загрузчика
+    /// </summary>
+    public void SaveUpdateNotificationSetting(bool enable)
+    {
+        if (_server == null) return;
+
+        if (enable != _server.Settings.EnableUpdateNotification)
+        {
+            _server.Settings.EnableUpdateNotification = enable;
+            _serverManager.UpdateServer(_server);
+        }
+    }
+
+    /// <summary>
     /// Сохранение порта из редактора свойств
     /// </summary>
     public void SavePort(int newPort)
@@ -287,6 +305,28 @@ public partial class ServerDetailViewModel : ObservableObject
     }
 
     // ─── Процесс ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Останавливает сервер, если он запущен. Используется перед обновлением загрузчика.
+    /// Возвращает false, если остановка не удалась.
+    /// </summary>
+    public async Task<bool> StopServerIfRunningAsync()
+    {
+        if (_server == null || _serverId == null || !_server.IsRunning)
+            return true;
+
+        try
+        {
+            await _serverManager.StopServerAsync(_serverId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"StopServerIfRunning error: {ex.Message}", ex, "ServerDetailViewModel");
+            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_OperationError")}: {ex.Message}");
+            return false;
+        }
+    }
 
     /// <summary>
     /// Обновляет процесс из менеджера и возвращает его

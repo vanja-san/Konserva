@@ -96,6 +96,19 @@ public class McServerManagerTests : IDisposable
 
     #endregion
 
+    #region CreateServer Tests
+
+    [Fact]
+    public void CreateServer_SetsUpnpEnabledByDefault()
+    {
+        var server = _manager.CreateServer("Test", "1.21.1", new ModLoader { Type = ModLoaderType.Vanilla }, _testServerPath);
+
+        server.Settings.EnableUpnp.Should().BeTrue();
+        server.Settings.EnableUpdateNotification.Should().BeTrue();
+    }
+
+    #endregion
+
     #region GetServer Tests
 
     [Fact]

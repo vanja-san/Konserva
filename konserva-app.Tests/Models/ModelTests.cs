@@ -120,6 +120,24 @@ public class ServerSettingsTests
     }
 
     [Fact]
+    public void Clone_PreservesUpdateNotificationSetting()
+    {
+        var settings = new ServerSettings { EnableUpdateNotification = false };
+
+        var clone = settings.Clone();
+
+        clone.EnableUpdateNotification.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Default_UpdateNotificationEnabledByDefault()
+    {
+        var settings = new ServerSettings();
+
+        settings.EnableUpdateNotification.Should().BeTrue();
+    }
+
+    [Fact]
     public void Validate_ReturnsTrue_ForValidSettings()
     {
         var settings = new ServerSettings

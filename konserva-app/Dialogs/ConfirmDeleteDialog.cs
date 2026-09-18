@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using TextBlock = Wpf.Ui.Controls.TextBlock;
+using StackPanel = System.Windows.Controls.StackPanel;
 
 namespace Konserva.Dialogs;
 

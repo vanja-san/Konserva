@@ -122,6 +122,11 @@ public class ServerSettings : ObservableObject
     public bool EnableUpnp { get; set; }
 
     /// <summary>
+    /// Показывать уведомление о доступном обновлении загрузчика.
+    /// </summary>
+    public bool EnableUpdateNotification { get; set; } = true;
+
+    /// <summary>
     /// Копирование настроек
     /// </summary>
     public ServerSettings Clone() => new()
@@ -132,9 +137,10 @@ public class ServerSettings : ObservableObject
         JavaId = JavaId,
         JavaAutoSelect = JavaAutoSelect,
         JavaArgs = [.. JavaArgs],
-        AutoRestart = AutoRestart,
+AutoRestart = AutoRestart,
         AutoRestartDelay = AutoRestartDelay,
-        EnableUpnp = EnableUpnp
+        EnableUpnp = EnableUpnp,
+        EnableUpdateNotification = EnableUpdateNotification
     };
 
     /// <summary>

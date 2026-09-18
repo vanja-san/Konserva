@@ -13,6 +13,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using Wpf.Ui.Controls;
 using WpfButton = Wpf.Ui.Controls.Button;
 
@@ -35,6 +36,14 @@ public partial class ServerDetailPage : Page, IDisposable
     private bool _consoleAutoScroll;
     private bool _consoleWordWrap;
 
+    private readonly IModLoaderService _modLoaderService;
+    private CancellationTokenSource? _updateCts;
+    private string? _currentLoaderVersion;
+    private string? _latestLoaderVersion;
+    private string[] _allLoaderVersions = [];
+    private bool _updateInProgress;
+    private CancellationTokenSource? _updateResultCts;
+
     private static readonly Brush SuccessBrush = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
     private static readonly Brush WarningBrush = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
     private static readonly Brush ErrorBrush = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
@@ -48,6 +57,8 @@ public partial class ServerDetailPage : Page, IDisposable
                 Ioc.Default.GetService<IServerManager>()!,
                 Ioc.Default.GetService<IConfigService>()!,
                 Ioc.Default.GetService<IPortForwardingService>());
+
+        _modLoaderService = Ioc.Default.GetService<IModLoaderService>()!;
 
         InitializeComponent();
 
@@ -190,6 +201,9 @@ public partial class ServerDetailPage : Page, IDisposable
         // Заполняем UI
         ServerNameText.Text = _viewModel.ServerName;
         ServerInfoText.Text = _viewModel.ServerInfo;
+
+        // Обновление загрузчика
+        LoadUpdateForm();
 
         // Настройки
         SettingName.Text = _viewModel.SettingsName;
@@ -725,14 +739,17 @@ public partial class ServerDetailPage : Page, IDisposable
         if (string.IsNullOrEmpty(tag))
             return;
 
+        ShowSection(tag);
+    }
+
+    /// <summary>
+    /// Переключает видимый раздел сервера по его имени
+    /// (Console / Mods / Plugins / Properties / Settings)
+    /// </summary>
+    private void ShowSection(string tag)
+    {
         // Сбрасываем выделение всех кнопок
         ResetNavigationButtons();
-
-        // Выделяем активную кнопку
-        navButton.Background = TryFindResource("ControlFillColorSecondaryBrush") as Brush;
-
-        // Устанавливаем Filled=True для активной иконки
-        SetIconFilled(tag, true);
 
         // Показываем нужную панель
         ConsoleView.Visibility = tag == "Console" ? Visibility.Visible : Visibility.Collapsed;
@@ -740,6 +757,29 @@ public partial class ServerDetailPage : Page, IDisposable
         PluginsView.Visibility = tag == "Plugins" ? Visibility.Visible : Visibility.Collapsed;
         PropertiesView.Visibility = tag == "Properties" ? Visibility.Visible : Visibility.Collapsed;
         SettingsView.Visibility = tag == "Settings" ? Visibility.Visible : Visibility.Collapsed;
+
+        // Выделяем активную кнопку (если найдена)
+        switch (tag)
+        {
+            case "Console":
+                ConsoleNavButton.Background = TryFindResource("ControlFillColorSecondaryBrush") as Brush;
+                break;
+            case "Mods":
+                ModsNavButton.Background = TryFindResource("ControlFillColorSecondaryBrush") as Brush;
+                break;
+            case "Plugins":
+                PluginsNavButton.Background = TryFindResource("ControlFillColorSecondaryBrush") as Brush;
+                break;
+            case "Properties":
+                PropertiesNavButton.Background = TryFindResource("ControlFillColorSecondaryBrush") as Brush;
+                break;
+            case "Settings":
+                SettingsNavButton.Background = TryFindResource("ControlFillColorSecondaryBrush") as Brush;
+                break;
+        }
+
+        // Устанавливаем Filled=True для активной иконки
+        SetIconFilled(tag, true);
 
         // Загружаем данные для соответствующих разделов
         switch (tag)
@@ -1539,6 +1579,425 @@ public partial class ServerDetailPage : Page, IDisposable
     {
         try { await UiHelper.ShowWarning(message); }
         catch (Exception ex) { Logger.Warning($"[ShowWarningSafe] Error: {ex.Message}", "ServerDetailPage"); }
+    }
+
+    // ─── Обновление загрузчика сервера ──────────────────────────────
+
+    /// <summary>
+    /// Заполняет карточку обновления загрузчика: видимость, текущая версия,
+    /// список доступных версий, уведомление в заголовке.
+    /// </summary>
+    private void LoadUpdateForm()
+    {
+        if (_server == null || _modLoaderService == null)
+            return;
+
+        var loaderType = _server.ModLoader.Type;
+        var updatable = loaderType is ModLoaderType.Forge or ModLoaderType.NeoForge
+            or ModLoaderType.Fabric or ModLoaderType.Quilt or ModLoaderType.Paper;
+
+        UpdateServerCard.Visibility = updatable ? Visibility.Visible : Visibility.Collapsed;
+        if (!updatable)
+            return;
+
+        _currentLoaderVersion = string.IsNullOrWhiteSpace(_server.ModLoader.LoaderVersion)
+            ? null
+            : _server.ModLoader.LoaderVersion;
+
+        UpdateCurrentVersionText.Text = _currentLoaderVersion
+            ?? LocalizationManager.Get("ServerDetail_UpdateLoader_CurrentEmpty");
+
+        UpdateServerButton.IsEnabled = false;
+        SettingUpdateNotifications.IsChecked = _viewModel.SettingsEnableUpdateNotification;
+        _ = LoadLoaderVersionsAsync();
+    }
+
+    /// <summary>
+    /// Загружает доступные версии загрузчика и обновляет карточку.
+    /// </summary>
+    private async Task LoadLoaderVersionsAsync()
+    {
+        if (_server == null || _modLoaderService == null)
+            return;
+
+        try
+        {
+            var versions = await _modLoaderService.GetLoaderVersionsAsync(
+                _server.ModLoader.Type.ToString(), _server.McVersion, showSnapshots: false);
+
+            _allLoaderVersions = versions;
+
+            if (versions.Length == 0)
+            {
+                _latestLoaderVersion = null;
+                UpdateLoaderVersionBox.ItemsSource = Array.Empty<string>();
+                UpdateServerButton.IsEnabled = false;
+                SetUpdateStatus(LocalizationManager.Get("ServerDetail_UpdateLoader_NoVersions"), WarningBrush);
+                UpdateUpdateAvailability();
+                return;
+            }
+
+            // Последняя доступная версия — максимум по списку
+            var newest = versions[0];
+            foreach (var v in versions)
+            {
+                if (CompareLoaderVersions(v, newest) > 0)
+                    newest = v;
+            }
+            _latestLoaderVersion = newest;
+
+            ApplyVersionFilter();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"LoadLoaderVersionsAsync error: {ex.Message}", "ServerDetailPage");
+            SetUpdateStatus(string.Format(
+                LocalizationManager.Get("ServerDetail_UpdateLoader_LoadVersFailed"), ex.Message), ErrorBrush);
+        }
+    }
+
+    /// <summary>
+    /// Показывает в выпадающем списке только версии, новее установленной
+    /// (даунгрейд не поддерживается, поэтому более старые отбрасываются).
+    /// </summary>
+    private void ApplyVersionFilter()
+    {
+        if (_allLoaderVersions.Length == 0)
+        {
+            UpdateLoaderVersionBox.IsEnabled = true;
+            UpdateLoaderVersionBox.ItemsSource = Array.Empty<string>();
+            UpdateServerButton.IsEnabled = false;
+            UpdateUpdateAvailability();
+            return;
+        }
+
+        var current = _currentLoaderVersion;
+        var selectable = string.IsNullOrEmpty(current)
+            ? _allLoaderVersions
+            : [.. _allLoaderVersions.Where(v => CompareLoaderVersions(v, current) > 0)];
+
+        if (selectable.Length > 0)
+        {
+            UpdateLoaderVersionBox.IsEnabled = true;
+            UpdateLoaderVersionBox.ItemsSource = selectable;
+            UpdateLoaderVersionBox.SelectedIndex = 0;
+            UpdateServerButton.IsEnabled = !_updateInProgress;
+            // Не показываем «висящий» статус, когда есть что выбирать
+            SetUpdateStatus(string.Empty, null);
+        }
+        else
+        {
+            // Новых версий нет: выключаем список и кнопку, в списке — «актуальная версия»
+            UpdateLoaderVersionBox.IsEnabled = false;
+            UpdateLoaderVersionBox.ItemsSource =
+                new[] { LocalizationManager.Get("ServerDetail_UpdateLoader_NoUpdates") };
+            UpdateLoaderVersionBox.SelectedIndex = 0;
+            UpdateServerButton.IsEnabled = false;
+        }
+
+        UpdateUpdateAvailability();
+    }
+
+    /// <summary>
+    /// Показывает/скрывает иконку уведомления об обновлении в заголовке.
+    /// </summary>
+    private void UpdateUpdateAvailability()
+    {
+        var notifyEnabled = SettingUpdateNotifications.IsChecked ?? false;
+        var hasUpdate = notifyEnabled
+            && !string.IsNullOrEmpty(_currentLoaderVersion)
+            && _allLoaderVersions.Any(v => CompareLoaderVersions(v, _currentLoaderVersion) > 0);
+
+        UpdateAvailableButton.Visibility = hasUpdate ? Visibility.Visible : Visibility.Collapsed;
+        if (hasUpdate)
+        {
+            UpdateAvailableButton.ToolTip = string.Format(
+                LocalizationManager.Get("ServerDetail_UpdateLoader_Available"), _latestLoaderVersion);
+        }
+    }
+
+    /// <summary>
+    /// Сравнивает версии загрузчика по числовым компонентам
+    /// ("0.19.4" &lt; "0.19.5"; сборки Paper "492 (ALPHA)" — по ведущему числу).
+    /// Возвращает отрицательное, ноль или положительное значение.
+    /// </summary>
+    private static int CompareLoaderVersions(string a, string b)
+    {
+        if (string.Equals(a, b, StringComparison.OrdinalIgnoreCase))
+            return 0;
+
+        var aParts = a.Split('.');
+        var bParts = b.Split('.');
+        var len = Math.Max(aParts.Length, bParts.Length);
+
+        for (var i = 0; i < len; i++)
+        {
+            var aPart = i < aParts.Length ? aParts[i] : "0";
+            var bPart = i < bParts.Length ? bParts[i] : "0";
+
+            // Числовой префикс части (до пробела) — напр. "492 (ALPHA)"
+            var aNumStr = aPart.Split(' ')[0];
+            var bNumStr = bPart.Split(' ')[0];
+
+            if (int.TryParse(aNumStr, out var aNum) && int.TryParse(bNumStr, out var bNum))
+            {
+                if (aNum != bNum)
+                    return aNum.CompareTo(bNum);
+            }
+            else
+            {
+                var cmp = string.Compare(aPart, bPart, StringComparison.OrdinalIgnoreCase);
+                if (cmp != 0)
+                    return cmp;
+            }
+        }
+
+        return 0;
+    }
+
+    /// <summary>
+    /// Переход к карточке обновления в настройках по клику на иконку уведомления.
+    /// </summary>
+    private void UpdateAvailable_Click(object sender, RoutedEventArgs e)
+    {
+        ShowSection("Settings");
+        UpdateServerCard.IsExpanded = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded,
+            new Action(() => UpdateServerCard.BringIntoView()));
+    }
+
+    /// <summary>
+    /// Обновление загрузчика сервера: подтверждение остановки, резервная копия,
+    /// переустановка загрузчика, сохранение новой версии.
+    /// </summary>
+    private async void UpdateServerButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_server == null || _updateInProgress)
+            return;
+
+        var newVersion = UpdateLoaderVersionBox.SelectedItem as string;
+        if (string.IsNullOrEmpty(newVersion))
+            return;
+
+        // 1. Останавливаем запущенный сервер (с подтверждением)
+        if (_server.IsRunning)
+        {
+            var confirm = await UiHelper.ShowConfirm(
+                LocalizationManager.Get("ServerDetail_UpdateLoader_StopConfirm"),
+                LocalizationManager.Get("ServerDetail_UpdateLoader_StopConfirm_Title"));
+            if (confirm != ContentDialogResult.Primary)
+                return;
+
+            if (!await _viewModel.StopServerIfRunningAsync())
+                return;
+        }
+
+        var oldVersionDisplay = _currentLoaderVersion
+            ?? LocalizationManager.Get("ServerDetail_UpdateLoader_CurrentEmpty");
+
+        var updated = false;
+        string? resultMessage = null;
+
+        _updateInProgress = true;
+        _updateCts?.Dispose();
+        _updateCts = new CancellationTokenSource();
+
+        _updateResultCts?.Cancel();
+        UpdateLogProgress.Opacity = 1;
+        UpdateLogProgress.Visibility = Visibility.Visible;
+        UpdateResultText.Visibility = Visibility.Collapsed;
+
+        UpdateServerButton.IsEnabled = false;
+        UpdateProgress.Visibility = Visibility.Visible;
+        UpdateLogProgress.Visibility = Visibility.Visible;
+        UpdateButtonText.Text = LocalizationManager.Get("ServerDetail_UpdateLoader_Updating");
+
+        try
+        {
+            var installer = Ioc.Default.GetService<IServerInstaller>()!;
+            var progress = new DispatcherProgress<string>(msg => AppLogLine(msg), Dispatcher);
+
+            AppLogLine(LocalizationManager.Get("ServerDetail_UpdateLoader_Started"));
+
+            // 2. Резервная копия (по желанию)
+            if (SettingUpdateBackup.IsChecked == true)
+            {
+                AppLogLine(LocalizationManager.Get("ServerDetail_UpdateLoader_BackupCreating"));
+                var backupPath = ServerBackup.CreateBackupFolder(_server.Path, _server.Name);
+                AppLogLine(string.Format(
+                    LocalizationManager.Get("ServerDetail_UpdateLoader_BackupCreated"), backupPath));
+            }
+
+            // 3. Удаляем файлы, которые установщик пересоздаст сам
+            var removed = ServerBackup.RemoveLoaderFiles(_server.Path, _server.ModLoader.Type);
+            foreach (var item in removed)
+                AppLogLine($"{LocalizationManager.Get("ServerDetail_UpdateLoader_LogRemoved")} {item}");
+
+            // 4. Устанавливаем новый загрузчик
+            var result = await installer.InstallServer(
+                _server.ModLoader.Type,
+                _server.McVersion,
+                newVersion,
+                _server.Path,
+                _server.Port,
+                _server.Settings.RamMin,
+                _server.Settings.RamMax,
+                progress,
+                _updateCts.Token);
+
+            if (result.Success)
+            {
+                // 5. Сохраняем новую версию загрузчика
+                _server.ModLoader.LoaderVersion = newVersion;
+                if (result.BuildNumber.HasValue)
+                    _server.ServerBuild = result.BuildNumber.Value;
+                _server.Status = ServerStatus.Stopped;
+                Ioc.Default.GetService<IServerManager>()!.UpdateServer(_server);
+
+                _currentLoaderVersion = newVersion;
+                UpdateCurrentVersionText.Text = newVersion;
+                ApplyVersionFilter();
+
+                var successMsg = string.Format(
+                    LocalizationManager.Get("ServerDetail_UpdateLoader_Success"),
+                    oldVersionDisplay, newVersion);
+                updated = true;
+                resultMessage = successMsg;
+                // Успех показываем в прогрессбаре, отдельную строку статуса очищаем
+                SetUpdateStatus(string.Empty, null);
+            }
+            else
+            {
+                var errorMsg = string.Format(
+                    LocalizationManager.Get("ServerDetail_UpdateLoader_Error"),
+                    result.Error ?? result.Status.ToString());
+                AppLogLine(errorMsg);
+                SetUpdateStatus(errorMsg, ErrorBrush);
+            }
+
+            UpdateUpdateAvailability();
+        }
+        catch (OperationCanceledException)
+        {
+            AppLogLine(LocalizationManager.Get("ServerDetail_UpdateLoader_Cancelled"));
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"UpdateServerButton_Click error: {ex.Message}", ex, "ServerDetailPage");
+            var errorMsg = string.Format(
+                LocalizationManager.Get("ServerDetail_UpdateLoader_Error"), ex.Message);
+            AppLogLine(errorMsg);
+            SetUpdateStatus(errorMsg, ErrorBrush);
+        }
+        finally
+        {
+            _updateInProgress = false;
+            _updateCts?.Dispose();
+            _updateCts = null;
+            UpdateProgress.Visibility = Visibility.Collapsed;
+            UpdateButtonText.Text = LocalizationManager.Get("ServerDetail_UpdateLoader_Update");
+            UpdateServerButton.IsEnabled = UpdateLoaderVersionBox.IsEnabled
+                && UpdateLoaderVersionBox.SelectedIndex >= 0;
+        }
+
+        _ = FinishUpdateAsync(updated, resultMessage);
+    }
+
+    /// <summary>
+    /// Добавляет строку в статус карточки обновления (вместо отдельного окна лога).
+    /// </summary>
+    private void AppLogLine(string line)
+    {
+        SetUpdateStatus($"{DateTime.Now:HH:mm:ss} {line}", null);
+    }
+
+    /// <summary>
+    /// Обработка изменения чекбокса «показывать уведомление об обновлении».
+    /// </summary>
+    private void SettingUpdateNotifications_Click(object sender, RoutedEventArgs e)
+    {
+        var enable = SettingUpdateNotifications.IsChecked ?? false;
+        _viewModel.SaveUpdateNotificationSetting(enable);
+        UpdateUpdateAvailability();
+    }
+
+    /// <summary>
+    /// Показывает сообщение статуса в карточке обновления загрузчика.
+    /// </summary>
+    private void SetUpdateStatus(string message, Brush? brush)
+    {
+        UpdateStatusText.Text = message;
+        UpdateStatusText.Foreground = brush ?? DefaultBrush;
+        UpdateStatusText.Visibility = string.IsNullOrEmpty(message)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+    }
+
+    /// <summary>
+    /// Плавно прячет прогрессбар после завершения обновления. При успехе показывает
+    /// текст результата в прогрессбаре, держит его чуть дольше и плавно скрывает.
+    /// </summary>
+    private async Task FinishUpdateAsync(bool success, string? resultMessage)
+    {
+        _updateResultCts?.Cancel();
+        _updateResultCts?.Dispose();
+        _updateResultCts = new CancellationTokenSource();
+        var token = _updateResultCts.Token;
+
+        // Прогрессбар плавно исчезает при завершении
+        if (UpdateLogProgress.Visibility == Visibility.Visible)
+        {
+            await FadeAsync(UpdateLogProgress, 1, 0, 300);
+            if (token.IsCancellationRequested)
+                return;
+            UpdateLogProgress.Visibility = Visibility.Collapsed;
+        }
+
+        if (!success || string.IsNullOrEmpty(resultMessage))
+            return;
+
+        // Текст успеха появляется в прогрессбаре
+        UpdateResultText.Text = resultMessage;
+        UpdateResultText.Foreground = SuccessBrush;
+        UpdateResultText.Visibility = Visibility.Visible;
+        UpdateResultText.Opacity = 0;
+        await FadeAsync(UpdateResultText, 0, 1, 250);
+        if (token.IsCancellationRequested)
+            return;
+
+        // Держим текст чуть дольше, затем плавно скрываем
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2), token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        await FadeAsync(UpdateResultText, 1, 0, 450);
+        UpdateResultText.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Плавно изменяет прозрачность элемента.
+    /// </summary>
+    private static Task FadeAsync(FrameworkElement element, double from, double to, int milliseconds)
+    {
+        var tcs = new TaskCompletionSource();
+        var animation = new DoubleAnimation
+        {
+            From = from,
+            To = to,
+            Duration = TimeSpan.FromMilliseconds(milliseconds),
+            EasingFunction = new QuadraticEase
+            {
+                EasingMode = to > from ? EasingMode.EaseOut : EasingMode.EaseIn
+            }
+        };
+        animation.Completed += (_, _) => tcs.TrySetResult();
+        element.BeginAnimation(OpacityProperty, animation);
+        return tcs.Task;
     }
 
     public void Dispose()

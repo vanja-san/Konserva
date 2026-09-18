@@ -68,7 +68,8 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
             Settings = new ServerSettings
             {
                 RamMin = 1024,
-                RamMax = 4096
+                RamMax = 4096,
+                EnableUpnp = true
             }
         };
 

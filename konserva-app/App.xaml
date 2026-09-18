@@ -6,12 +6,15 @@
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:local="clr-namespace:Konserva"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
     DispatcherUnhandledException="App_DispatcherUnhandledException">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
+                <vio:ThemesDictionary Theme="Dark" />
+                <vio:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
 
             <converters:BoolToVisibilityConverter x:Key="BoolToVisibility" />

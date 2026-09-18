@@ -30,6 +30,21 @@
                             Foreground="{ui:ThemeResource TextFillColorDisabledBrush}"
                             Text="1.0.0 • ModloaderName" />
                     </StackPanel>
+                    <!--  Уведомление о доступном обновлении загрузчика  -->
+                    <ui:Button
+                        x:Name="UpdateAvailableButton"
+                        Margin="12,0,0,0"
+                        Padding="6"
+                        VerticalAlignment="Center"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="UpdateAvailable_Click"
+                        Visibility="Collapsed">
+                        <ui:SymbolIcon
+                            FontSize="20"
+                            Foreground="{ui:ThemeResource SystemFillColorCautionBrush}"
+                            Symbol="ArrowClockwise20" />
+                    </ui:Button>
                 </StackPanel>
 
                 <!--  Кнопки управления  -->
@@ -532,7 +547,7 @@
 
                 <!--  Настройки сервера  -->
                 <Grid x:Name="SettingsView" Visibility="Collapsed">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer x:Name="SettingsScrollViewer" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <!--  Баннер: сервер запущен  -->
                             <Border
@@ -970,6 +985,151 @@
                                             Click="CopyAddressButton_Click"
                                             Content="{loc:Loc ServerDetail_Upnp_CopyAddress}"
                                             Visibility="Collapsed" />
+                                    </Grid>
+                                </Grid>
+                            </ui:CardExpander>
+
+                            <!--  Обновление сервера (загрузчик)  -->
+                            <ui:CardExpander
+                                x:Name="UpdateServerCard"
+                                Margin="0,0,0,8"
+                                Padding="12"
+                                ContentPadding="8"
+                                Visibility="Collapsed">
+                                <ui:CardExpander.Icon>
+                                    <ui:SymbolIcon
+                                        Filled="True"
+                                        FontSize="20"
+                                        Symbol="ArrowClockwise20" />
+                                </ui:CardExpander.Icon>
+                                <ui:CardExpander.Header>
+                                    <ui:TextBlock VerticalAlignment="Center" Text="{loc:Loc ServerDetail_UpdateLoader_Title}" />
+                                </ui:CardExpander.Header>
+                                <Grid Margin="8,0" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                                    <!--  Установленная версия  -->
+                                    <Grid
+                                        Grid.Row="0"
+                                        Margin="0,8"
+                                        ColumnDefinitions="*,Auto">
+                                        <ui:TextBlock VerticalAlignment="Center" Text="{loc:Loc ServerDetail_UpdateLoader_CurrentLabel}" />
+                                        <ui:TextBlock
+                                            x:Name="UpdateCurrentVersionText"
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            FontWeight="SemiBold"
+                                            Text="—" />
+                                    </Grid>
+
+                                    <!--  Доступные версии  -->
+                                    <Grid
+                                        Grid.Row="1"
+                                        Margin="0,8"
+                                        ColumnDefinitions="180,*">
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_UpdateLoader_VersionsLabel}" />
+                                            <ui:TextBlock
+                                                FontSize="11"
+                                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                Text="{loc:Loc ServerDetail_UpdateLoader_Versions_Desc}" />
+                                        </StackPanel>
+                                        <ComboBox
+                                            x:Name="UpdateLoaderVersionBox"
+                                            Grid.Column="1"
+                                            MinWidth="180"
+                                            MaxDropDownHeight="200"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center" />
+                                    </Grid>
+
+                                    <!--  Резервная копия  -->
+                                    <Grid
+                                        Grid.Row="2"
+                                        Margin="0,8"
+                                        ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0">
+                                            <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_UpdateLoader_BackupLabel}" />
+                                            <ui:TextBlock
+                                                FontSize="11"
+                                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                Text="{loc:Loc ServerDetail_UpdateLoader_Backup_Desc}" />
+                                        </StackPanel>
+                                        <CheckBox
+                                            x:Name="SettingUpdateBackup"
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center" />
+                                    </Grid>
+
+                                    <!--  Уведомление об обновлении  -->
+                                    <Grid
+                                        Grid.Row="3"
+                                        Margin="0,8"
+                                        ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0">
+                                            <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_UpdateLoader_NotifyLabel}" />
+                                            <ui:TextBlock
+                                                FontSize="11"
+                                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                Text="{loc:Loc ServerDetail_UpdateLoader_Notify_Desc}" />
+                                        </StackPanel>
+                                        <CheckBox
+                                            x:Name="SettingUpdateNotifications"
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Click="SettingUpdateNotifications_Click" />
+                                    </Grid>
+
+                                    <!--  Статус  -->
+                                    <ui:TextBlock
+                                        x:Name="UpdateStatusText"
+                                        Grid.Row="4"
+                                        Margin="0,4"
+                                        FontSize="12"
+                                        Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                        TextWrapping="Wrap"
+                                        Visibility="Collapsed" />
+
+                                    <!--  Прогресс + кнопка обновления  -->
+                                    <Grid
+                                        Grid.Row="5"
+                                        Margin="0,8,0,0"
+                                        ColumnDefinitions="*,Auto">
+                                        <Grid Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+                                        <ProgressBar
+                                            x:Name="UpdateLogProgress"
+                                            Height="4"
+                                            VerticalAlignment="Center"
+                                            IsIndeterminate="True"
+                                            Visibility="Collapsed" />
+                                        <ui:TextBlock
+                                            x:Name="UpdateResultText"
+                                            FontSize="12"
+                                            VerticalAlignment="Center"
+                                            TextWrapping="Wrap"
+                                            Visibility="Collapsed" />
+                                    </Grid>
+                                        <ui:Button
+                                            x:Name="UpdateServerButton"
+                                            Grid.Column="1"
+                                            MinWidth="140"
+                                            HorizontalAlignment="Right"
+                                            Appearance="Primary"
+                                            Click="UpdateServerButton_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:ProgressRing
+                                                    x:Name="UpdateProgress"
+                                                    Width="16"
+                                                    Height="16"
+                                                    Margin="0,0,6,0"
+                                                    IsIndeterminate="True"
+                                                    Visibility="Collapsed" />
+                                                <ui:TextBlock
+                                                    x:Name="UpdateButtonText"
+                                                    VerticalAlignment="Center"
+                                                    Text="{loc:Loc ServerDetail_UpdateLoader_Update}" />
+                                            </StackPanel>
+                                        </ui:Button>
                                     </Grid>
                                 </Grid>
                             </ui:CardExpander>
