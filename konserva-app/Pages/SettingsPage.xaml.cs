@@ -183,6 +183,10 @@ public partial class SettingsPage : Page
     /// Показывает временный статус сохранения (зелёный — успех, красный — ошибка)
     /// с автоматическим скрытием через 2 секунды.
     /// </summary>
+    private static System.Windows.Media.Brush GetThemeBrush(string key) =>
+        System.Windows.Application.Current.TryFindResource(key) as System.Windows.Media.Brush
+        ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray);
+
     private async Task ShowSaveStatus(Wpf.Ui.Controls.TextBlock statusText, bool isError)
     {
         if (statusText == null) return;
@@ -190,9 +194,7 @@ public partial class SettingsPage : Page
         statusText.Text = isError
             ? LocalizationManager.Get("Props_SaveError")
             : LocalizationManager.Get("Message_SettingsSaved");
-        statusText.Foreground = isError
-            ? new SolidColorBrush(Colors.Red)
-            : (System.Windows.Media.Brush)FindResource("SystemFillColorSuccessBrush");
+        statusText.Foreground = isError ? GetThemeBrush("SystemFillColorCriticalBrush") : GetThemeBrush("SystemFillColorSuccessBrush");
         statusText.Visibility = Visibility.Visible;
         statusText.Opacity = 0;
 
@@ -359,12 +361,12 @@ public partial class SettingsPage : Page
             CheckUpdatesButton.IsEnabled = false;
 
             // Показываем индикатор загрузки
-            UpdateWaveDots.Visibility = Visibility.Visible;
+            UpdateWaveDots.ShowIndeterminate();
 
             var updateInfo = await _viewModel.ForceCheckUpdatesAsync();
 
             // Убираем индикатор, обновляем текст
-            UpdateWaveDots.Visibility = Visibility.Collapsed;
+            UpdateWaveDots.HideIndeterminate();
 
             if (!updateInfo.IsAvailable)
             {
@@ -379,7 +381,7 @@ public partial class SettingsPage : Page
         }
         catch (Exception ex)
         {
-            UpdateWaveDots.Visibility = Visibility.Collapsed;
+            UpdateWaveDots.HideIndeterminate();
             CheckUpdatesButtonText.Text = $"{LocalizationManager.Get("Settings_CheckForUpdates")} — {LocalizationManager.Get("Settings_UpdateCheckError")}";
             Logger.Error($"Update check error in button: {ex.Message}", ex, "SettingsPage");
         }

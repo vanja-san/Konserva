@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 
@@ -106,6 +107,32 @@ public static class UiExtensions
         if (comboBox.SelectedItem is ComboBoxItem item)
             return item.Tag?.ToString();
         return null;
+    }
+
+    #endregion
+
+    #region ProgressRing helpers
+
+    /// <summary>
+    /// Показывает индетерминантное кольцо и гарантированно (пере)запускает анимацию вращения.
+    /// WPF-UI запускает вращение через EventTrigger Loaded на вложенном Arc, поэтому предзаданный
+    /// в XAML <see cref="Wpf.Ui.Controls.ProgressRing.IsIndeterminate"/> анимацию не запускает —
+    /// переключение флага после показа заново применяет шаблон и стартует сториборд.
+    /// </summary>
+    public static void ShowIndeterminate(this Wpf.Ui.Controls.ProgressRing ring)
+    {
+        ring.Visibility = System.Windows.Visibility.Visible;
+        ring.IsIndeterminate = false;
+        ring.IsIndeterminate = true;
+    }
+
+    /// <summary>
+    /// Скрывает кольцо и останавливает анимацию вращения.
+    /// </summary>
+    public static void HideIndeterminate(this Wpf.Ui.Controls.ProgressRing ring)
+    {
+        ring.IsIndeterminate = false;
+        ring.Visibility = System.Windows.Visibility.Collapsed;
     }
 
     #endregion

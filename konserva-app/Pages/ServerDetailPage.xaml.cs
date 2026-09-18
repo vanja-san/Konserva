@@ -44,10 +44,14 @@ public partial class ServerDetailPage : Page, IDisposable
     private bool _updateInProgress;
     private CancellationTokenSource? _updateResultCts;
 
-    private static readonly Brush SuccessBrush = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
-    private static readonly Brush WarningBrush = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
-    private static readonly Brush ErrorBrush = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
-    private static readonly Brush DefaultBrush = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33));
+    private static readonly Brush SuccessBrush = GetThemeBrush("SystemFillColorSuccessBrush");
+    private static readonly Brush WarningBrush = GetThemeBrush("SystemFillColorCautionBrush");
+    private static readonly Brush ErrorBrush = GetThemeBrush("SystemFillColorCriticalBrush");
+    private static readonly Brush DefaultBrush = GetThemeBrush("TextFillColorPrimaryBrush");
+
+    private static Brush GetThemeBrush(string key) =>
+        Application.Current.TryFindResource(key) as Brush
+        ?? new SolidColorBrush(Color.FromRgb(0x90, 0x90, 0x90));
 
     public ServerDetailPage(string? serverId = null)
     {
@@ -1024,7 +1028,7 @@ public partial class ServerDetailPage : Page, IDisposable
         if (statusText == null) return;
 
         statusText.Text = message;
-        statusText.Foreground = new SolidColorBrush(Color.FromRgb(220, 80, 80)); // мягкий красный
+        statusText.Foreground = ErrorBrush;
         statusText.Visibility = Visibility.Visible;
         statusText.Opacity = 0;
 
@@ -1063,9 +1067,7 @@ public partial class ServerDetailPage : Page, IDisposable
         statusText.Text = isError
             ? LocalizationManager.Get("Props_SaveError")
             : LocalizationManager.Get("Message_SettingsSaved");
-        statusText.Foreground = isError
-            ? new SolidColorBrush(Colors.Red)
-            : (System.Windows.Media.Brush)FindResource("SystemFillColorSuccessBrush");
+        statusText.Foreground = isError ? ErrorBrush : SuccessBrush;
         statusText.Visibility = Visibility.Visible;
         statusText.Opacity = 0;
 
@@ -1190,13 +1192,13 @@ public partial class ServerDetailPage : Page, IDisposable
 
         try
         {
-            CheckUpnpProgress.Visibility = Visibility.Visible;
+            CheckUpnpProgress.ShowIndeterminate();
             CheckUpnpButton.IsEnabled = false;
             CheckUpnpText.Text = LocalizationManager.Get("ServerDetail_Upnp_Checking");
 
             var isAvailable = await _viewModel.CheckUpnpAvailabilityAsync();
 
-            CheckUpnpProgress.Visibility = Visibility.Collapsed;
+            CheckUpnpProgress.HideIndeterminate();
             CheckUpnpButton.IsEnabled = true;
             CheckUpnpText.Text = LocalizationManager.Get("ServerDetail_Upnp_Check");
 
@@ -1217,7 +1219,7 @@ public partial class ServerDetailPage : Page, IDisposable
         catch (Exception ex)
         {
             Logger.Error($"UPnP check error: {ex.Message}", ex, "ServerDetailPage");
-            CheckUpnpProgress.Visibility = Visibility.Collapsed;
+            CheckUpnpProgress.HideIndeterminate();
             CheckUpnpButton.IsEnabled = true;
             CheckUpnpText.Text = LocalizationManager.Get("ServerDetail_Upnp_Check");
 
@@ -1808,7 +1810,7 @@ public partial class ServerDetailPage : Page, IDisposable
         UpdateResultText.Visibility = Visibility.Collapsed;
 
         UpdateServerButton.IsEnabled = false;
-        UpdateProgress.Visibility = Visibility.Visible;
+        UpdateProgress.ShowIndeterminate();
         UpdateLogProgress.Visibility = Visibility.Visible;
         UpdateButtonText.Text = LocalizationManager.Get("ServerDetail_UpdateLoader_Updating");
 
@@ -1894,7 +1896,7 @@ public partial class ServerDetailPage : Page, IDisposable
             _updateInProgress = false;
             _updateCts?.Dispose();
             _updateCts = null;
-            UpdateProgress.Visibility = Visibility.Collapsed;
+            UpdateProgress.HideIndeterminate();
             UpdateButtonText.Text = LocalizationManager.Get("ServerDetail_UpdateLoader_Update");
             UpdateServerButton.IsEnabled = UpdateLoaderVersionBox.IsEnabled
                 && UpdateLoaderVersionBox.SelectedIndex >= 0;

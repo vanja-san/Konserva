@@ -511,6 +511,7 @@ public partial class MainWindow : FluentWindow, IDisposable
 
     /// <summary>
     /// Применение темы приложения через WPF-UI
+    /// (переключает словари WPF-UI::ThemesDictionary на месте; Violeta-словари статичны)
     /// </summary>
     public void ApplyTheme(string theme)
     {
@@ -567,7 +568,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     {
         _ = Dispatcher.InvokeAsync(() =>
         {
-            UpdateProgressRing.Visibility = Visibility.Visible;
+            UpdateProgressRing.ShowIndeterminate();
             UpdateCheckmarkIcon.Visibility = Visibility.Collapsed;
         });
     }
@@ -576,7 +577,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     {
         _ = Dispatcher.InvokeAsync(async () =>
         {
-            UpdateProgressRing.Visibility = Visibility.Collapsed;
+            UpdateProgressRing.HideIndeterminate();
 
             if (!updateInfo.IsAvailable)
             {

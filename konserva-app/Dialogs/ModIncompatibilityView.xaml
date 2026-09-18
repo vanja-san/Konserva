@@ -6,19 +6,19 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <UserControl.Resources>
         <Style x:Key="RowIconStyle" TargetType="ui:SymbolIcon">
-            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorSecondaryBrush}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IconKind}" Value="Success">
-                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                    <Setter Property="Foreground" Value="{ui:ThemeResource SystemFillColorSuccessBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IconKind}" Value="Critical">
-                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                    <Setter Property="Foreground" Value="{ui:ThemeResource SystemFillColorCriticalBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IconKind}" Value="Caution">
-                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                    <Setter Property="Foreground" Value="{ui:ThemeResource SystemFillColorCautionBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IconKind}" Value="Accent">
-                    <Setter Property="Foreground" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                    <Setter Property="Foreground" Value="{ui:ThemeResource SystemAccentColorPrimaryBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -41,13 +41,13 @@
                             FontSize="13"
                             FontWeight="SemiBold"
                             TextWrapping="Wrap"
-                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}" />
                         <ui:TextBlock
                             Text="{Binding Detail}"
                             FontSize="12.5"
                             TextWrapping="Wrap"
                             Margin="0,2,0,0"
-                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                 </Grid>
             </ui:Card>
@@ -75,7 +75,7 @@
                         FontSize="12.5"
                         FontWeight="SemiBold"
                         TextWrapping="Wrap"
-                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}" />
 
                     <ItemsControl ItemsSource="{Binding Segments}" Margin="0,2,0,0">
                         <ItemsControl.ItemsPanel>
@@ -88,10 +88,10 @@
                                 <ui:TextBlock Text="{Binding Text}" FontSize="12.5" TextWrapping="Wrap">
                                     <ui:TextBlock.Style>
                                         <Style TargetType="ui:TextBlock">
-                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorSecondaryBrush}" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsAccent}" Value="True">
-                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                    <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}" />
                                                     <Setter Property="FontFamily" Value="Consolas" />
                                                     <Setter Property="FontWeight" Value="SemiBold" />
                                                     <Setter Property="TextDecorations" Value="Underline" />
@@ -123,7 +123,7 @@
                     Text="{Binding Text}"
                     FontSize="12.5"
                     TextWrapping="Wrap"
-                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
@@ -139,14 +139,14 @@
                     FontSize="14"
                     FontWeight="SemiBold"
                     Margin="0,0,0,8"
-                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}" />
                 <ItemsControl ItemsSource="{Binding Solutions}" />
             </StackPanel>
 
             <Border
                 Height="1"
                 Margin="0,2,0,12"
-                Background="{DynamicResource DividerStrokeColorDefaultBrush}"
+                Background="{ui:ThemeResource DividerStrokeColorDefaultBrush}"
                 Visibility="{Binding ShowDivider, Converter={StaticResource BoolToVisibility}}" />
 
             <StackPanel Visibility="{Binding HasDetails, Converter={StaticResource BoolToVisibility}}">
@@ -155,14 +155,14 @@
                     FontSize="14"
                     FontWeight="SemiBold"
                     Margin="0,0,0,8"
-                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}" />
                 <ItemsControl ItemsSource="{Binding Issues}" />
 
                 <ui:TextBlock
                     Text="{Binding MoreDetailsText}"
                     FontSize="12"
                     Margin="0,4,0,0"
-                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                     Visibility="{Binding HasMoreDetails, Converter={StaticResource BoolToVisibility}}" />
             </StackPanel>
 

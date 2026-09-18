@@ -9,12 +9,14 @@ namespace Konserva.Converters;
 /// </summary>
 public class BoolToGreenBrushConverter : IValueConverter
 {
-    private static readonly Brush GreenBrush = CreateBrush(0x22, 0xC5, 0x5E);
+    private static readonly Brush GreenBrush = CreateThemeBrush("SystemFillColorSuccessBrush", 0x22, 0xC5, 0x5E);
     private static readonly Brush TransparentBrush = Brushes.Transparent;
 
-    private static SolidColorBrush CreateBrush(byte r, byte g, byte b)
+    private static SolidColorBrush CreateThemeBrush(string key, byte fallbackR, byte fallbackG, byte fallbackB)
     {
-        var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+        var color = (System.Windows.Application.Current?.TryFindResource(key) as SolidColorBrush)?.Color
+            ?? Color.FromRgb(fallbackR, fallbackG, fallbackB);
+        var brush = new SolidColorBrush(color);
         brush.Freeze();
         return brush;
     }

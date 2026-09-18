@@ -6,6 +6,7 @@
     xmlns:controls="clr-namespace:Konserva.Controls"
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
     Title="">
 
     <Grid Margin="20,0,20,16" RowDefinitions="Auto,Auto,*">
@@ -71,7 +72,7 @@
                                 <Ellipse
                                     Width="10"
                                     Height="10"
-                                    Fill="#F59E0B" />
+                                    Fill="{ui:ThemeResource SystemFillColorCautionBrush}" />
                             </Grid>
                             <ui:TextBlock
                                 x:Name="StartStopText"
@@ -743,7 +744,7 @@
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                 Text="{loc:Loc ServerDetail_Settings_AutoRestart_Desc}" />
                                         </StackPanel>
-                                        <CheckBox
+                                        <ui:ToggleSwitch
                                             x:Name="SettingAutoRestart"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"
@@ -811,7 +812,7 @@
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                 Text="{loc:Loc ServerDetail_Settings_Java_Auto_Desc}" />
                                         </StackPanel>
-                                        <CheckBox
+                                        <ui:ToggleSwitch
                                             x:Name="SettingJavaAutoSelect"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"
@@ -845,7 +846,7 @@
                                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                     Text="{loc:Loc ServerDetail_Settings_JvmArgs_Desc}" />
                                             </StackPanel>
-                                            <TextBox
+                                            <ui:TextBox
                                                 x:Name="SettingJvmArgs"
                                                 Grid.Row="1"
                                                 MinHeight="100"
@@ -899,7 +900,7 @@
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                 Text="{loc:Loc ServerDetail_Upnp_Enable_Desc}" />
                                         </StackPanel>
-                                        <CheckBox
+                                        <ui:ToggleSwitch
                                             x:Name="SettingEnableUpnp"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"
@@ -912,7 +913,7 @@
                                         Margin="0,0,0,8"
                                         HorizontalAlignment="Right"
                                         Orientation="Horizontal">
-                                        <TextBlock
+                                        <ui:TextBlock
                                             x:Name="UpnpCheckResultText"
                                             Margin="0,0,12,0"
                                             VerticalAlignment="Center"
@@ -1053,7 +1054,7 @@
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                 Text="{loc:Loc ServerDetail_UpdateLoader_Backup_Desc}" />
                                         </StackPanel>
-                                        <CheckBox
+                                        <ui:ToggleSwitch
                                             x:Name="SettingUpdateBackup"
                                             Grid.Column="1"
                                             HorizontalAlignment="Right"
@@ -1072,7 +1073,7 @@
                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                 Text="{loc:Loc ServerDetail_UpdateLoader_Notify_Desc}" />
                                         </StackPanel>
-                                        <CheckBox
+                                        <ui:ToggleSwitch
                                             x:Name="SettingUpdateNotifications"
                                             Grid.Column="1"
                                             HorizontalAlignment="Right"
@@ -1101,6 +1102,7 @@
                                             Height="4"
                                             VerticalAlignment="Center"
                                             IsIndeterminate="True"
+                                            vio:ProgressBarHelper.IsEnabled="True"
                                             Visibility="Collapsed" />
                                         <ui:TextBlock
                                             x:Name="UpdateResultText"

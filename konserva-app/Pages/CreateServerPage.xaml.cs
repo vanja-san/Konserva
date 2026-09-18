@@ -159,7 +159,7 @@ public partial class CreateServerPage : Page
 
         _isUpdating = true;
         _isChangingModLoader = true;
-        LoaderProgressRing.Visibility = Visibility.Visible;
+        LoaderProgressRing.ShowIndeterminate();
         try
         {
             var showSnapshots = ShowSnapshotsBox.IsChecked ?? false;
@@ -273,7 +273,7 @@ public partial class CreateServerPage : Page
         {
             _isUpdating = false;
             _isChangingModLoader = false;
-            LoaderProgressRing.Visibility = Visibility.Collapsed;
+            LoaderProgressRing.HideIndeterminate();
             Logger.Info("FilterMcVersionsAsync completed", "CreateServerPage");
         }
     }
@@ -709,10 +709,11 @@ public partial class CreateServerPage : Page
 
         Dispatcher.Invoke(() =>
         {
-            if (isInstalling)
-            {
-                ProgressPanel.Visibility = Visibility.Visible;
-                ProgressText.Text = LocalizationManager.Get("Installer_Preparing");
+if (isInstalling)
+                {
+                    ProgressPanel.Visibility = Visibility.Visible;
+                    ProgressRing.ShowIndeterminate();
+                    ProgressText.Text = LocalizationManager.Get("Installer_Preparing");
 
                 ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Cancel");
                 ActionOrCancelButton.Appearance = ControlAppearance.Danger;
@@ -871,6 +872,7 @@ public partial class CreateServerPage : Page
             Dispatcher.Invoke(() =>
             {
                 ProgressPanel.Visibility = Visibility.Visible;
+                ProgressRing.ShowIndeterminate();
                 ProgressText.Text = LocalizationManager.Get("Installer_Preparing");
             });
 

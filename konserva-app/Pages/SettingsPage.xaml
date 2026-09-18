@@ -483,7 +483,7 @@
                                     <ui:TextBlock Style="{StaticResource SettingTitle}" Text="{loc:Loc Settings_Console_AutoScroll}" />
                                     <ui:TextBlock Style="{StaticResource SettingDescription}" Text="{loc:Loc Settings_Console_AutoScroll_Desc}" />
                                 </StackPanel>
-                                <CheckBox
+                                <ui:ToggleSwitch
                                     x:Name="ConsoleAutoScrollBox"
                                     Grid.Column="1"
                                     VerticalAlignment="Center"
@@ -506,7 +506,7 @@
                                     <ui:TextBlock Style="{StaticResource SettingTitle}" Text="{loc:Loc Settings_Console_WordWrap}" />
                                     <ui:TextBlock Style="{StaticResource SettingDescription}" Text="{loc:Loc Settings_Console_WordWrap_Desc}" />
                                 </StackPanel>
-                                <CheckBox
+                                <ui:ToggleSwitch
                                     x:Name="ConsoleWordWrapBox"
                                     Grid.Column="1"
                                     VerticalAlignment="Center"
@@ -590,7 +590,7 @@
                                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                         Text="{loc:Loc Settings_About_Description}" />
                                 </StackPanel>
-                                <Button
+                                <ui:Button
                                     x:Name="CheckUpdatesButton"
                                     Grid.RowSpan="2"
                                     Grid.Column="1"
@@ -615,7 +615,7 @@
                                             IsIndeterminate="True"
                                             Visibility="Collapsed" />
                                     </StackPanel>
-                                </Button>
+                                </ui:Button>
                             </Grid>
                         </Border>
 

@@ -16,10 +16,10 @@
         <Style BasedOn="{StaticResource {x:Type ComboBox}}" TargetType="ComboBox">
             <Setter Property="Margin" Value="12,8,0,8" />
         </Style>
-        <Style BasedOn="{StaticResource {x:Type PasswordBox}}" TargetType="PasswordBox">
+        <Style BasedOn="{StaticResource {x:Type ui:PasswordBox}}" TargetType="ui:PasswordBox">
             <Setter Property="Margin" Value="12,8,0,8" />
         </Style>
-        <Style BasedOn="{StaticResource {x:Type CheckBox}}" TargetType="CheckBox">
+        <Style BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}" TargetType="ui:ToggleSwitch">
             <Setter Property="Margin" Value="12,8,0,8" />
         </Style>
     </UserControl.Resources>
@@ -234,7 +234,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ForceGamemode_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="ForceGamemodeBox"
                             Grid.Row="1"
                             Grid.Column="1"
@@ -273,7 +273,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_Hardcore_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="HardcoreBox"
                             Grid.Row="3"
                             Grid.Column="1"
@@ -290,7 +290,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_PvP_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="PvpBox"
                             Grid.Row="4"
                             Grid.Column="1"
@@ -307,7 +307,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_AllowFlight_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="AllowFlightBox"
                             Grid.Row="5"
                             Grid.Column="1"
@@ -324,7 +324,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_CommandBlocks_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="CommandBlocksBox"
                             Grid.Row="6"
                             Grid.Column="1"
@@ -342,7 +342,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SpawnNPCs_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="SpawnNpcsBox"
                             Grid.Row="7"
                             Grid.Column="1"
@@ -359,7 +359,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SpawnAnimals_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="SpawnAnimalsBox"
                             Grid.Row="8"
                             Grid.Column="1"
@@ -376,7 +376,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SpawnMonsters_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="SpawnMonstersBox"
                             Grid.Row="9"
                             Grid.Column="1"
@@ -504,7 +504,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SpawnStructures_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="GenerateStructuresBox"
                             Grid.Row="5"
                             Grid.Column="1"
@@ -521,7 +521,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_AllowNether_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="AllowNetherBox"
                             Grid.Row="6"
                             Grid.Column="1"
@@ -578,7 +578,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_OnlineMode_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="OnlineModeBox"
                             Grid.Row="0"
                             Grid.Column="1"
@@ -595,7 +595,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnforceSecureProfile_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="EnforceSecureProfileBox"
                             Grid.Row="1"
                             Grid.Column="1"
@@ -612,7 +612,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_PreventProxyConnections_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="PreventProxyConnectionsBox"
                             Grid.Row="2"
                             Grid.Column="1"
@@ -697,7 +697,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_AcceptsTransfers_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="AcceptsTransfersBox"
                             Grid.Row="7"
                             Grid.Column="1"
@@ -753,7 +753,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_Whitelist_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="WhiteListBox"
                             Grid.Row="0"
                             Grid.Column="1"
@@ -770,7 +770,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnforceWhitelist_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="EnforceWhitelistBox"
                             Grid.Row="1"
                             Grid.Column="1"
@@ -787,7 +787,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_HideOnlinePlayers_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="HideOnlinePlayersBox"
                             Grid.Row="2"
                             Grid.Column="1"
@@ -826,7 +826,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnableRcon_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="EnableRconBox"
                             Grid.Row="0"
                             Grid.Column="1"
@@ -898,7 +898,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnableQuery_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="EnableQueryBox"
                             Grid.Row="0"
                             Grid.Column="1"
@@ -1056,7 +1056,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ManagementServerEnabled_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="ManagementServerEnabledBox"
                             Grid.Row="0"
                             Grid.Column="1"
@@ -1123,7 +1123,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ManagementServerTlsEnabled_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="ManagementServerTlsEnabledBox"
                             Grid.Row="4"
                             Grid.Column="1"
@@ -1172,7 +1172,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_ManagementServerTlsKeystorePassword_Desc}" />
                         </StackPanel>
-                        <PasswordBox
+                        <ui:PasswordBox
                             x:Name="ManagementServerTlsKeystorePasswordBox"
                             Grid.Row="7"
                             Grid.Column="1" />
@@ -1274,7 +1274,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_RequireResourcePack_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="RequireResourcePackBox"
                             Grid.Row="4"
                             Grid.Column="1"
@@ -1347,7 +1347,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_SyncChunkWrites_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="SyncChunkWritesBox"
                             Grid.Row="2"
                             Grid.Column="1"
@@ -1364,7 +1364,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_UseNativeTransport_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="UseNativeTransportBox"
                             Grid.Row="3"
                             Grid.Column="1"
@@ -1423,7 +1423,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_LogIps_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="LogIpsBox"
                             Grid.Row="0"
                             Grid.Column="1"
@@ -1440,7 +1440,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_BroadcastConsoleToOps_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="BroadcastConsoleToOpsBox"
                             Grid.Row="1"
                             Grid.Column="1"
@@ -1457,7 +1457,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_BroadcastRconToOps_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="BroadcastRconToOpsBox"
                             Grid.Row="2"
                             Grid.Column="1"
@@ -1474,7 +1474,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnableJmxMonitoring_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="EnableJmxMonitoringBox"
                             Grid.Row="3"
                             Grid.Column="1"
@@ -1491,7 +1491,7 @@
                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                 Text="{loc:Loc ServerProperties_EnableCodeOfConduct_Desc}" />
                         </StackPanel>
-                        <CheckBox
+                        <ui:ToggleSwitch
                             x:Name="EnableCodeOfConductBox"
                             Grid.Row="4"
                             Grid.Column="1"

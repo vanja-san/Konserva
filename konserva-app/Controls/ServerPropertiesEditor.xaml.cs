@@ -418,11 +418,11 @@ public partial class ServerPropertiesEditor : UserControl
     }
 
     /// <summary>
-    /// Получает булево значение из CheckBox
+    /// Получает булево значение из ToggleSwitch
     /// </summary>
-    private bool GetBoolValue(CheckBox checkBox)
+    private bool GetBoolValue(Wpf.Ui.Controls.ToggleSwitch toggleSwitch)
     {
-        return checkBox.IsChecked ?? false;
+        return toggleSwitch.IsChecked ?? false;
     }
 
     /// <summary>
@@ -570,10 +570,12 @@ public partial class ServerPropertiesEditor : UserControl
     private void ShowStatus(string message, bool isError)
     {
         StatusMessage.Text = message;
-        StatusMessage.Foreground = isError
-            ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Red)
-            : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Green);
+        StatusMessage.Foreground = isError ? GetThemeBrush("SystemFillColorCriticalBrush") : GetThemeBrush("SystemFillColorSuccessBrush");
     }
+
+    private static System.Windows.Media.Brush GetThemeBrush(string key) =>
+        System.Windows.Application.Current.TryFindResource(key) as System.Windows.Media.Brush
+        ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray);
 
     private void Save_Click(object sender, RoutedEventArgs e) => Save();
     private void Load_Click(object sender, RoutedEventArgs e)
