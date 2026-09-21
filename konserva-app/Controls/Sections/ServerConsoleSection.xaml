@@ -1,0 +1,55 @@
+<UserControl
+    x:Class="Konserva.Controls.Sections.ServerConsoleSection"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:avalon="http://icsharpcode.net/sharpdevelop/avalonedit"
+    xmlns:loc="clr-namespace:Konserva.Localization"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+
+    <Grid RowDefinitions="*,Auto">
+        <!--  Лог сервера  -->
+        <Border
+            Grid.Row="0"
+            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+            ClipToBounds="True"
+            CornerRadius="5">
+            <avalon:TextEditor
+                x:Name="LogBox"
+                Padding="8"
+                Background="Transparent"
+                BorderThickness="0"
+                FontFamily="Consolas"
+                FontSize="12"
+                Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                HorizontalScrollBarVisibility="Auto"
+                IsReadOnly="True"
+                IsVisibleChanged="LogBox_IsVisibleChanged"
+                ShowLineNumbers="False"
+                VerticalScrollBarVisibility="Auto"
+                WordWrap="False" />
+        </Border>
+        <!--  Placeholder для пустой консоли  -->
+        <ui:TextBlock
+            x:Name="ConsolePlaceholder"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            FontSize="14"
+            Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+            IsHitTestVisible="False"
+            Text="{loc:Loc ServerDetail_Console_Empty}" />
+        <!--  Ввод команды  -->
+        <Grid
+            Grid.Row="1"
+            Margin="0,8,0,0"
+            ColumnDefinitions="*,Auto">
+            <ui:TextBox x:Name="CommandBox" KeyDown="CommandBox_KeyDown" />
+            <ui:Button
+                Grid.Column="1"
+                Margin="8,0,0,0"
+                Padding="20,8"
+                Click="SendCommand_Click"
+                Content="{loc:Loc ServerDetail_SendCommand}" />
+        </Grid>
+    </Grid>
+
+</UserControl>

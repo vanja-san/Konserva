@@ -1,15 +1,11 @@
-﻿using CommunityToolkit.Mvvm.DependencyInjection;
+using CommunityToolkit.Mvvm.DependencyInjection;
 using Konserva.Localization;
 using Konserva.Services;
 using Konserva.Utilities;
 using Konserva.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http.Resilience;
-using Microsoft.Extensions.Resilience;
-using Polly;
 using System.IO;
 using System.IO.Pipes;
-using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Windows;
@@ -178,6 +174,20 @@ public partial class App : Application
             var factory = sp.GetRequiredService<IHttpClientFactory>();
             return new AppUpdater(factory.CreateClient("AppUpdater"));
         });
+
+        // Mod update services (Modrinth)
+        services.AddSingleton<IModRepositoryApi>(sp =>
+        {
+            var factory = sp.GetRequiredService<IHttpClientFactory>();
+            return new ModrinthApi(factory.CreateClient("ModrinthApi"));
+        });
+        services.AddSingleton<IModFileDownloader>(sp =>
+        {
+            var factory = sp.GetRequiredService<IHttpClientFactory>();
+            return new ModFileDownloader(factory.CreateClient("ModrinthApi"));
+        });
+        services.AddSingleton<IModUpdateService, ModUpdateService>();
+
         services.AddTransient<ServersViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<ServerDetailViewModel>();
@@ -232,6 +242,20 @@ public partial class App : Application
             .AddStandardResilienceHandler(options =>
             {
                 options.Retry.MaxRetryAttempts = 3;
+                options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
+                options.Retry.UseJitter = true;
+            });
+
+        // HttpClient для Modrinth API (обновления модов)
+        services.AddHttpClient("ModrinthApi", options =>
+        {
+            options.Timeout = TimeSpan.FromSeconds(30);
+            options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
+        })
+            .ConfigurePrimaryHttpMessageHandler(HttpClientDefaults.CreateDefaultHandler)
+            .AddStandardResilienceHandler(options =>
+            {
+                options.Retry.MaxRetryAttempts = 2;
                 options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
                 options.Retry.UseJitter = true;
             });

@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using Wpf.Ui.Controls;
 
 namespace Konserva.Utilities;
 
@@ -114,22 +115,21 @@ public static class UiExtensions
     #region ProgressRing helpers
 
     /// <summary>
-    /// Показывает индетерминантное кольцо и гарантированно (пере)запускает анимацию вращения.
-    /// WPF-UI запускает вращение через EventTrigger Loaded на вложенном Arc, поэтому предзаданный
-    /// в XAML <see cref="Wpf.Ui.Controls.ProgressRing.IsIndeterminate"/> анимацию не запускает —
-    /// переключение флага после показа заново применяет шаблон и стартует сториборд.
+    /// Показывает индетерминантное кольцо <see cref="ProgressRing"/> и при необходимости
+    /// перезапускает его анимацию (двойной сброс IsIndeterminate надёжно будит
+    /// Storyboard в шаблоне WPF.UI).
     /// </summary>
-    public static void ShowIndeterminate(this Wpf.Ui.Controls.ProgressRing ring)
+    public static void ShowIndeterminate(this ProgressRing ring)
     {
-        ring.Visibility = System.Windows.Visibility.Visible;
         ring.IsIndeterminate = false;
         ring.IsIndeterminate = true;
+        ring.Visibility = System.Windows.Visibility.Visible;
     }
 
     /// <summary>
     /// Скрывает кольцо и останавливает анимацию вращения.
     /// </summary>
-    public static void HideIndeterminate(this Wpf.Ui.Controls.ProgressRing ring)
+    public static void HideIndeterminate(this ProgressRing ring)
     {
         ring.IsIndeterminate = false;
         ring.Visibility = System.Windows.Visibility.Collapsed;

@@ -6,7 +6,7 @@
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Title="CreateServer"
+        Title="CreateServer"
     mc:Ignorable="d">
 
     <Page.Resources>

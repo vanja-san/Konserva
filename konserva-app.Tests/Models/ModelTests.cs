@@ -513,6 +513,17 @@ public class ModItemTests
         mod.FilePath.Should().Be("/mods/fabric-api.jar");
         mod.FileSize.Should().Be(5_000_000);
     }
+
+    [Theory]
+    [InlineData("", false)]
+    [InlineData("  ", false)]
+    [InlineData("1.0.0", true)]
+    public void HasVersion_ReflectsVersionNonEmpty(string version, bool expected)
+    {
+        var mod = new ModItem { Version = version };
+
+        mod.HasVersion.Should().Be(expected);
+    }
 }
 
 /// <summary>

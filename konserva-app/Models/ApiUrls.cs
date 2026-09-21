@@ -54,4 +54,7 @@ public static class ApiUrls
 
     // --- Adoptium (Java) ---
     public const string Adoptium = "https://adoptium.net";
+
+    // --- Modrinth (проверка обновлений модов по хешам, без API-ключа) ---
+    public const string ModrinthApiBase = "https://api.modrinth.com/v2";
 }

@@ -1,30 +1,29 @@
 using CommunityToolkit.Mvvm.DependencyInjection;
-using ICSharpCode.AvalonEdit.Document;
-using ICSharpCode.AvalonEdit.Rendering;
+using Konserva.Controls.Sections;
 using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
 using Konserva.ViewModels;
 using System.IO;
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Wpf.Ui.Controls;
-using WpfButton = Wpf.Ui.Controls.Button;
+using ControlAppearance = Wpf.Ui.Controls.ControlAppearance;
+using ContentDialogResult = Wpf.Ui.Controls.ContentDialogResult;
 
 namespace Konserva.Pages;
 
 /// <summary>
-/// Страница деталей сервера - консоль, моды, плагины, настройки, удаление
+/// Страница деталей сервера - консоль, моды, плагины, свойства, настройки
 /// </summary>
 public partial class ServerDetailPage : Page, IDisposable
 {
     private readonly ServerDetailViewModel _viewModel;
+    private readonly IModLoaderService _modLoaderService;
     private string? _serverId;
     private Server? _server;
     private McServerProcess? _process;
@@ -32,22 +31,15 @@ public partial class ServerDetailPage : Page, IDisposable
     private bool _isBusy;
     private CancellationTokenSource? _statusCts;
     private CancellationTokenSource? _errorResetCts;
-    private bool _colorizerInitialized;
-    private bool _consoleAutoScroll;
-    private bool _consoleWordWrap;
 
-    private readonly IModLoaderService _modLoaderService;
-    private CancellationTokenSource? _updateCts;
-    private string? _currentLoaderVersion;
-    private string? _latestLoaderVersion;
-    private string[] _allLoaderVersions = [];
-    private bool _updateInProgress;
-    private CancellationTokenSource? _updateResultCts;
+    private ServerConsoleSection? _consoleSection;
+    private ServerModsSection? _modsSection;
+    private ServerPluginsSection? _pluginsSection;
+    private ServerSettingsSection? _settingsSection;
 
     private static readonly Brush SuccessBrush = GetThemeBrush("SystemFillColorSuccessBrush");
     private static readonly Brush WarningBrush = GetThemeBrush("SystemFillColorCautionBrush");
     private static readonly Brush ErrorBrush = GetThemeBrush("SystemFillColorCriticalBrush");
-    private static readonly Brush DefaultBrush = GetThemeBrush("TextFillColorPrimaryBrush");
 
     private static Brush GetThemeBrush(string key) =>
         Application.Current.TryFindResource(key) as Brush
@@ -66,10 +58,6 @@ public partial class ServerDetailPage : Page, IDisposable
 
         InitializeComponent();
 
-        // Подписываемся после InitializeComponent чтобы избежать NullReferenceException
-        SettingJavaAutoSelect.Checked += SettingJavaAutoSelect_CheckedChanged;
-        SettingJavaAutoSelect.Unchecked += SettingJavaAutoSelect_CheckedChanged;
-
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
@@ -82,7 +70,7 @@ public partial class ServerDetailPage : Page, IDisposable
         // Подписываемся на событие ошибки запуска
         Ioc.Default.GetService<IServerManager>()!.OnServerStartError += OnServerStartError;
 
-        ApplyConsoleSettings();
+        EnsureConsoleSection();
 
         StartStatusTimer();
         LoadServer();
@@ -107,40 +95,6 @@ public partial class ServerDetailPage : Page, IDisposable
 
         var newPort = PropertiesEditor.CurrentPort;
         _viewModel.SavePort(newPort);
-    }
-
-    /// <summary>
-    /// Применяет настройки консоли из конфига приложения
-    /// </summary>
-    private void ApplyConsoleSettings()
-    {
-        var config = Ioc.Default.GetService<IConfigService>()?.GetConfig();
-        if (config == null)
-            return;
-
-        _consoleAutoScroll = config.ConsoleAutoScroll;
-        _consoleWordWrap = config.ConsoleWordWrap;
-        LogBox.WordWrap = _consoleWordWrap;
-    }
-
-    /// <summary>
-    /// Инициализация Colorizer при первом появлении TextEditor (TextView должен быть готов)
-    /// </summary>
-    private void LogBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
-    {
-        if (LogBox.IsVisible && !_colorizerInitialized && LogBox.TextArea?.TextView != null)
-        {
-            // Удаляем встроенный LinkElementGenerator — он создаёт VisualLineLinkText
-            // с тёмно-синим цветом по умолчанию, поверх которого наша раскраска не работает
-            var linkGen = LogBox.TextArea.TextView.ElementGenerators
-                .OfType<ICSharpCode.AvalonEdit.Rendering.LinkElementGenerator>()
-                .FirstOrDefault();
-            if (linkGen != null)
-                LogBox.TextArea.TextView.ElementGenerators.Remove(linkGen);
-
-            LogBox.TextArea.TextView.LineTransformers.Add(new LogColorizer());
-            _colorizerInitialized = true;
-        }
     }
 
     /// <summary>
@@ -202,31 +156,12 @@ public partial class ServerDetailPage : Page, IDisposable
         // Подключаемся к процессу сервера (если он есть)
         ConnectToProcess();
 
-        // Заполняем UI
+        // Заполняем заголовок
         ServerNameText.Text = _viewModel.ServerName;
         ServerInfoText.Text = _viewModel.ServerInfo;
 
-        // Обновление загрузчика
-        LoadUpdateForm();
-
-        // Настройки
-        SettingName.Text = _viewModel.SettingsName;
-        SettingRamMin.Text = _viewModel.SettingsRamMin.ToString();
-        SettingRamMax.Text = _viewModel.SettingsRamMax.ToString();
-        SettingAutoRestart.IsChecked = _viewModel.SettingsAutoRestart;
-        SettingAutoRestartDelay.Text = _viewModel.SettingsAutoRestartDelay.ToString();
-
-        // Настройки Java
-        SettingJavaAutoSelect.IsChecked = _viewModel.SettingsJavaAutoSelect;
-        LoadJavaComboBox();
-        UpdateJavaComboBoxVisibility();
-
-        // UPnP настройки
-        SettingEnableUpnp.IsChecked = _viewModel.SettingsEnableUpnp;
-        UpdateServerAddressDisplay();
-
-        // JVM аргументы
-        SettingJvmArgs.Text = _viewModel.SettingsJvmArgs;
+        // Лёгкая проверка обновления загрузчика для уведомления в заголовке
+        _ = CheckLoaderUpdateAvailabilityAsync();
 
         UpdateStatus(_server.Status);
 
@@ -270,7 +205,7 @@ public partial class ServerDetailPage : Page, IDisposable
             return false;
 
         // Загружаем существующие логи
-        LoadExistingLogs();
+        _consoleSection?.LoadExistingLogs(_process.GetLogs());
 
         // Подписываемся на события процесса
         _process.OnLog += UpdateLog;
@@ -280,83 +215,9 @@ public partial class ServerDetailPage : Page, IDisposable
         return true;
     }
 
-    /// <summary>
-    /// Обновляет баннер-предупреждение и доступность настроек
-    /// в зависимости от статуса сервера
-    /// </summary>
-    private void UpdateSettingsAvailability()
+    private void UpdateLog(string line)
     {
-        var isRunning = _server?.IsRunning ?? false;
-
-        SettingsRunningBanner.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
-
-        // Настройки, которые требуют перезапуска сервера
-        SettingName.IsEnabled = !isRunning;
-        SettingRamMin.IsEnabled = !isRunning;
-        SettingRamMax.IsEnabled = !isRunning;
-        SettingJavaAutoSelect.IsEnabled = !isRunning;
-        JavaSelectionGrid.IsEnabled = !isRunning;
-        SettingJvmArgs.IsEnabled = !isRunning;
-    }
-
-    private void LoadExistingLogs()
-    {
-        if (_process == null)
-            return;
-
-        var logs = _process.GetLogs();
-
-        this.Invoke(() =>
-        {
-            double oldOffset = LogBox.VerticalOffset;
-
-            if (logs.Count > 0)
-            {
-                LogBox.Document.Text = string.Join("\n", logs) + "\n";
-                ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
-            }
-            else
-            {
-                LogBox.Clear();
-                ConsolePlaceholder.Visibility = System.Windows.Visibility.Visible;
-            }
-
-            if (_consoleAutoScroll)
-                LogBox.ScrollToEnd();
-            else
-                LogBox.ScrollToVerticalOffset(oldOffset);
-        });
-    }
-
-    private async void UpdateLog(string line)
-    {
-        try
-        {
-            await this.InvokeAsync(() =>
-            {
-                if (_consoleAutoScroll)
-                {
-                    LogBox.Document.Insert(LogBox.Document.TextLength, line + "\n");
-                    ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
-                    LogBox.ScrollToEnd();
-                }
-                else
-                {
-                    double oldOffset = LogBox.VerticalOffset;
-                    LogBox.Document.Insert(LogBox.Document.TextLength, line + "\n");
-                    ConsolePlaceholder.Visibility = System.Windows.Visibility.Collapsed;
-                    LogBox.ScrollToVerticalOffset(oldOffset);
-                }
-            });
-        }
-        catch (TaskCanceledException)
-        {
-            // Игнорируем — приложение закрывается, диспетчер уже не работает
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"[UpdateLog] Error: {ex.Message}", "ServerDetailPage");
-        }
+        _consoleSection?.AppendLog(line);
     }
 
     private async void UpdateStatus(ServerStatus status)
@@ -383,8 +244,8 @@ public partial class ServerDetailPage : Page, IDisposable
                 _isBusy = false;
             }
 
-            // Обновляем баннер и доступность настроек
-            UpdateSettingsAvailability();
+            // Обновляем доступность настроек (баннер и контролы раздела настроек)
+            _settingsSection?.UpdateSettingsAvailability();
 
             await this.InvokeAsync(() =>
             {
@@ -397,35 +258,35 @@ public partial class ServerDetailPage : Page, IDisposable
                 switch (status)
                 {
                     case ServerStatus.Running:
-                        icon = Wpf.Ui.Controls.SymbolRegular.Stop20;
+                        icon = SymbolRegular.Stop20;
                         toolTip = LocalizationManager.Get("ServerDetail_Stop");
                         text = LocalizationManager.Get("ServerDetail_Stop");
                         appearance = ControlAppearance.Danger;
                         isTransitioning = false;
                         break;
                     case ServerStatus.Starting:
-                        icon = Wpf.Ui.Controls.SymbolRegular.ArrowRepeat120;
+                        icon = SymbolRegular.ArrowRepeat120;
                         toolTip = LocalizationManager.Get("ServerDetail_Starting");
                         text = LocalizationManager.Get("ServerDetail_Starting");
                         appearance = ControlAppearance.Caution;
                         isTransitioning = true;
                         break;
                     case ServerStatus.Stopping:
-                        icon = Wpf.Ui.Controls.SymbolRegular.ArrowRepeat120;
+                        icon = SymbolRegular.ArrowRepeat120;
                         toolTip = LocalizationManager.Get("ServerDetail_Stopping");
                         text = LocalizationManager.Get("ServerDetail_Stopping");
                         appearance = ControlAppearance.Caution;
                         isTransitioning = true;
                         break;
                     case ServerStatus.Error:
-                        icon = Wpf.Ui.Controls.SymbolRegular.Play20;
+                        icon = SymbolRegular.Play20;
                         toolTip = LocalizationManager.Get("ServerDetail_Start");
                         text = LocalizationManager.Get("ServerStatus_Error");
                         appearance = ControlAppearance.Danger;
                         isTransitioning = false;
                         break;
                     default: // Stopped
-                        icon = Wpf.Ui.Controls.SymbolRegular.Play20;
+                        icon = SymbolRegular.Play20;
                         toolTip = LocalizationManager.Get("ServerDetail_Start");
                         text = LocalizationManager.Get("ServerDetail_Start");
                         appearance = ControlAppearance.Primary;
@@ -532,132 +393,6 @@ public partial class ServerDetailPage : Page, IDisposable
     }
 
     /// <summary>
-    /// Раскраска элементов строки консоли: таймштампы серым, [LEVEL] — своим цветом,
-    /// остальной текст без изменений.
-    /// </summary>
-    private sealed class LogColorizer : DocumentColorizingTransformer
-    {
-        private static readonly Brush TimestampBrush =
-            new SolidColorBrush(Color.FromRgb(140, 140, 140));
-        private static readonly Brush InfoBrush =
-            new SolidColorBrush(Color.FromRgb(100, 170, 255));
-        private static readonly Brush WarnBrush =
-            new SolidColorBrush(Color.FromRgb(255, 200, 80));
-        private static readonly Brush ErrorBrush =
-            new SolidColorBrush(Color.FromRgb(220, 100, 100));
-        private static readonly Brush DebugBrush =
-            new SolidColorBrush(Color.FromRgb(160, 120, 200));
-        private static readonly Brush SuccessBrush =
-            new SolidColorBrush(Color.FromRgb(80, 200, 80));
-
-        private static readonly Regex TimestampRegex =
-            new Regex(@"^\[\d{2}:\d{2}:\d{2}\]", RegexOptions.Compiled);
-        private static readonly Regex LevelTagRegex =
-            new Regex(@"\[(?:[^\]/]*/)?(INFO|WARN(?:ING)?|ERROR|FATAL|DEBUG)\]", RegexOptions.Compiled);
-        private static readonly Regex StderrTagRegex =
-            new Regex(@"^\[STDERR\]", RegexOptions.Compiled);
-        private static readonly Regex StderrLevelRegex =
-            new Regex(@"(WARNING|ERROR|INFO|FATAL|DEBUG):", RegexOptions.Compiled);
-        private static readonly Regex UrlRegex =
-            new Regex(@"https?://[^\s\]\)<>]+", RegexOptions.Compiled);
-
-        protected override void ColorizeLine(DocumentLine line)
-        {
-            var lineText = CurrentContext.Document.GetText(line);
-
-            // 1. Таймштамп [HH:MM:SS] — серым
-            var tsMatch = TimestampRegex.Match(lineText);
-            if (tsMatch.Success)
-            {
-                ChangeLinePart(
-                    line.Offset + tsMatch.Index,
-                    line.Offset + tsMatch.Index + tsMatch.Length,
-                    e => e.TextRunProperties.SetForegroundBrush(TimestampBrush));
-            }
-
-            // 2. [STDERR] — оранжевым
-            var stderrMatch = StderrTagRegex.Match(lineText);
-            if (stderrMatch.Success)
-            {
-                ChangeLinePart(
-                    line.Offset + stderrMatch.Index,
-                    line.Offset + stderrMatch.Index + stderrMatch.Length,
-                    e => e.TextRunProperties.SetForegroundBrush(WarnBrush));
-            }
-
-            // 2a. Уровневое слово (WARNING:, ERROR:, etc.) после [STDERR]
-            foreach (Match slMatch in StderrLevelRegex.Matches(lineText))
-            {
-                var slTag = slMatch.Groups[1].Value;
-                var slBrush = slTag switch
-                {
-                    "ERROR" or "FATAL" => ErrorBrush,
-                    "WARNING" => WarnBrush,
-                    "INFO" => InfoBrush,
-                    "DEBUG" => DebugBrush,
-                    _ => null
-                };
-
-                if (slBrush != null)
-                {
-                    ChangeLinePart(
-                        line.Offset + slMatch.Index,
-                        line.Offset + slMatch.Index + slMatch.Groups[1].Length,
-                        e => e.TextRunProperties.SetForegroundBrush(slBrush));
-                }
-            }
-
-            // 3. Уровневый блок [LEVEL] или [thread/LEVEL] — своим цветом
-            var levelMatch = LevelTagRegex.Match(lineText);
-            if (levelMatch.Success)
-            {
-                var tag = levelMatch.Groups[1].Value;
-                var brush = tag switch
-                {
-                    "ERROR" or "FATAL" => ErrorBrush,
-                    "WARN" or "WARNING" => WarnBrush,
-                    "INFO" => InfoBrush,
-                    "DEBUG" => DebugBrush,
-                    _ => null
-                };
-
-                if (brush != null)
-                {
-                    ChangeLinePart(
-                        line.Offset + levelMatch.Index,
-                        line.Offset + levelMatch.Index + levelMatch.Length,
-                        e => e.TextRunProperties.SetForegroundBrush(brush));
-                }
-            }
-
-            // 4. URL-адреса — красивым голубым (поверх стандартного тёмно-синего)
-            foreach (Match urlMatch in UrlRegex.Matches(lineText))
-            {
-                ChangeLinePart(
-                    line.Offset + urlMatch.Index,
-                    line.Offset + urlMatch.Index + urlMatch.Length,
-                    e => e.TextRunProperties.SetForegroundBrush(InfoBrush));
-            }
-
-            // 5. Строки без спецтегов — проверяем старт/стоп целиком
-            if (!tsMatch.Success && !levelMatch.Success && !stderrMatch.Success)
-            {
-                var text = lineText.AsSpan();
-                if (text.Contains(LocalizationManager.Get("Log_ServerStarted").AsSpan(), StringComparison.Ordinal) ||
-                    text.Contains(LocalizationManager.Get("Log_ServerReady").AsSpan(), StringComparison.Ordinal) ||
-                    text.Contains(LocalizationManager.Get("Log_ServerReady_Commands").AsSpan(), StringComparison.Ordinal) ||
-                    text.Contains(LocalizationManager.Get("Log_ServerStoppedSuccessfully").AsSpan(), StringComparison.Ordinal))
-                {
-                    ChangeLinePart(
-                        line.Offset,
-                        line.EndOffset,
-                        e => e.TextRunProperties.SetForegroundBrush(SuccessBrush));
-                }
-            }
-        }
-    }
-
-    /// <summary>
     /// Отписка от событий процесса для предотвращения утечек
     /// </summary>
     private void UnsubscribeFromProcess()
@@ -756,11 +491,11 @@ public partial class ServerDetailPage : Page, IDisposable
         ResetNavigationButtons();
 
         // Показываем нужную панель
-        ConsoleView.Visibility = tag == "Console" ? Visibility.Visible : Visibility.Collapsed;
-        ModsView.Visibility = tag == "Mods" ? Visibility.Visible : Visibility.Collapsed;
-        PluginsView.Visibility = tag == "Plugins" ? Visibility.Visible : Visibility.Collapsed;
+        ConsoleHost.Visibility = tag == "Console" ? Visibility.Visible : Visibility.Collapsed;
+        ModsHost.Visibility = tag == "Mods" ? Visibility.Visible : Visibility.Collapsed;
+        PluginsHost.Visibility = tag == "Plugins" ? Visibility.Visible : Visibility.Collapsed;
         PropertiesView.Visibility = tag == "Properties" ? Visibility.Visible : Visibility.Collapsed;
-        SettingsView.Visibility = tag == "Settings" ? Visibility.Visible : Visibility.Collapsed;
+        SettingsHost.Visibility = tag == "Settings" ? Visibility.Visible : Visibility.Collapsed;
 
         // Выделяем активную кнопку (если найдена)
         switch (tag)
@@ -785,17 +520,22 @@ public partial class ServerDetailPage : Page, IDisposable
         // Устанавливаем Filled=True для активной иконки
         SetIconFilled(tag, true);
 
-        // Загружаем данные для соответствующих разделов
+        // Создаём нужную секцию (лениво) и загружаем данные
         switch (tag)
         {
             case "Mods":
-                LoadMods();
+                EnsureModsSection();
+                _modsSection?.Load();
                 break;
             case "Plugins":
-                LoadPlugins();
+                EnsurePluginsSection();
+                _pluginsSection?.Load();
                 break;
             case "Properties":
                 LoadProperties();
+                break;
+            case "Settings":
+                EnsureSettingsSection();
                 break;
         }
     }
@@ -840,530 +580,136 @@ public partial class ServerDetailPage : Page, IDisposable
             icon.Filled = filled;
     }
 
-    private void SendCommand_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Создаёт секцию консоли при первом показе страницы.
+    /// </summary>
+    private void EnsureConsoleSection()
     {
-        if (string.IsNullOrEmpty(CommandBox.Text))
+        if (_consoleSection != null)
             return;
 
-        Ioc.Default.GetService<IServerManager>()!.SendCommand(_serverId!, CommandBox.Text);
-        CommandBox.Clear();
+        _consoleSection = new ServerConsoleSection();
+        _consoleSection.SetServerId(_serverId);
+        _consoleSection.ApplyConsoleSettings();
+        ConsoleHost.Children.Add(_consoleSection);
     }
 
-    private void CommandBox_KeyDown(object sender, KeyEventArgs e)
+    /// <summary>
+    /// Создаёт секцию модов при первом открытии раздела.
+    /// </summary>
+    private void EnsureModsSection()
     {
-        if (e.Key == Key.Enter)
+        if (_modsSection != null)
+            return;
+
+        _modsSection = new ServerModsSection();
+        _modsSection.Initialize(_viewModel, _server);
+        ModsHost.Children.Add(_modsSection);
+    }
+
+    /// <summary>
+    /// Создаёт секцию плагинов при первом открытии раздела.
+    /// </summary>
+    private void EnsurePluginsSection()
+    {
+        if (_pluginsSection != null)
+            return;
+
+        _pluginsSection = new ServerPluginsSection();
+        _pluginsSection.Initialize(_viewModel, _server);
+        PluginsHost.Children.Add(_pluginsSection);
+    }
+
+    /// <summary>
+    /// Создаёт секцию настроек при первом открытии раздела.
+    /// </summary>
+    private void EnsureSettingsSection()
+    {
+        if (_settingsSection != null)
+            return;
+
+        _settingsSection = new ServerSettingsSection();
+        _settingsSection.ServerRenamed += OnSectionServerRenamed;
+        _settingsSection.UpdateAvailabilityChanged += OnSectionUpdateAvailabilityChanged;
+        _settingsSection.Initialize(_viewModel, _server);
+        SettingsHost.Children.Add(_settingsSection);
+    }
+
+    /// <summary>
+    /// Обновляем заголовок страницы при переименовании сервера в настройках.
+    /// </summary>
+    private void OnSectionServerRenamed(string name)
+    {
+        this.Invoke(() => ServerNameText.Text = name);
+    }
+
+    /// <summary>
+    /// Показываем/скрываем уведомление об обновлении загрузчика в заголовке.
+    /// </summary>
+    private void OnSectionUpdateAvailabilityChanged(bool hasUpdate, string? latestVersion)
+    {
+        UpdateAvailableButton.Visibility = hasUpdate ? Visibility.Visible : Visibility.Collapsed;
+        if (hasUpdate && !string.IsNullOrEmpty(latestVersion))
         {
-            SendCommand_Click(sender, e);
+            UpdateAvailableButton.ToolTip = string.Format(
+                LocalizationManager.Get("ServerDetail_UpdateLoader_Available"), latestVersion);
         }
     }
 
     /// <summary>
-    /// Валидация: разрешаем ввод только цифр
+    /// Лёгкая проверка доступности обновления загрузчика для уведомления
+    /// в заголовке (полная форма со списком версий живёт в разделе настроек).
     /// </summary>
-    private void NumberValidationTextBox_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
+    private async Task CheckLoaderUpdateAvailabilityAsync()
     {
-        e.Handled = !int.TryParse(e.Text, out _);
-    }
-
-    /// <summary>
-    /// Заполнение ComboBox со списком Java
-    /// </summary>
-    private void LoadJavaComboBox()
-    {
-        var javaList = _viewModel.GetJavaList();
-
-        SettingJavaComboBox.Items.Clear();
-
-        foreach (var (id, display) in javaList)
-        {
-            SettingJavaComboBox.Items.Add(new ComboBoxItem
-            {
-                Content = display,
-                Tag = id
-            });
-        }
-
-        var selectedJavaId = _viewModel.GetSelectedJavaId();
-        if (!string.IsNullOrEmpty(selectedJavaId))
-        {
-            var selectedItem = SettingJavaComboBox.Items
-                .Cast<ComboBoxItem>()
-                .FirstOrDefault(item => (string?)item.Tag == selectedJavaId);
-
-            if (selectedItem != null)
-                SettingJavaComboBox.SelectedItem = selectedItem;
-        }
-        else
-        {
-            SettingJavaComboBox.SelectedIndex = 0;
-        }
-    }
-
-    /// <summary>
-    /// Автосохранение настроек при изменении
-    /// </summary>
-    /// <summary>
-    /// Определяет, к какому экспандеру относится контрол-отправитель
-    /// </summary>
-    private Wpf.Ui.Controls.TextBlock? GetSaveStatusTarget(object? sender)
-    {
-        if (sender is FrameworkElement element)
-        {
-            return element.Name switch
-            {
-                nameof(SettingName) => GeneralSaveStatus,
-                nameof(SettingRamMin) or nameof(SettingRamMax) => RamSaveStatus,
-                nameof(SettingAutoRestart) or nameof(SettingAutoRestartDelay) => AutoRestartSaveStatus,
-                nameof(SettingJavaAutoSelect) => JavaSaveStatus,
-                _ => null
-            };
-        }
-        return null;
-    }
-
-    private void Setting_Click(object sender, RoutedEventArgs e)
-    {
-        AutoSaveSettings(GetSaveStatusTarget(sender));
-    }
-
-    /// <summary>
-    /// Автосохранение настроек при потере фокуса
-    /// </summary>
-    private void Setting_LostFocus(object sender, RoutedEventArgs e)
-    {
-        AutoSaveSettings(GetSaveStatusTarget(sender));
-    }
-
-    /// <summary>
-    /// Автоматическое сохранение настроек сервера
-    /// </summary>
-    private void AutoSaveSettings(Wpf.Ui.Controls.TextBlock? statusText = null)
-    {
-        if (_server == null)
+        if (_server == null || _modLoaderService == null)
             return;
 
         try
         {
-            var newName = SettingName.Text.Trim();
-            var ramMinStr = SettingRamMin.Text;
-            var ramMaxStr = SettingRamMax.Text;
-            var autoRestart = SettingAutoRestart.IsChecked;
-            var autoRestartDelayStr = SettingAutoRestartDelay.Text;
-            var javaAutoSelect = SettingJavaAutoSelect.IsChecked ?? true;
-            var javaId = SettingJavaComboBox.SelectedItem is ComboBoxItem selectedItem
-                ? selectedItem.Tag as string
-                : null;
-            var jvmArgs = SettingJvmArgs.Text;
-
-            // ─── Валидация ──────────────────────────────────────────
-            if (statusText != null)
+            var loaderType = _server.ModLoader.Type;
+            var updatable = loaderType is ModLoaderType.Forge or ModLoaderType.NeoForge
+                or ModLoaderType.Fabric or ModLoaderType.Quilt or ModLoaderType.Paper;
+            if (!updatable || !_viewModel.SettingsEnableUpdateNotification)
             {
-                string? validationError = null;
-
-                if (statusText == GeneralSaveStatus && string.IsNullOrWhiteSpace(newName))
-                    validationError = LocalizationManager.Get("Validation_NameRequired");
-                else if (statusText == RamSaveStatus && string.IsNullOrWhiteSpace(ramMinStr))
-                    validationError = LocalizationManager.Get("Validation_RamMinRequired");
-                else if (statusText == RamSaveStatus && string.IsNullOrWhiteSpace(ramMaxStr))
-                    validationError = LocalizationManager.Get("Validation_RamMaxRequired");
-                else if (statusText == AutoRestartSaveStatus && string.IsNullOrWhiteSpace(autoRestartDelayStr))
-                    validationError = LocalizationManager.Get("Validation_AutoRestartDelayRequired");
-
-                if (validationError != null)
-                {
-                    _ = ShowValidationWarning(statusText, validationError);
-                    return;
-                }
+                UpdateAvailableButton.Visibility = Visibility.Collapsed;
+                return;
             }
 
-            _viewModel.SaveSettings(new ServerSettingsRequest(
-                Name: newName,
-                RamMinStr: ramMinStr,
-                RamMaxStr: ramMaxStr,
-                AutoRestart: autoRestart,
-                AutoRestartDelayStr: autoRestartDelayStr,
-                JavaAutoSelect: javaAutoSelect,
-                JavaId: javaId,
-                JvmArgs: jvmArgs
-            ));
-
-            // Проверяем ошибку переименования папки
-            if (_viewModel.LastRenameError != null)
+            var current = string.IsNullOrWhiteSpace(_server.ModLoader.LoaderVersion)
+                ? null
+                : _server.ModLoader.LoaderVersion;
+            if (current == null)
             {
-                if (statusText != null)
-                {
-                    statusText.Text = _viewModel.LastRenameError;
-                    _ = ShowSaveStatus(statusText, isError: true);
-                }
-                // Возвращаем старое имя в поле ввода
-                SettingName.Text = _viewModel.Server?.Name ?? newName;
-                ServerNameText.Text = _viewModel.Server?.Name ?? newName;
+                UpdateAvailableButton.Visibility = Visibility.Collapsed;
+                return;
             }
-            else
-            {
-                // Обновляем UI если имя изменилось
-                if (!string.IsNullOrEmpty(newName) && newName != ServerNameText.Text)
-                {
-                    ServerNameText.Text = newName;
-                }
 
-                // Показываем статус сохранения
-                if (statusText != null)
-                    _ = ShowSaveStatus(statusText, isError: false);
-            }
+            var versions = await _modLoaderService.GetLoaderVersionsAsync(
+                loaderType.ToString(), _server.McVersion, showSnapshots: false);
+
+            var hasUpdate = versions.Any(v => VersionCompare.CompareLoaderVersions(v, current) > 0);
+
+            UpdateAvailableButton.Visibility = hasUpdate ? Visibility.Visible : Visibility.Collapsed;
         }
         catch (Exception ex)
         {
-            Logger.Error($"AutoSaveSettings error: {ex.Message}", ex, "ServerDetailPage");
-            if (statusText != null)
-                _ = ShowSaveStatus(statusText, isError: true);
+            Logger.Warning($"CheckLoaderUpdateAvailability error: {ex.Message}", "ServerDetailPage");
         }
     }
 
     /// <summary>
-    /// Показывает предупреждение валидации (красный текст, автоматическое скрытие)
+    /// Переход к обновлению загрузчика: открываем раздел настроек и карточку обновления.
     /// </summary>
-    private async Task ShowValidationWarning(Wpf.Ui.Controls.TextBlock statusText, string message)
+    private void UpdateAvailable_Click(object sender, RoutedEventArgs e)
     {
-        if (statusText == null) return;
-
-        statusText.Text = message;
-        statusText.Foreground = ErrorBrush;
-        statusText.Visibility = Visibility.Visible;
-        statusText.Opacity = 0;
-
-        var fadeIn = new DoubleAnimation
-        {
-            From = 0,
-            To = 1,
-            Duration = TimeSpan.FromMilliseconds(200),
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-        };
-        statusText.BeginAnimation(OpacityProperty, fadeIn);
-
-        await Task.Delay(2500);
-
-        var fadeOut = new DoubleAnimation
-        {
-            From = 1,
-            To = 0,
-            Duration = TimeSpan.FromMilliseconds(300),
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
-        };
-        statusText.BeginAnimation(OpacityProperty, fadeOut);
-
-        await Task.Delay(300);
-        statusText.Visibility = Visibility.Collapsed;
+        ShowSection("Settings");
+        _settingsSection?.ShowUpdateCard();
     }
 
     /// <summary>
-    /// Показывает временный статус сохранения (зелёный — успех, красный — ошибка)
-    /// с автоматическим скрытием через 2 секунды.
+    /// Загрузка server.properties в редактор.
     /// </summary>
-    private async Task ShowSaveStatus(Wpf.Ui.Controls.TextBlock statusText, bool isError)
-    {
-        if (statusText == null) return;
-
-        statusText.Text = isError
-            ? LocalizationManager.Get("Props_SaveError")
-            : LocalizationManager.Get("Message_SettingsSaved");
-        statusText.Foreground = isError ? ErrorBrush : SuccessBrush;
-        statusText.Visibility = Visibility.Visible;
-        statusText.Opacity = 0;
-
-        // Плавное появление
-        var fadeIn = new DoubleAnimation
-        {
-            From = 0,
-            To = 1,
-            Duration = TimeSpan.FromMilliseconds(200),
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-        };
-        statusText.BeginAnimation(OpacityProperty, fadeIn);
-
-        // Ждём 2 секунды
-        await Task.Delay(2000);
-
-        // Плавное исчезновение
-        var fadeOut = new DoubleAnimation
-        {
-            From = 1,
-            To = 0,
-            Duration = TimeSpan.FromMilliseconds(300),
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-        };
-        fadeOut.Completed += (_, _) => statusText.Visibility = Visibility.Collapsed;
-        statusText.BeginAnimation(OpacityProperty, fadeOut);
-    }
-
-    /// <summary>
-    /// Обновление видимости ComboBox Java
-    /// </summary>
-    private void UpdateJavaComboBoxVisibility()
-    {
-        var isAutoSelect = SettingJavaAutoSelect.IsChecked ?? true;
-        JavaSelectionGrid.Visibility = isAutoSelect ? Visibility.Collapsed : Visibility.Visible;
-    }
-
-    /// <summary>
-    /// Обработка изменения автоматического выбора Java
-    /// </summary>
-    private void SettingJavaAutoSelect_CheckedChanged(object sender, RoutedEventArgs e)
-    {
-        // Проверка: защита от вызова до инициализации
-        if (!IsInitialized || JavaSelectionGrid == null)
-            return;
-
-        UpdateJavaComboBoxVisibility();
-    }
-
-    /// <summary>
-    /// Обработка изменения чекбокса UPnP
-    /// </summary>
-    private void SettingEnableUpnp_Click(object sender, RoutedEventArgs e)
-    {
-        if (_server == null)
-            return;
-
-        var enable = SettingEnableUpnp.IsChecked ?? false;
-        _viewModel.SaveUpnpSetting(enable);
-
-        _ = ShowSaveStatus(UpnpSaveStatus, isError: false);
-    }
-
-    /// <summary>
-    /// Обновляет отображение адреса сервера (IP:Port).
-    /// </summary>
-    private void UpdateServerAddressDisplay()
-    {
-        _viewModel.UpdateServerAddressDisplay();
-
-        if (!string.IsNullOrEmpty(_viewModel.UpnpAddress))
-        {
-            UpnpAddressText.Text = _viewModel.UpnpAddress;
-            UpnpAddressText.Visibility = Visibility.Visible;
-            CopyAddressButton.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            UpnpAddressText.Visibility = Visibility.Collapsed;
-            CopyAddressButton.Visibility = Visibility.Collapsed;
-        }
-    }
-
-    /// <summary>
-    /// Копирует адрес сервера (IP:Port) в буфер обмена.
-    /// </summary>
-    private void CopyAddressButton_Click(object sender, RoutedEventArgs e)
-    {
-        var address = UpnpAddressText.Text;
-        if (string.IsNullOrEmpty(address))
-            return;
-
-        try
-        {
-            Clipboard.SetText(address);
-            CopyAddressButton.Content = LocalizationManager.Get("Common_Copied");
-
-            // Возвращаем текст кнопки через 2 секунды
-            var dispatcher = Dispatcher;
-            Task.Delay(2000).ContinueWith(_ =>
-            {
-                dispatcher.Invoke(() =>
-                {
-                    CopyAddressButton.Content = LocalizationManager.Get("ServerDetail_Upnp_CopyAddress");
-                });
-            });
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Failed to copy address: {ex.Message}", "ServerDetailPage");
-        }
-    }
-
-    /// <summary>
-    /// Проверка UPnP доступности
-    /// </summary>
-    private async void CheckUpnpButton_Click(object sender, RoutedEventArgs e)
-    {
-        // Скрываем предыдущий результат перед новой проверкой
-        UpnpCheckResultText.Visibility = Visibility.Collapsed;
-        UpnpCheckResultIcon.Visibility = Visibility.Collapsed;
-
-        try
-        {
-            CheckUpnpProgress.ShowIndeterminate();
-            CheckUpnpButton.IsEnabled = false;
-            CheckUpnpText.Text = LocalizationManager.Get("ServerDetail_Upnp_Checking");
-
-            var isAvailable = await _viewModel.CheckUpnpAvailabilityAsync();
-
-            CheckUpnpProgress.HideIndeterminate();
-            CheckUpnpButton.IsEnabled = true;
-            CheckUpnpText.Text = LocalizationManager.Get("ServerDetail_Upnp_Check");
-
-            if (isAvailable)
-            {
-                UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_Available");
-                UpnpCheckResultText.Foreground = SuccessBrush;
-            }
-            else
-            {
-                UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_NotAvailable");
-                UpnpCheckResultText.Foreground = WarningBrush;
-            }
-
-            UpnpCheckResultText.Visibility = Visibility.Visible;
-            UpnpCheckResultIcon.Visibility = Visibility.Collapsed;
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"UPnP check error: {ex.Message}", ex, "ServerDetailPage");
-            CheckUpnpProgress.HideIndeterminate();
-            CheckUpnpButton.IsEnabled = true;
-            CheckUpnpText.Text = LocalizationManager.Get("ServerDetail_Upnp_Check");
-
-            UpnpCheckResultText.Visibility = Visibility.Collapsed;
-            UpnpCheckResultIcon.Symbol = SymbolRegular.ErrorCircle24;
-            UpnpCheckResultIcon.ToolTip = new ToolTip
-            {
-                Content = $"UPnP: {ex.Message}",
-                FontSize = 14
-            };
-            UpnpCheckResultIcon.Foreground = ErrorBrush;
-            UpnpCheckResultIcon.Visibility = Visibility.Visible;
-        }
-        finally
-        {
-            _ = ResetCheckUpnpResultAsync();
-        }
-    }
-
-    /// <summary>
-    /// Сбрасывает результат проверки UPnP через 5 секунд.
-    /// </summary>
-    private async Task ResetCheckUpnpResultAsync()
-    {
-        try
-        {
-            await Task.Delay(5000);
-            Dispatcher.Invoke(() =>
-            {
-                UpnpCheckResultText.Visibility = Visibility.Collapsed;
-                UpnpCheckResultText.Text = string.Empty;
-                UpnpCheckResultText.Foreground = DefaultBrush;
-            });
-        }
-        catch
-        {
-            // Ignore
-        }
-    }
-
-    /// <summary>
-    /// Проверка проброса порта через UPnP. Результат показывается слева от кнопок.
-    /// </summary>
-    private async void CheckPortButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (_server == null)
-            return;
-
-        // Скрываем предыдущий результат перед новой проверкой
-        UpnpCheckResultText.Visibility = Visibility.Collapsed;
-        UpnpCheckResultIcon.Visibility = Visibility.Collapsed;
-
-        try
-        {
-            CheckPortProgress.Visibility = Visibility.Visible;
-            CheckPortButton.IsEnabled = false;
-            CheckPortText.Text = LocalizationManager.Get("ServerDetail_Upnp_Checking");
-
-            var port = _server.Port;
-            var isForwarded = await _viewModel.CheckPortMappingAsync(port);
-
-            CheckPortProgress.Visibility = Visibility.Collapsed;
-            CheckPortButton.IsEnabled = true;
-            CheckPortText.Text = LocalizationManager.Get("ServerDetail_Upnp_CheckPort");
-
-            if (isForwarded)
-            {
-                UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_Port_Open");
-                UpnpCheckResultText.Foreground = SuccessBrush;
-                UpdateServerAddressDisplay();
-            }
-            else
-            {
-                UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_Port_Closed");
-                UpnpCheckResultText.Foreground = ErrorBrush;
-
-                // Скрываем адрес, если порт закрыт
-                UpnpAddressText.Visibility = Visibility.Collapsed;
-                CopyAddressButton.Visibility = Visibility.Collapsed;
-            }
-
-            UpnpCheckResultText.Visibility = Visibility.Visible;
-            UpnpCheckResultIcon.Visibility = Visibility.Collapsed;
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"UPnP port check error: {ex.Message}", ex, "ServerDetailPage");
-            CheckPortProgress.Visibility = Visibility.Collapsed;
-            CheckPortButton.IsEnabled = true;
-            CheckPortText.Text = LocalizationManager.Get("ServerDetail_Upnp_CheckPort");
-
-            UpnpCheckResultText.Visibility = Visibility.Collapsed;
-            UpnpCheckResultIcon.Symbol = SymbolRegular.ErrorCircle24;
-            UpnpCheckResultIcon.ToolTip = new ToolTip
-            {
-                Content = $"UPnP: {ex.Message}",
-                FontSize = 14
-            };
-            UpnpCheckResultIcon.Foreground = ErrorBrush;
-            UpnpCheckResultIcon.Visibility = Visibility.Visible;
-        }
-        finally
-        {
-            _ = ResetCheckPortResultAsync();
-        }
-    }
-
-    /// <summary>
-    /// Сбрасывает результат проверки порта через 5 секунд.
-    /// </summary>
-    private async Task ResetCheckPortResultAsync()
-    {
-        try
-        {
-            await Task.Delay(5000);
-            Dispatcher.Invoke(() =>
-            {
-                UpnpCheckResultText.Visibility = Visibility.Collapsed;
-                UpnpCheckResultText.Text = string.Empty;
-                UpnpCheckResultText.Foreground = DefaultBrush;
-            });
-        }
-        catch
-        {
-            // Ignore
-        }
-    }
-
-    /// <summary>
-    /// Обработка выбора Java в ComboBox (автосохранение)
-    /// </summary>
-    private void SettingJavaComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        AutoSaveSettings(JavaSaveStatus);
-    }
-
-    /// <summary>
-    /// Сохранение JVM аргументов при потере фокуса
-    /// </summary>
-    private void SettingJvmArgs_LostFocus(object sender, RoutedEventArgs e)
-    {
-        AutoSaveSettings(JavaSaveStatus);
-    }
-
     private void LoadProperties()
     {
         if (_server == null)
@@ -1379,173 +725,6 @@ public partial class ServerDetailPage : Page, IDisposable
             Logger.Warning($"Failed to load properties: {ex.Message}", "ServerDetailPage");
             ShowErrorSafe($"{LocalizationManager.Get("ServerDetail_PropsLoadError")}: {ex.Message}");
         }
-    }
-
-    private void LoadMods()
-    {
-        if (_server == null) return;
-        _viewModel.LoadMods();
-        ModsList.ItemsSource = _viewModel.Mods;
-        ReloadItemsPanel(ModsList, ModsCountBadge, _viewModel.Mods.Count, () => UpdateToggleBtn(ToggleAllModsBtn, _viewModel.CheckAllModsDisabled, "ServerDetail_Mods_ToggleAll_Enable", "ServerDetail_Mods_ToggleAll_Disable"));
-    }
-
-    private void LoadPlugins()
-    {
-        if (_server == null) return;
-        _viewModel.LoadPlugins();
-        PluginsList.ItemsSource = _viewModel.Plugins;
-        ReloadItemsPanel(PluginsList, PluginsCountBadge, _viewModel.Plugins.Count, () => UpdateToggleBtn(ToggleAllPluginsBtn, _viewModel.CheckAllPluginsDisabled, "ServerDetail_Plugins_ToggleAll_Enable", "ServerDetail_Plugins_ToggleAll_Disable"));
-    }
-
-    private void RefreshMods_Click(object sender, RoutedEventArgs e) => LoadMods();
-    private void RefreshPlugins_Click(object sender, RoutedEventArgs e) => LoadPlugins();
-
-    private static void ReloadItemsPanel(ItemsControl list, InfoBadge badge, int count, Action updateToggle)
-    {
-        badge.Value = count > 0 ? count.ToString() : string.Empty;
-        badge.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        updateToggle();
-    }
-
-    private void UpdateToggleBtn(WpfButton toggleBtn, Func<bool> checkAllDisabled, string enableKey, string disableKey)
-    {
-        toggleBtn.Visibility = Visibility.Visible;
-        toggleBtn.Content = LocalizationManager.Get(checkAllDisabled() ? enableKey : disableKey);
-    }
-
-
-
-    private void OpenModsFolder_Click(object sender, RoutedEventArgs e) => OpenItemFolder("mods", "ServerDetail_ModsFolderNotFound");
-    private void OpenPluginsFolder_Click(object sender, RoutedEventArgs e) => OpenItemFolder("plugins", "ServerDetail_PluginsFolderNotFound");
-
-    private void OpenItemFolder(string subDir, string notFoundKey)
-    {
-        if (_server == null) return;
-        var dir = Path.Combine(_server.Path, subDir);
-        if (Directory.Exists(dir)) UiHelper.OpenFolder(dir);
-        else ShowWarningSafe(LocalizationManager.Get(notFoundKey));
-    }
-
-    private void ShowItemMoreMenu(WpfButton btn, IItemEntry item, string enableKey, string disableKey, string deleteKey,
-        RoutedEventHandler toggleHandler, RoutedEventHandler deleteHandler)
-    {
-        var contextMenu = new ContextMenu
-        {
-            PlacementTarget = btn,
-            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
-            MinWidth = btn.ActualWidth
-        };
-        contextMenu.Items.Add(BuildToggleItem(item, enableKey, disableKey, toggleHandler));
-        contextMenu.Items.Add(new Separator());
-        contextMenu.Items.Add(BuildDeleteItem(deleteKey, deleteHandler));
-        contextMenu.IsOpen = true;
-    }
-
-    private void BuildItemContextMenu(CardControl card, IItemEntry item, string enableKey, string disableKey, string deleteKey,
-        RoutedEventHandler toggleHandler, RoutedEventHandler deleteHandler)
-    {
-        card.ContextMenu = new ContextMenu();
-        card.ContextMenu.Items.Add(BuildToggleItem(item, enableKey, disableKey, toggleHandler));
-        card.ContextMenu.Items.Add(new Separator());
-        card.ContextMenu.Items.Add(BuildDeleteItem(deleteKey, deleteHandler));
-    }
-
-    private System.Windows.Controls.MenuItem BuildToggleItem(IItemEntry item, string enableKey, string disableKey, RoutedEventHandler clickHandler)
-    {
-        var isEnabled = item.Enabled;
-        var toggleItem = new System.Windows.Controls.MenuItem
-        {
-            Header = LocalizationManager.Get(isEnabled ? disableKey : enableKey),
-            Tag = item
-        };
-        var toggleIcon = new SymbolIcon
-        {
-            FontSize = 16,
-            Symbol = isEnabled ? SymbolRegular.CheckboxChecked20 : SymbolRegular.CheckboxUnchecked20
-        };
-        if (isEnabled)
-            toggleIcon.Foreground = (Brush)FindResource("SystemFillColorCriticalBrush");
-        toggleItem.Icon = toggleIcon;
-        toggleItem.Click += clickHandler;
-        return toggleItem;
-    }
-
-    private System.Windows.Controls.MenuItem BuildDeleteItem(string deleteKey, RoutedEventHandler clickHandler)
-    {
-        var deleteItem = new System.Windows.Controls.MenuItem
-        {
-            Header = LocalizationManager.Get(deleteKey)
-        };
-        deleteItem.Icon = new SymbolIcon
-        {
-            FontSize = 16,
-            Symbol = SymbolRegular.Delete20,
-            Foreground = (Brush)FindResource("SystemFillColorCriticalBrush")
-        };
-        deleteItem.Click += clickHandler;
-        return deleteItem;
-    }
-
-    private void ModMoreMenu_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not WpfButton btn || btn.Tag is not ModItem mod) return;
-        ShowItemMoreMenu(btn, mod, "ServerDetail_Mods_Enable", "ServerDetail_Mods_Disable", "ServerDetail_Mods_Delete", ToggleMod_Click, DeleteMod_Click);
-    }
-
-    private void PluginMoreMenu_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not WpfButton btn || btn.Tag is not PluginItem plugin) return;
-        ShowItemMoreMenu(btn, plugin, "ServerDetail_Plugins_Enable", "ServerDetail_Plugins_Disable", "ServerDetail_Plugins_Delete", TogglePlugin_Click, DeletePlugin_Click);
-    }
-
-    private void ModCard_ContextMenuOpening(object sender, ContextMenuEventArgs e)
-    {
-        if (sender is not CardControl card || card.DataContext is not ModItem mod) return;
-        BuildItemContextMenu(card, mod, "ServerDetail_Mods_Enable", "ServerDetail_Mods_Disable", "ServerDetail_Mods_Delete", ToggleMod_Click, DeleteMod_Click);
-    }
-
-    private void PluginCard_ContextMenuOpening(object sender, ContextMenuEventArgs e)
-    {
-        if (sender is not CardControl card || card.DataContext is not PluginItem plugin) return;
-        BuildItemContextMenu(card, plugin, "ServerDetail_Plugins_Enable", "ServerDetail_Plugins_Disable", "ServerDetail_Plugins_Delete", TogglePlugin_Click, DeletePlugin_Click);
-    }
-
-    private async void ToggleMod_Click(object sender, RoutedEventArgs e) => await ToggleItemAsync<ModItem>(sender, _viewModel.ToggleModAsync, LoadMods);
-    private async void TogglePlugin_Click(object sender, RoutedEventArgs e) => await ToggleItemAsync<PluginItem>(sender, _viewModel.TogglePluginAsync, LoadPlugins);
-
-    private async Task ToggleItemAsync<T>(object sender, Func<T, Task> toggleAsync, Action reload) where T : class, IItemEntry
-    {
-        if (_server == null) return;
-        var item = ExtractSender<T>(sender);
-        if (item == null) return;
-        await toggleAsync(item);
-        reload();
-    }
-
-    private async void ToggleAllMods_Click(object sender, RoutedEventArgs e) { _viewModel.ToggleAllMods(); LoadMods(); }
-    private async void ToggleAllPlugins_Click(object sender, RoutedEventArgs e) { _viewModel.ToggleAllPlugins(); LoadPlugins(); }
-
-    private async void DeleteMod_Click(object sender, RoutedEventArgs e) => await DeleteItemAsync<ModItem>(sender, _viewModel.DeleteModAsync, LoadMods, "ServerDetail_DeleteModConfirm", "ServerDetail_DeleteModTitle");
-    private async void DeletePlugin_Click(object sender, RoutedEventArgs e) => await DeleteItemAsync<PluginItem>(sender, _viewModel.DeletePluginAsync, LoadPlugins, "ServerDetail_DeletePluginConfirm", "ServerDetail_DeletePluginTitle");
-
-    private async Task DeleteItemAsync<T>(object sender, Func<T, Task> deleteAsync, Action reload, string confirmKey, string titleKey) where T : class, IItemEntry
-    {
-        if (_server == null) return;
-        var item = ExtractSender<T>(sender);
-        if (item == null) return;
-        var result = await UiHelper.ShowConfirm(
-            string.Format(LocalizationManager.Get(confirmKey), item.Name, item.FileName),
-            LocalizationManager.Get(titleKey));
-        if (result != ContentDialogResult.Primary) return;
-        await deleteAsync(item);
-        reload();
-    }
-
-    private static T? ExtractSender<T>(object sender) where T : class, IItemEntry
-    {
-        if (sender is WpfButton btn && btn.Tag is T bt) return bt;
-        if (sender is System.Windows.Controls.MenuItem mi && mi.Tag is T mt) return mt;
-        return null;
     }
 
     private async void Delete_Click(object sender, RoutedEventArgs e)
@@ -1574,434 +753,6 @@ public partial class ServerDetailPage : Page, IDisposable
         catch (Exception ex) { Logger.Warning($"[ShowErrorSafe] Error: {ex.Message}", "ServerDetailPage"); }
     }
 
-    /// <summary>
-    /// Безопасный вызов ShowWarning из sync-контекста (fire-and-forget с try/catch)
-    /// </summary>
-    private async void ShowWarningSafe(string message)
-    {
-        try { await UiHelper.ShowWarning(message); }
-        catch (Exception ex) { Logger.Warning($"[ShowWarningSafe] Error: {ex.Message}", "ServerDetailPage"); }
-    }
-
-    // ─── Обновление загрузчика сервера ──────────────────────────────
-
-    /// <summary>
-    /// Заполняет карточку обновления загрузчика: видимость, текущая версия,
-    /// список доступных версий, уведомление в заголовке.
-    /// </summary>
-    private void LoadUpdateForm()
-    {
-        if (_server == null || _modLoaderService == null)
-            return;
-
-        var loaderType = _server.ModLoader.Type;
-        var updatable = loaderType is ModLoaderType.Forge or ModLoaderType.NeoForge
-            or ModLoaderType.Fabric or ModLoaderType.Quilt or ModLoaderType.Paper;
-
-        UpdateServerCard.Visibility = updatable ? Visibility.Visible : Visibility.Collapsed;
-        if (!updatable)
-            return;
-
-        _currentLoaderVersion = string.IsNullOrWhiteSpace(_server.ModLoader.LoaderVersion)
-            ? null
-            : _server.ModLoader.LoaderVersion;
-
-        UpdateCurrentVersionText.Text = _currentLoaderVersion
-            ?? LocalizationManager.Get("ServerDetail_UpdateLoader_CurrentEmpty");
-
-        UpdateServerButton.IsEnabled = false;
-        SettingUpdateNotifications.IsChecked = _viewModel.SettingsEnableUpdateNotification;
-        _ = LoadLoaderVersionsAsync();
-    }
-
-    /// <summary>
-    /// Загружает доступные версии загрузчика и обновляет карточку.
-    /// </summary>
-    private async Task LoadLoaderVersionsAsync()
-    {
-        if (_server == null || _modLoaderService == null)
-            return;
-
-        try
-        {
-            var versions = await _modLoaderService.GetLoaderVersionsAsync(
-                _server.ModLoader.Type.ToString(), _server.McVersion, showSnapshots: false);
-
-            _allLoaderVersions = versions;
-
-            if (versions.Length == 0)
-            {
-                _latestLoaderVersion = null;
-                UpdateLoaderVersionBox.ItemsSource = Array.Empty<string>();
-                UpdateServerButton.IsEnabled = false;
-                SetUpdateStatus(LocalizationManager.Get("ServerDetail_UpdateLoader_NoVersions"), WarningBrush);
-                UpdateUpdateAvailability();
-                return;
-            }
-
-            // Последняя доступная версия — максимум по списку
-            var newest = versions[0];
-            foreach (var v in versions)
-            {
-                if (CompareLoaderVersions(v, newest) > 0)
-                    newest = v;
-            }
-            _latestLoaderVersion = newest;
-
-            ApplyVersionFilter();
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"LoadLoaderVersionsAsync error: {ex.Message}", "ServerDetailPage");
-            SetUpdateStatus(string.Format(
-                LocalizationManager.Get("ServerDetail_UpdateLoader_LoadVersFailed"), ex.Message), ErrorBrush);
-        }
-    }
-
-    /// <summary>
-    /// Показывает в выпадающем списке только версии, новее установленной
-    /// (даунгрейд не поддерживается, поэтому более старые отбрасываются).
-    /// </summary>
-    private void ApplyVersionFilter()
-    {
-        if (_allLoaderVersions.Length == 0)
-        {
-            UpdateLoaderVersionBox.IsEnabled = true;
-            UpdateLoaderVersionBox.ItemsSource = Array.Empty<string>();
-            UpdateServerButton.IsEnabled = false;
-            UpdateUpdateAvailability();
-            return;
-        }
-
-        var current = _currentLoaderVersion;
-        var selectable = string.IsNullOrEmpty(current)
-            ? _allLoaderVersions
-            : [.. _allLoaderVersions.Where(v => CompareLoaderVersions(v, current) > 0)];
-
-        if (selectable.Length > 0)
-        {
-            UpdateLoaderVersionBox.IsEnabled = true;
-            UpdateLoaderVersionBox.ItemsSource = selectable;
-            UpdateLoaderVersionBox.SelectedIndex = 0;
-            UpdateServerButton.IsEnabled = !_updateInProgress;
-            // Не показываем «висящий» статус, когда есть что выбирать
-            SetUpdateStatus(string.Empty, null);
-        }
-        else
-        {
-            // Новых версий нет: выключаем список и кнопку, в списке — «актуальная версия»
-            UpdateLoaderVersionBox.IsEnabled = false;
-            UpdateLoaderVersionBox.ItemsSource =
-                new[] { LocalizationManager.Get("ServerDetail_UpdateLoader_NoUpdates") };
-            UpdateLoaderVersionBox.SelectedIndex = 0;
-            UpdateServerButton.IsEnabled = false;
-        }
-
-        UpdateUpdateAvailability();
-    }
-
-    /// <summary>
-    /// Показывает/скрывает иконку уведомления об обновлении в заголовке.
-    /// </summary>
-    private void UpdateUpdateAvailability()
-    {
-        var notifyEnabled = SettingUpdateNotifications.IsChecked ?? false;
-        var hasUpdate = notifyEnabled
-            && !string.IsNullOrEmpty(_currentLoaderVersion)
-            && _allLoaderVersions.Any(v => CompareLoaderVersions(v, _currentLoaderVersion) > 0);
-
-        UpdateAvailableButton.Visibility = hasUpdate ? Visibility.Visible : Visibility.Collapsed;
-        if (hasUpdate)
-        {
-            UpdateAvailableButton.ToolTip = string.Format(
-                LocalizationManager.Get("ServerDetail_UpdateLoader_Available"), _latestLoaderVersion);
-        }
-    }
-
-    /// <summary>
-    /// Сравнивает версии загрузчика по числовым компонентам
-    /// ("0.19.4" &lt; "0.19.5"; сборки Paper "492 (ALPHA)" — по ведущему числу).
-    /// Возвращает отрицательное, ноль или положительное значение.
-    /// </summary>
-    private static int CompareLoaderVersions(string a, string b)
-    {
-        if (string.Equals(a, b, StringComparison.OrdinalIgnoreCase))
-            return 0;
-
-        var aParts = a.Split('.');
-        var bParts = b.Split('.');
-        var len = Math.Max(aParts.Length, bParts.Length);
-
-        for (var i = 0; i < len; i++)
-        {
-            var aPart = i < aParts.Length ? aParts[i] : "0";
-            var bPart = i < bParts.Length ? bParts[i] : "0";
-
-            // Числовой префикс части (до пробела) — напр. "492 (ALPHA)"
-            var aNumStr = aPart.Split(' ')[0];
-            var bNumStr = bPart.Split(' ')[0];
-
-            if (int.TryParse(aNumStr, out var aNum) && int.TryParse(bNumStr, out var bNum))
-            {
-                if (aNum != bNum)
-                    return aNum.CompareTo(bNum);
-            }
-            else
-            {
-                var cmp = string.Compare(aPart, bPart, StringComparison.OrdinalIgnoreCase);
-                if (cmp != 0)
-                    return cmp;
-            }
-        }
-
-        return 0;
-    }
-
-    /// <summary>
-    /// Переход к карточке обновления в настройках по клику на иконку уведомления.
-    /// </summary>
-    private void UpdateAvailable_Click(object sender, RoutedEventArgs e)
-    {
-        ShowSection("Settings");
-        UpdateServerCard.IsExpanded = true;
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded,
-            new Action(() => UpdateServerCard.BringIntoView()));
-    }
-
-    /// <summary>
-    /// Обновление загрузчика сервера: подтверждение остановки, резервная копия,
-    /// переустановка загрузчика, сохранение новой версии.
-    /// </summary>
-    private async void UpdateServerButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (_server == null || _updateInProgress)
-            return;
-
-        var newVersion = UpdateLoaderVersionBox.SelectedItem as string;
-        if (string.IsNullOrEmpty(newVersion))
-            return;
-
-        // 1. Останавливаем запущенный сервер (с подтверждением)
-        if (_server.IsRunning)
-        {
-            var confirm = await UiHelper.ShowConfirm(
-                LocalizationManager.Get("ServerDetail_UpdateLoader_StopConfirm"),
-                LocalizationManager.Get("ServerDetail_UpdateLoader_StopConfirm_Title"));
-            if (confirm != ContentDialogResult.Primary)
-                return;
-
-            if (!await _viewModel.StopServerIfRunningAsync())
-                return;
-        }
-
-        var oldVersionDisplay = _currentLoaderVersion
-            ?? LocalizationManager.Get("ServerDetail_UpdateLoader_CurrentEmpty");
-
-        var updated = false;
-        string? resultMessage = null;
-
-        _updateInProgress = true;
-        _updateCts?.Dispose();
-        _updateCts = new CancellationTokenSource();
-
-        _updateResultCts?.Cancel();
-        UpdateLogProgress.Opacity = 1;
-        UpdateLogProgress.Visibility = Visibility.Visible;
-        UpdateResultText.Visibility = Visibility.Collapsed;
-
-        UpdateServerButton.IsEnabled = false;
-        UpdateProgress.ShowIndeterminate();
-        UpdateLogProgress.Visibility = Visibility.Visible;
-        UpdateButtonText.Text = LocalizationManager.Get("ServerDetail_UpdateLoader_Updating");
-
-        try
-        {
-            var installer = Ioc.Default.GetService<IServerInstaller>()!;
-            var progress = new DispatcherProgress<string>(msg => AppLogLine(msg), Dispatcher);
-
-            AppLogLine(LocalizationManager.Get("ServerDetail_UpdateLoader_Started"));
-
-            // 2. Резервная копия (по желанию)
-            if (SettingUpdateBackup.IsChecked == true)
-            {
-                AppLogLine(LocalizationManager.Get("ServerDetail_UpdateLoader_BackupCreating"));
-                var backupPath = ServerBackup.CreateBackupFolder(_server.Path, _server.Name);
-                AppLogLine(string.Format(
-                    LocalizationManager.Get("ServerDetail_UpdateLoader_BackupCreated"), backupPath));
-            }
-
-            // 3. Удаляем файлы, которые установщик пересоздаст сам
-            var removed = ServerBackup.RemoveLoaderFiles(_server.Path, _server.ModLoader.Type);
-            foreach (var item in removed)
-                AppLogLine($"{LocalizationManager.Get("ServerDetail_UpdateLoader_LogRemoved")} {item}");
-
-            // 4. Устанавливаем новый загрузчик
-            var result = await installer.InstallServer(
-                _server.ModLoader.Type,
-                _server.McVersion,
-                newVersion,
-                _server.Path,
-                _server.Port,
-                _server.Settings.RamMin,
-                _server.Settings.RamMax,
-                progress,
-                _updateCts.Token);
-
-            if (result.Success)
-            {
-                // 5. Сохраняем новую версию загрузчика
-                _server.ModLoader.LoaderVersion = newVersion;
-                if (result.BuildNumber.HasValue)
-                    _server.ServerBuild = result.BuildNumber.Value;
-                _server.Status = ServerStatus.Stopped;
-                Ioc.Default.GetService<IServerManager>()!.UpdateServer(_server);
-
-                _currentLoaderVersion = newVersion;
-                UpdateCurrentVersionText.Text = newVersion;
-                ApplyVersionFilter();
-
-                var successMsg = string.Format(
-                    LocalizationManager.Get("ServerDetail_UpdateLoader_Success"),
-                    oldVersionDisplay, newVersion);
-                updated = true;
-                resultMessage = successMsg;
-                // Успех показываем в прогрессбаре, отдельную строку статуса очищаем
-                SetUpdateStatus(string.Empty, null);
-            }
-            else
-            {
-                var errorMsg = string.Format(
-                    LocalizationManager.Get("ServerDetail_UpdateLoader_Error"),
-                    result.Error ?? result.Status.ToString());
-                AppLogLine(errorMsg);
-                SetUpdateStatus(errorMsg, ErrorBrush);
-            }
-
-            UpdateUpdateAvailability();
-        }
-        catch (OperationCanceledException)
-        {
-            AppLogLine(LocalizationManager.Get("ServerDetail_UpdateLoader_Cancelled"));
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"UpdateServerButton_Click error: {ex.Message}", ex, "ServerDetailPage");
-            var errorMsg = string.Format(
-                LocalizationManager.Get("ServerDetail_UpdateLoader_Error"), ex.Message);
-            AppLogLine(errorMsg);
-            SetUpdateStatus(errorMsg, ErrorBrush);
-        }
-        finally
-        {
-            _updateInProgress = false;
-            _updateCts?.Dispose();
-            _updateCts = null;
-            UpdateProgress.HideIndeterminate();
-            UpdateButtonText.Text = LocalizationManager.Get("ServerDetail_UpdateLoader_Update");
-            UpdateServerButton.IsEnabled = UpdateLoaderVersionBox.IsEnabled
-                && UpdateLoaderVersionBox.SelectedIndex >= 0;
-        }
-
-        _ = FinishUpdateAsync(updated, resultMessage);
-    }
-
-    /// <summary>
-    /// Добавляет строку в статус карточки обновления (вместо отдельного окна лога).
-    /// </summary>
-    private void AppLogLine(string line)
-    {
-        SetUpdateStatus($"{DateTime.Now:HH:mm:ss} {line}", null);
-    }
-
-    /// <summary>
-    /// Обработка изменения чекбокса «показывать уведомление об обновлении».
-    /// </summary>
-    private void SettingUpdateNotifications_Click(object sender, RoutedEventArgs e)
-    {
-        var enable = SettingUpdateNotifications.IsChecked ?? false;
-        _viewModel.SaveUpdateNotificationSetting(enable);
-        UpdateUpdateAvailability();
-    }
-
-    /// <summary>
-    /// Показывает сообщение статуса в карточке обновления загрузчика.
-    /// </summary>
-    private void SetUpdateStatus(string message, Brush? brush)
-    {
-        UpdateStatusText.Text = message;
-        UpdateStatusText.Foreground = brush ?? DefaultBrush;
-        UpdateStatusText.Visibility = string.IsNullOrEmpty(message)
-            ? Visibility.Collapsed
-            : Visibility.Visible;
-    }
-
-    /// <summary>
-    /// Плавно прячет прогрессбар после завершения обновления. При успехе показывает
-    /// текст результата в прогрессбаре, держит его чуть дольше и плавно скрывает.
-    /// </summary>
-    private async Task FinishUpdateAsync(bool success, string? resultMessage)
-    {
-        _updateResultCts?.Cancel();
-        _updateResultCts?.Dispose();
-        _updateResultCts = new CancellationTokenSource();
-        var token = _updateResultCts.Token;
-
-        // Прогрессбар плавно исчезает при завершении
-        if (UpdateLogProgress.Visibility == Visibility.Visible)
-        {
-            await FadeAsync(UpdateLogProgress, 1, 0, 300);
-            if (token.IsCancellationRequested)
-                return;
-            UpdateLogProgress.Visibility = Visibility.Collapsed;
-        }
-
-        if (!success || string.IsNullOrEmpty(resultMessage))
-            return;
-
-        // Текст успеха появляется в прогрессбаре
-        UpdateResultText.Text = resultMessage;
-        UpdateResultText.Foreground = SuccessBrush;
-        UpdateResultText.Visibility = Visibility.Visible;
-        UpdateResultText.Opacity = 0;
-        await FadeAsync(UpdateResultText, 0, 1, 250);
-        if (token.IsCancellationRequested)
-            return;
-
-        // Держим текст чуть дольше, затем плавно скрываем
-        try
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2), token);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        await FadeAsync(UpdateResultText, 1, 0, 450);
-        UpdateResultText.Visibility = Visibility.Collapsed;
-    }
-
-    /// <summary>
-    /// Плавно изменяет прозрачность элемента.
-    /// </summary>
-    private static Task FadeAsync(FrameworkElement element, double from, double to, int milliseconds)
-    {
-        var tcs = new TaskCompletionSource();
-        var animation = new DoubleAnimation
-        {
-            From = from,
-            To = to,
-            Duration = TimeSpan.FromMilliseconds(milliseconds),
-            EasingFunction = new QuadraticEase
-            {
-                EasingMode = to > from ? EasingMode.EaseOut : EasingMode.EaseIn
-            }
-        };
-        animation.Completed += (_, _) => tcs.TrySetResult();
-        element.BeginAnimation(OpacityProperty, animation);
-        return tcs.Task;
-    }
-
     public void Dispose()
     {
         if (_disposed)
@@ -2014,6 +765,10 @@ public partial class ServerDetailPage : Page, IDisposable
 
         _errorResetCts?.Cancel();
         _errorResetCts?.Dispose();
+        _errorResetCts = null;
+
+        _modsSection?.Dispose();
+        _settingsSection?.Dispose();
 
         _disposed = true;
     }

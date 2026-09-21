@@ -17,17 +17,29 @@ public partial class ServerDetailViewModel : ObservableObject
     private readonly IServerManager _serverManager;
     private readonly IConfigService _configService;
     private readonly IPortForwardingService? _portForwardingService;
+    private readonly IModUpdateService? _modUpdateService;
 
     private bool _isBusy;
+
+    private readonly Dictionary<string, ModUpdateInfo> _pendingUpdates = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Кэш реальных названий и версий модов из Modrinth.
+    /// Ключ — нормализованное имя файла (без .disabled), чтобы после перезагрузок
+    /// не показывать имена файлов и не дёргать сеть при каждом действии.
+    /// </summary>
+    private readonly Dictionary<string, ModMetadata> _modTitlesCache = new(StringComparer.OrdinalIgnoreCase);
 
     public ServerDetailViewModel(
         IServerManager serverManager,
         IConfigService configService,
-        IPortForwardingService? portForwardingService = null)
+        IPortForwardingService? portForwardingService = null,
+        IModUpdateService? modUpdateService = null)
     {
         _serverManager = serverManager;
         _configService = configService;
         _portForwardingService = portForwardingService;
+        _modUpdateService = modUpdateService;
     }
 
     // ─── Свойства ───────────────────────────────────────────────────
@@ -130,6 +142,20 @@ public partial class ServerDetailViewModel : ObservableObject
     public string ModsCount => Mods.Count > 0 ? Mods.Count.ToString() : string.Empty;
 
     public string PluginsCount => Plugins.Count > 0 ? Plugins.Count.ToString() : string.Empty;
+
+    // ─── Mod Updates ──────────────────────────────────────────────────
+
+    [ObservableProperty]
+    private bool _isCheckingModUpdates;
+
+    [ObservableProperty]
+    private bool _isUpdatingMods;
+
+    [ObservableProperty]
+    private bool _hasModUpdates;
+
+    [ObservableProperty]
+    private string _modUpdateStatusText = string.Empty;
 
     // ─── Загрузка сервера ───────────────────────────────────────────
 
@@ -392,6 +418,7 @@ public partial class ServerDetailViewModel : ObservableObject
         try
         {
             var items = ScanItemFiles<ModItem>("mods");
+            ApplyCachedTitles(items);
             Mods = new(items);
             ModsVisible = Mods.Count > 0;
         }
@@ -433,6 +460,219 @@ public partial class ServerDetailViewModel : ObservableObject
 
     public async Task DeletePluginAsync(PluginItem plugin) =>
         await DeleteItemInternal(plugin, LoadPlugins, "ServerDetail_PluginDeleteError");
+
+    // ─── Mod Updates ──────────────────────────────────────────────────
+
+    public async Task CheckModUpdatesAsync()
+    {
+        if (_server == null || _isBusy || IsCheckingModUpdates || _modUpdateService == null) return;
+
+        if (IsRunning)
+        {
+            await UiHelper.ShowInfo(LocalizationManager.Get("ServerDetail_Mods_ServerMustBeStopped"));
+            return;
+        }
+
+        if (!ModrinthLoaderMap.SupportsModUpdates(_server.ModLoader.Type))
+        {
+            await UiHelper.ShowInfo(LocalizationManager.Get("ServerDetail_Mods_UpdateNotSupported"));
+            return;
+        }
+
+        IsCheckingModUpdates = true;
+        _pendingUpdates.Clear();
+        foreach (var mod in Mods)
+        {
+            mod.UpdateAvailable = false;
+            mod.LatestVersion = null;
+        }
+        ModUpdateStatusText = LocalizationManager.Get("ServerDetail_Mods_CheckingUpdates");
+
+        try
+        {
+            var paths = Mods.Select(m => m.FilePath).ToList();
+            var updates = await _modUpdateService.CheckForUpdatesAsync(
+                paths, _server.ModLoader.Type, _server.McVersion, ModUpdateChannel.Release);
+
+            foreach (var mod in Mods)
+            {
+                if (updates.TryGetValue(mod.FilePath, out var info))
+                {
+                    _pendingUpdates[mod.FilePath] = info;
+                    mod.UpdateAvailable = true;
+                    mod.LatestVersion = info.LatestVersion;
+                }
+            }
+
+            HasModUpdates = _pendingUpdates.Count > 0;
+            ModUpdateStatusText = _pendingUpdates.Count > 0
+                ? string.Format(LocalizationManager.Get("ServerDetail_Mods_UpdatesFound"), _pendingUpdates.Count)
+                : LocalizationManager.Get("ServerDetail_Mods_NoUpdatesFound");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("CheckModUpdates error", ex, "ServerDetailViewModel");
+            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_Mods_CheckUpdatesError")}: {ex.Message}");
+        }
+        finally
+        {
+            IsCheckingModUpdates = false;
+        }
+    }
+
+    public async Task ApplyAllModsUpdatesAsync()
+    {
+        if (_server == null || _pendingUpdates.Count == 0 || _modUpdateService == null) return;
+
+        if (IsRunning)
+        {
+            var stopped = await StopServerIfRunningAsync();
+            if (!stopped) return;
+        }
+
+        IsUpdatingMods = true;
+        try
+        {
+            var backupDir = ModBackup.CreateBackupDirectory(_server.Name);
+            var successCount = 0;
+            var total = _pendingUpdates.Count;
+            var processed = 0;
+
+            foreach (var (path, update) in _pendingUpdates)
+            {
+                processed++;
+                ModUpdateStatusText = string.Format(
+                    LocalizationManager.Get("ServerDetail_Mods_UpdatingProgress"),
+                    processed, total, update.DownloadFileName);
+
+                var result = await _modUpdateService.ApplyUpdateAsync(update, backupDir);
+
+                if (result.Success)
+                    successCount++;
+                else
+                    Logger.Warning($"Failed to update {Path.GetFileName(path)}: {result.Error}", "ServerDetailViewModel");
+            }
+
+            ModUpdateStatusText = string.Format(
+                LocalizationManager.Get("ServerDetail_Mods_UpdateComplete"), successCount);
+            _pendingUpdates.Clear();
+            HasModUpdates = false;
+            LoadMods();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("ApplyAllModsUpdates error", ex, "ServerDetailViewModel");
+            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_Mods_UpdateError")}: {ex.Message}");
+        }
+        finally
+        {
+            IsUpdatingMods = false;
+        }
+    }
+
+    public async Task<ModUpdateApplyResult?> ApplyModUpdateAsync(ModItem mod)
+    {
+        if (_server == null || !_pendingUpdates.TryGetValue(mod.FilePath, out var update) || _modUpdateService == null) return null;
+
+        IsUpdatingMods = true;
+        try
+        {
+            var backupDir = ModBackup.CreateBackupDirectory(_server.Name);
+            ModUpdateStatusText = LocalizationManager.Get("ServerDetail_Mods_Updating") + " " + update.DownloadFileName;
+
+            var result = await _modUpdateService.ApplyUpdateAsync(update, backupDir);
+
+            if (result.Success)
+            {
+                _pendingUpdates.Remove(mod.FilePath);
+                HasModUpdates = _pendingUpdates.Count > 0;
+                ModUpdateStatusText = LocalizationManager.Get("ServerDetail_Mods_UpdateCompleteSingle");
+                LoadMods();
+                RefreshModUpdateStatus();
+            }
+            else
+            {
+                await UiHelper.ShowWarning($"Ошибка: {result.Error}");
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("ApplyModUpdate error", ex, "ServerDetailViewModel");
+            await UiHelper.ShowError($"{LocalizationManager.Get("ServerDetail_Mods_UpdateError")}: {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            IsUpdatingMods = false;
+        }
+    }
+
+    private void RefreshModUpdateStatus()
+    {
+        foreach (var mod in Mods)
+        {
+            if (_pendingUpdates.TryGetValue(mod.FilePath, out var info))
+            {
+                mod.UpdateAvailable = true;
+                mod.LatestVersion = info.LatestVersion;
+            }
+        }
+    }
+
+    public async Task ResolveModTitlesAsync()
+    {
+        if (_server == null || _modUpdateService == null) return;
+
+        try
+        {
+            ApplyCachedTitles(Mods);
+
+            var uncachedPaths = Mods
+                .Where(m => !_modTitlesCache.ContainsKey(m.FileName))
+                .Select(m => m.FilePath)
+                .ToList();
+
+            if (uncachedPaths.Count == 0)
+                return;
+
+            var metadata = await _modUpdateService.ResolveModMetadataAsync(uncachedPaths);
+
+            foreach (var mod in Mods)
+            {
+                if (metadata.TryGetValue(mod.FilePath, out var info))
+                {
+                    if (!string.IsNullOrWhiteSpace(info.Title))
+                        mod.Name = info.Title;
+                    if (!string.IsNullOrWhiteSpace(info.Version))
+                        mod.Version = info.Version;
+
+                    _modTitlesCache[mod.FileName] = new ModMetadata
+                    {
+                        Title = string.IsNullOrWhiteSpace(info.Title) ? mod.Name : info.Title,
+                        Version = string.IsNullOrWhiteSpace(info.Version) ? mod.Version : info.Version
+                    };
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"ResolveModTitles error: {ex.Message}", "ServerDetailViewModel");
+        }
+    }
+
+    private void ApplyCachedTitles(IEnumerable<ModItem> mods)
+    {
+        foreach (var mod in mods)
+        {
+            if (_modTitlesCache.TryGetValue(mod.FileName, out var meta))
+            {
+                mod.Name = meta.Title;
+                mod.Version = meta.Version;
+            }
+        }
+    }
 
     // ─── Generic helpers ────────────────────────────────────────────
 

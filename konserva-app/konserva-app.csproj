@@ -14,10 +14,10 @@
     <AssemblyCopyright>Copyright (c) 2026 vanja-san</AssemblyCopyright>
     <AssemblyCompany>vanja-san</AssemblyCompany>
     <AssemblyProduct>Konserva</AssemblyProduct>
-    <AssemblyVersion>1.15.1.0</AssemblyVersion>
-    <FileVersion>1.15.1.0</FileVersion>
-    <InformationalVersion>1.15.1</InformationalVersion>
-    <Version>1.15.1</Version>
+    <AssemblyVersion>1.16.0.0</AssemblyVersion>
+    <FileVersion>1.16.0.0</FileVersion>
+    <InformationalVersion>1.16.0</InformationalVersion>
+    <Version>1.16.0</Version>
     <NeutralLanguage>ru-RU</NeutralLanguage>
     <Copyright>Copyright (c) 2026 vanja-san</Copyright>
 	  
@@ -40,7 +40,7 @@
     <PackageReference Include="SharpOpenNat" Version="4.0.19" />
     <PackageReference Include="WPF-UI" Version="4.3.0" />
     <PackageReference Include="WPF-UI.Tray" Version="4.3.0" />
-    <PackageReference Include="WPF-UI.Violeta" Version="4.3.0.13" />
+    <PackageReference Include="WPF-UI.Violeta" Version="4.3.0.14" />
   </ItemGroup>
 
   <ItemGroup>

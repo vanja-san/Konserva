@@ -10,12 +10,21 @@ public partial class ModItem : ObservableObject, IItemEntry
     /// <summary>
     /// Имя мода (без расширения)
     /// </summary>
-    public string Name { get; set; } = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVersion))]
+    private string _name = string.Empty;
 
     /// <summary>
     /// Версия мода
     /// </summary>
-    public string Version { get; set; } = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVersion))]
+    private string _version = string.Empty;
+
+    /// <summary>
+    /// Показывать ли версию рядом с названием (не пустая)
+    /// </summary>
+    public bool HasVersion => !string.IsNullOrWhiteSpace(Version);
 
     /// <summary>
     /// Имя файла (например "OptiFine.jar")
@@ -37,4 +46,44 @@ public partial class ModItem : ObservableObject, IItemEntry
     /// </summary>
     [ObservableProperty]
     private bool _enabled = true;
+
+    /// <summary>
+    /// Доступно ли обновление для этого мода
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateTooltip))]
+    private bool _updateAvailable;
+
+    /// <summary>
+    /// Идёт ли сейчас обновление этого мода
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotUpdating))]
+    private bool _isUpdating;
+
+    /// <summary>
+    /// НЕ идёт обновление и нет успешного результата (кнопка видна)
+    /// </summary>
+    public bool IsNotUpdating => !IsUpdating && !UpdateSucceeded;
+
+    /// <summary>
+    /// Успешно ли завершилось обновление (показать галочку)
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotUpdating))]
+    private bool _updateSucceeded;
+
+    /// <summary>
+    /// Номер доступной новой версии
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateTooltip))]
+    private string? _latestVersion;
+
+    /// <summary>
+    /// Тултип кнопки обновления: "Обновить до vX.X.X"
+    /// </summary>
+    public string? UpdateTooltip => LatestVersion != null
+        ? $"{Localization.LocalizationManager.Get("ServerDetail_Mods_Update")} v{LatestVersion}"
+        : null;
 }
