@@ -2,6 +2,7 @@
     x:Class="Konserva.Pages.CreateServerPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Konserva.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -98,14 +99,13 @@
                                         Grid.Column="0"
                                         ContextMenu="{x:Null}"
                                         IsEnabled="False" />
-                                    <ui:ProgressRing
+                                    <controls:SpinnerRing
                                         x:Name="LoaderProgressRing"
                                         Grid.Column="1"
                                         Width="20"
                                         Height="20"
                                         Margin="8,0,0,0"
                                         VerticalAlignment="Center"
-                                        IsIndeterminate="True"
                                         Visibility="Collapsed" />
                                 </Grid>
                             </StackPanel>
@@ -203,12 +203,11 @@
                     VerticalAlignment="Center"
                     Orientation="Horizontal"
                     Visibility="Collapsed">
-                    <ui:ProgressRing
+                    <controls:SpinnerRing
                         x:Name="ProgressRing"
                         Width="16"
                         Height="16"
-                        Margin="0,0,16,0"
-                        IsIndeterminate="True" />
+                        Margin="0,0,16,0" />
                     <ui:TextBlock
                         x:Name="ProgressText"
                         Cursor="Hand"

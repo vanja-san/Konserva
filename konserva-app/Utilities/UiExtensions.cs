@@ -1,3 +1,4 @@
+using Konserva.Controls;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -115,23 +116,18 @@ public static class UiExtensions
     #region ProgressRing helpers
 
     /// <summary>
-    /// Показывает индетерминантное кольцо <see cref="ProgressRing"/> и при необходимости
-    /// перезапускает его анимацию (двойной сброс IsIndeterminate надёжно будит
-    /// Storyboard в шаблоне WPF.UI).
+    /// Показывает спиннер <see cref="SpinnerRing"/>. Вращение стартует само при загрузке.
     /// </summary>
-    public static void ShowIndeterminate(this ProgressRing ring)
+    public static void ShowIndeterminate(this SpinnerRing ring)
     {
-        ring.IsIndeterminate = false;
-        ring.IsIndeterminate = true;
         ring.Visibility = System.Windows.Visibility.Visible;
     }
 
     /// <summary>
-    /// Скрывает кольцо и останавливает анимацию вращения.
+    /// Скрывает спиннер.
     /// </summary>
-    public static void HideIndeterminate(this ProgressRing ring)
+    public static void HideIndeterminate(this SpinnerRing ring)
     {
-        ring.IsIndeterminate = false;
         ring.Visibility = System.Windows.Visibility.Collapsed;
     }
 

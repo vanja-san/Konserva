@@ -19,12 +19,26 @@ public partial class ModItem : ObservableObject, IItemEntry
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasVersion))]
+    [NotifyPropertyChangedFor(nameof(HasVersionDisplay))]
+    [NotifyPropertyChangedFor(nameof(VersionDisplay))]
     private string _version = string.Empty;
 
     /// <summary>
     /// Показывать ли версию рядом с названием (не пустая)
     /// </summary>
     public bool HasVersion => !string.IsNullOrWhiteSpace(Version);
+
+    /// <summary>
+    /// Показывать ли строку версии (текущая или "текущая -> новая")
+    /// </summary>
+    public bool HasVersionDisplay => HasVersion || UpdateAvailable;
+
+    /// <summary>
+    /// Версия для отображения: текущая, либо "текущая -> новая" при доступном обновлении
+    /// </summary>
+    public string VersionDisplay => UpdateAvailable && LatestVersion != null
+        ? (HasVersion ? $"{Version} -> {LatestVersion}" : LatestVersion)
+        : Version;
 
     /// <summary>
     /// Имя файла (например "OptiFine.jar")
@@ -52,6 +66,8 @@ public partial class ModItem : ObservableObject, IItemEntry
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateTooltip))]
+    [NotifyPropertyChangedFor(nameof(HasVersionDisplay))]
+    [NotifyPropertyChangedFor(nameof(VersionDisplay))]
     private bool _updateAvailable;
 
     /// <summary>
@@ -78,12 +94,14 @@ public partial class ModItem : ObservableObject, IItemEntry
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateTooltip))]
+    [NotifyPropertyChangedFor(nameof(HasVersionDisplay))]
+    [NotifyPropertyChangedFor(nameof(VersionDisplay))]
     private string? _latestVersion;
 
     /// <summary>
     /// Тултип кнопки обновления: "Обновить до vX.X.X"
     /// </summary>
     public string? UpdateTooltip => LatestVersion != null
-        ? $"{Localization.LocalizationManager.Get("ServerDetail_Mods_Update")} v{LatestVersion}"
+        ? $"{Localization.LocalizationManager.Get("ServerDetail_Mods_UpdateTo")} v{LatestVersion}"
         : null;
 }

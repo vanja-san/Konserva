@@ -187,15 +187,14 @@
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         Text="{utils:AppVersion Prefix=v}"/>
-                    <!--  ProgressRing — виден только во время проверки обновлений  -->
-                    <ui:ProgressRing
+                    <!--  SpinnerRing — виден только во время проверки обновлений  -->
+                    <controls:SpinnerRing
                         x:Name="UpdateProgressRing"
                         Width="16"
                         Height="16"
                         Margin="6,0,0,0"
                         VerticalAlignment="Center"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        IsIndeterminate="True"
                         Visibility="Collapsed"/>
                     <!--  Checkmark — виден, когда версия актуальна  -->
                     <ui:SymbolIcon

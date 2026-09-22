@@ -154,6 +154,8 @@ public partial class ServerDetailViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasModUpdates;
 
+    public int ModUpdatesCount => _pendingUpdates.Count;
+
     [ObservableProperty]
     private string _modUpdateStatusText = string.Empty;
 
@@ -419,6 +421,7 @@ public partial class ServerDetailViewModel : ObservableObject
         {
             var items = ScanItemFiles<ModItem>("mods");
             ApplyCachedTitles(items);
+            RefreshModUpdateStatus(items);
             Mods = new(items);
             ModsVisible = Mods.Count > 0;
         }
@@ -507,7 +510,7 @@ public partial class ServerDetailViewModel : ObservableObject
             HasModUpdates = _pendingUpdates.Count > 0;
             ModUpdateStatusText = _pendingUpdates.Count > 0
                 ? string.Format(LocalizationManager.Get("ServerDetail_Mods_UpdatesFound"), _pendingUpdates.Count)
-                : LocalizationManager.Get("ServerDetail_Mods_NoUpdatesFound");
+                : string.Empty;
         }
         catch (Exception ex)
         {
@@ -586,9 +589,8 @@ public partial class ServerDetailViewModel : ObservableObject
             {
                 _pendingUpdates.Remove(mod.FilePath);
                 HasModUpdates = _pendingUpdates.Count > 0;
-                ModUpdateStatusText = LocalizationManager.Get("ServerDetail_Mods_UpdateCompleteSingle");
+                ModUpdateStatusText = string.Empty;
                 LoadMods();
-                RefreshModUpdateStatus();
             }
             else
             {
@@ -609,9 +611,9 @@ public partial class ServerDetailViewModel : ObservableObject
         }
     }
 
-    private void RefreshModUpdateStatus()
+    private void RefreshModUpdateStatus(IEnumerable<ModItem> items)
     {
-        foreach (var mod in Mods)
+        foreach (var mod in items)
         {
             if (_pendingUpdates.TryGetValue(mod.FilePath, out var info))
             {

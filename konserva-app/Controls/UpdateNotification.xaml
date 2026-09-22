@@ -8,22 +8,12 @@
 
     <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
         <!--  Версия с иконкой  -->
-        <StackPanel
+        <ui:TextBlock
             Margin="0,0,4,0"
+            x:Name="VersionText"
             VerticalAlignment="Center"
-            Orientation="Horizontal">
-            <ui:SymbolIcon
-                Margin="0,0,4,0"
-                VerticalAlignment="Center"
-                FontSize="12"
-                Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
-                Symbol="ArrowUpload24" />
-            <ui:TextBlock
-                x:Name="VersionText"
-                VerticalAlignment="Center"
-                FontSize="12"
-                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
-        </StackPanel>
+            FontSize="12"
+            Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}" />
 
         <!--  Кнопка обновления / статус  -->
         <ui:Button

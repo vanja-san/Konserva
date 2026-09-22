@@ -4,8 +4,6 @@ using Konserva.Utilities;
 using Konserva.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
 using Wpf.Ui.Controls;
 using WpfButton = Wpf.Ui.Controls.Button;
 
@@ -18,8 +16,6 @@ public partial class ServerModsSection : System.Windows.Controls.UserControl, ID
 {
     private ServerDetailViewModel _viewModel = null!;
     private Server? _server;
-    private CancellationTokenSource? _modUpdateStatusCts;
-    private bool _modUpdateStatusBarOpen;
     private bool _disposed;
 
     public ServerModsSection()
@@ -54,7 +50,21 @@ public partial class ServerModsSection : System.Windows.Controls.UserControl, ID
 
     private async void CheckModUpdates_Click(object sender, RoutedEventArgs e)
     {
+        CheckModUpdatesBtn.Visibility = Visibility.Collapsed;
+        CheckModUpdatesProgress.Visibility = Visibility.Visible;
+
         await _viewModel.CheckModUpdatesAsync();
+
+        CheckModUpdatesProgress.Visibility = Visibility.Collapsed;
+
+        if (!_viewModel.HasModUpdates)
+        {
+            CheckModUpdatesCheck.Visibility = Visibility.Visible;
+            await Task.Delay(1200);
+            CheckModUpdatesCheck.Visibility = Visibility.Collapsed;
+        }
+
+        CheckModUpdatesBtn.Visibility = Visibility.Visible;
         UpdateModUpdateUI();
     }
 
@@ -62,13 +72,11 @@ public partial class ServerModsSection : System.Windows.Controls.UserControl, ID
     {
         UpdateAllModsBtn.Visibility = Visibility.Collapsed;
         UpdateAllModsProgress.Visibility = Visibility.Visible;
-        UpdateAllModsProgress.IsIndeterminate = true;
 
         await _viewModel.ApplyAllModsUpdatesAsync();
 
         await ReloadModsList();
 
-        UpdateAllModsProgress.IsIndeterminate = false;
         UpdateAllModsProgress.Visibility = Visibility.Collapsed;
         UpdateAllModsCheck.Visibility = Visibility.Visible;
 
@@ -102,7 +110,7 @@ public partial class ServerModsSection : System.Windows.Controls.UserControl, ID
             {
                 updatedMod.UpdateSucceeded = true;
                 updatedMod.UpdateAvailable = false;
-                await Task.Delay(1200);
+                await Task.Delay(3000);
                 updatedMod.UpdateSucceeded = false;
             }
 
@@ -130,124 +138,11 @@ public partial class ServerModsSection : System.Windows.Controls.UserControl, ID
 
     private void UpdateModUpdateUI()
     {
-        if (_viewModel.IsCheckingModUpdates)
-        {
-            CancelModUpdateStatusAutoClose();
-            SetModUpdateStatusOpen(true);
-            ModUpdateStatusBar.Title = _viewModel.ModUpdateStatusText;
-            ModUpdateStatusBar.Severity = InfoBarSeverity.Informational;
-            ModUpdateStatusBar.IsClosable = false;
-            CheckModUpdatesBtn.IsEnabled = false;
-        }
-        else if (_viewModel.IsUpdatingMods)
-        {
-            CancelModUpdateStatusAutoClose();
-            SetModUpdateStatusOpen(true);
-            ModUpdateStatusBar.Title = _viewModel.ModUpdateStatusText;
-            ModUpdateStatusBar.Severity = InfoBarSeverity.Informational;
-            ModUpdateStatusBar.IsClosable = false;
-            CheckModUpdatesBtn.IsEnabled = false;
-        }
-        else if (!string.IsNullOrEmpty(_viewModel.ModUpdateStatusText))
-        {
-            SetModUpdateStatusOpen(true);
-            ModUpdateStatusBar.Title = _viewModel.ModUpdateStatusText;
-            ModUpdateStatusBar.Severity = _viewModel.HasModUpdates ? InfoBarSeverity.Warning : InfoBarSeverity.Success;
-            ModUpdateStatusBar.IsClosable = true;
-            CheckModUpdatesBtn.IsEnabled = true;
-            AutoCloseModUpdateStatus();
-        }
-        else
-        {
-            CancelModUpdateStatusAutoClose();
-            SetModUpdateStatusOpen(false);
-            CheckModUpdatesBtn.IsEnabled = true;
-        }
-
-        UpdateAllModsContainer.Visibility = _viewModel.HasModUpdates ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    /// <summary>
-    /// Плавно открывает/закрывает InfoBar статуса: вертикальное расширение из центра
-    /// при появлении и сжатие к центру при скрытии.
-    /// </summary>
-    private void SetModUpdateStatusOpen(bool open)
-    {
-        if (open == _modUpdateStatusBarOpen && (open == ModUpdateStatusBar.IsOpen || !open))
-            return;
-
-        CancelModUpdateStatusAnimation();
-
-        if (open)
-        {
-            _modUpdateStatusBarOpen = true;
-            ModUpdateStatusBar.IsOpen = true;
-            ModUpdateStatusBarScale.BeginAnimation(ScaleTransform.ScaleYProperty,
-                CreateStatusBarAnimation(0.0, 1.0, 220, EasingMode.EaseOut));
-            ModUpdateStatusBar.BeginAnimation(OpacityProperty,
-                CreateStatusBarAnimation(0.0, 1.0, 220, EasingMode.EaseOut));
-        }
-        else
-        {
-            _modUpdateStatusBarOpen = false;
-            var hide = CreateStatusBarAnimation(1.0, 0.0, 160, EasingMode.EaseIn);
-            hide.Completed += (_, _) =>
-            {
-                CancelModUpdateStatusAnimation();
-                ModUpdateStatusBar.IsOpen = false;
-            };
-            ModUpdateStatusBarScale.BeginAnimation(ScaleTransform.ScaleYProperty, hide);
-            ModUpdateStatusBar.BeginAnimation(OpacityProperty,
-                CreateStatusBarAnimation(1.0, 0.0, 160, EasingMode.EaseIn));
-        }
-    }
-
-    private static DoubleAnimation CreateStatusBarAnimation(double from, double to, int milliseconds, EasingMode easingMode) =>
-        new(from, to, new Duration(TimeSpan.FromMilliseconds(milliseconds)))
-        {
-            EasingFunction = new CubicEase { EasingMode = easingMode },
-        };
-
-    private void CancelModUpdateStatusAnimation()
-    {
-        ModUpdateStatusBarScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
-        ModUpdateStatusBar.BeginAnimation(OpacityProperty, null);
-        ModUpdateStatusBarScale.ScaleY = 1.0;
-        ModUpdateStatusBar.Opacity = 1.0;
-    }
-
-    /// <summary>
-    /// Автоматически скрывает статус обновления модов через 3 секунды.
-    /// </summary>
-    private void AutoCloseModUpdateStatus()
-    {
-        _modUpdateStatusCts?.Cancel();
-        _modUpdateStatusCts?.Dispose();
-        _modUpdateStatusCts = new CancellationTokenSource();
-        var token = _modUpdateStatusCts.Token;
-
-        Task.Run(async () =>
-        {
-            try
-            {
-                await Task.Delay(TimeSpan.FromSeconds(3), token);
-                await this.InvokeAsync(() =>
-                {
-                    if (!token.IsCancellationRequested)
-                        SetModUpdateStatusOpen(false);
-                });
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }, token).SafeFireAndForget(errorMessage: "Mod update status auto-close failed");
-    }
-
-    private void CancelModUpdateStatusAutoClose()
-    {
-        _modUpdateStatusCts?.Cancel();
-        _modUpdateStatusCts?.Dispose();
-        _modUpdateStatusCts = null;
+        var hasUpdates = _viewModel.HasModUpdates;
+        ModsUpdatesBadge.Value = _viewModel.ModUpdatesCount.ToString();
+        ModsUpdatesBadge.Visibility = hasUpdates ? Visibility.Visible : Visibility.Collapsed;
+        CheckModUpdatesBtn.IsEnabled = !_viewModel.IsCheckingModUpdates && !_viewModel.IsUpdatingMods;
+        UpdateAllModsContainer.Visibility = hasUpdates ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OpenModsFolder_Click(object sender, RoutedEventArgs e) =>
@@ -277,7 +172,5 @@ public partial class ServerModsSection : System.Windows.Controls.UserControl, ID
     {
         if (_disposed) return;
         _disposed = true;
-        CancelModUpdateStatusAutoClose();
-        CancelModUpdateStatusAnimation();
     }
 }

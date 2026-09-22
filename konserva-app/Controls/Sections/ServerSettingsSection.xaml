@@ -2,6 +2,7 @@
     x:Class="Konserva.Controls.Sections.ServerSettingsSection"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Konserva.Controls"
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta">
@@ -389,12 +390,11 @@
                             Margin="0,0,8,0"
                             Click="CheckUpnpButton_Click">
                             <StackPanel Orientation="Horizontal">
-                                <ui:ProgressRing
+                                <controls:SpinnerRing
                                     x:Name="CheckUpnpProgress"
                                     Width="16"
                                     Height="16"
                                     Margin="0,0,6,0"
-                                    IsIndeterminate="True"
                                     Visibility="Collapsed" />
                                 <TextBlock
                                     x:Name="CheckUpnpText"
@@ -408,12 +408,11 @@
                             Appearance="Primary"
                             Click="CheckPortButton_Click">
                             <StackPanel Orientation="Horizontal">
-                                <ui:ProgressRing
+                                <controls:SpinnerRing
                                     x:Name="CheckPortProgress"
                                     Width="16"
                                     Height="16"
                                     Margin="0,0,6,0"
-                                    IsIndeterminate="True"
                                     Visibility="Collapsed" />
                                 <TextBlock
                                     x:Name="CheckPortText"
@@ -577,12 +576,11 @@
                             Appearance="Primary"
                             Click="UpdateServerButton_Click">
                             <StackPanel Orientation="Horizontal">
-                                <ui:ProgressRing
+                                <controls:SpinnerRing
                                     x:Name="UpdateProgress"
                                     Width="16"
                                     Height="16"
                                     Margin="0,0,6,0"
-                                    IsIndeterminate="True"
                                     Visibility="Collapsed" />
                                 <ui:TextBlock
                                     x:Name="UpdateButtonText"

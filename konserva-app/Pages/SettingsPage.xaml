@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:converters="clr-namespace:Konserva.Converters"
+    xmlns:controls="clr-namespace:Konserva.Controls"
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:utils="clr-namespace:Konserva.Utilities"
@@ -606,13 +607,12 @@
                                             Symbol="CheckmarkCircle24"
                                             Visibility="Collapsed" />
                                         <ui:TextBlock x:Name="CheckUpdatesButtonText" Text="{loc:Loc Settings_CheckForUpdates}" />
-                                        <ui:ProgressRing
+                                        <controls:SpinnerRing
                                             x:Name="UpdateWaveDots"
                                             Width="16"
                                             Height="16"
                                             Margin="4,0,0,0"
                                             VerticalAlignment="Center"
-                                            IsIndeterminate="True"
                                             Visibility="Collapsed" />
                                     </StackPanel>
                                 </ui:Button>
