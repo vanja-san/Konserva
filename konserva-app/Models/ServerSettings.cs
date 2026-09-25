@@ -127,6 +127,11 @@ public class ServerSettings : ObservableObject
     public bool EnableUpdateNotification { get; set; } = true;
 
     /// <summary>
+    /// Создавать резервную копию модов перед обновлением.
+    /// </summary>
+    public bool ModBackupEnabled { get; set; } = true;
+
+    /// <summary>
     /// Копирование настроек
     /// </summary>
     public ServerSettings Clone() => new()
@@ -140,7 +145,8 @@ public class ServerSettings : ObservableObject
 AutoRestart = AutoRestart,
         AutoRestartDelay = AutoRestartDelay,
         EnableUpnp = EnableUpnp,
-        EnableUpdateNotification = EnableUpdateNotification
+        EnableUpdateNotification = EnableUpdateNotification,
+        ModBackupEnabled = ModBackupEnabled
     };
 
     /// <summary>

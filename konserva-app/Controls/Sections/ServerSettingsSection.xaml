@@ -451,6 +451,54 @@
                 </Grid>
             </ui:CardExpander>
 
+            <!--  Обновление модов  -->
+            <ui:CardExpander
+                Margin="0,0,0,8"
+                Padding="12"
+                ContentPadding="8"
+                IsExpanded="True">
+                <ui:CardExpander.Icon>
+                    <ui:SymbolIcon
+                        Filled="True"
+                        FontSize="20"
+                        Symbol="Cube20" />
+                </ui:CardExpander.Icon>
+                <ui:CardExpander.Header>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <ui:TextBlock VerticalAlignment="Center" Text="{loc:Loc ServerDetail_Settings_Mods}" />
+                        <ui:TextBlock
+                            x:Name="ModsSaveStatus"
+                            Grid.Column="1"
+                            Margin="0,0,8,0"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            FontSize="12"
+                            Opacity="0"
+                            Visibility="Collapsed" />
+                    </Grid>
+                </ui:CardExpander.Header>
+                <Grid Margin="8,0" RowDefinitions="Auto">
+                    <Grid
+                        Grid.Row="0"
+                        Margin="0,8"
+                        ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0">
+                            <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_Settings_ModBackup}" />
+                            <ui:TextBlock
+                                FontSize="11"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc ServerDetail_Settings_ModBackup_Desc}" />
+                        </StackPanel>
+                        <ui:ToggleSwitch
+                            x:Name="SettingModBackup"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Click="Setting_Click" />
+                    </Grid>
+                </Grid>
+            </ui:CardExpander>
+
             <!--  Обновление сервера (загрузчик)  -->
             <ui:CardExpander
                 x:Name="UpdateServerCard"

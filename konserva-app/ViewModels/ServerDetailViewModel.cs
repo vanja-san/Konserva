@@ -140,6 +140,9 @@ public partial class ServerDetailViewModel : ObservableObject
     private bool _settingsEnableUpdateNotification = true;
 
     [ObservableProperty]
+    private bool _settingsModBackupEnabled = true;
+
+    [ObservableProperty]
     private string _settingsJvmArgs = string.Empty;
 
     [ObservableProperty]
@@ -220,6 +223,7 @@ public partial class ServerDetailViewModel : ObservableObject
         SettingsJavaAutoSelect = server.Settings.JavaAutoSelect;
         SettingsEnableUpnp = server.Settings.EnableUpnp;
         SettingsEnableUpdateNotification = server.Settings.EnableUpdateNotification;
+        SettingsModBackupEnabled = server.Settings.ModBackupEnabled;
         SettingsJvmArgs = server.Settings.JvmArgsText;
 
         UpdateServerAddressDisplay();
@@ -274,6 +278,10 @@ public partial class ServerDetailViewModel : ObservableObject
         // Задержка авто-рестарта
         if (int.TryParse(request.AutoRestartDelayStr, out var delay) && delay >= 0 && delay != _server.Settings.AutoRestartDelay)
             _server.Settings.AutoRestartDelay = delay;
+
+        // Бэкап модов при обновлении
+        if (request.ModBackupEnabled.HasValue && request.ModBackupEnabled.Value != _server.Settings.ModBackupEnabled)
+            _server.Settings.ModBackupEnabled = request.ModBackupEnabled.Value;
 
         // Java
         if (request.JavaAutoSelect != _server.Settings.JavaAutoSelect)
@@ -576,7 +584,9 @@ public partial class ServerDetailViewModel : ObservableObject
         IsUpdatingMods = true;
         try
         {
-            var backupDir = ModBackup.CreateBackupDirectory(_server.Name);
+            var backupDir = _server.Settings.ModBackupEnabled
+                ? ModBackup.CreateBackupDirectory(_server.Name)
+                : string.Empty;
             var successCount = 0;
             var total = _pendingUpdates.Count;
             var processed = 0;
@@ -625,7 +635,9 @@ public partial class ServerDetailViewModel : ObservableObject
         IsUpdatingMods = true;
         try
         {
-            var backupDir = ModBackup.CreateBackupDirectory(_server.Name);
+            var backupDir = _server.Settings.ModBackupEnabled
+                ? ModBackup.CreateBackupDirectory(_server.Name)
+                : string.Empty;
             ModUpdateStatusText = LocalizationManager.Get("ServerDetail_Mods_Updating") + " " + update.DownloadFileName;
 
             var result = await _modUpdateService.ApplyUpdateAsync(update, backupDir);

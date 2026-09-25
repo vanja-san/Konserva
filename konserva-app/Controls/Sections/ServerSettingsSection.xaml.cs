@@ -81,6 +81,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         SettingEnableUpnp.IsChecked = _viewModel.SettingsEnableUpnp;
         UpdateServerAddressDisplay();
 
+        SettingModBackup.IsChecked = _viewModel.SettingsModBackupEnabled;
         SettingJvmArgs.Text = _viewModel.SettingsJvmArgs;
 
         UpdateSettingsAvailability();
@@ -230,6 +231,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
                 nameof(SettingRamMin) or nameof(SettingRamMax) => RamSaveStatus,
                 nameof(SettingAutoRestart) or nameof(SettingAutoRestartDelay) => AutoRestartSaveStatus,
                 nameof(SettingJavaAutoSelect) => JavaSaveStatus,
+                nameof(SettingModBackup) => ModsSaveStatus,
                 _ => null
             };
         }
@@ -264,6 +266,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
             var ramMaxStr = SettingRamMax.Text;
             var autoRestart = SettingAutoRestart.IsChecked;
             var autoRestartDelayStr = SettingAutoRestartDelay.Text;
+            var modBackup = SettingModBackup.IsChecked;
             var javaAutoSelect = SettingJavaAutoSelect.IsChecked ?? true;
             var javaId = SettingJavaComboBox.SelectedItem is ComboBoxItem selectedItem
                 ? selectedItem.Tag as string
@@ -297,6 +300,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
                 RamMaxStr: ramMaxStr,
                 AutoRestart: autoRestart,
                 AutoRestartDelayStr: autoRestartDelayStr,
+                ModBackupEnabled: modBackup,
                 JavaAutoSelect: javaAutoSelect,
                 JavaId: javaId,
                 JvmArgs: jvmArgs

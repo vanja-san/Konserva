@@ -6,6 +6,7 @@ public record ServerSettingsRequest(
     string? RamMaxStr,
     bool? AutoRestart,
     string? AutoRestartDelayStr,
+    bool? ModBackupEnabled,
     bool JavaAutoSelect,
     string? JavaId,
     string JvmArgs
