@@ -169,6 +169,15 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
             : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Показывает или скрывает область ввода команды
+    /// (поле ввода + кнопку отправки) в зависимости от статуса сервера.
+    /// </summary>
+    public void UpdateCommandInputVisibility(bool isRunning)
+    {
+        CommandInputRow.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     private sealed class LogColorizer : DocumentColorizingTransformer
     {
         private static readonly Brush TimestampBrush =

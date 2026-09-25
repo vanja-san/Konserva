@@ -306,6 +306,9 @@ public partial class ServerDetailPage : Page, IDisposable
         // Обновляем доступность настроек (баннер и контролы раздела настроек)
         _settingsSection?.UpdateSettingsAvailability();
 
+        // Область ввода команды в консоли видна только у запущенного сервера
+        _consoleSection?.UpdateCommandInputVisibility(status == ServerStatus.Running);
+
         // Определяем настройки для каждого статуса
         SymbolRegular icon;
         string toolTip, text;

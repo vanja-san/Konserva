@@ -37,11 +37,13 @@
             Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
             IsHitTestVisible="False"
             Text="{loc:Loc ServerDetail_Console_Empty}" />
-        <!--  Ввод команды  -->
+        <!--  Ввод команды (виден только когда сервер запущен)  -->
         <Grid
+            x:Name="CommandInputRow"
             Grid.Row="1"
             Margin="0,8,0,0"
-            ColumnDefinitions="*,Auto">
+            ColumnDefinitions="*,Auto"
+            Visibility="Collapsed">
             <Grid Grid.Column="0">
                 <ui:TextBox
                     x:Name="CommandBox"
