@@ -390,7 +390,6 @@
                             Visibility="Collapsed" />
                         <ui:Button
                             x:Name="CheckUpnpButton"
-                            MinWidth="120"
                             Margin="0,0,8,0"
                             Click="CheckUpnpButton_Click">
                             <StackPanel Orientation="Horizontal">
@@ -408,7 +407,6 @@
                         </ui:Button>
                         <ui:Button
                             x:Name="CheckPortButton"
-                            MinWidth="120"
                             Appearance="Primary"
                             Click="CheckPortButton_Click">
                             <StackPanel Orientation="Horizontal">
@@ -441,7 +439,6 @@
                         <ui:Button
                             x:Name="CopyAddressButton"
                             Grid.Column="1"
-                            MinWidth="100"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Click="CopyAddressButton_Click"
@@ -505,12 +502,10 @@
                         Click="DeleteModBackupsButton_Click">
                         <StackPanel Orientation="Horizontal">
                             <ui:SymbolIcon
-                                FontSize="16"
                                 Margin="0,0,6,0"
+                                FontSize="16"
                                 Symbol="Delete20" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                Text="{loc:Loc ServerDetail_Settings_ModBackup_Clear}" />
+                            <TextBlock VerticalAlignment="Center" Text="{loc:Loc ServerDetail_Settings_ModBackup_Clear}" />
                         </StackPanel>
                     </ui:Button>
                 </Grid>
