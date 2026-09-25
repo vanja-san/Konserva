@@ -50,15 +50,22 @@
 | | |
 |---|---|
 | ⚡ **One-click setup** | Pick a version, choose a mod loader, hit create — server ready in minutes |
-| 🎮 **All loaders** | Vanilla · Fabric · Forge · NeoForge · Paper · Quilt · Purpur |
-| 🖥️ **Live console** | Real-time output, send commands, restart with one click |
-| 🧩 **Mods & plugins** | Browse installed mods, view details, delete unwanted ones |
+| 🎮 **All loaders** | Vanilla · Fabric · Forge · NeoForge · Quilt · Paper |
+| 📥 **Import** | Add any existing server by pointing at its folder |
+| 🖥️ **Live console** | Real-time output, send commands, stop with one click |
+| 🧩 **Mods & plugins** | Browse, enable/disable, delete · instant local list from a disk cache |
+| 🔄 **Mod updates** | Check for updates on Modrinth and update everything in one click |
+| ⚠️ **Compatibility check** | Detects missing or conflicting mod dependencies before launch |
+| 🔄 **Loader updates** | Update Fabric / Forge / NeoForge / Quilt — optionally with a full backup |
 | ☕ **Java manager** | Auto-detects installed Java · Auto-selects compatible version · Manual override |
 | 💾 **RAM tuning** | Per-server min/max memory allocation |
-| 🔄 **Auto-restart** | Automatically restart server after a crash |
-| 🛠️ **Properties editor** | GUI for `server.properties` — no manual editing |
+| 🔄 **Auto-restart** | Automatically restart the server after a crash |
+| 🛠️ **Properties editor** | Full GUI for `server.properties` — no manual editing |
+| 📶 **UPnP** | Auto-forward your port on start and check it's reachable |
+| ☁️ **Self-updates** | One-click app updates verified with SHA-256 |
+| 🛎️ **System tray** | Minimize to tray · live server status and quick controls |
+| 🎨 **Theme & language** | Dark / Light / System theme · English & Russian with runtime switching |
 | 📦 **Portable** | All data stored alongside the executable — no installers, no registry |
-| 🌐 **Dual language** | English & Russian interface with runtime switching |
 
 <br>
 
@@ -80,8 +87,8 @@
 
 | Problem | Solution |
 |---|---|
-| **Server won't start** | Check console logs. Verify Java is installed and compatible (Java 25+ for 26.1.x, Java 21 for 1.20.5+, Java 17 for 1.18–1.20.4). Ensure port `25565` is free. |
-| **EULA not accepted** | Open `.\Servers\<name>\eula.txt`, change `eula=false` → `eula=true`, restart server. |
+| **Server won't start** | Check console logs. Verify Java is installed and compatible (Java 25+ for 26.x, Java 21 for 1.20.5+, Java 17 for 1.18–1.20.4, Java 16 for 1.17, Java 8 for 1.16 and older — for Forge/NeoForge use Java 8 ≤ 8u302). Ensure port `25565` is free. |
+| **EULA not accepted** | New servers accept the EULA automatically. For imported servers, open `.\Servers\<name>\eula.txt` and set `eula=false` → `eula=true`, then restart the server. |
 | **Out of memory** | Increase **Max RAM** in server settings. Close other heavy applications. |
 
 <br>
