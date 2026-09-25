@@ -379,13 +379,14 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     /// Показывает временный статус сохранения (зелёный — успех, красный — ошибка)
     /// с автоматическим скрытием через 2 секунды.
     /// </summary>
-    private async Task ShowSaveStatus(Wpf.Ui.Controls.TextBlock statusText, bool isError)
+    private async Task ShowSaveStatus(Wpf.Ui.Controls.TextBlock statusText, bool isError, string? customMessage = null)
     {
         if (statusText == null) return;
 
-        statusText.Text = isError
-            ? LocalizationManager.Get("Props_SaveError")
-            : LocalizationManager.Get("Message_SettingsSaved");
+        statusText.Text = customMessage
+            ?? (isError
+                ? LocalizationManager.Get("Props_SaveError")
+                : LocalizationManager.Get("Message_SettingsSaved"));
         statusText.Foreground = isError ? ErrorBrush : SuccessBrush;
         statusText.Visibility = Visibility.Visible;
         statusText.Opacity = 0;
@@ -455,6 +456,31 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     private void SettingJvmArgs_LostFocus(object sender, RoutedEventArgs e)
     {
         AutoSaveSettings(JavaSaveStatus);
+    }
+
+    /// <summary>
+    /// Удаление всех резервных копий модов сервера (с подтверждением).
+    /// </summary>
+    private async void DeleteModBackupsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_server == null)
+            return;
+
+        var confirm = await UiHelper.ShowConfirm(
+            LocalizationManager.Get("ServerDetail_Settings_ModBackup_Clear_Confirm"),
+            LocalizationManager.Get("ServerDetail_Settings_ModBackup_Clear_Confirm_Title"));
+        if (confirm != ContentDialogResult.Primary)
+            return;
+
+        if (_viewModel.DeleteModBackups())
+        {
+            _ = ShowSaveStatus(ModsSaveStatus, isError: false,
+                customMessage: LocalizationManager.Get("ServerDetail_Settings_ModBackup_Clear_Done"));
+        }
+        else
+        {
+            _ = ShowSaveStatus(ModsSaveStatus, isError: true);
+        }
     }
 
     /// <summary>

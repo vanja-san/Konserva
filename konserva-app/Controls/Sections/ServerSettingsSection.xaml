@@ -477,10 +477,10 @@
                             Visibility="Collapsed" />
                     </Grid>
                 </ui:CardExpander.Header>
-                <Grid Margin="8,0" RowDefinitions="Auto">
+                <Grid Margin="8,0" RowDefinitions="Auto,Auto">
                     <Grid
                         Grid.Row="0"
-                        Margin="0,8"
+                        Margin="0,4,0,4"
                         ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0">
                             <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_Settings_ModBackup}" />
@@ -496,6 +496,22 @@
                             VerticalAlignment="Center"
                             Click="Setting_Click" />
                     </Grid>
+                    <ui:Button
+                        Grid.Row="1"
+                        MinWidth="140"
+                        Margin="0,8,0,0"
+                        HorizontalAlignment="Right"
+                        Click="DeleteModBackupsButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon
+                                FontSize="16"
+                                Margin="0,0,6,0"
+                                Symbol="Delete20" />
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                Text="{loc:Loc ServerDetail_Settings_ModBackup_Clear}" />
+                        </StackPanel>
+                    </ui:Button>
                 </Grid>
             </ui:CardExpander>
 

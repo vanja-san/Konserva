@@ -672,6 +672,30 @@ public partial class ServerDetailViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Удаляет все резервные копии модов сервера. Возвращает true при успехе.
+    /// </summary>
+    public bool DeleteModBackups()
+    {
+        if (_server == null)
+            return false;
+
+        var dir = ModBackup.GetBackupDirectory(_server.Path);
+        if (!Directory.Exists(dir))
+            return true;
+
+        try
+        {
+            Directory.Delete(dir, recursive: true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("DeleteModBackups error", ex, "ServerDetailViewModel");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Приводит имя файла мода к ключу кэша названий: убирает суффикс ".disabled",
     /// чтобы и ".jar", и ".jar.disabled" указывали на одну запись (см. ScanItemFiles).
     /// </summary>
