@@ -96,7 +96,7 @@ public class ModUpdateServiceTests : IDisposable
         result.Should().BeEmpty();
     }
 
-    [Fact]
+[Fact]
     public async Task CheckForUpdatesAsync_NoUpdate_WhenLatestMissing()
     {
         var path = WriteFile("unknown.jar", "unknown");
@@ -106,6 +106,71 @@ public class ModUpdateServiceTests : IDisposable
             [path], ModLoaderType.Fabric, "1.21.1", ModUpdateChannel.Release);
 
         result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CheckForUpdatesAsync_FallsBackToProjectVersions_WhenUpdateEndpointEmpty()
+    {
+        var path = WriteFile("strict.jar", "strict");
+        var localHash = HashOf("strict");
+        var remoteVersion = Version("2.0.0", RemoteHash, "2024-06-01T00:00:00Z", fileName: "strict-2.0.0.jar");
+        remoteVersion.GameVersions = ["1.20.1"];
+
+        SetupRepo(
+            current: new() { [localHash] = Version("1.0.0", localHash, "2024-01-01T00:00:00Z") },
+            latest: new(),
+            projectVersions: new() { ["proj"] = [remoteVersion] });
+
+        var result = await CreateService().CheckForUpdatesAsync(
+            [path], ModLoaderType.Fabric, "1.20.1", ModUpdateChannel.Release);
+
+        result.Should().ContainKey(path);
+        var info = result[path];
+        info.LatestVersion.Should().Be("2.0.0");
+        info.CurrentVersion.Should().Be("1.0.0");
+        info.LatestHash.Should().Be(RemoteHash);
+        info.DownloadFileName.Should().Be("strict-2.0.0.jar");
+        info.ProjectId.Should().Be("proj");
+    }
+
+    [Fact]
+    public async Task CheckForUpdatesAsync_FallbackSkipsOlderOrSameDateVersions()
+    {
+        var path = WriteFile("strict.jar", "strict");
+        var localHash = HashOf("strict");
+        var older = Version("0.9.0", RemoteHash + "0", "2023-12-01T00:00:00Z", fileName: "strict-0.9.0.jar");
+        var sameDate = Version("1.0.1", RemoteHash, "2024-01-01T00:00:00Z", fileName: "strict-1.0.1.jar");
+        older.GameVersions = ["1.20.1"];
+        sameDate.GameVersions = ["1.20.1"];
+
+        SetupRepo(
+            current: new() { [localHash] = Version("1.0.0", localHash, "2024-01-01T00:00:00Z") },
+            latest: new(),
+            projectVersions: new() { ["proj"] = [older, sameDate] });
+
+        var result = await CreateService().CheckForUpdatesAsync(
+            [path], ModLoaderType.Fabric, "1.20.1", ModUpdateChannel.Release);
+
+        result.Should().BeEmpty("fallback должен соблюдать даунгрейд-защиту и равенство дат");
+    }
+
+    [Fact]
+    public async Task CheckForUpdatesAsync_FallbackSkipsUncompatibleGameVersions()
+    {
+        var path = WriteFile("strict.jar", "strict");
+        var localHash = HashOf("strict");
+        var newer101 = Version("2.0.0", RemoteHash, "2024-06-01T00:00:00Z", fileName: "strict-2.0.0.jar");
+        newer101.GameVersions = ["1.21.1"];
+
+        SetupRepo(
+            current: new() { [localHash] = Version("1.0.0", localHash, "2024-01-01T00:00:00Z") },
+            latest: new(),
+            projectVersions: new() { ["proj"] = [newer101] });
+
+        var result = await CreateService().CheckForUpdatesAsync(
+            [path], ModLoaderType.Fabric, "1.20.1", ModUpdateChannel.Release);
+
+        result.Should().BeEmpty("версия для другой версии игры не должна попадать в результат");
     }
 
     [Fact]
@@ -402,9 +467,10 @@ public class ModUpdateServiceTests : IDisposable
     private static string HashOf(string content) =>
         Convert.ToHexStringLower(SHA512.HashData(Encoding.UTF8.GetBytes(content)));
 
-    private void SetupRepo(
+private void SetupRepo(
         Dictionary<string, ModrinthVersion> current,
-        Dictionary<string, ModrinthVersion> latest)
+        Dictionary<string, ModrinthVersion> latest,
+        Dictionary<string, IReadOnlyList<ModrinthVersion>>? projectVersions = null)
     {
         _repo.Setup(r => r.GetCurrentVersionsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(current);
@@ -415,6 +481,16 @@ public class ModUpdateServiceTests : IDisposable
                 It.IsAny<IReadOnlyCollection<string>>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(latest);
+        _repo.Setup(r => r.GetProjectVersionsAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyCollection<string>>(),
+                It.IsAny<IReadOnlyCollection<string>>(),
+                It.IsAny<IReadOnlyCollection<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string projectId, IReadOnlyCollection<string> _, IReadOnlyCollection<string> _, IReadOnlyCollection<string> _, CancellationToken _) =>
+                projectVersions is not null && projectVersions.TryGetValue(projectId, out var list)
+                    ? list
+                    : new List<ModrinthVersion>());
     }
 
     private static ModrinthVersion Version(

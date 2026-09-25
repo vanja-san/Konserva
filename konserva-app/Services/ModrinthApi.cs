@@ -66,37 +66,57 @@ public sealed class ModrinthApi : IModRepositoryApi
         string operation,
         CancellationToken ct)
     {
-        try
+        for (var attempt = 1; attempt <= 2; attempt++)
         {
-            using var response = await _http.PostAsJsonAsync(url, body, JsonOptions, ct);
-
-            if (response.StatusCode == HttpStatusCode.Gone)
+            try
             {
-                Logger.Warning("Modrinth API v2 недоступен (410 Gone)", "ModrinthApi");
+                using var response = await _http.PostAsJsonAsync(url, body, JsonOptions, ct);
+
+                if (response.StatusCode == HttpStatusCode.Gone)
+                {
+                    Logger.Warning("Modrinth API v2 недоступен (410 Gone)", "ModrinthApi");
+                    return Empty;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    // Повторяем только транзиентные 5xx, остальные ошибки бессмысленно ретраить
+                    if ((int)response.StatusCode >= 500 && attempt == 1)
+                    {
+                        Logger.Warning($"Modrinth {operation}: HTTP {(int)response.StatusCode}, повторная попытка", "ModrinthApi");
+                        await Task.Delay(500, ct).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    Logger.Warning($"Modrinth {operation}: HTTP {(int)response.StatusCode}", "ModrinthApi");
+                    return Empty;
+                }
+
+                var result = await response.Content
+                    .ReadFromJsonAsync<Dictionary<string, ModrinthVersion>>(JsonOptions, ct)
+                    .ConfigureAwait(false);
+
+                return result ?? Empty;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                if (attempt == 1)
+                {
+                    Logger.Warning($"Modrinth {operation}: {ex.Message}, повторная попытка", "ModrinthApi");
+                    await Task.Delay(500, ct).ConfigureAwait(false);
+                    continue;
+                }
+
+                Logger.Warning($"Modrinth {operation}: {ex.Message}", "ModrinthApi");
                 return Empty;
             }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                Logger.Warning($"Modrinth {operation}: HTTP {(int)response.StatusCode}", "ModrinthApi");
-                return Empty;
-            }
-
-            var result = await response.Content
-                .ReadFromJsonAsync<Dictionary<string, ModrinthVersion>>(JsonOptions, ct)
-                .ConfigureAwait(false);
-
-            return result ?? Empty;
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"Modrinth {operation}: {ex.Message}", "ModrinthApi");
-            return Empty;
-        }
+
+        return Empty;
     }
 
     public async Task<IReadOnlyDictionary<string, ModrinthProject>> GetProjectsAsync(
@@ -158,6 +178,66 @@ public sealed class ModrinthApi : IModRepositoryApi
         }
 
         return result;
+    }
+
+    public async Task<IReadOnlyList<ModrinthVersion>> GetProjectVersionsAsync(
+        string projectId,
+        IReadOnlyCollection<string> loaders,
+        IReadOnlyCollection<string> gameVersions,
+        IReadOnlyCollection<string> versionTypes,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectId);
+
+        var query = new List<string>();
+        if (loaders.Count > 0)
+            query.Add($"loaders={Uri.EscapeDataString(JsonSerializer.Serialize(loaders))}");
+        if (gameVersions.Count > 0)
+            query.Add($"game_versions={Uri.EscapeDataString(JsonSerializer.Serialize(gameVersions))}");
+        if (versionTypes.Count > 0)
+            query.Add($"version_type={string.Join(",", versionTypes)}");
+
+        var url = $"{ApiUrls.ModrinthApiBase}/project/{Uri.EscapeDataString(projectId)}/version";
+        if (query.Count > 0)
+            url += "?" + string.Join("&", query);
+
+        try
+        {
+            using var response = await _http.GetAsync(url, ct).ConfigureAwait(false);
+
+            if (response.StatusCode == HttpStatusCode.Gone)
+            {
+                Logger.Warning("Modrinth API v2 недоступен (410 Gone)", "ModrinthApi");
+                return [];
+            }
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                Logger.Info($"Проект {projectId} не найден (404)", "ModrinthApi");
+                return [];
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Logger.Warning($"Modrinth {nameof(GetProjectVersionsAsync)}: HTTP {(int)response.StatusCode}", "ModrinthApi");
+                return [];
+            }
+
+            var versions = await response.Content
+                .ReadFromJsonAsync<List<ModrinthVersion>>(JsonOptions, ct)
+                .ConfigureAwait(false);
+
+            return versions ?? [];
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Modrinth {nameof(GetProjectVersionsAsync)}: {ex.Message}", "ModrinthApi");
+            return [];
+        }
     }
 
     private static IEnumerable<IReadOnlyCollection<string>> ChunkIds(IReadOnlyList<string> source, int size)

@@ -34,4 +34,16 @@ public interface IModRepositoryApi
     Task<IReadOnlyDictionary<string, ModrinthProject>> GetProjectsAsync(
         IReadOnlyCollection<string> projectIds,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Все версии проекта с фильтрами (GET /v2/project/{id}/version).
+    /// Используется как fallback, когда /version_files/update не вернул кандидата
+    /// из-за строгой сверки совместимости. Обычно новые версии идут первыми.
+    /// </summary>
+    Task<IReadOnlyList<ModrinthVersion>> GetProjectVersionsAsync(
+        string projectId,
+        IReadOnlyCollection<string> loaders,
+        IReadOnlyCollection<string> gameVersions,
+        IReadOnlyCollection<string> versionTypes,
+        CancellationToken ct = default);
 }

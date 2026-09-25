@@ -20,6 +20,10 @@ public class ModrinthVersion
     [JsonPropertyName("version_type")]
     public string VersionType { get; set; } = string.Empty;
 
+    /// <summary>Совместимые версии Minecraft (например "1.20.1", "1.20").</summary>
+    [JsonPropertyName("game_versions")]
+    public List<string> GameVersions { get; set; } = [];
+
     [JsonPropertyName("date_published")]
     public DateTimeOffset DatePublished { get; set; }
 

@@ -24,6 +24,14 @@ public partial class ServerDetailViewModel : ObservableObject
     private readonly Dictionary<string, ModUpdateInfo> _pendingUpdates = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Хеши SHA-512 по путям файлов, посчитанные за текущую сессию.
+    /// Позволяет не хешировать один и тот же файл дважды за одно открытие вкладки
+    /// (названия + проверка обновлений). На диск хеши попадают через
+    /// ModMetadataCacheEntry.Sha512.
+    /// </summary>
+    private readonly Dictionary<string, string> _fileHashes = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Кэш реальных названий и версий модов из Modrinth.
     /// Ключ — нормализованное имя файла (без .disabled), чтобы после перезагрузок
     /// не показывать имена файлов и не дёргать сеть при каждом действии.
@@ -521,8 +529,10 @@ public partial class ServerDetailViewModel : ObservableObject
         try
         {
             var paths = Mods.Select(m => m.FilePath).ToList();
+            var hashes = await BuildModHashMapAsync(Mods).ConfigureAwait(false);
             var updates = await _modUpdateService.CheckForUpdatesAsync(
-                paths, _server.ModLoader.Type, _server.McVersion, ModUpdateChannel.Release);
+                paths, _server.ModLoader.Type, _server.McVersion, ModUpdateChannel.Release,
+                progress: null, precomputedHashes: hashes);
 
             foreach (var mod in Mods)
             {
@@ -581,9 +591,14 @@ public partial class ServerDetailViewModel : ObservableObject
                 var result = await _modUpdateService.ApplyUpdateAsync(update, backupDir);
 
                 if (result.Success)
+                {
                     successCount++;
+                    SeedTitleCacheAfterUpdate(CleanFileNameKey(Path.GetFileName(path)), update, result.NewFileName);
+                }
                 else
+                {
                     Logger.Warning($"Failed to update {Path.GetFileName(path)}: {result.Error}", "ServerDetailViewModel");
+                }
             }
 
             ModUpdateStatusText = string.Format(
@@ -620,6 +635,9 @@ public partial class ServerDetailViewModel : ObservableObject
                 _pendingUpdates.Remove(mod.FilePath);
                 HasModUpdates = _pendingUpdates.Count > 0;
                 ModUpdateStatusText = string.Empty;
+
+                SeedTitleCacheAfterUpdate(mod.FileName, update, result.NewFileName);
+
                 LoadMods();
             }
             else
@@ -638,6 +656,61 @@ public partial class ServerDetailViewModel : ObservableObject
         finally
         {
             IsUpdatingMods = false;
+        }
+    }
+
+    /// <summary>
+    /// Приводит имя файла мода к ключу кэша названий: убирает суффикс ".disabled",
+    /// чтобы и ".jar", и ".jar.disabled" указывали на одну запись (см. ScanItemFiles).
+    /// </summary>
+    private static string CleanFileNameKey(string fileName) =>
+        fileName.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase)
+            ? fileName[..^".disabled".Length]
+            : fileName;
+
+    /// <summary>
+    /// Переносит уже известное название мода на файл с новой версией, чтобы после
+    /// обновления список не мигал «имя файла → название с Modrinth»: новый файл сразу
+    /// получает title/версию из кэша, а сетевой ResolveModTitlesAsync лишь подтвердит.
+    /// </summary>
+    private void SeedTitleCacheAfterUpdate(string oldFileName, ModUpdateInfo update, string? newFileName)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(newFileName))
+                return;
+
+            if (!_modTitlesCache.TryGetValue(oldFileName, out var oldEntry)
+                || string.IsNullOrWhiteSpace(oldEntry.Title))
+            {
+                return;
+            }
+
+            // Ключи кэша хранятся без ".disabled" (см. ScanItemFiles), приводим имя к тому же виду
+            var cacheKey = CleanFileNameKey(newFileName);
+
+            var directory = Path.GetDirectoryName(update.FilePath);
+            if (string.IsNullOrEmpty(directory))
+                return;
+
+            var newPath = Path.Combine(directory, newFileName);
+            if (!File.Exists(newPath))
+                return;
+
+            _modTitlesCache[cacheKey] = new ModMetadataCacheEntry
+            {
+                FileSize = new FileInfo(newPath).Length,
+                Title = oldEntry.Title,
+                Version = update.LatestVersion,
+                Sha512 = update.LatestHash
+            };
+
+            _fileHashes[newPath] = update.LatestHash;
+            PersistModsCache();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"SeedTitleCacheAfterUpdate error: {ex.Message}", "ServerDetailViewModel");
         }
     }
 
@@ -661,18 +734,22 @@ public partial class ServerDetailViewModel : ObservableObject
         {
             ApplyCachedTitles(Mods);
 
-            var uncachedPaths = Mods
+            var uncachedMods = Mods
                 .Where(m => !_modTitlesCache.TryGetValue(m.FileName, out var cached)
                             || cached.FileSize != m.FileSize)
-                .Select(m => m.FilePath)
                 .ToList();
 
-            if (uncachedPaths.Count == 0)
+            if (uncachedMods.Count == 0)
                 return;
 
-            var metadata = await _modUpdateService.ResolveModMetadataAsync(uncachedPaths);
+            var hashes = await BuildModHashMapAsync(uncachedMods).ConfigureAwait(false);
 
-            foreach (var mod in Mods)
+            var metadata = await _modUpdateService.ResolveModMetadataAsync(
+                [.. uncachedMods.Select(m => m.FilePath)],
+                progress: null,
+                precomputedHashes: hashes).ConfigureAwait(false);
+
+            foreach (var mod in uncachedMods)
             {
                 if (metadata.TryGetValue(mod.FilePath, out var info))
                 {
@@ -685,7 +762,8 @@ public partial class ServerDetailViewModel : ObservableObject
                     {
                         FileSize = mod.FileSize,
                         Title = string.IsNullOrWhiteSpace(info.Title) ? mod.Name : info.Title,
-                        Version = string.IsNullOrWhiteSpace(info.Version) ? mod.Version : info.Version
+                        Version = string.IsNullOrWhiteSpace(info.Version) ? mod.Version : info.Version,
+                        Sha512 = hashes.TryGetValue(mod.FilePath, out var hash) ? hash : string.Empty
                     };
                 }
             }
@@ -708,6 +786,78 @@ public partial class ServerDetailViewModel : ObservableObject
                 mod.Version = entry.Version;
             }
         }
+    }
+
+    /// <summary>
+    /// SHA-512 локальных jar-файлов с переиспользованием кэшей: сначала сессионный
+    /// _fileHashes, затем персистентный ModMetadataCacheEntry.Sha512 (по имени файла
+    /// с совпавшим размером), и только недостающее хешируется параллельно.
+    /// Возвращает карту: путь → хеш. Хеши оседают в _fileHashes (и в кэш названий,
+    /// если для файла уже есть запись), чтобы каждый файл за сессию хешировался один раз.
+    /// </summary>
+    private async Task<Dictionary<string, string>> BuildModHashMapAsync(
+        IEnumerable<ModItem> mods,
+        CancellationToken ct = default)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var toHash = new List<ModItem>();
+
+        foreach (var mod in mods)
+        {
+            if (string.IsNullOrWhiteSpace(mod.FilePath) || string.IsNullOrWhiteSpace(mod.FileName))
+                continue;
+            if (!File.Exists(mod.FilePath))
+                continue;
+
+            if (_fileHashes.TryGetValue(mod.FilePath, out var known))
+            {
+                result[mod.FilePath] = known;
+                continue;
+            }
+
+            if (_modTitlesCache.TryGetValue(mod.FileName, out var entry)
+                && entry.FileSize == mod.FileSize
+                && !string.IsNullOrWhiteSpace(entry.Sha512))
+            {
+                _fileHashes[mod.FilePath] = entry.Sha512;
+                result[mod.FilePath] = entry.Sha512;
+                continue;
+            }
+
+            toHash.Add(mod);
+        }
+
+        if (toHash.Count > 0)
+        {
+            await Parallel.ForEachAsync(
+                toHash,
+                new ParallelOptions { MaxDegreeOfParallelism = 6, CancellationToken = ct },
+                async (mod, token) =>
+                {
+                    var hash = await FileHash.Sha512Async(mod.FilePath, token).ConfigureAwait(false);
+
+                    lock (_fileHashes)
+                    {
+                        _fileHashes[mod.FilePath] = hash;
+                    }
+
+                    lock (result)
+                    {
+                        result[mod.FilePath] = hash;
+                    }
+
+                    if (_modTitlesCache.TryGetValue(mod.FileName, out var entry))
+                    {
+                        lock (_modTitlesCache)
+                        {
+                            if (entry.FileSize == mod.FileSize)
+                                entry.Sha512 = hash;
+                        }
+                    }
+                }).ConfigureAwait(false);
+        }
+
+        return result;
     }
 
     // ─── Disk cache helpers ─────────────────────────────────────────

@@ -11,7 +11,9 @@ namespace Konserva.Services;
 /// </summary>
 public sealed class ModUpdateService : IModUpdateService
 {
-    private const int HashBatchSize = 1000;
+    private const int HashBatchSize = 250;
+    private const int HashParallelism = 6;
+    private const int MaxFallbackProjects = 40;
 
     private readonly IModRepositoryApi _repository;
     private readonly IModFileDownloader _downloader;
@@ -28,7 +30,8 @@ public sealed class ModUpdateService : IModUpdateService
         string gameVersion,
         ModUpdateChannel channel,
         IProgress<string>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IReadOnlyDictionary<string, string>? precomputedHashes = null)
     {
         var result = new Dictionary<string, ModUpdateInfo>(StringComparer.OrdinalIgnoreCase);
 
@@ -46,7 +49,7 @@ public sealed class ModUpdateService : IModUpdateService
         }
 
         var versionTypes = ModUpdateChannels.ToVersionTypes(channel);
-        var hashToPath = await ComputeHashesAsync(jarPaths, progress, ct).ConfigureAwait(false);
+        var hashToPath = await ComputeHashesAsync(jarPaths, progress, ct, precomputedHashes).ConfigureAwait(false);
         if (hashToPath.Count == 0)
             return result;
 
@@ -104,15 +107,120 @@ public sealed class ModUpdateService : IModUpdateService
             };
         }
 
+        await ApplyProjectFallbackAsync(hashToPath, currentVersions, latestVersions, loaders, gameVersion, versionTypes, result, ct).ConfigureAwait(false);
+
         return result;
+    }
+
+    /// <summary>
+    /// Fallback для модов, по которым /version_files/update не вернул кандидата,
+    /// хотя локальная версия в репозитории известна. Строгий серверный фильтр
+    /// иногда не находит совместимую версию (например, версия Minecraft указана
+    /// как 1.20.x, а мод помечен 1.20). Сверяемся по всем версиям проекта
+    /// с мягким матчингом major.minor.
+    /// </summary>
+    private async Task ApplyProjectFallbackAsync(
+        Dictionary<string, string> hashToPath,
+        Dictionary<string, ModrinthVersion> currentVersions,
+        Dictionary<string, ModrinthVersion> latestVersions,
+        IReadOnlyCollection<string> loaders,
+        string gameVersion,
+        IReadOnlyCollection<string> versionTypes,
+        Dictionary<string, ModUpdateInfo> result,
+        CancellationToken ct)
+    {
+        var pendingHashes = hashToPath.Keys
+            .Where(hash => !latestVersions.ContainsKey(hash)
+                           && currentVersions.TryGetValue(hash, out var local)
+                           && !string.IsNullOrWhiteSpace(local.ProjectId))
+            .ToArray();
+        if (pendingHashes.Length == 0)
+            return;
+
+        var projectIds = pendingHashes
+            .Select(hash => currentVersions[hash].ProjectId)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(MaxFallbackProjects)
+            .ToArray();
+
+        var byProject = new Dictionary<string, IReadOnlyList<ModrinthVersion>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var projectId in projectIds)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var versions = await _repository
+                .GetProjectVersionsAsync(projectId, loaders, [gameVersion], versionTypes, ct)
+                .ConfigureAwait(false);
+            if (versions is null)
+                continue;
+
+            byProject[projectId] = versions;
+        }
+
+        foreach (var hash in pendingHashes)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var local = currentVersions[hash];
+            if (!byProject.TryGetValue(local.ProjectId, out var versions))
+                continue;
+
+            var candidate = versions
+                .Select(v => (Version: v, File: v.PrimaryFile))
+                .Where(x => x.File != null
+                            && !string.IsNullOrWhiteSpace(x.File.Hashes.Sha512)
+                            && !string.IsNullOrWhiteSpace(x.File.Url)
+                            && !string.Equals(x.File.Hashes.Sha512, hash, StringComparison.OrdinalIgnoreCase)
+                            && x.Version.DatePublished > local.DatePublished
+                            && MatchesGameVersion(x.Version, gameVersion))
+                .OrderByDescending(x => x.Version.DatePublished)
+                .Select(x => x.Version)
+                .FirstOrDefault();
+
+            if (candidate is null)
+                continue;
+
+            var file = candidate.PrimaryFile!;
+            var path = hashToPath[hash];
+            result[path] = new ModUpdateInfo
+            {
+                FilePath = path,
+                CurrentHash = hash,
+                CurrentVersion = local.VersionNumber,
+                VersionId = candidate.Id,
+                ProjectId = candidate.ProjectId,
+                LatestVersion = candidate.VersionNumber,
+                DownloadUrl = file.Url,
+                DownloadFileName = file.FileName,
+                LatestHash = file.Hashes.Sha512!
+            };
+        }
+    }
+
+    private static bool MatchesGameVersion(ModrinthVersion version, string gameVersion)
+    {
+        if (version.GameVersions.Count == 0)
+            return false;
+
+        if (version.GameVersions.Any(g => string.Equals(g, gameVersion, StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        if (McVersionHelper.TryParseMcVersion(gameVersion, out var major, out var minor))
+            return version.GameVersions.Any(g =>
+                McVersionHelper.TryParseMcVersion(g, out var gm, out var gn)
+                && gm == major && gn == minor);
+
+        return false;
     }
 
     private static async Task<Dictionary<string, string>> ComputeHashesAsync(
         IReadOnlyCollection<string> jarPaths,
         IProgress<string>? progress,
-        CancellationToken ct)
+        CancellationToken ct,
+        IReadOnlyDictionary<string, string>? precomputedHashes = null)
     {
         var hashToPath = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var pathsToHash = new List<string>();
 
         foreach (var path in jarPaths)
         {
@@ -121,20 +229,42 @@ public sealed class ModUpdateService : IModUpdateService
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 continue;
 
-            try
+            if (precomputedHashes != null
+                && precomputedHashes.TryGetValue(path, out var pre)
+                && !string.IsNullOrWhiteSpace(pre))
             {
-                progress?.Report(Path.GetFileName(path));
-                var hash = await FileHash.Sha512Async(path, ct).ConfigureAwait(false);
-                hashToPath[hash] = path;
+                hashToPath[pre] = path;
+                continue;
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"Не удалось вычислить SHA-512 для {path}: {ex.Message}", "ModUpdateService");
-            }
+
+            pathsToHash.Add(path);
+        }
+
+        if (pathsToHash.Count > 0)
+        {
+            await Parallel.ForEachAsync(
+                pathsToHash,
+                new ParallelOptions { MaxDegreeOfParallelism = HashParallelism, CancellationToken = ct },
+                async (path, token) =>
+                {
+                    try
+                    {
+                        progress?.Report(Path.GetFileName(path));
+                        var hash = await FileHash.Sha512Async(path, token).ConfigureAwait(false);
+                        lock (hashToPath)
+                        {
+                            hashToPath[hash] = path;
+                        }
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"Не удалось вычислить SHA-512 для {path}: {ex.Message}", "ModUpdateService");
+                    }
+                }).ConfigureAwait(false);
         }
 
         return hashToPath;
@@ -149,11 +279,12 @@ public sealed class ModUpdateService : IModUpdateService
     public async Task<IReadOnlyDictionary<string, ModMetadata>> ResolveModMetadataAsync(
         IReadOnlyCollection<string> jarPaths,
         IProgress<string>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IReadOnlyDictionary<string, string>? precomputedHashes = null)
     {
         var result = new Dictionary<string, ModMetadata>(StringComparer.OrdinalIgnoreCase);
 
-        var hashToPath = await ComputeHashesAsync(jarPaths, progress, ct).ConfigureAwait(false);
+        var hashToPath = await ComputeHashesAsync(jarPaths, progress, ct, precomputedHashes).ConfigureAwait(false);
         if (hashToPath.Count == 0)
             return result;
 

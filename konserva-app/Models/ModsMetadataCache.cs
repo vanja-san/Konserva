@@ -29,6 +29,12 @@ public class ModMetadataCacheEntry
     public string Title { get; set; } = string.Empty;
 
     public string Version { get; set; } = string.Empty;
+
+    /// <summary>
+    /// SHA-512 локального файла (нижний регистр hex, формат Modrinth).
+    /// Позволяет не пересчитывать хеши при каждом открытии вкладки.
+    /// </summary>
+    public string Sha512 { get; set; } = string.Empty;
 }
 
 /// <summary>

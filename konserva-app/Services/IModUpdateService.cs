@@ -17,13 +17,15 @@ public interface IModUpdateService
     /// <param name="gameVersion">Версия Minecraft сервера.</param>
     /// <param name="channel">Канал обновлений (release/beta/alpha).</param>
     /// <param name="progress">Отчёт о прогрессе (имя обрабатываемого файла).</param>
+    /// <param name="precomputedHashes">Уже посчитанные SHA-512: путь → хеш. Позволяет не хешировать файлы повторно.</param>
     Task<IReadOnlyDictionary<string, ModUpdateInfo>> CheckForUpdatesAsync(
         IReadOnlyCollection<string> jarPaths,
         ModLoaderType loader,
         string gameVersion,
         ModUpdateChannel channel,
         IProgress<string>? progress = null,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        IReadOnlyDictionary<string, string>? precomputedHashes = null);
 
     /// <summary>
     /// Скачивает новую версию, проверяет её SHA-512, делает резервную копию
@@ -45,8 +47,10 @@ public interface IModUpdateService
     /// </summary>
     /// <param name="jarPaths">Пути к локальным jar-файлам модов.</param>
     /// <param name="progress">Отчёт о прогрессе (имя обрабатываемого файла).</param>
+    /// <param name="precomputedHashes">Уже посчитанные SHA-512: путь → хеш. Позволяет не хешировать файлы повторно.</param>
     Task<IReadOnlyDictionary<string, ModMetadata>> ResolveModMetadataAsync(
         IReadOnlyCollection<string> jarPaths,
         IProgress<string>? progress = null,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        IReadOnlyDictionary<string, string>? precomputedHashes = null);
 }
