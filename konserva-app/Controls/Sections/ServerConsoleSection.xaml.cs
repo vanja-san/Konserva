@@ -178,6 +178,19 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
         CommandInputRow.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Клик вне области ввода (например, по логу или пустому месту) снимает
+    /// фокус с поля ввода — иначе в WPF он остаётся на последнем
+    /// фокусируемом элементе.
+    /// </summary>
+    private void ConsoleSection_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject source && CommandInputRow.IsAncestorOf(source))
+            return;
+
+        Keyboard.ClearFocus();
+    }
+
     private sealed class LogColorizer : DocumentColorizingTransformer
     {
         private static readonly Brush TimestampBrush =

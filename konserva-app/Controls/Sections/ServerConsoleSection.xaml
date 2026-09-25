@@ -6,7 +6,9 @@
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid
+        RowDefinitions="*,Auto"
+        PreviewMouseDown="ConsoleSection_PreviewMouseDown">
         <!--  Лог сервера  -->
         <Border
             Grid.Row="0"
