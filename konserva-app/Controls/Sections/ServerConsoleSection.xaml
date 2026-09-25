@@ -42,7 +42,23 @@
             Grid.Row="1"
             Margin="0,8,0,0"
             ColumnDefinitions="*,Auto">
-            <ui:TextBox x:Name="CommandBox" KeyDown="CommandBox_KeyDown" />
+            <Grid Grid.Column="0">
+                <ui:TextBox
+                    x:Name="CommandBox"
+                    GotFocus="CommandBox_GotFocus"
+                    KeyDown="CommandBox_KeyDown"
+                    LostFocus="CommandBox_LostFocus"
+                    TextChanged="CommandBox_TextChanged" />
+                <ui:TextBlock
+                    x:Name="CommandPlaceholder"
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    FontTypography="Caption"
+                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                    IsHitTestVisible="False"
+                    Text="{loc:Loc ServerDetail_Console_InputHint}" />
+            </Grid>
             <ui:Button
                 Grid.Column="1"
                 Margin="8,0,0,0"

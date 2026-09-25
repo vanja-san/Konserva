@@ -5,6 +5,7 @@ using Konserva.Services;
 using Konserva.Utilities;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.DependencyInjection;
@@ -146,6 +147,28 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
         }
     }
 
+    private void CommandBox_GotFocus(object sender, RoutedEventArgs e)
+    {
+        UpdateCommandPlaceholder();
+    }
+
+    private void CommandBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        UpdateCommandPlaceholder();
+    }
+
+    private void CommandBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        UpdateCommandPlaceholder();
+    }
+
+    private void UpdateCommandPlaceholder()
+    {
+        CommandPlaceholder.Visibility = (string.IsNullOrEmpty(CommandBox.Text) && !CommandBox.IsFocused)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
     private sealed class LogColorizer : DocumentColorizingTransformer
     {
         private static readonly Brush TimestampBrush =
@@ -256,7 +279,6 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
                 var text = lineText.AsSpan();
                 if (text.Contains(LocalizationManager.Get("Log_ServerStarted").AsSpan(), StringComparison.Ordinal) ||
                     text.Contains(LocalizationManager.Get("Log_ServerReady").AsSpan(), StringComparison.Ordinal) ||
-                    text.Contains(LocalizationManager.Get("Log_ServerReady_Commands").AsSpan(), StringComparison.Ordinal) ||
                     text.Contains(LocalizationManager.Get("Log_ServerStoppedSuccessfully").AsSpan(), StringComparison.Ordinal))
                 {
                     ChangeLinePart(

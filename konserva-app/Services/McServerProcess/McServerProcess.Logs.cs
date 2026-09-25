@@ -241,7 +241,6 @@ public partial class McServerProcess
             await Task.Delay(500, token);
 
             AppendLog($" {LocalizationManager.Get("Log_ServerReady")}");
-            AppendLog($" {LocalizationManager.Get("Log_ServerReady_Commands")}");
 
             if (Status == ServerStatus.Starting)
             {
