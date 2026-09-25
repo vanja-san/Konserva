@@ -1,8 +1,9 @@
-using System.IO;
+﻿using System.IO;
 using System.Security.Cryptography;
 
 namespace Konserva.Tests.Utilities;
 
+[Trait("Category", "Unit")]
 public class FileHashTests : IDisposable
 {
     private readonly string _dir;

@@ -1,4 +1,4 @@
-using Konserva.Models;
+﻿using Konserva.Models;
 using Konserva.Services;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -9,6 +9,7 @@ namespace Konserva.Tests.Services;
 /// <summary>
 /// Тесты для ConfigService
 /// </summary>
+[Trait("Category", "Integration")]
 public class ConfigServiceTests : IDisposable
 {
     private readonly string _testConfigPath;

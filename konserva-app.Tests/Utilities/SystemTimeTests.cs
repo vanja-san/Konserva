@@ -1,11 +1,19 @@
-using Konserva.Utilities;
+﻿using Konserva.Utilities;
 using Xunit;
 
 namespace Konserva.Tests.Utilities;
 
 /// <summary>
 /// Тесты для SystemTime — обёртки над TimeProvider.
+/// <para>
+/// Класс в последовательной коллекции: <c>SystemTime</c> — глобальное изменяемое
+/// статическое состояние, которым пользуются десятки мест в production-коде
+/// (создание серверов, кэш версий, имена лог-файлов). Параллельный прогон
+/// этих тестов выдёргивал бы часы из-под других тестов и давал плавающие сбои.
+/// </para>
 /// </summary>
+[Collection("Sequential")]
+[Trait("Category", "Unit")]
 public class SystemTimeTests
 {
     [Fact]

@@ -1,4 +1,4 @@
-using Konserva.Services;
+﻿using Konserva.Services;
 using Moq;
 using Moq.Protected;
 using System.IO;
@@ -9,6 +9,7 @@ using Xunit;
 
 namespace Konserva.Tests.Services;
 
+[Trait("Category", "Integration")]
 public class McVersionsApiTests : IDisposable
 {
     private readonly string _cacheFolder;

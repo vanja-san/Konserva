@@ -1,4 +1,4 @@
-using Konserva.Models;
+﻿using Konserva.Models;
 using Konserva.Services;
 using System.IO;
 using System.IO.Compression;
@@ -10,6 +10,7 @@ namespace Konserva.Tests.Services;
 /// <summary>
 /// Тесты для McServerInstaller
 /// </summary>
+[Trait("Category", "Integration")]
 public class McServerInstallerTests : IDisposable
 {
     private readonly string _testDir;

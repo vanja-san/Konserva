@@ -1,10 +1,11 @@
-using System.IO;
+﻿using System.IO;
 
 namespace Konserva.Tests.Models;
 
 /// <summary>
 /// Тесты для ServerSettings
 /// </summary>
+[Trait("Category", "Unit")]
 public class ServerSettingsTests
 {
     [Fact]
@@ -167,6 +168,7 @@ public class ServerSettingsTests
 /// <summary>
 /// Тесты для ServerProperties
 /// </summary>
+[Trait("Category", "Unit")]
 public class ServerPropertiesTests : IDisposable
 {
     private readonly string _testFilePath;
@@ -384,6 +386,55 @@ pvp=TrUe
         props.DifficultyDisplayName.Should().Be("Сложный");
     }
 
+    [Fact]
+    public void Save_PreservesKeysUnknownToTheModel()
+    {
+        // Ключ от мода / будущей версии Minecraft, которого нет в модели.
+        // Раньше он молча удалялся при первом сохранении из GUI.
+        File.WriteAllText(_testFilePath, string.Join('\n',
+            "#Minecraft server properties",
+            "server-port=25566",
+            "some-mod-property=hello world",
+            "future-mc-key=42"));
+
+        var props = ServerProperties.Load(_testFilePath);
+        props.Save(_testFilePath);
+
+        var text = File.ReadAllText(_testFilePath);
+        text.Should().Contain("some-mod-property=hello world");
+        text.Should().Contain("future-mc-key=42");
+    }
+
+    [Fact]
+    public void Save_PreservesUnknownKeysAlongsideEditedKnownKeys()
+    {
+        File.WriteAllText(_testFilePath, string.Join('\n',
+            "server-port=25565",
+            "custom-key=keep-me",
+            "max-players=20"));
+
+        var props = ServerProperties.Load(_testFilePath);
+        props.MaxPlayers = 50;
+        props.Save(_testFilePath);
+
+        var reloaded = ServerProperties.Load(_testFilePath);
+        reloaded.MaxPlayers.Should().Be(50);
+        File.ReadAllText(_testFilePath).Should().Contain("custom-key=keep-me");
+    }
+
+    [Fact]
+    public void Save_DoesNotInventKeysThatWereNotInFile()
+    {
+        File.WriteAllText(_testFilePath, "server-port=25565");
+
+        var props = ServerProperties.Load(_testFilePath);
+        props.Save(_testFilePath);
+
+        var text = File.ReadAllText(_testFilePath);
+        text.Should().Contain("server-port=25565");
+        text.Should().NotContain("level-seed");
+    }
+
     public void Dispose()
     {
         if (File.Exists(_testFilePath))
@@ -394,6 +445,7 @@ pvp=TrUe
 /// <summary>
 /// Тесты для ModLoader
 /// </summary>
+[Trait("Category", "Unit")]
 public class ModLoaderTests
 {
     [Fact]
@@ -481,6 +533,7 @@ public class ModLoaderTests
 /// <summary>
 /// Тесты для ModItem
 /// </summary>
+[Trait("Category", "Unit")]
 public class ModItemTests
 {
     [Fact]
@@ -529,6 +582,7 @@ public class ModItemTests
 /// <summary>
 /// Тесты для PluginItem
 /// </summary>
+[Trait("Category", "Unit")]
 public class PluginItemTests
 {
     [Fact]
@@ -560,58 +614,5 @@ public class PluginItemTests
         plugin.FileName.Should().Be("EssentialsX-2.20.1.jar");
         plugin.FilePath.Should().Be("/plugins/EssentialsX.jar");
         plugin.FileSize.Should().Be(3_000_000);
-    }
-}
-
-/// <summary>
-/// Тесты для ApiEndpoints
-/// </summary>
-public class ApiEndpointsTests
-{
-    [Fact]
-    public void Constructor_DefaultUrls_AreSet()
-    {
-        var endpoints = new ApiEndpoints();
-
-        endpoints.MojangManifest.Should().NotBeNullOrEmpty();
-        endpoints.FabricMeta.Should().NotBeNullOrEmpty();
-        endpoints.FabricInstaller.Should().NotBeNullOrEmpty();
-        endpoints.ForgeMaven.Should().NotBeNullOrEmpty();
-        endpoints.NeoForgeMaven.Should().NotBeNullOrEmpty();
-        endpoints.NeoForgeApi.Should().NotBeNullOrEmpty();
-        endpoints.QuiltMeta.Should().NotBeNullOrEmpty();
-        endpoints.QuiltInstaller.Should().NotBeNullOrEmpty();
-        endpoints.PaperApi.Should().NotBeNullOrEmpty();
-        endpoints.Adoptium.Should().NotBeNullOrEmpty();
-    }
-
-    [Fact]
-    public void AllUrls_StartWithHttps()
-    {
-        var endpoints = new ApiEndpoints();
-
-        var urls = new[]
-        {
-            endpoints.MojangManifest, endpoints.FabricMeta, endpoints.FabricInstaller,
-            endpoints.ForgeMaven, endpoints.NeoForgeMaven, endpoints.NeoForgeApi,
-            endpoints.QuiltMeta, endpoints.QuiltInstaller, endpoints.PaperApi,
-            endpoints.Adoptium
-        };
-
-        foreach (var url in urls)
-        {
-            url.Should().StartWith("https://");
-        }
-    }
-
-    [Fact]
-    public void CanModifyUrls()
-    {
-        var endpoints = new ApiEndpoints
-        {
-            MojangManifest = "https://custom.url/manifest.json"
-        };
-
-        endpoints.MojangManifest.Should().Be("https://custom.url/manifest.json");
     }
 }

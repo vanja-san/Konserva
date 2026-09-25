@@ -6,9 +6,14 @@ root = true
 [*]
 indent_style = space
 indent_size = 4
-charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
+
+# C#/XAML: достаточно UTF-8. .NET SDK читает исходники без BOM как UTF-8,
+# поэтому BOM не обязателен (в репозитории он есть примерно у трети файлов —
+# это наследие Visual Studio, а не требование сборки).
+[*.{cs,xaml}]
+charset = utf-8
 
 # XML files
 [*.{xml,config,props,targets,csproj,resx}]

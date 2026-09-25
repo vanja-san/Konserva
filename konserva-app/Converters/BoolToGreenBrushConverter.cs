@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
@@ -9,14 +10,14 @@ namespace Konserva.Converters;
 /// </summary>
 public class BoolToGreenBrushConverter : IValueConverter
 {
-    private static readonly Brush GreenBrush = CreateThemeBrush("SystemFillColorSuccessBrush", 0x22, 0xC5, 0x5E);
     private static readonly Brush TransparentBrush = Brushes.Transparent;
 
-    private static SolidColorBrush CreateThemeBrush(string key, byte fallbackR, byte fallbackG, byte fallbackB)
+    // Резервный цвет, если ресурса темы нет (например, в юнит-тестах).
+    private static readonly SolidColorBrush FallbackGreen = CreateFallback();
+
+    private static SolidColorBrush CreateFallback()
     {
-        var color = (System.Windows.Application.Current?.TryFindResource(key) as SolidColorBrush)?.Color
-            ?? Color.FromRgb(fallbackR, fallbackG, fallbackB);
-        var brush = new SolidColorBrush(color);
+        var brush = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
         brush.Freeze();
         return brush;
     }
@@ -25,8 +26,14 @@ public class BoolToGreenBrushConverter : IValueConverter
     {
         if (value is bool boolValue)
         {
-            return boolValue ? GreenBrush : TransparentBrush;
+            // Читаем ресурс темы на каждый вызов: static-кэш «замерзал» цвет
+            // на момент первого обращения и не реагировал на смену темы.
+            return boolValue
+                ? (Application.Current?.TryFindResource("SystemFillColorSuccessBrush") as SolidColorBrush
+                   ?? FallbackGreen)
+                : TransparentBrush;
         }
+
         return TransparentBrush;
     }
 

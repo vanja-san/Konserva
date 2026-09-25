@@ -1,10 +1,11 @@
-using Moq.Protected;
+﻿using Moq.Protected;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json.Nodes;
 
 namespace Konserva.Tests.Services;
 
+[Trait("Category", "Integration")]
 public class ModrinthApiTests
 {
     [Fact]

@@ -37,4 +37,11 @@ public class VersionDownload
 
     [JsonPropertyName("assetName")]
     public string AssetName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// SHA-256 ассета в виде 64 hex-символов. Обязателен: без него
+    /// <see cref="Services.AppUpdater"/> отказывается применять обновление.
+    /// </summary>
+    [JsonPropertyName("sha256")]
+    public string Sha256 { get; set; } = string.Empty;
 }

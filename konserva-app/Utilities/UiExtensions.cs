@@ -116,18 +116,20 @@ public static class UiExtensions
     #region ProgressRing helpers
 
     /// <summary>
-    /// Показывает спиннер <see cref="SpinnerRing"/>. Вращение стартует само при загрузке.
+    /// Показывает спиннер <see cref="SpinnerRing"/> и запускает вращение.
     /// </summary>
     public static void ShowIndeterminate(this SpinnerRing ring)
     {
+        ring.StartSpin();
         ring.Visibility = System.Windows.Visibility.Visible;
     }
 
     /// <summary>
-    /// Скрывает спиннер.
+    /// Скрывает спиннер и останавливает вращение.
     /// </summary>
     public static void HideIndeterminate(this SpinnerRing ring)
     {
+        ring.StopSpin();
         ring.Visibility = System.Windows.Visibility.Collapsed;
     }
 

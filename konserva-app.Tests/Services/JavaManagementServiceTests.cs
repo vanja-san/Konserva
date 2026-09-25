@@ -1,4 +1,4 @@
-using Konserva.Models;
+﻿using Konserva.Models;
 using Konserva.Services;
 using Moq;
 using System.IO;
@@ -8,6 +8,7 @@ namespace Konserva.Tests.Services;
 /// <summary>
 /// Тесты для JavaManagementService
 /// </summary>
+[Trait("Category", "Integration")]
 public class JavaManagementServiceTests : IDisposable
 {
     private readonly Mock<IConfigService> _mockConfigService;
@@ -308,52 +309,6 @@ public class JavaManagementServiceTests : IDisposable
 
     #endregion
 
-    #region GetCompatibleJavaAsync Tests
-
-    [Fact]
-    public async Task GetCompatibleJavaAsync_ReturnsCompatibleJava()
-    {
-        // Arrange
-        _testConfig.JavaInstallations.Clear();
-        _testConfig.JavaInstallations.Add(new JavaInstallation
-        {
-            Id = "java17",
-            Name = "Java 17",
-            Path = "C:\\Java17\\bin\\java.exe",
-            MajorVersion = 17,
-            IsDefault = true
-        });
-
-        // Act
-        var result = await _javaService.GetCompatibleJavaAsync(
-            "1.21.1",
-            new Mock<IServerInstaller>().Object,
-            "C:\\Server"
-        );
-
-        // Assert - для Minecraft 1.21.1 требуется Java 21, но найдётся только Java 17
-        // Сервис должен вернуть null или fallback
-        result?.MajorVersion.Should().Be(17); // Fallback на доступную
-    }
-
-    [Fact]
-    public async Task GetCompatibleJavaAsync_ReturnsNull_WhenNoJavaInstalled()
-    {
-        // Arrange
-        _testConfig.JavaInstallations.Clear();
-
-        // Act
-        var result = await _javaService.GetCompatibleJavaAsync(
-            "1.21.1",
-            new Mock<IServerInstaller>().Object,
-            "C:\\Server"
-        );
-
-        // Assert
-        result.Should().BeNull();
-    }
-
-    #endregion
 
     #region JavaInstallation Model Tests
 

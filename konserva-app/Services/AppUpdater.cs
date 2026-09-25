@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Windows;
 
 namespace Konserva.Services
@@ -35,6 +36,18 @@ namespace Konserva.Services
 
             try
             {
+                // Шаг 0: Проверяем, что манифест вообще содержит контрольную сумму.
+                // Без неё мы не можем отличить подменённый ассет от повреждённого,
+                // поэтому применять такой апдейт нельзя.
+                if (!IsValidSha256(updateInfo.Sha256))
+                {
+                    const string reason =
+                        "version.json does not contain a valid 'sha256' for the selected build; refusing to install an unverified update";
+                    Logger.Error($"App update aborted: {reason}", null, "AppUpdater");
+                    UpdateLog($"Update aborted: {reason}", "ERROR");
+                    return false;
+                }
+
                 var downloadDir = Path.Combine(AppContext.BaseDirectory, "downloads");
                 var tempDir = Path.Combine(downloadDir, "KonservaUpdate");
                 var zipPath = Path.Combine(tempDir, "update.zip");
@@ -52,6 +65,23 @@ namespace Konserva.Services
                 UpdateLog($"Downloading {updateInfo.AssetName} ({FormatSize(updateInfo.SizeBytes)})");
 
                 await DownloadFileAsync(updateInfo.DownloadUrl, zipPath, updateInfo.CurrentVersion, progress);
+
+                // Шаг 2.5: Обязательная проверка целостности скачанного архива
+                UpdateLog("Verifying SHA-256...");
+                await VerifySha256Async(zipPath, updateInfo.Sha256);
+
+                if (updateInfo.SizeBytes > 0)
+                {
+                    var actualSize = new FileInfo(zipPath).Length;
+                    if (actualSize != updateInfo.SizeBytes)
+                    {
+                        var reason = $"size mismatch: expected {updateInfo.SizeBytes} bytes, got {actualSize}";
+                        UpdateLog($"Update aborted: {reason}", "ERROR");
+                        Logger.Error($"App update aborted: {reason}", null, "AppUpdater");
+                        TryDeleteFile(zipPath);
+                        return false;
+                    }
+                }
 
                 // Шаг 3: Распаковка
                 progress?.Report(90);
@@ -151,6 +181,69 @@ exit
 ";
 
             File.WriteAllText(batchPath, batchContent, new System.Text.UTF8Encoding(true));
+        }
+
+        /// <summary>
+        /// Валидирует формат контрольной суммы: ровно 64 hex-символа.
+        /// </summary>
+        private static bool IsValidSha256(string? sha256)
+        {
+            if (string.IsNullOrWhiteSpace(sha256))
+                return false;
+
+            var trimmed = sha256.Trim();
+            if (trimmed.Length != 64)
+                return false;
+
+            foreach (var c in trimmed)
+            {
+                var isHex = c is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F';
+                if (!isHex)
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Считает SHA-256 файла и сравнивает с ожидаемым (регистронезависимо).
+        /// При несовпадении архив удаляется и выбрасывается <see cref="InvalidDataException"/>.
+        /// </summary>
+        private static async Task VerifySha256Async(string filePath, string expectedSha256)
+        {
+            byte[] actual;
+
+            await using (var stream = new FileStream(
+                filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true))
+            {
+                actual = await SHA256.HashDataAsync(stream);
+            }
+
+            var actualHex = Convert.ToHexString(actual);
+            var expectedHex = expectedSha256.Trim().ToUpperInvariant();
+
+            if (string.Equals(actualHex, expectedHex, StringComparison.Ordinal))
+            {
+                UpdateLog($"SHA-256 OK: {actualHex}");
+                return;
+            }
+
+            TryDeleteFile(filePath);
+            throw new InvalidDataException(
+                $"SHA-256 mismatch. Expected {expectedHex}, got {actualHex}");
+        }
+
+        private static void TryDeleteFile(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AppUpdater] Failed to delete {path}: {ex.Message}");
+            }
         }
 
         /// <summary>

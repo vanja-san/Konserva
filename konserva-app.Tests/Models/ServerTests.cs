@@ -1,4 +1,4 @@
-using Konserva.Models;
+﻿using Konserva.Models;
 using Konserva.Utilities;
 using Xunit;
 
@@ -7,6 +7,7 @@ namespace Konserva.Tests.Models;
 /// <summary>
 /// Тесты для модели Server
 /// </summary>
+[Trait("Category", "Unit")]
 public class ServerTests
 {
     [Fact]

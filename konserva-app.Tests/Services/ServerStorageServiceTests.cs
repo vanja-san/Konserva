@@ -1,4 +1,4 @@
-using Konserva.Models;
+﻿using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
 using System.IO;
@@ -9,6 +9,7 @@ namespace Konserva.Tests.Services;
 
 // Отключаем параллельное выполнение — тесты используют общий servers.json
 [Collection("Sequential")]
+[Trait("Category", "Integration")]
 public class ServerStorageServiceTests : IDisposable
 {
     private readonly ServerStorageService _service;

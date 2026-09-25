@@ -40,11 +40,16 @@ public partial class ServerModsSection : System.Windows.Controls.UserControl, ID
     private async void LoadMods()
     {
         if (_server == null) return;
+
+        // Список из локальных файлов показываем сразу, названия/версии подтягиваются в фоне
         _viewModel.LoadMods();
-        await _viewModel.ResolveModTitlesAsync();
         ModsList.ItemsSource = _viewModel.Mods;
         ItemUiHelper.ReloadItemsPanel(ModsList, ModsCountBadge, _viewModel.Mods.Count, () => ItemUiHelper.UpdateToggleBtn(ToggleAllModsBtn, _viewModel.CheckAllModsDisabled, "ServerDetail_Mods_ToggleAll_Enable", "ServerDetail_Mods_ToggleAll_Disable"));
-        await _viewModel.CheckModUpdatesAsync();
+
+        await _viewModel.ResolveModTitlesAsync();
+
+        // Авто-проверка обновлений только если файлы изменились или кэш устарел (TTL)
+        await _viewModel.MaybeCheckModUpdatesAutoAsync();
         UpdateModUpdateUI();
     }
 
@@ -128,12 +133,15 @@ public partial class ServerModsSection : System.Windows.Controls.UserControl, ID
     private async Task ReloadModsList()
     {
         if (_server == null) return;
+
+        // После применения обновлений не дёргаем авто-проверку — список обновим без сети
         _viewModel.LoadMods();
-        await _viewModel.ResolveModTitlesAsync();
         ModsList.ItemsSource = _viewModel.Mods;
         ItemUiHelper.ReloadItemsPanel(ModsList, ModsCountBadge, _viewModel.Mods.Count,
             () => ItemUiHelper.UpdateToggleBtn(ToggleAllModsBtn, _viewModel.CheckAllModsDisabled,
                 "ServerDetail_Mods_ToggleAll_Enable", "ServerDetail_Mods_ToggleAll_Disable"));
+
+        await _viewModel.ResolveModTitlesAsync();
     }
 
     private void UpdateModUpdateUI()

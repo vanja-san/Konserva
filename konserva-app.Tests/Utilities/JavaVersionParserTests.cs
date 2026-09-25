@@ -1,9 +1,10 @@
-using Konserva.Models;
+﻿using Konserva.Models;
 using Konserva.Utilities;
 using Xunit;
 
 namespace Konserva.Tests;
 
+[Trait("Category", "Unit")]
 public class JavaVersionParserTests
 {
     // Реальный stderr Forge когда Java слишком старая (class file version)

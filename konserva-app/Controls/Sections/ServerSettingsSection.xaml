@@ -7,7 +7,11 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta">
 
-    <ScrollViewer x:Name="SettingsScrollViewer" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer
+        x:Name="SettingsScrollViewer"
+        Margin="0,8,-16,0"
+        Padding="0,0,16,0"
+        VerticalScrollBarVisibility="Auto">
         <StackPanel>
             <!--  Баннер: сервер запущен  -->
             <Border
@@ -494,9 +498,9 @@
                             x:Name="UpdateLoaderVersionBox"
                             Grid.Column="1"
                             MinWidth="180"
-                            MaxDropDownHeight="200"
                             HorizontalAlignment="Right"
-                            VerticalAlignment="Center" />
+                            VerticalAlignment="Center"
+                            MaxDropDownHeight="200" />
                     </Grid>
 
                     <!--  Резервная копия  -->
@@ -553,18 +557,21 @@
                         Grid.Row="5"
                         Margin="0,8,0,0"
                         ColumnDefinitions="*,Auto">
-                        <Grid Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <Grid
+                            Grid.Column="0"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center">
                             <ProgressBar
                                 x:Name="UpdateLogProgress"
                                 Height="4"
                                 VerticalAlignment="Center"
-                                IsIndeterminate="True"
                                 vio:ProgressBarHelper.IsEnabled="True"
+                                IsIndeterminate="True"
                                 Visibility="Collapsed" />
                             <ui:TextBlock
                                 x:Name="UpdateResultText"
-                                FontSize="12"
                                 VerticalAlignment="Center"
+                                FontSize="12"
                                 TextWrapping="Wrap"
                                 Visibility="Collapsed" />
                         </Grid>

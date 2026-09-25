@@ -214,11 +214,18 @@ public partial class SettingsViewModel : ObservableObject
 
     // ─── Helpers ────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Локализованная подпись интервала проверки обновлений.
+    /// Публична, потому что список пунктов меню строится из тех же значений,
+    /// что и текст на кнопке — иначе подписи расходятся.
+    /// </summary>
+    public string FormatUpdateInterval(int hours) => FormatInterval(hours);
+
     private static string FormatInterval(int hours)
     {
         if (hours <= 24)
-            return $"{hours} ч";
+            return LocalizationManager.Get("Settings_Interval_Hours", hours);
         else
-            return $"{hours / 24} д";
+            return LocalizationManager.Get("Settings_Interval_Days", hours / 24);
     }
 }

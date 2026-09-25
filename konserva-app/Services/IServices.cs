@@ -94,7 +94,6 @@ public interface IJavaManagementService
     JavaInstallation? AddJava(string javaPath);
     bool RemoveJava(string javaId);
     bool SetDefaultJava(string javaId);
-    Task<JavaInstallation?> GetCompatibleJavaAsync(string mcVersion, IServerInstaller installer, string serverPath, CancellationToken ct = default);
 
     /// <summary>
     /// Scans the system for all installed Java runtimes.

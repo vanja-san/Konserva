@@ -1,4 +1,4 @@
-using Konserva.Models;
+﻿using Konserva.Models;
 using Xunit;
 
 namespace Konserva.Tests.Models;
@@ -6,6 +6,7 @@ namespace Konserva.Tests.Models;
 /// <summary>
 /// Тесты для ApiUrls — проверка, что константы заданы корректно.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ApiUrlsTests
 {
     [Fact]

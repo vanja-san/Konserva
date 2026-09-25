@@ -1,4 +1,4 @@
-using Konserva.Models;
+﻿using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
 using System.Diagnostics;
@@ -10,6 +10,7 @@ namespace Konserva.Tests.Services;
 /// <summary>
 /// Тесты для McServerProcess
 /// </summary>
+[Trait("Category", "Integration")]
 public class McServerProcessTests : IDisposable
 {
     private readonly string _testServerPath;
@@ -96,18 +97,20 @@ public class McServerProcessTests : IDisposable
     }
 
     [Fact]
-    public void GetLogs_ReturnsReadOnlyList()
+    public void GetLogs_ReturnsSnapshot_NotLiveView()
     {
         // Arrange
         var server = new Server { Name = "Test", Path = _testServerPath };
         var process = new McServerProcess(server, _configService);
+        process.AppendLog("first");
 
         // Act
         var logs = process.GetLogs();
+        process.AppendLog("second");
 
-        // Assert
-        logs.Should().NotBeNull();
-        // IReadOnlyList по определению read-only
+        // Assert: снимок не должен «догонять» последующие строки
+        logs.Should().ContainSingle().Which.Should().Be("first");
+        process.GetLogs().Should().HaveCount(2);
     }
 
     #endregion
@@ -115,9 +118,9 @@ public class McServerProcessTests : IDisposable
     #region Start Tests
 
     [Fact]
-    public void Start_ThrowsException_WhenServerJarNotFound()
+    public async Task Start_WhenServerJarNotFound_ReportsError()
     {
-        // Arrange
+        // Arrange: папка существует, но server.jar отсутствует
         var server = new Server
         {
             Name = "Test",
@@ -127,10 +130,13 @@ public class McServerProcessTests : IDisposable
         };
         var process = new McServerProcess(server, _configService);
 
-        // Act & Assert
-        // Start запускается асинхронно и не бросает исключения сразу
-        // Проверяем, что метод вызывается без исключений
-        process.Start();
+        // Act
+        await process.Awaiting(p => p.StartAsync()).Should().ThrowAsync<Exception>();
+
+        // Assert: ошибка не остаётся безымянной — в статусе и в LastError
+        process.Status.Should().Be(ServerStatus.Error);
+        process.LastError.Should().NotBeNullOrEmpty();
+        process.Process.Should().BeNull();
     }
 
     [Fact]

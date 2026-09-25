@@ -10,6 +10,7 @@ namespace Konserva.Tests.Services;
 /// <summary>
 /// Тесты для системы локализации
 /// </summary>
+[Trait("Category", "Integration")]
 public class LocalizationTests : IDisposable
 {
     private readonly string _testI18nPath;

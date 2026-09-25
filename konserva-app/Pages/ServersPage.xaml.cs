@@ -18,6 +18,7 @@ public partial class ServersPage : Page, IDisposable
 {
     private readonly ServersViewModel _viewModel;
     private bool _disposed;
+    private bool _subscribed;
 
     public ServersPage()
     {
@@ -26,9 +27,6 @@ public partial class ServersPage : Page, IDisposable
         _viewModel = Ioc.Default.GetService<ServersViewModel>()
             ?? new ServersViewModel(Ioc.Default.GetService<IServerManager>()!);
 
-        // Подписываемся на события ViewModel для UI-действий
-        _viewModel.NavigateToServerRequested += OnNavigateToServer;
-        _viewModel.OpenFolderRequested += OnOpenFolder;
         DataContext = _viewModel;
 
         Loaded += OnLoaded;
@@ -37,13 +35,31 @@ public partial class ServersPage : Page, IDisposable
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        if (_disposed || _subscribed)
+            return;
+        _subscribed = true;
+
         Ioc.Default.GetService<IServerManager>()!.OnServerStartError += OnServerStartError;
+
+        // Подписка на события ViewModel живёт ровно пока страница видима.
+        // Иначе старые экземпляры страницы (их держит Frame-журнал) оставались бы
+        // подписанными на события singleton-ViewModel и не собирались GC.
+        _viewModel.NavigateToServerRequested += OnNavigateToServer;
+        _viewModel.OpenFolderRequested += OnOpenFolder;
+
         _viewModel.IsVisible = true;
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        if (!_subscribed)
+            return;
+        _subscribed = false;
+
         Ioc.Default.GetService<IServerManager>()!.OnServerStartError -= OnServerStartError;
+        _viewModel.NavigateToServerRequested -= OnNavigateToServer;
+        _viewModel.OpenFolderRequested -= OnOpenFolder;
+
         _viewModel.IsVisible = false;
     }
 
@@ -213,8 +229,12 @@ public partial class ServersPage : Page, IDisposable
         if (_disposed)
             return;
         _disposed = true;
+
         Loaded -= OnLoaded;
         Unloaded -= OnUnloaded;
-        Ioc.Default.GetService<IServerManager>()!.OnServerStartError -= OnServerStartError;
+
+        OnUnloaded(this, new RoutedEventArgs());
+
+        // ViewModel — singleton, его Dispose не вызываем: он переживёт страницу.
     }
 }

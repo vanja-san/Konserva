@@ -142,6 +142,67 @@ jobs:
         Get-Item $archiveName | Select-Object Name, Length
       shell: pwsh
 
+    - name: Update version manifest with real hashes
+      # AppUpdater проверяет sha256 и sizeBytes из этого файла и отказывается
+      # ставить обновление при несовпадении. Если манифест не обновить здесь,
+      # он навсегда останется на предыдущем релизе, и пользователи либо не увидят
+      # обновление, либо получат отказ по контрольной сумме.
+      run: |
+        $version = "${{ inputs.version }}"
+        $fullName = "Konserva-v$version-Full.zip"
+        $depsName = "Konserva-v$version-Deps.zip"
+        $manifestPath = ".github/version.json"
+
+        $full = Get-Item $fullName
+        $deps = Get-Item $depsName
+        $fullHash = (Get-FileHash $fullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        $depsHash = (Get-FileHash $depsName -Algorithm SHA256).Hash.ToLowerInvariant()
+
+        $manifest = [ordered]@{
+          latestVersion     = $version
+          minRequiredVersion = "0.0.1"
+          downloads         = [ordered]@{
+            full  = [ordered]@{
+              url       = "https://github.com/vanja-san/Konserva/releases/download/v$version/$fullName"
+              sizeBytes  = $full.Length
+              assetName  = $fullName
+              sha256     = $fullHash
+            }
+            deps  = [ordered]@{
+              url       = "https://github.com/vanja-san/Konserva/releases/download/v$version/$depsName"
+              sizeBytes  = $deps.Length
+              assetName  = $depsName
+              sha256     = $depsHash
+            }
+          }
+          releaseNotes  = ""
+          changelogUrl  = "https://github.com/vanja-san/Konserva/releases/tag/v$version"
+        }
+
+        $json = $manifest | ConvertTo-Json -Depth 5
+        [System.IO.File]::WriteAllText(
+            (Join-Path $PWD $manifestPath),
+            $json,
+            [System.Text.UTF8Encoding]::new($false))
+        Write-Host "Wrote $manifestPath for v$version"
+        Write-Host "  $fullName  $($full.Length) bytes  $fullHash"
+        Write-Host "  $depsName  $($deps.Length) bytes  $depsHash"
+      shell: pwsh
+
+    - name: Commit updated version manifest
+      if: inputs.create_release == true
+      run: |
+        git config user.name  "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add .github/version.json
+        if (git diff --cached --quiet); then
+          Write-Host "version.json unchanged"
+        else
+          git commit -m "chore: update version manifest for v${{ inputs.version }}"
+          git push
+        }
+      shell: pwsh
+
     - name: Upload Full artifact
       uses: actions/upload-artifact@v6
       with:

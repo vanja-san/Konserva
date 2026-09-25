@@ -15,6 +15,13 @@ namespace Konserva.Models
         public string ChangelogUrl { get; set; } = string.Empty;
 
         /// <summary>
+        /// Ожидаемый SHA-256 ассета (64 hex-символа) из version.json.
+        /// Пустая строка означает, что манифест не содержит контрольную сумму —
+        /// в таком случае обновление не применяется (см. <see cref="Services.AppUpdater"/>).
+        /// </summary>
+        public string Sha256 { get; set; } = string.Empty;
+
+        /// <summary>
         /// true, если удалось прочитать version.json (HTTP 200).
         /// false при таймауте или другой сетевой ошибке.
         /// </summary>

@@ -73,11 +73,6 @@ public class AppConfig
     public List<string> RecentServers { get; set; } = [];
 
     /// <summary>
-    /// API Endpoints для внешних запросов
-    /// </summary>
-    public ApiEndpoints ApiEndpoints { get; set; } = new();
-
-    /// <summary>
     /// Путь к конфигурационной папке (рядом с exe)
     /// </summary>
     public static string ConfigDirectory
@@ -106,9 +101,4 @@ public class AppConfig
     /// Получить путь к Java по умолчанию
     /// </summary>
     public string GetDefaultJavaPath() => GetDefaultJava()?.Path ?? DefaultJavaPath;
-
-    /// <summary>
-    /// Получить API Endpoints
-    /// </summary>
-    public ApiEndpoints GetApiEndpoints() => ApiEndpoints ?? new ApiEndpoints();
 }

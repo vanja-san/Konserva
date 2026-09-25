@@ -66,6 +66,7 @@ namespace Konserva.Services
                 updateInfo.AssetName = download.AssetName;
                 updateInfo.DownloadUrl = download.Url;
                 updateInfo.SizeBytes = download.SizeBytes;
+                updateInfo.Sha256 = download.Sha256 ?? string.Empty;
                 updateInfo.ReleaseNotes = manifest.ReleaseNotes ?? string.Empty;
                 updateInfo.ChangelogUrl = manifest.ChangelogUrl ?? string.Empty;
 

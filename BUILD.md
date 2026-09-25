@@ -120,9 +120,11 @@ konserva-app/
 │   ├── Controls/                    # Custom controls
 │   └── App.xaml / MainWindow.xaml   # Application entry
 ├── konserva-app.Tests/              # Test project (xUnit)
-│   ├── Unit/                        # Unit tests
-│   ├── Integration/                 # Integration tests
-│   └── E2E/                         # End-to-end tests
+│   ├── Models/                      # Model tests
+│   ├── Services/                    # Service tests
+│   ├── Utilities/                   # Utility tests
+│   ├── Converters/                  # Converter tests
+│   └── Localization/                # Localization tests
 ├── .github/
 │   └── workflows/                   # CI/CD workflows
 ├── publish/                         # Build output
@@ -157,16 +159,19 @@ dotnet test --configuration Release
 ```
 
 ### Run Specific Test Category
+Categories are declared as a `Category` xUnit trait on each test class, so
+filters work from the command line and from the test explorer UI:
+
 ```bash
-# Unit tests only
+# Unit tests only — pure logic, no I/O
 dotnet test --filter "Category=Unit"
 
-# Integration tests only
+# Integration tests only — filesystem, registry, HTTP
 dotnet test --filter "Category=Integration"
-
-# E2E tests only
-dotnet test --filter "Category=E2E"
 ```
+
+There is no `E2E` category: no end-to-end tests exist yet. Add the trait
+(`[Trait("Category", "E2E")]`) when the first one appears.
 
 ### Test Output
 Test results are saved to `TestResults/` directory.
@@ -187,7 +192,10 @@ dotnet build --configuration Release
 Use Deps version (~10 MB instead of ~60 MB)
 
 ### Russian text encoding issues
-Ensure all .cs and .xaml files are saved with UTF-8 with BOM encoding.
+Save all .cs and .xaml files as UTF-8. A BOM is not required — the .NET SDK
+decodes BOM-less files as UTF-8, which is why the project builds with a mix of
+both. If a Russian string looks garbled, the file was most likely saved in a
+legacy single-byte codepage.
 
 ### WPF UI errors
 Make sure WPF UI 4.2.0 package is restored:
@@ -198,11 +206,13 @@ dotnet restore
 ## Code Quality
 
 ### Fix Encoding (Russian Text)
-All source files must be UTF-8 with BOM. Use PowerShell to fix:
+All source files must be UTF-8. To normalise them (strips stray BOMs, rewrites
+every file in UTF-8) — run this only when a file genuinely misbehaves, and review
+the resulting diff, since it touches every source file:
 ```powershell
 Get-ChildItem -Recurse -Include *.cs,*.xaml | ForEach-Object {
-    $content = Get-Content $_.FullName -Raw -Encoding UTF8
-    [System.IO.File]::WriteAllText($_.FullName, $content, [System.Text.UTF8Encoding]::new($true))
+    $content = [System.IO.File]::ReadAllText($_.FullName, [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText($_.FullName, $content, [System.Text.UTF8Encoding]::new($false))
 }
 ```
 
@@ -262,7 +272,7 @@ Used by application for version resolution:
 3. **Self-contained by default** — No .NET installation required for users
 4. **WPF UI 4.2.0** — Modern Fluent Design controls
 5. **.NET 10** — Latest LTS framework
-6. **xUnit Testing** — 77 tests (Unit, Integration, E2E)
+6. **xUnit Testing** — 400 tests, tagged with a `Category` trait (`Unit` / `Integration`); no E2E suite yet
 
 ---
 

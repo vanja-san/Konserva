@@ -1,4 +1,4 @@
-using Konserva.Models;
+﻿using Konserva.Models;
 using Konserva.Services;
 using Moq;
 using System.IO;
@@ -8,6 +8,7 @@ namespace Konserva.Tests.Services;
 /// <summary>
 /// Fake in-memory storage service для тестирования McServerManager
 /// </summary>
+[Trait("Category", "Integration")]
 public class FakeServerStorageService : IServerStorageService
 {
     private readonly List<Server> _servers = [];
@@ -39,6 +40,7 @@ public class FakeServerStorageService : IServerStorageService
 /// Тесты для McServerManager
 /// </summary>
 [Collection("Sequential")]
+[Trait("Category", "Integration")]
 public class McServerManagerTests : IDisposable
 {
     private readonly FakeServerStorageService _storage;

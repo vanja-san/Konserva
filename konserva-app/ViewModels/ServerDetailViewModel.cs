@@ -28,7 +28,29 @@ public partial class ServerDetailViewModel : ObservableObject
     /// Ключ — нормализованное имя файла (без .disabled), чтобы после перезагрузок
     /// не показывать имена файлов и не дёргать сеть при каждом действии.
     /// </summary>
-    private readonly Dictionary<string, ModMetadata> _modTitlesCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ModMetadataCacheEntry> _modTitlesCache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Закэшированные на диске обновления: имя файла → данные (валидны для файла указанного размера).
+    /// Позволяет показывать найденные обновления сразу после перезапуска приложения без сети.
+    /// </summary>
+    private readonly Dictionary<string, ModUpdateCacheEntry> _cachedUpdates = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Порог актуальности авто-проверки обновлений: пока файлы не менялись и проверка была
+    /// меньше часа назад — сеть не дёргаем.
+    /// </summary>
+    private static readonly TimeSpan ModUpdateAutoCheckTtl = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Диск-кэш метаданных модов (названия, версии, инвентаризация файлов, обновления).
+    /// Keyed by server id under Constants.ServersPath\mods_cache.
+    /// </summary>
+    private FileBasedStore<ModsMetadataCacheData>? _modsCacheStore;
+    private bool _modsCacheLoaded;
+
+    /// <summary>Время последней реальной проверки обновлений (UTC).</summary>
+    private DateTime _lastModsUpdateCheckUtc;
 
     public ServerDetailViewModel(
         IServerManager serverManager,
@@ -174,6 +196,8 @@ public partial class ServerDetailViewModel : ObservableObject
 
         if (server == null)
             return;
+
+        EnsureModsCacheLoaded();
 
         ServerName = server.Name;
         ServerInfo = server.Description;
@@ -421,6 +445,7 @@ public partial class ServerDetailViewModel : ObservableObject
         {
             var items = ScanItemFiles<ModItem>("mods");
             ApplyCachedTitles(items);
+            ApplyCachedUpdates(items);
             RefreshModUpdateStatus(items);
             Mods = new(items);
             ModsVisible = Mods.Count > 0;
@@ -466,19 +491,21 @@ public partial class ServerDetailViewModel : ObservableObject
 
     // ─── Mod Updates ──────────────────────────────────────────────────
 
-    public async Task CheckModUpdatesAsync()
+    public async Task CheckModUpdatesAsync(bool silent = false)
     {
         if (_server == null || _isBusy || IsCheckingModUpdates || _modUpdateService == null) return;
 
         if (IsRunning)
         {
-            await UiHelper.ShowInfo(LocalizationManager.Get("ServerDetail_Mods_ServerMustBeStopped"));
+            if (!silent)
+                await UiHelper.ShowInfo(LocalizationManager.Get("ServerDetail_Mods_ServerMustBeStopped"));
             return;
         }
 
         if (!ModrinthLoaderMap.SupportsModUpdates(_server.ModLoader.Type))
         {
-            await UiHelper.ShowInfo(LocalizationManager.Get("ServerDetail_Mods_UpdateNotSupported"));
+            if (!silent)
+                await UiHelper.ShowInfo(LocalizationManager.Get("ServerDetail_Mods_UpdateNotSupported"));
             return;
         }
 
@@ -511,6 +538,9 @@ public partial class ServerDetailViewModel : ObservableObject
             ModUpdateStatusText = _pendingUpdates.Count > 0
                 ? string.Format(LocalizationManager.Get("ServerDetail_Mods_UpdatesFound"), _pendingUpdates.Count)
                 : string.Empty;
+
+            _lastModsUpdateCheckUtc = DateTime.UtcNow;
+            PersistModsCache();
         }
         catch (Exception ex)
         {
@@ -632,7 +662,8 @@ public partial class ServerDetailViewModel : ObservableObject
             ApplyCachedTitles(Mods);
 
             var uncachedPaths = Mods
-                .Where(m => !_modTitlesCache.ContainsKey(m.FileName))
+                .Where(m => !_modTitlesCache.TryGetValue(m.FileName, out var cached)
+                            || cached.FileSize != m.FileSize)
                 .Select(m => m.FilePath)
                 .ToList();
 
@@ -650,13 +681,16 @@ public partial class ServerDetailViewModel : ObservableObject
                     if (!string.IsNullOrWhiteSpace(info.Version))
                         mod.Version = info.Version;
 
-                    _modTitlesCache[mod.FileName] = new ModMetadata
+                    _modTitlesCache[mod.FileName] = new ModMetadataCacheEntry
                     {
+                        FileSize = mod.FileSize,
                         Title = string.IsNullOrWhiteSpace(info.Title) ? mod.Name : info.Title,
                         Version = string.IsNullOrWhiteSpace(info.Version) ? mod.Version : info.Version
                     };
                 }
             }
+
+            PersistModsCache();
         }
         catch (Exception ex)
         {
@@ -668,12 +702,162 @@ public partial class ServerDetailViewModel : ObservableObject
     {
         foreach (var mod in mods)
         {
-            if (_modTitlesCache.TryGetValue(mod.FileName, out var meta))
+            if (_modTitlesCache.TryGetValue(mod.FileName, out var entry) && entry.FileSize == mod.FileSize)
             {
-                mod.Name = meta.Title;
-                mod.Version = meta.Version;
+                mod.Name = entry.Title;
+                mod.Version = entry.Version;
             }
         }
+    }
+
+    // ─── Disk cache helpers ─────────────────────────────────────────
+
+    private string? GetModsCachePath()
+    {
+        if (_server == null) return null;
+        return Path.Combine(Constants.ServersPath, "mods_cache", $"{_server.Id}.json");
+    }
+
+    private void EnsureModsCacheLoaded()
+    {
+        if (_modsCacheLoaded || _server == null) return;
+        _modsCacheLoaded = true;
+
+        try
+        {
+            var cachePath = GetModsCachePath();
+            if (cachePath == null) return;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
+            _modsCacheStore = new FileBasedStore<ModsMetadataCacheData>(cachePath);
+
+            var data = _modsCacheStore.Load();
+            if (data == null) return;
+
+            _lastModsUpdateCheckUtc = data.LastUpdatesCheckUtc;
+            _modTitlesCache.Clear();
+            _cachedUpdates.Clear();
+
+            foreach (var (fileName, entry) in data.Titles)
+            {
+                if (!string.IsNullOrEmpty(fileName) && entry != null)
+                    _modTitlesCache[fileName] = entry;
+            }
+
+            foreach (var (fileName, entry) in data.Updates)
+            {
+                if (!string.IsNullOrEmpty(fileName) && entry?.Update != null)
+                    _cachedUpdates[fileName] = entry;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"ModsCache load error: {ex.Message}", "ServerDetailViewModel");
+        }
+    }
+
+    /// <summary>
+    /// Восстанавливает найденные ранее обновления из кэша для файлов, чей размер не изменился.
+    /// Ключ кэша — имя файла, поэтому при перезапуске пути (в т.ч. с .disabled) исправляются под текущие.
+    /// </summary>
+    private void ApplyCachedUpdates(IEnumerable<ModItem> items)
+    {
+        _pendingUpdates.Clear();
+
+        foreach (var mod in items)
+        {
+            if (_cachedUpdates.TryGetValue(mod.FileName, out var entry) && entry.FileSize == mod.FileSize)
+            {
+                var info = entry.Update;
+                if (info == null) continue;
+
+                info.FilePath = mod.FilePath;
+                _pendingUpdates[mod.FilePath] = info;
+                mod.UpdateAvailable = true;
+                mod.LatestVersion = info.LatestVersion;
+            }
+        }
+
+        HasModUpdates = _pendingUpdates.Count > 0;
+    }
+
+    /// <summary>
+    /// Пишет на диск кэш названий/версий, инвентаризацию файлов и найденные обновления,
+    /// чтобы после перезапуска приложения не дёргать сеть повторно.
+    /// </summary>
+    private void PersistModsCache()
+    {
+        if (_modsCacheStore == null || _server == null) return;
+
+        try
+        {
+            _cachedUpdates.Clear();
+            foreach (var mod in Mods)
+            {
+                if (_pendingUpdates.TryGetValue(mod.FilePath, out var info))
+                    _cachedUpdates[mod.FileName] = new ModUpdateCacheEntry { FileSize = mod.FileSize, Update = info };
+            }
+
+            var data = new ModsMetadataCacheData
+            {
+                LastUpdatesCheckUtc = _lastModsUpdateCheckUtc,
+                Titles = new(_modTitlesCache, StringComparer.OrdinalIgnoreCase),
+                Updates = new(_cachedUpdates, StringComparer.OrdinalIgnoreCase)
+            };
+
+            foreach (var mod in Mods)
+                data.ModFiles[mod.FileName] = mod.FileSize;
+
+            _modsCacheStore.Save(data);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"ModsCache save error: {ex.Message}", "ServerDetailViewModel");
+        }
+    }
+
+    /// <summary>
+    /// Авто-проверка обновлений при открытии вкладки: без сети, если файлы не менялись
+    /// и последняя проверка была меньше часа назад. Сервер при этом должен быть остановлен.
+    /// </summary>
+    public async Task MaybeCheckModUpdatesAutoAsync()
+    {
+        if (_server == null || _isBusy || IsCheckingModUpdates || _modUpdateService == null) return;
+        if (IsRunning) return;
+        if (!ModrinthLoaderMap.SupportsModUpdates(_server.ModLoader.Type)) return;
+        if (Mods.Count == 0) return;
+
+        try
+        {
+            EnsureModsCacheLoaded();
+            if (!ShouldAutoCheckUpdates()) return;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Auto-check skipped: {ex.Message}", "ServerDetailViewModel");
+            return;
+        }
+
+        await CheckModUpdatesAsync(silent: true);
+    }
+
+    private bool ShouldAutoCheckUpdates()
+    {
+        var data = _modsCacheStore?.Load();
+        if (data == null) return true;
+
+        if (data.ModFiles.Count != Mods.Count) return true;
+
+        foreach (var mod in Mods)
+        {
+            if (!data.ModFiles.TryGetValue(mod.FileName, out var size) || size != mod.FileSize)
+                return true;
+        }
+
+        var lastCheck = data.LastUpdatesCheckUtc != default ? data.LastUpdatesCheckUtc : _lastModsUpdateCheckUtc;
+        if (lastCheck == default) return true;
+
+        return DateTime.UtcNow - lastCheck > ModUpdateAutoCheckTtl;
     }
 
     // ─── Generic helpers ────────────────────────────────────────────

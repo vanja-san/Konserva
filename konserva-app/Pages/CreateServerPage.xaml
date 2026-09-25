@@ -7,7 +7,7 @@
     xmlns:loc="clr-namespace:Konserva.Localization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        Title="CreateServer"
+    Title="CreateServer"
     mc:Ignorable="d">
 
     <Page.Resources>
@@ -181,12 +181,10 @@
         <!--  Кнопки и прогресс (фиксировано внизу)  -->
         <Border
             Grid.Row="1"
-            Margin="16,0,16,16"
             Padding="8"
             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
-            BorderBrush="{ui:ThemeResource ControlElevationBorderBrush}"
-            BorderThickness="1,1,1,1"
-            CornerRadius="8">
+            BorderBrush="{ui:ThemeResource SurfaceStrokeColorFlyoutBrush}"
+            BorderThickness="0,1,0,0">
             <Grid Margin="0" ColumnDefinitions="Auto,*,Auto">
                 <!--  Кнопка Импорт  -->
                 <ui:Button

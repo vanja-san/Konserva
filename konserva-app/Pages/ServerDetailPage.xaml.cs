@@ -64,6 +64,9 @@ public partial class ServerDetailPage : Page, IDisposable
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        if (_disposed)
+            return;
+
         // Передаём serverId в ViewModel (устанавливается через конструктор или DataContext)
         _viewModel.ServerId = _serverId;
 
@@ -81,11 +84,16 @@ public partial class ServerDetailPage : Page, IDisposable
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        if (_disposed)
+            return;
+
         // Отписываемся от события ошибки запуска
         Ioc.Default.GetService<IServerManager>()!.OnServerStartError -= OnServerStartError;
         PropertiesEditor.PropertiesSaved -= OnPropertiesSaved;
-        StopStatusTimer();
-        Dispose();
+
+        // Страница может быть выгружена и загружена снова (Frame с OwnsJournal),
+        // поэтому освобождаем только ресурсы текущего показа, а не «сжигаем» страницу.
+        Teardown();
     }
 
     private void OnPropertiesSaved(object? sender, EventArgs e)
@@ -165,6 +173,9 @@ public partial class ServerDetailPage : Page, IDisposable
 
         UpdateStatus(_server.Status);
 
+        // Скрываем вкладки, которые не поддерживаются этим типом сервера
+        UpdateNavigationVisibility();
+
         // Выделяем первую кнопку (Консоль) при загрузке
         ResetNavigationButtons();
         if (ConsoleNavButton != null)
@@ -172,6 +183,23 @@ public partial class ServerDetailPage : Page, IDisposable
             ConsoleNavButton.Background = TryFindResource("ControlFillColorSecondaryBrush") as Brush;
             ConsoleNavIcon.Filled = true;
         }
+    }
+
+    /// <summary>
+    /// Скрывает вкладки «Моды» и «Плагины», если они не поддерживаются
+    /// модлоадером этого сервера (например, плагины у Forge/Fabric, моды у Paper).
+    /// </summary>
+    private void UpdateNavigationVisibility()
+    {
+        if (_server == null)
+            return;
+
+        ModsNavButton.Visibility = ModrinthLoaderMap.SupportsMods(_server.ModLoader.Type)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        PluginsNavButton.Visibility = ModrinthLoaderMap.SupportsPlugins(_server.ModLoader.Type)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     /// <summary>
@@ -220,154 +248,26 @@ public partial class ServerDetailPage : Page, IDisposable
         _consoleSection?.AppendLog(line);
     }
 
-    private async void UpdateStatus(ServerStatus status)
+    /// <summary>
+    /// Обновляет UI по статусу сервера.
+    /// Вызывается из <see cref="StatusLoopAsync"/> (UI-поток) и из событий
+    /// <see cref="McServerProcess.OnStatusChanged"/>, которые поднимаются из
+    /// потока чтения stdout/stderr процесса. Поэтому всё тело выносится в
+    /// <see cref="ApplyStatus"/>, выполняемую строго на UI-потоке.
+    /// </summary>
+    private void UpdateStatus(ServerStatus status)
+    {
+        if (_disposed)
+            return;
+
+        _ = UpdateStatusAsync(status);
+    }
+
+    private async Task UpdateStatusAsync(ServerStatus status)
     {
         try
         {
-            // Если сервер успешно запущен — сбрасываем флаг ошибки
-            if (status == ServerStatus.Running && _server != null)
-            {
-                _server.ResetErrorDialog();
-            }
-
-            // Если процесс не актуален — переподключаемся к свежему.
-            // Покрывает и ошибки запуска: даже если сервер упал до поллинга,
-            // подключаемся и загружаем уже накопленные логи.
-            if (status is not ServerStatus.Stopped && _process is null or { Status: ServerStatus.Stopped or ServerStatus.Error })
-            {
-                ConnectToProcess();
-            }
-
-            // Для остановленных или ошибочных снимаем флаг занятости
-            if (status is ServerStatus.Stopped or ServerStatus.Error)
-            {
-                _isBusy = false;
-            }
-
-            // Обновляем доступность настроек (баннер и контролы раздела настроек)
-            _settingsSection?.UpdateSettingsAvailability();
-
-            await this.InvokeAsync(() =>
-            {
-                // Определяем настройки для каждого статуса
-                SymbolRegular icon;
-                string toolTip, text;
-                ControlAppearance appearance;
-                bool isTransitioning;
-
-                switch (status)
-                {
-                    case ServerStatus.Running:
-                        icon = SymbolRegular.Stop20;
-                        toolTip = LocalizationManager.Get("ServerDetail_Stop");
-                        text = LocalizationManager.Get("ServerDetail_Stop");
-                        appearance = ControlAppearance.Danger;
-                        isTransitioning = false;
-                        break;
-                    case ServerStatus.Starting:
-                        icon = SymbolRegular.ArrowRepeat120;
-                        toolTip = LocalizationManager.Get("ServerDetail_Starting");
-                        text = LocalizationManager.Get("ServerDetail_Starting");
-                        appearance = ControlAppearance.Caution;
-                        isTransitioning = true;
-                        break;
-                    case ServerStatus.Stopping:
-                        icon = SymbolRegular.ArrowRepeat120;
-                        toolTip = LocalizationManager.Get("ServerDetail_Stopping");
-                        text = LocalizationManager.Get("ServerDetail_Stopping");
-                        appearance = ControlAppearance.Caution;
-                        isTransitioning = true;
-                        break;
-                    case ServerStatus.Error:
-                        icon = SymbolRegular.Play20;
-                        toolTip = LocalizationManager.Get("ServerDetail_Start");
-                        text = LocalizationManager.Get("ServerStatus_Error");
-                        appearance = ControlAppearance.Danger;
-                        isTransitioning = false;
-                        break;
-                    default: // Stopped
-                        icon = SymbolRegular.Play20;
-                        toolTip = LocalizationManager.Get("ServerDetail_Start");
-                        text = LocalizationManager.Get("ServerDetail_Start");
-                        appearance = ControlAppearance.Primary;
-                        isTransitioning = false;
-                        break;
-                }
-
-                // Иконка, текст, цвет кнопки
-                StartStopIcon.Symbol = icon;
-                StartStopIcon.Visibility = isTransitioning ? Visibility.Collapsed : Visibility.Visible;
-                StartStopPulse.Visibility = isTransitioning ? Visibility.Visible : Visibility.Collapsed;
-                StartStopText.Visibility = string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
-                StartStopButton.ToolTip = toolTip;
-                StartStopButton.Appearance = appearance;
-                StartStopButton.IsEnabled = !isTransitioning;
-                StartStopText.Text = text;
-
-                // Останавливаем старую пульсацию
-                StartStopPulse.BeginAnimation(UIElement.OpacityProperty, null);
-                StartStopButton.BeginAnimation(UIElement.OpacityProperty, null);
-                StartStopButton.Opacity = 1.0;
-
-                // Пульсация для переходных состояний (кружок + кнопка)
-                if (isTransitioning)
-                {
-                    var pulseSb = new Storyboard
-                    {
-                        RepeatBehavior = RepeatBehavior.Forever,
-                        AutoReverse = true
-                    };
-                    var anim = new DoubleAnimation
-                    {
-                        From = 1.0,
-                        To = 0.2,
-                        Duration = TimeSpan.FromSeconds(0.7)
-                    };
-
-                    // Пульсация кружка
-                    var ellipseAnim = anim.Clone();
-                    Storyboard.SetTarget(ellipseAnim, StartStopPulse);
-                    Storyboard.SetTargetProperty(ellipseAnim, new PropertyPath("Opacity"));
-                    pulseSb.Children.Add(ellipseAnim);
-
-                    // Пульсация кнопки
-                    var btnAnim = anim.Clone();
-                    Storyboard.SetTarget(btnAnim, StartStopButton);
-                    Storyboard.SetTargetProperty(btnAnim, new PropertyPath("Opacity"));
-                    pulseSb.Children.Add(btnAnim);
-
-                    pulseSb.Begin();
-                    StartStopPulse.Opacity = 1.0;
-                }
-
-                // Автосброс Error через 10 секунд
-                _errorResetCts?.Cancel();
-                _errorResetCts?.Dispose();
-                _errorResetCts = null;
-
-                if (status == ServerStatus.Error)
-                {
-                    _errorResetCts = new CancellationTokenSource();
-                    var ct = _errorResetCts.Token;
-                    var capturedServer = _server;
-                    Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(10), ct);
-                            await this.InvokeAsync(() =>
-                            {
-                                if (capturedServer != null)
-                                    capturedServer.Status = ServerStatus.Stopped;
-                                UpdateStatus(ServerStatus.Stopped);
-                            });
-                        }
-                        catch (OperationCanceledException)
-                        {
-                        }
-                    }, ct).SafeFireAndForget(errorMessage: "Error auto-reset failed");
-                }
-            });
+            await this.InvokeAsync(() => ApplyStatus(status));
         }
         catch (Exception ex)
         {
@@ -375,21 +275,167 @@ public partial class ServerDetailPage : Page, IDisposable
         }
     }
 
-    private async void UpdatePlayers(int players)
+    /// <summary>
+    /// Применяет статус к элементам интерфейса. Обязательно вызывается на UI-потоке.
+    /// </summary>
+    private void ApplyStatus(ServerStatus status)
     {
-        try
-        {
-            Logger.Info($"Players online: {players}", "ServerDetailPage");
+        if (_disposed)
+            return;
 
-            await this.InvokeAsync(() =>
-            {
-                // TODO: Обновлять UI элемент с количеством игроков, когда он будет добавлен
-            });
-        }
-        catch (Exception ex)
+        // Если сервер успешно запущен — сбрасываем флаг ошибки
+        if (status == ServerStatus.Running && _server != null)
         {
-            Logger.Warning($"[UpdatePlayers] Error: {ex.Message}", "ServerDetailPage");
+            _server.ResetErrorDialog();
         }
+
+        // Если процесс не актуален — переподключаемся к свежему.
+        // Покрывает и ошибки запуска: даже если сервер упал до поллинга,
+        // подключаемся и загружаем уже накопленные логи.
+        if (status is not ServerStatus.Stopped && _process is null or { Status: ServerStatus.Stopped or ServerStatus.Error })
+        {
+            ConnectToProcess();
+        }
+
+        // Для остановленных или ошибочных снимаем флаг занятости
+        if (status is ServerStatus.Stopped or ServerStatus.Error)
+        {
+            _isBusy = false;
+        }
+
+        // Обновляем доступность настроек (баннер и контролы раздела настроек)
+        _settingsSection?.UpdateSettingsAvailability();
+
+        // Определяем настройки для каждого статуса
+        SymbolRegular icon;
+        string toolTip, text;
+        ControlAppearance appearance;
+        bool isTransitioning;
+
+        switch (status)
+        {
+            case ServerStatus.Running:
+                icon = SymbolRegular.Stop20;
+                toolTip = LocalizationManager.Get("ServerDetail_Stop");
+                text = LocalizationManager.Get("ServerDetail_Stop");
+                appearance = ControlAppearance.Danger;
+                isTransitioning = false;
+                break;
+            case ServerStatus.Starting:
+                icon = SymbolRegular.ArrowRepeat120;
+                toolTip = LocalizationManager.Get("ServerDetail_Starting");
+                text = LocalizationManager.Get("ServerDetail_Starting");
+                appearance = ControlAppearance.Caution;
+                isTransitioning = true;
+                break;
+            case ServerStatus.Stopping:
+                icon = SymbolRegular.ArrowRepeat120;
+                toolTip = LocalizationManager.Get("ServerDetail_Stopping");
+                text = LocalizationManager.Get("ServerDetail_Stopping");
+                appearance = ControlAppearance.Caution;
+                isTransitioning = true;
+                break;
+            case ServerStatus.Error:
+                icon = SymbolRegular.Play20;
+                toolTip = LocalizationManager.Get("ServerDetail_Start");
+                text = LocalizationManager.Get("ServerStatus_Error");
+                appearance = ControlAppearance.Danger;
+                isTransitioning = false;
+                break;
+            default: // Stopped
+                icon = SymbolRegular.Play20;
+                toolTip = LocalizationManager.Get("ServerDetail_Start");
+                text = LocalizationManager.Get("ServerDetail_Start");
+                appearance = ControlAppearance.Primary;
+                isTransitioning = false;
+                break;
+        }
+
+        // Иконка, текст, цвет кнопки
+        StartStopIcon.Symbol = icon;
+        StartStopIcon.Visibility = isTransitioning ? Visibility.Collapsed : Visibility.Visible;
+        StartStopPulse.Visibility = isTransitioning ? Visibility.Visible : Visibility.Collapsed;
+        StartStopText.Visibility = string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
+        StartStopButton.ToolTip = toolTip;
+        StartStopButton.Appearance = appearance;
+        StartStopButton.IsEnabled = !isTransitioning;
+        StartStopText.Text = text;
+
+        // Останавливаем старую пульсацию
+        StartStopPulse.BeginAnimation(UIElement.OpacityProperty, null);
+        StartStopButton.BeginAnimation(UIElement.OpacityProperty, null);
+        StartStopButton.Opacity = 1.0;
+
+        // Пульсация для переходных состояний (кружок + кнопка)
+        if (isTransitioning)
+        {
+            var pulseSb = new Storyboard
+            {
+                RepeatBehavior = RepeatBehavior.Forever,
+                AutoReverse = true
+            };
+            var anim = new DoubleAnimation
+            {
+                From = 1.0,
+                To = 0.2,
+                Duration = TimeSpan.FromSeconds(0.7)
+            };
+
+            // Пульсация кружка
+            var ellipseAnim = anim.Clone();
+            Storyboard.SetTarget(ellipseAnim, StartStopPulse);
+            Storyboard.SetTargetProperty(ellipseAnim, new PropertyPath("Opacity"));
+            pulseSb.Children.Add(ellipseAnim);
+
+            // Пульсация кнопки
+            var btnAnim = anim.Clone();
+            Storyboard.SetTarget(btnAnim, StartStopButton);
+            Storyboard.SetTargetProperty(btnAnim, new PropertyPath("Opacity"));
+            pulseSb.Children.Add(btnAnim);
+
+            pulseSb.Begin();
+            StartStopPulse.Opacity = 1.0;
+        }
+
+        // Автосброс Error через 10 секунд
+        _errorResetCts?.Cancel();
+        _errorResetCts?.Dispose();
+        _errorResetCts = null;
+
+        if (status == ServerStatus.Error)
+        {
+            _errorResetCts = new CancellationTokenSource();
+            var ct = _errorResetCts.Token;
+            var capturedServer = _server;
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(10), ct);
+                    await this.InvokeAsync(() =>
+                    {
+                        if (capturedServer != null)
+                            capturedServer.Status = ServerStatus.Stopped;
+                        UpdateStatus(ServerStatus.Stopped);
+                    });
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            }, ct).SafeFireAndForget(errorMessage: "Error auto-reset failed");
+        }
+    }
+
+    /// <summary>
+    /// Обработчик изменения числа игроков. Событие приходит из потока чтения
+    /// stdout, поэтому любая работа с UI обязана идти через Dispatcher.
+    /// </summary>
+    private void UpdatePlayers(int players)
+    {
+        Logger.Info($"Players online: {players}", "ServerDetailPage");
+
+        // TODO: Обновлять UI элемент с количеством игроков, когда он будет добавлен.
+        // При добавлении оборачивать в this.InvokeAsync(...) — здесь поток не UI.
     }
 
     /// <summary>
@@ -487,6 +533,22 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private void ShowSection(string tag)
     {
+        // Не показываем вкладки, не поддерживаемые этим типом сервера
+        if (_server != null)
+        {
+            var supported = tag switch
+            {
+                "Mods" => ModrinthLoaderMap.SupportsMods(_server.ModLoader.Type),
+                "Plugins" => ModrinthLoaderMap.SupportsPlugins(_server.ModLoader.Type),
+                _ => true
+            };
+            if (!supported)
+            {
+                ShowSection("Console");
+                return;
+            }
+        }
+
         // Сбрасываем выделение всех кнопок
         ResetNavigationButtons();
 
@@ -753,12 +815,16 @@ public partial class ServerDetailPage : Page, IDisposable
         catch (Exception ex) { Logger.Warning($"[ShowErrorSafe] Error: {ex.Message}", "ServerDetailPage"); }
     }
 
-    public void Dispose()
+    /// <summary>
+    /// Освобождает ресурсы, привязанные к текущему показу страницы.
+    /// Идемпотентна и безопасна для повторного вызова: страница может быть
+    /// выгружена и снова загружена, поэтому отписка от процесса обязана
+    /// выполняться на каждом <see cref="OnUnloaded"/>, а не только один раз.
+    /// </summary>
+    private void Teardown()
     {
-        if (_disposed)
-            return;
-
-        // Отписываемся от событий процесса
+        // Главное: McServerProcess живёт в singleton-наследнике IServerManager,
+        // поэтому без отписки он удерживал бы страницу живой через обработчики.
         UnsubscribeFromProcess();
 
         StopStatusTimer();
@@ -766,9 +832,26 @@ public partial class ServerDetailPage : Page, IDisposable
         _errorResetCts?.Cancel();
         _errorResetCts?.Dispose();
         _errorResetCts = null;
+    }
 
-        _modsSection?.Dispose();
+    /// <summary>
+    /// Финальное освобождение. Вызывается только когда экземпляр страницы
+    /// больше не будет показан (в текущей архитектуре — при выходе из приложения).
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        Teardown();
+
+        Loaded -= OnLoaded;
+        Unloaded -= OnUnloaded;
+        Ioc.Default.GetService<IServerManager>()?.OnServerStartError -= OnServerStartError;
+        PropertiesEditor.PropertiesSaved -= OnPropertiesSaved;
+
         _settingsSection?.Dispose();
+        _modsSection?.Dispose();
 
         _disposed = true;
     }

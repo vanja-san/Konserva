@@ -25,17 +25,35 @@ internal static class HttpClientDefaults
     }
 
     /// <summary>
-    /// Добавляет HttpClient с дефолтным SocketsHttpHandler и стандартной
-    /// политикой повторных попыток (exponential + jitter).
+    /// Добавляет именованный HttpClient с дефолтным SocketsHttpHandler
+    /// и стандартной политикой повторных попыток (exponential + jitter).
     /// </summary>
     public static IHttpClientBuilder AddHttpClientWithDefaults(
         this IServiceCollection services,
         string name,
-        Action<HttpClient>? configureClient = null,
+        Action<HttpClient> configureClient,
         int retryCount = 3)
     {
-        var builder = services.AddHttpClient(name, configureClient ?? (_ => { }))
-            .ConfigurePrimaryHttpMessageHandler(CreateDefaultHandler);
+        return AddDefaultResilience(services.AddHttpClient(name, configureClient), retryCount);
+    }
+
+    /// <summary>
+    /// Добавляет типизированный HttpClient с теми же настройками, что и
+    /// именованный. Нужен для <c>AddHttpClient&lt;TClient, TImpl&gt;</c>.
+    /// </summary>
+    public static IHttpClientBuilder AddHttpClientWithDefaults<TClient, TImplementation>(
+        this IServiceCollection services,
+        Action<HttpClient> configureClient,
+        int retryCount = 3)
+        where TClient : class
+        where TImplementation : class, TClient
+    {
+        return AddDefaultResilience(services.AddHttpClient<TClient, TImplementation>(configureClient), retryCount);
+    }
+
+    private static IHttpClientBuilder AddDefaultResilience(IHttpClientBuilder builder, int retryCount)
+    {
+        builder.ConfigurePrimaryHttpMessageHandler(CreateDefaultHandler);
 
         if (retryCount > 0)
         {

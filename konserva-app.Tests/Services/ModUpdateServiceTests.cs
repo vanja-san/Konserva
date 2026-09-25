@@ -1,4 +1,4 @@
-using Konserva.Services;
+﻿using Konserva.Services;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
@@ -7,6 +7,7 @@ using System.Text;
 
 namespace Konserva.Tests.Services;
 
+[Trait("Category", "Integration")]
 public class ModUpdateServiceTests : IDisposable
 {
     private const string RemoteHash = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";

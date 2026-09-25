@@ -3,6 +3,7 @@ using Konserva.Utilities;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Management;
 
 namespace Konserva.Services;
 
@@ -538,40 +539,46 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
     }
 
     /// <summary>
-    /// Убивает zombie Java процессы, которые могут держать блокировки файлов сервера
+    /// Убивает «зомби»-процессы Java, оставшиеся от предыдущих запусков Konserva
+    /// и удерживающие блокировки файлов сервера (например <c>world/session.lock</c>).
     /// </summary>
+    /// <remarks>
+    /// Признак процесса — командная строка: она содержит путь к папке сервера
+    /// (рабочий каталог процесса и/или абсолютный путь к server.jar).
+    /// <para>
+    /// Раньше здесь сравнивался <c>Process.MainModule.FileName</c> с папкой сервера, но это
+    /// путь к самому <c>java.exe</c>/<c>javaw.exe</c> (например <c>C:\Program Files\Java\bin\javaw.exe</c>),
+    /// который никогда не лежит внутри папки сервера — совпадение было невозможно, и метод
+    /// молча ничего не делал. Теперь используется WMI (<c>Win32_Process.CommandLine</c>):
+    /// в отличие от <c>wmic</c> в консоли он отдаёт корректный Unicode для кириллических путей.
+    /// </para>
+    /// </remarks>
     internal static void KillZombieProcesses(string serverPath)
     {
+        if (string.IsNullOrWhiteSpace(serverPath))
+            return;
+
         try
         {
             var normalizedPath = serverPath.Replace('/', '\\').TrimEnd('\\');
 
-            foreach (var proc in Process.GetProcessesByName("java").Concat(Process.GetProcessesByName("javaw")))
+            // Кандидаты: java/javaw, чья командная строка ссылается на папку сервера.
+            foreach (var pid in FindJavaPidsForPath(normalizedPath))
             {
+                if (pid == Environment.ProcessId)
+                    continue;
+
                 try
                 {
-                    if (proc.Id == Environment.ProcessId) continue;
-
-                    // MainModule работает корректно с кириллицей в путях (в отличие от wmic)
-                    // Используем StartsWith вместо Contains, чтобы избежать ложных срабатываний
-                    // когда имя папки сервера является подстрокой другой папки
-                    var fileName = proc.MainModule?.FileName;
-                    if (fileName != null &&
-                        (fileName.StartsWith(normalizedPath + "\\", StringComparison.OrdinalIgnoreCase) ||
-                         string.Equals(fileName, normalizedPath, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        Logger.Info($"[KillZombieProcesses] Killing zombie PID={proc.Id} for {serverPath}", "McServerManager");
-                        proc.Kill(entireProcessTree: true);
-                        proc.WaitForExit(5000);
-                    }
+                    using var proc = Process.GetProcessById(pid);
+                    Logger.Info($"[KillZombieProcesses] Killing zombie PID={pid} for {serverPath}", "McServerManager");
+                    proc.Kill(entireProcessTree: true);
+                    proc.WaitForExit(5000);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Нет доступа к процессу — пропускаем
-                }
-                finally
-                {
-                    proc.Dispose();
+                    // Процесс мог завершиться сам между поиском и kill — это не ошибка.
+                    Logger.Info($"[KillZombieProcesses] PID={pid} could not be killed: {ex.Message}", "McServerManager");
                 }
             }
         }
@@ -579,6 +586,36 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
         {
             Logger.Warning($"[KillZombieProcesses] Failed: {ex.Message}", "McServerManager");
         }
+    }
+
+    /// <summary>
+    /// Возвращает PID процессов java/javaw, чья командная строка указывает на <paramref name="serverPath"/>.
+    /// </summary>
+    private static List<int> FindJavaPidsForPath(string normalizedServerPath)
+    {
+        var result = new List<int>();
+
+        var scope = new ManagementScope();
+        scope.Connect();
+
+        // "\" в WQL-строках является экранированным обратным слэшем.
+        var escapedPath = normalizedServerPath.Replace("\\", "\\\\");
+
+        var query = new ObjectQuery(
+            "SELECT ProcessId, CommandLine FROM Win32_Process " +
+            $"WHERE (Name = 'java.exe' OR Name = 'javaw.exe') AND CommandLine LIKE '%{escapedPath}%'");
+
+        using var searcher = new ManagementObjectSearcher(scope, query);
+        using var results = searcher.Get();
+
+        foreach (var item in results)
+        {
+            using var entry = item;
+            if (entry["ProcessId"] is uint pid)
+                result.Add((int)pid);
+        }
+
+        return result;
     }
 
     // ===== UPnP helpers =====

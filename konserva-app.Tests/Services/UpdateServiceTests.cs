@@ -1,4 +1,4 @@
-using Konserva.Models;
+﻿using Konserva.Models;
 using Konserva.Services;
 using Konserva.Utilities;
 
@@ -7,6 +7,7 @@ namespace Konserva.Tests.Services;
 /// <summary>
 /// Тесты для UpdateService.
 /// </summary>
+[Trait("Category", "Unit")]
 public class UpdateServiceTests : IDisposable
 {
   private readonly Mock<IConfigService> _configMock;

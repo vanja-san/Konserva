@@ -1,4 +1,4 @@
-// Тесты конвертеров намеренно передают null для проверки граничных случаев
+﻿// Тесты конвертеров намеренно передают null для проверки граничных случаев
 #pragma warning disable CS8625
 
 using System.Globalization;
@@ -11,6 +11,7 @@ namespace Konserva.Tests.Converters;
 /// <summary>
 /// Тесты для BoolToGreenBrushConverter
 /// </summary>
+[Trait("Category", "Unit")]
 public class BoolToGreenBrushConverterTests
 {
     private readonly BoolToGreenBrushConverter _converter = new();
@@ -62,6 +63,7 @@ public class BoolToGreenBrushConverterTests
 /// <summary>
 /// Тесты для BoolToVisibilityConverter
 /// </summary>
+[Trait("Category", "Unit")]
 public class BoolToVisibilityConverterTests
 {
     private readonly BoolToVisibilityConverter _converter = new();
@@ -140,6 +142,7 @@ public class BoolToVisibilityConverterTests
 /// <summary>
 /// Тесты для EmptyToVisibilityConverter
 /// </summary>
+[Trait("Category", "Unit")]
 public class EmptyToVisibilityConverterTests
 {
     private readonly EmptyToVisibilityConverter _converter = new();
@@ -191,6 +194,7 @@ public class EmptyToVisibilityConverterTests
 /// <summary>
 /// Тесты для FileSizeConverter
 /// </summary>
+[Trait("Category", "Unit")]
 public class FileSizeConverterTests
 {
     private readonly FileSizeConverter _converter = new();
@@ -271,6 +275,7 @@ public class FileSizeConverterTests
 /// <summary>
 /// Тесты для PercentToWidthConverter
 /// </summary>
+[Trait("Category", "Unit")]
 public class PercentToWidthConverterTests
 {
     private readonly PercentToWidthConverter _converter = new();
@@ -335,6 +340,7 @@ public class PercentToWidthConverterTests
 /// <summary>
 /// Тесты для StatusToBrushConverter
 /// </summary>
+[Trait("Category", "Unit")]
 public class StatusToBrushConverterTests
 {
     private readonly StatusToBrushConverter _converter = new();
@@ -384,6 +390,7 @@ public class StatusToBrushConverterTests
 /// <summary>
 /// Тесты для StringIsEmptyConverter
 /// </summary>
+[Trait("Category", "Unit")]
 public class StringIsEmptyConverterTests
 {
     private readonly StringIsEmptyConverter _converter = new();
@@ -435,6 +442,7 @@ public class StringIsEmptyConverterTests
 /// <summary>
 /// Тесты для StringToPlaceholderConverter
 /// </summary>
+[Trait("Category", "Unit")]
 public class StringToPlaceholderConverterTests
 {
     private readonly StringToPlaceholderConverter _converter = new();

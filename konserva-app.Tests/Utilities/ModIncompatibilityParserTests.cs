@@ -1,8 +1,9 @@
-using Konserva.Utilities;
+﻿using Konserva.Utilities;
 using Xunit;
 
 namespace Konserva.Tests;
 
+[Trait("Category", "Unit")]
 public class ModIncompatibilityParserTests
 {
     // Реальный вывод Fabric Loader при несовместимых модах

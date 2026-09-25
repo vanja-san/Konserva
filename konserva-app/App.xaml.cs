@@ -188,43 +188,34 @@ public partial class App : Application
         });
         services.AddSingleton<IModUpdateService, ModUpdateService>();
 
-        services.AddTransient<ServersViewModel>();
+        // ServersViewModel держит подписку на событие singleton'а IServerManager,
+        // поэтому обязан быть singleton'ом: иначе каждое посещение страницы
+        // списка серверов оставляло бы после себя «висящий» ViewModel.
+        services.AddSingleton<ServersViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<ServerDetailViewModel>();
         services.AddTransient<CreateServerViewModel>();
         services.AddSingleton<MainWindow>();
 
         // HttpClient для API с retry политикой
-        services.AddHttpClient<IMcVersionsApi, McVersionsApi>(options =>
+        services.AddHttpClientWithDefaults<IMcVersionsApi, McVersionsApi>(options =>
         {
             options.Timeout = TimeSpan.FromSeconds(30);
             options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
-        })
-            .ConfigurePrimaryHttpMessageHandler(HttpClientDefaults.CreateDefaultHandler)
-            .AddStandardResilienceHandler(options =>
-            {
-                options.Retry.MaxRetryAttempts = 3;
-                options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
-                options.Retry.UseJitter = true;
-            });
+        });
 
         // HttpClient для UpdateChecker (проверка обновлений GitHub)
-        services.AddHttpClient("UpdateChecker", options =>
+        services.AddHttpClientWithDefaults("UpdateChecker", options =>
         {
             options.Timeout = TimeSpan.FromSeconds(15);
             // User-Agent будет переопределён в UpdateChecker.CheckAsync() актуальной версией
             options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva");
             options.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
-        })
-            .ConfigurePrimaryHttpMessageHandler(HttpClientDefaults.CreateDefaultHandler)
-            .AddStandardResilienceHandler(options =>
-            {
-                options.Retry.MaxRetryAttempts = 2;
-                options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
-                options.Retry.UseJitter = true;
-            });
+        }, retryCount: 2);
 
-        // HttpClient для AppUpdater (скачивание обновлений)
+        // HttpClient для AppUpdater (скачивание обновлений).
+        // Без retry: частично скачанный архив нельзя повторно докачать тем же запросом,
+        // а проверка целостности всё равно отклонит битый файл.
         services.AddHttpClient("AppUpdater", options =>
         {
             options.Timeout = TimeSpan.FromMinutes(10);
@@ -233,32 +224,18 @@ public partial class App : Application
             .ConfigurePrimaryHttpMessageHandler(HttpClientDefaults.CreateDefaultHandler);
 
         // HttpClient для McServerInstaller (скачивание серверов) с retry политикой
-        services.AddHttpClient("McServerInstaller", options =>
+        services.AddHttpClientWithDefaults("McServerInstaller", options =>
         {
             options.Timeout = TimeSpan.FromMinutes(5);
             options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
-        })
-            .ConfigurePrimaryHttpMessageHandler(HttpClientDefaults.CreateDefaultHandler)
-            .AddStandardResilienceHandler(options =>
-            {
-                options.Retry.MaxRetryAttempts = 3;
-                options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
-                options.Retry.UseJitter = true;
-            });
+        });
 
         // HttpClient для Modrinth API (обновления модов)
-        services.AddHttpClient("ModrinthApi", options =>
+        services.AddHttpClientWithDefaults("ModrinthApi", options =>
         {
             options.Timeout = TimeSpan.FromSeconds(30);
             options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
-        })
-            .ConfigurePrimaryHttpMessageHandler(HttpClientDefaults.CreateDefaultHandler)
-            .AddStandardResilienceHandler(options =>
-            {
-                options.Retry.MaxRetryAttempts = 2;
-                options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
-                options.Retry.UseJitter = true;
-            });
+        }, retryCount: 2);
 
         return services;
         // конец ConfigureServices()

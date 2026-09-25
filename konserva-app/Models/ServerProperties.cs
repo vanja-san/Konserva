@@ -14,6 +14,14 @@ public class ServerProperties
     /// </summary>
     public HashSet<string> FoundKeys { get; } = new();
 
+    /// <summary>
+    /// Исходные значения всех ключей, прочитанных из файла.
+    /// Нужны, чтобы при сохранении вернуть на место ключи, которых нет в модели
+    /// (ключи от модов, новые ключи будущих версий Minecraft, пользовательские
+    /// параметры). Раньше они молча удалялись при первом же сохранении из GUI.
+    /// </summary>
+    private readonly Dictionary<string, string> _rawValues = new(StringComparer.Ordinal);
+
     // ===== Основные настройки =====
     public int ServerPort { get; set; } = 25565;
     public string ServerIp { get; set; } = "";
@@ -148,6 +156,10 @@ public class ServerProperties
             // Запоминаем ключ для последующей фильтрации UI
             props.FoundKeys.Add(key);
 
+            // Сохраняем исходное значение: ключ может оказаться неизвестным модели,
+            // и тогда его нужно будет вернуть в файл при сохранении без изменений.
+            props._rawValues[key] = value;
+
             SetProperty(props, key, value);
         }
 
@@ -244,7 +256,24 @@ public class ServerProperties
             ? allProps.Where(kv => FoundKeys.Contains(kv.Key))
             : allProps;
 
+        var output = new SortedDictionary<string, string>(StringComparer.Ordinal);
         foreach (var (key, value) in props)
+        {
+            output[key] = value;
+        }
+
+        // Возвращаем на место ключи, которых нет в модели, с их исходными значениями.
+        // Без этого сохранение из GUI стирало бы всё, что Konserva не умеет редактировать.
+        if (FoundKeys.Count > 0)
+        {
+            foreach (var key in FoundKeys)
+            {
+                if (!allProps.ContainsKey(key) && _rawValues.TryGetValue(key, out var raw))
+                    output[key] = raw;
+            }
+        }
+
+        foreach (var (key, value) in output)
         {
             sb.AppendLine($"{key}={value}");
         }

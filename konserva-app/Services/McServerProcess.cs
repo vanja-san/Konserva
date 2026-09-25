@@ -54,7 +54,11 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     {
         lock (_lock)
         {
-            return _logLines.AsReadOnly();
+            // Именно копия, а не AsReadOnly()-обёртка: обёртка отражает изменения
+            // List'а, а перечисление происходит уже вне lock — параллельный
+            // AppendLog успевал бы изменить версию коллекции и выбросить
+            // InvalidOperationException прямо посреди отрисовки консоли.
+            return _logLines.ToArray();
         }
     }
 

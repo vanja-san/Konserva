@@ -41,8 +41,9 @@
                     Padding="0"
                     ToolTip="{loc:Loc ServersPage_SortBy}">
                     <ui:DropDownButton.Flyout>
-                        <ContextMenu>
+                        <ContextMenu ItemContainerStyleSelector="{StaticResource MenuItemSelectionStyleSelector}">
                             <MenuItem
+                                Margin="0,0,14,0"
                                 FontWeight="SemiBold"
                                 Header="{loc:Loc ServersPage_Sort_Header}"
                                 IsEnabled="False" />
@@ -86,9 +87,10 @@
                     Padding="0"
                     ToolTip="{loc:Loc ServersPage_Filter_All}">
                     <ui:DropDownButton.Flyout>
-                        <ContextMenu>
+                        <ContextMenu ItemContainerStyleSelector="{StaticResource MenuItemSelectionStyleSelector}">
                             <!--  Type filter  -->
                             <MenuItem
+                                Margin="0,0,32,0"
                                 FontWeight="SemiBold"
                                 Header="{loc:Loc ServersPage_Filter_All}"
                                 IsEnabled="False" />

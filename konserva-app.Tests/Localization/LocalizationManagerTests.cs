@@ -1,8 +1,9 @@
-using Konserva.Localization;
+﻿using Konserva.Localization;
 using Xunit;
 
 namespace Konserva.Tests.Localization;
 
+[Trait("Category", "Unit")]
 public class LocalizationManagerTests
 {
     [Fact]

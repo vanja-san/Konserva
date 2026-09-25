@@ -1,8 +1,9 @@
-namespace Konserva.Tests.Models;
+﻿namespace Konserva.Tests.Models;
 
 /// <summary>
 /// Тесты для ServerLaunchType — проверка enum значений.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ServerLaunchTypeTests
 {
     [Fact]

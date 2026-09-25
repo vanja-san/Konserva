@@ -155,42 +155,12 @@
                                 <ui:DropDownButton
                                     x:Name="UpdateIntervalButton"
                                     Grid.Column="1"
-                                    Content="24 ч">
+                                    Content="24">
                                     <ui:DropDownButton.Flyout>
-                                        <ContextMenu>
-                                            <MenuItem
-                                                Click="UpdateIntervalMenuItem_Click"
-                                                Header="1 ч"
-                                                Tag="1" />
-                                            <MenuItem
-                                                Click="UpdateIntervalMenuItem_Click"
-                                                Header="2 ч"
-                                                Tag="2" />
-                                            <MenuItem
-                                                Click="UpdateIntervalMenuItem_Click"
-                                                Header="6 ч"
-                                                Tag="6" />
-                                            <MenuItem
-                                                Click="UpdateIntervalMenuItem_Click"
-                                                Header="12 ч"
-                                                Tag="12" />
-                                            <MenuItem
-                                                Click="UpdateIntervalMenuItem_Click"
-                                                Header="24 ч"
-                                                Tag="24" />
-                                            <MenuItem
-                                                Click="UpdateIntervalMenuItem_Click"
-                                                Header="2 д"
-                                                Tag="48" />
-                                            <MenuItem
-                                                Click="UpdateIntervalMenuItem_Click"
-                                                Header="3 д"
-                                                Tag="72" />
-                                            <MenuItem
-                                                Click="UpdateIntervalMenuItem_Click"
-                                                Header="7 д"
-                                                Tag="168" />
-                                        </ContextMenu>
+                                        <!-- Пункты заполняются из кода (PopulateUpdateIntervalMenu):
+                                             список часов и заголовки берутся из локализации,
+                                             чтобы подписи не расходились с текстом на кнопке. -->
+                                        <ContextMenu x:Name="UpdateIntervalMenu" />
                                     </ui:DropDownButton.Flyout>
                                 </ui:DropDownButton>
                             </Grid>

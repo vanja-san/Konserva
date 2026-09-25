@@ -25,6 +25,12 @@ public static class ModrinthLoaderMap
         _ => []
     };
 
+    /// <summary>true, если модлоадер поддерживает моды.</summary>
+    public static bool SupportsMods(ModLoaderType loader) => ModLoaders(loader).Count > 0;
+
+    /// <summary>true, если модлоадер поддерживает плагины (Bukkit API).</summary>
+    public static bool SupportsPlugins(ModLoaderType loader) => PluginLoaders(loader).Count > 0;
+
     /// <summary>true, если для лоадера вообще есть смысл проверять моды.</summary>
-    public static bool SupportsModUpdates(ModLoaderType loader) => ModLoaders(loader).Count > 0;
+    public static bool SupportsModUpdates(ModLoaderType loader) => SupportsMods(loader);
 }

@@ -30,6 +30,8 @@ public partial class MainWindow : FluentWindow, IDisposable
     // Tray
     private NotifyIcon? _trayIcon;
     private MenuItem? _trayStatusMenuItem;
+    private MenuItem? _trayOpenMenuItem;
+    private MenuItem? _trayExitMenuItem;
     private bool _isExiting;
 
     public MainWindow(IConfigService configService, IServerManager serverManager, IJavaManagementService javaService, IUpdateService updateService)
@@ -65,13 +67,16 @@ public partial class MainWindow : FluentWindow, IDisposable
     {
         try
         {
-            var showItem = new MenuItem { Header = "Открыть Konserva" };
+            _trayOpenMenuItem = new MenuItem { Header = LocalizationManager.Get("Tray_Open") };
             _trayStatusMenuItem = new MenuItem
             {
-                Header = "Серверы: 0 | Запущено: 0",
+                Header = LocalizationManager.Get("Tray_Status", 0, 0),
                 IsEnabled = false
             };
-            var exitItem = new MenuItem { Header = "Выход" };
+            _trayExitMenuItem = new MenuItem { Header = LocalizationManager.Get("Tray_Exit") };
+
+            var showItem = _trayOpenMenuItem;
+            var exitItem = _trayExitMenuItem;
 
             showItem.Click += (_, _) =>
             {
@@ -186,8 +191,8 @@ public partial class MainWindow : FluentWindow, IDisposable
             BackButton.Visibility = ContentFrame.CanGoBack ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        // Скрываем статусбар на странице создания сервера
-        StatusBarPanel.Visibility = e.Content is Pages.CreateServerPage
+        // Скрываем статусбар на страницах, где он не нужен (создание сервера, настройки)
+        StatusBarPanel.Visibility = e.Content is Pages.CreateServerPage or Pages.SettingsPage
             ? Visibility.Collapsed
             : Visibility.Visible;
 
@@ -236,6 +241,16 @@ public partial class MainWindow : FluentWindow, IDisposable
             WindowTitleText.Text = ContentFrame.Content is System.Windows.Controls.Page page && !string.IsNullOrEmpty(page.Title?.ToString())
                 ? $"{mainTitle} — {page.Title}"
                 : mainTitle;
+
+            // Контекстное меню трея создаётся в коде, поэтому его подписи
+            // не обновляются через {loc:Loc} — переустанавливаем вручную.
+            if (_trayOpenMenuItem != null)
+                _trayOpenMenuItem.Header = LocalizationManager.Get("Tray_Open");
+
+            if (_trayExitMenuItem != null)
+                _trayExitMenuItem.Header = LocalizationManager.Get("Tray_Exit");
+
+            UpdateTrayStatus();
         });
     }
 
@@ -456,12 +471,10 @@ public partial class MainWindow : FluentWindow, IDisposable
         {
             var (total, running, _) = _serverManager.GetStats();
 
-            Func<string, string> localize = LocalizationManager.Get;
-            var statusText = $"{localize("StatusBar_TotalServers")}: {total} | {localize("StatusBar_Running")}: {running}";
-            _trayStatusMenuItem.Header = statusText;
+            _trayStatusMenuItem.Header = LocalizationManager.Get("Tray_Status", total, running);
 
             _trayIcon.TooltipText = running > 0
-                ? $"Konserva — {running}/{total} {localize("StatusBar_Running").ToLowerInvariant()}"
+                ? $"Konserva — {running}/{total} {LocalizationManager.Get("StatusBar_Running").ToLowerInvariant()}"
                 : "Konserva — Minecraft Server Manager";
         }
         catch (Exception ex)

@@ -661,41 +661,6 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Получение совместимой Java версии для сервера
-    /// </summary>
-    public async Task<JavaInstallation?> GetCompatibleJavaAsync(
-        string mcVersion,
-        IServerInstaller installer,
-        string serverPath,
-        CancellationToken ct = default)
-    {
-        var config = configService.GetConfig();
-        var launchType = installer.GetServerLaunchType(serverPath);
-        var requiredVersion = GetRequiredJavaVersion(mcVersion, launchType);
-
-        // Ищем Java с подходящей версией
-        var compatibleJava = config.JavaInstallations
-            .FirstOrDefault(j => j.MajorVersion >= requiredVersion && j.Exists);
-
-        if (compatibleJava != null)
-        {
-            Logger.Info($"Found compatible Java: {compatibleJava.DisplayName} (required {requiredVersion}+)", "JavaManagementService");
-            return compatibleJava;
-        }
-
-        // Fallback на любую установленную Java
-        var anyJava = config.JavaInstallations.FirstOrDefault(j => j.Exists);
-        if (anyJava != null)
-        {
-            Logger.Warning($"No compatible Java found (required {requiredVersion}+), using {anyJava.DisplayName}", "JavaManagementService");
-            return anyJava;
-        }
-
-        Logger.Error($"No Java installations found", category: "JavaManagementService");
-        return null;
-    }
-
-    /// <summary>
     /// Получение требуемой версии Java
     /// </summary>
     private static int GetRequiredJavaVersion(string mcVersion, ServerLaunchType launchType)

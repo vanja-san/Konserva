@@ -36,6 +36,38 @@ public partial class SettingsPage : Page
         Title = LocalizationManager.Get("Settings_Title");
         Loaded += OnLoaded;
         Unloaded += (_, _) => LocalizationManager.LanguageChanged -= OnLanguageChanged;
+
+        PopulateUpdateIntervalMenu();
+    }
+
+    /// <summary>
+    /// Допустимые интервалы проверки обновлений в часах.
+    /// </summary>
+    private static readonly int[] UpdateIntervalOptions = [1, 2, 6, 12, 24, 48, 72, 168];
+
+    /// <summary>
+    /// Строит выпадающее меню интервалов из локализованных подписей.
+    /// Раньше пункты были захардкожены в XAML русским текстом, из-за чего
+    /// английский интерфейс показывал «24 ч», а разбор подписи обратно в
+    /// число молча сбрасывал интервал на 24 часа.
+    /// </summary>
+    private void PopulateUpdateIntervalMenu()
+    {
+        if (UpdateIntervalMenu == null)
+            return;
+
+        UpdateIntervalMenu.Items.Clear();
+
+        foreach (var hours in UpdateIntervalOptions)
+        {
+            var item = new System.Windows.Controls.MenuItem
+            {
+                Header = _viewModel.FormatUpdateInterval(hours),
+                Tag = hours.ToString()
+            };
+            item.Click += UpdateIntervalMenuItem_Click;
+            UpdateIntervalMenu.Items.Add(item);
+        }
     }
 
     private void OnLanguageChanged(string culture)
@@ -48,6 +80,9 @@ public partial class SettingsPage : Page
         ScanJavaButton.ToolTip = LocalizationManager.Get("Settings_Java_Scan");
         // Сбрасываем текст кнопки проверки обновлений на значение по умолчанию
         CheckUpdatesButtonText.Text = LocalizationManager.Get("Settings_CheckForUpdates");
+
+        // Пересобираем меню интервалов под новый язык
+        PopulateUpdateIntervalMenu();
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -97,7 +132,10 @@ public partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Автосохранение настроек
+    /// Автосохранение настроек.
+    /// Интервал берётся напрямую из ViewModel — раньше он разбирался из текста
+    /// кнопки («24 ч» / «2 д»), что молча сбрасывало значение на 24 часа
+    /// при любом другом языке интерфейса.
     /// </summary>
     private void AutoSaveSettings(Wpf.Ui.Controls.TextBlock? statusText = null)
     {
@@ -107,9 +145,10 @@ public partial class SettingsPage : Page
         {
             _isUpdating = true;
 
-            // Синхронизируем UI → ViewModel перед сохранением
+            // Синхронизируем UI → ViewModel перед сохранением.
+            // UpdateIntervalHours намеренно не синхронизируется: он уже хранится
+            // во ViewModel и меняется только через Tag пунктов меню.
             _viewModel.CheckUpdatesScheduled = CheckUpdatesScheduledItem.IsChecked;
-            _viewModel.UpdateIntervalHours = ParseIntervalFromButton();
             _viewModel.MinimizeToTrayMode = GetSelectedMinimizeToTrayMode();
             _viewModel.ConsoleAutoScroll = ConsoleAutoScrollBox.IsChecked == true;
             _viewModel.ConsoleWordWrap = ConsoleWordWrapBox.IsChecked == true;
@@ -149,23 +188,6 @@ public partial class SettingsPage : Page
         {
             _isUpdating = false;
         }
-    }
-
-    /// <summary>
-    /// Парсит интервал из текста кнопки
-    /// </summary>
-    private int ParseIntervalFromButton()
-    {
-        var text = UpdateIntervalButton.Content?.ToString();
-        if (string.IsNullOrEmpty(text)) return 24;
-
-        // Пример: "24 ч" или "2 д"
-        if (text.EndsWith(" ч") && int.TryParse(text[..^2], out var hours))
-            return hours;
-        if (text.EndsWith(" д") && int.TryParse(text[..^2], out var days))
-            return days * 24;
-
-        return 24;
     }
 
     /// <summary>

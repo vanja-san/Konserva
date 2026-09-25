@@ -55,6 +55,8 @@
         <ScrollViewer
             x:Name="PropertiesScrollViewer"
             Grid.Row="0"
+            Margin="0,8,-16,0"
+            Padding="0,0,16,0"
             VerticalScrollBarVisibility="Auto"
             Visibility="Collapsed">
             <StackPanel>

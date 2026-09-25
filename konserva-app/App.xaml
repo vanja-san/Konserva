@@ -27,6 +27,69 @@
             <converters:PercentToWidthConverter x:Key="PercentToWidth" />
             <converters:ScrollBarPaddingConverter x:Key="ScrollBarPadding" />
             <converters:BoolToOpacityConverter x:Key="BoolToOpacity" />
+
+            <!--  MenuItem inside sorting/filtering dropdowns: selected item has an accent bar + rounded highlight  -->
+            <Style
+                x:Key="MenuItemSelectionStyle"
+                TargetType="MenuItem">
+                <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="MenuItem">
+                            <Grid
+                                x:Name="Root"
+                                MinHeight="34"
+                                Background="Transparent">
+                                <Border
+                                    x:Name="Highlight"
+                                    Margin="3,2,3,2"
+                                    Background="{ui:ThemeResource SubtleFillColorSecondaryBrush}"
+                                    CornerRadius="4"
+                                    Visibility="Collapsed" />
+                                <Grid Margin="6,0,3,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Rectangle
+                                        x:Name="SelectionBar"
+                                        Grid.Column="0"
+                                        Width="3"
+                                        Margin="0,8,0,8"
+                                        HorizontalAlignment="Left"
+                                        Fill="{ui:ThemeResource SystemAccentColorPrimaryBrush}"
+                                        RadiusX="2"
+                                        RadiusY="2"
+                                        Visibility="Collapsed" />
+                                    <ContentPresenter
+                                        Grid.Column="1"
+                                        Margin="0,7,0,7"
+                                        VerticalAlignment="Center"
+                                        ContentSource="Header" />
+                                </Grid>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Highlight" Property="Visibility" Value="Visible" />
+                                    <Setter TargetName="Highlight" Property="Background" Value="{ui:ThemeResource SubtleFillColorSecondaryBrush}" />
+                                    <Setter TargetName="SelectionBar" Property="Visibility" Value="Visible" />
+                                </Trigger>
+                                <Trigger Property="IsHighlighted" Value="True">
+                                    <Setter TargetName="Highlight" Property="Visibility" Value="Visible" />
+                                    <Setter TargetName="Highlight" Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorTertiaryBrush}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <converters:MenuItemSelectionStyleSelector
+                x:Key="MenuItemSelectionStyleSelector"
+                MenuItemStyle="{StaticResource MenuItemSelectionStyle}" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
