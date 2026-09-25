@@ -585,7 +585,7 @@ public partial class ServerDetailViewModel : ObservableObject
         try
         {
             var backupDir = _server.Settings.ModBackupEnabled
-                ? ModBackup.CreateBackupDirectory()
+                ? ModBackup.CreateBackupDirectory(_server.Path)
                 : string.Empty;
             var successCount = 0;
             var total = _pendingUpdates.Count;
@@ -636,7 +636,7 @@ public partial class ServerDetailViewModel : ObservableObject
         try
         {
             var backupDir = _server.Settings.ModBackupEnabled
-                ? ModBackup.CreateBackupDirectory()
+                ? ModBackup.CreateBackupDirectory(_server.Path)
                 : string.Empty;
             ModUpdateStatusText = LocalizationManager.Get("ServerDetail_Mods_Updating") + " " + update.DownloadFileName;
 
