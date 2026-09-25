@@ -56,6 +56,8 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         // Подписываемся после InitializeComponent чтобы избежать NullReferenceException
         SettingJavaAutoSelect.Checked += SettingJavaAutoSelect_CheckedChanged;
         SettingJavaAutoSelect.Unchecked += SettingJavaAutoSelect_CheckedChanged;
+        SettingModBackup.Checked += SettingModBackup_CheckedChanged;
+        SettingModBackup.Unchecked += SettingModBackup_CheckedChanged;
     }
 
     /// <summary>
@@ -82,6 +84,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         UpdateServerAddressDisplay();
 
         SettingModBackup.IsChecked = _viewModel.SettingsModBackupEnabled;
+        UpdateModBackupControlsState();
         SettingJvmArgs.Text = _viewModel.SettingsJvmArgs;
 
         UpdateSettingsAvailability();
@@ -426,6 +429,25 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
             return;
 
         UpdateJavaComboBoxVisibility();
+    }
+
+    /// <summary>
+    /// Обновляет доступность кнопки удаления бэкапов модов.
+    /// </summary>
+    private void SettingModBackup_CheckedChanged(object sender, RoutedEventArgs e)
+    {
+        if (!IsInitialized || DeleteModBackupsButton == null)
+            return;
+
+        UpdateModBackupControlsState();
+    }
+
+    /// <summary>
+    /// Кнопка удаления бэкапов доступна только при включённом бэкапе модов.
+    /// </summary>
+    private void UpdateModBackupControlsState()
+    {
+        DeleteModBackupsButton.IsEnabled = SettingModBackup.IsChecked == true;
     }
 
     /// <summary>
