@@ -4,15 +4,15 @@
   "downloads": {
     "full": {
       "url": "https://github.com/vanja-san/Konserva/releases/download/v1.17.1/Konserva-v1.17.1-Full.zip",
-      "sizeBytes": 75505351,
+      "sizeBytes": 75505327,
       "assetName": "Konserva-v1.17.1-Full.zip",
-      "sha256": "649806934d61a74aa208288d8a0535e416c0a852d5ad52ac8efb8dea08dce364"
+      "sha256": "d1cf29e622ef25b30ab7eeb98bcaebeb3e56382c6028170203817285e96912de"
     },
     "deps": {
       "url": "https://github.com/vanja-san/Konserva/releases/download/v1.17.1/Konserva-v1.17.1-Deps.zip",
-      "sizeBytes": 6065890,
+      "sizeBytes": 6065836,
       "assetName": "Konserva-v1.17.1-Deps.zip",
-      "sha256": "7520d3d931399dfa6f460cffc8395918c287e7a5ab380e7a7b524448e6541e4a"
+      "sha256": "a658dc710daef811bab37d0f0980f6b8d4bdce6ec96ce73ac7c5a4ec9c8a227c"
     }
   },
   "releaseNotes": "",
