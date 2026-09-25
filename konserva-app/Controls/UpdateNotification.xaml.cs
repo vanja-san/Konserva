@@ -32,7 +32,7 @@ namespace Konserva.Controls
             var newVersion = $"v{updateInfo.NewVersion}";
             VersionText.Text = string.IsNullOrEmpty(currentVersion)
                 ? newVersion
-                : LocalizationManager.Get("StatusBar_UpdateVersions", "{0} → {1}", currentVersion, newVersion);
+                : LocalizationManager.Get("StatusBar_UpdateVersions", currentVersion, newVersion);
             UpdateButtonText.Text = LocalizationManager.Get("Update_Button", "Update");
             UpdateButton.IsEnabled = true;
             UpdateButton.ToolTip = LocalizationManager.Get("Update_Available_Tooltip", "Click to update");
