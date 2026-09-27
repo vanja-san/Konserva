@@ -22,8 +22,7 @@
 
     <Grid RowDefinitions="Auto,*,Auto">
         <!--  Title Bar  -->
-        <ui:TitleBar Grid.Row="0"
-                Height="32">
+        <ui:TitleBar Grid.Row="0" Height="32">
             <ui:TitleBar.Header>
                 <Grid ColumnDefinitions="Auto,Auto">
                     <!--  Кнопка "Назад"  -->
@@ -36,8 +35,7 @@
                         Click="BackButton_Click"
                         CornerRadius="0"
                         Visibility="Collapsed">
-                        <ui:SymbolIcon FontSize="13"
-                                Symbol="ArrowLeft32"/>
+                        <ui:SymbolIcon FontSize="13" Symbol="ArrowLeft32" />
                     </ui:Button>
                     <!--  Иконка и заголовок (прозрачны для мыши)  -->
                     <StackPanel
@@ -49,13 +47,13 @@
                             Width="16"
                             Height="16"
                             RenderOptions.BitmapScalingMode="HighQuality"
-                            Source="pack://application:,,,/Assets/app-icon.ico"/>
+                            Source="pack://application:,,,/Assets/app-icon.ico" />
                         <ui:TextBlock
                             x:Name="WindowTitleText"
                             Margin="8,0,0,0"
                             VerticalAlignment="Center"
                             FontSize="12"
-                            Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"/>
+                            Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
                 </Grid>
             </ui:TitleBar.Header>
@@ -63,14 +61,13 @@
                 <StackPanel Orientation="Horizontal">
                     <ui:Button
                         x:Name="NavSettings"
-                        Padding="12,8"
+                        Padding="12,4"
                         Background="Transparent"
                         BorderThickness="0"
                         Click="NavButton_Click"
                         CornerRadius="0"
                         ToolTip="{loc:Loc MainWindow_Settings}">
-                        <ui:SymbolIcon FontSize="18"
-                                Symbol="Settings20"/>
+                        <ui:SymbolIcon FontSize="18" Symbol="Settings20" />
                     </ui:Button>
                 </StackPanel>
             </ui:TitleBar.TrailingContent>
@@ -81,7 +78,7 @@
             x:Name="ContentFrame"
             Grid.Row="1"
             JournalOwnership="OwnsJournal"
-            NavigationUIVisibility="Hidden"/>
+            NavigationUIVisibility="Hidden" />
 
         <!--  Status Bar  -->
         <Border
@@ -103,14 +100,14 @@
                         Margin="0,0,6,0"
                         FontSize="16"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                        Symbol="Server24"/>
+                        Symbol="Server24" />
                     <ui:TextBlock
                         x:Name="StatusTotalServers"
                         VerticalAlignment="Center"
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                         Text="0"
-                        ToolTip="{loc:Loc StatusBar_TotalServers}"/>
+                        ToolTip="{loc:Loc StatusBar_TotalServers}" />
                 </StackPanel>
 
                 <!--  Running  -->
@@ -124,14 +121,14 @@
                         Margin="0,0,6,0"
                         FontSize="14"
                         Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
-                        Symbol="CheckmarkCircle24"/>
+                        Symbol="CheckmarkCircle24" />
                     <ui:TextBlock
                         x:Name="StatusRunningServers"
                         VerticalAlignment="Center"
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                         Text="0"
-                        ToolTip="{loc:Loc StatusBar_Running}"/>
+                        ToolTip="{loc:Loc StatusBar_Running}" />
                 </StackPanel>
 
                 <!--  CPU  -->
@@ -145,14 +142,14 @@
                         Margin="0,0,6,0"
                         FontSize="16"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                        Symbol="Clock24"/>
+                        Symbol="Clock24" />
                     <ui:TextBlock
                         x:Name="StatusCpuUsage"
                         VerticalAlignment="Center"
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                         Text="0%"
-                        ToolTip="CPU"/>
+                        ToolTip="CPU" />
                 </StackPanel>
 
                 <!--  Memory  -->
@@ -166,14 +163,14 @@
                         Margin="0,0,6,0"
                         FontSize="16"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                        Symbol="Storage24"/>
+                        Symbol="Storage24" />
                     <ui:TextBlock
                         x:Name="StatusMemoryUsage"
                         VerticalAlignment="Center"
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                         Text="0 MB"
-                        ToolTip="{loc:Loc StatusBar_Memory}"/>
+                        ToolTip="{loc:Loc StatusBar_Memory}" />
                 </StackPanel>
 
                 <!--  Version / Update Notification  -->
@@ -186,7 +183,7 @@
                         VerticalAlignment="Center"
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        Text="{utils:AppVersion Prefix=v}"/>
+                        Text="{utils:AppVersion Prefix=v}" />
                     <!--  SpinnerRing — виден только во время проверки обновлений  -->
                     <controls:SpinnerRing
                         x:Name="UpdateProgressRing"
@@ -195,7 +192,7 @@
                         Margin="6,0,0,0"
                         VerticalAlignment="Center"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        Visibility="Collapsed"/>
+                        Visibility="Collapsed" />
                     <!--  Checkmark — виден, когда версия актуальна  -->
                     <ui:SymbolIcon
                         x:Name="UpdateCheckmarkIcon"
@@ -204,8 +201,8 @@
                         FontSize="16"
                         Foreground="{ui:ThemeResource SystemFillColorSuccessBrush}"
                         Symbol="CheckmarkCircle24"
-                        Visibility="Collapsed"/>
-                    <controls:UpdateNotification x:Name="UpdateNotificationControl"/>
+                        Visibility="Collapsed" />
+                    <controls:UpdateNotification x:Name="UpdateNotificationControl" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -218,14 +215,14 @@
             Margin="0,0,0,20"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Bottom"
-            Panel.ZIndex="100"/>
+            Panel.ZIndex="100" />
 
         <!--  ContentDialog Host — для модальных диалогов  -->
         <ui:ContentDialogHost
             x:Name="ContentDialogPresenter"
             Grid.Row="0"
             Grid.RowSpan="3"
-            Panel.ZIndex="200"/>
+            Panel.ZIndex="200" />
 
     </Grid>
 </ui:FluentWindow>

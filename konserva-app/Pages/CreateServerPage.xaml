@@ -181,7 +181,7 @@
         <!--  Кнопки и прогресс (фиксировано внизу)  -->
         <Border
             Grid.Row="1"
-            Padding="8"
+            Padding="16"
             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
             BorderBrush="{ui:ThemeResource SurfaceStrokeColorFlyoutBrush}"
             BorderThickness="0,1,0,0">
