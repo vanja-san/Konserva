@@ -496,6 +496,7 @@
                             <ui:Button
                                 x:Name="DeleteModBackupsButton"
                                 Appearance="Transparent"
+                                BorderThickness="0"
                                 Click="DeleteModBackupsButton_Click"
                                 ToolTip="{loc:Loc ServerDetail_Settings_ModBackup_Clear}">
                                 <ui:SymbolIcon FontSize="16" Symbol="Delete20" />
