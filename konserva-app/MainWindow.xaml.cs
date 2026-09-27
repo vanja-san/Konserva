@@ -574,7 +574,13 @@ public partial class MainWindow : FluentWindow, IDisposable
 
     private void OnUpdateAvailable(UpdateInfo updateInfo)
     {
-        _ = Dispatcher.InvokeAsync(() => UpdateNotificationControl.Show(updateInfo));
+        _ = Dispatcher.InvokeAsync(() =>
+        {
+            // Уведомление само показывает "vX → vY", поэтому статичную версию скрываем,
+            // чтобы версия не выводилась дважды (v1.0v1.0 → v1.1).
+            VersionText.Visibility = Visibility.Collapsed;
+            UpdateNotificationControl.Show(updateInfo);
+        });
     }
 
     private void OnUpdateCheckStarted()
