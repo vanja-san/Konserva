@@ -496,6 +496,7 @@
                             <ui:Button
                                 x:Name="DeleteModBackupsButton"
                                 Cursor="Hand"
+                                Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
                                 Click="DeleteModBackupsButton_Click"
                                 ToolTip="{loc:Loc ServerDetail_Settings_ModBackup_Clear}">
                                 <ui:Button.Template>
@@ -509,7 +510,11 @@
                                                 ContentTemplate="{TemplateBinding ContentTemplate}" />
                                         </Border>
                                         <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Foreground" Value="{ui:ThemeResource AccentFillColorDefaultBrush}" />
+                                            </Trigger>
                                             <Trigger Property="IsEnabled" Value="False">
+                                                <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorDisabledBrush}" />
                                                 <Setter Property="Opacity" Value="0.35" />
                                             </Trigger>
                                             <Trigger Property="IsPressed" Value="True">
@@ -518,7 +523,10 @@
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
                                 </ui:Button.Template>
-                                <ui:SymbolIcon FontSize="16" Symbol="Delete20" />
+                                <ui:SymbolIcon
+                                    FontSize="16"
+                                    Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ui:Button}}"
+                                    Symbol="Delete20" />
                             </ui:Button>
                             <ui:ToggleSwitch
                                 x:Name="SettingModBackup"
