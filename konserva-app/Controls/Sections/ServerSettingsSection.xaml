@@ -495,10 +495,29 @@
                             VerticalAlignment="Center">
                             <ui:Button
                                 x:Name="DeleteModBackupsButton"
-                                Appearance="Transparent"
-                                BorderThickness="0"
+                                Cursor="Hand"
                                 Click="DeleteModBackupsButton_Click"
                                 ToolTip="{loc:Loc ServerDetail_Settings_ModBackup_Clear}">
+                                <ui:Button.Template>
+                                    <ControlTemplate TargetType="ui:Button">
+                                        <Border Background="Transparent">
+                                            <ContentPresenter
+                                                Margin="{TemplateBinding Padding}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Content="{TemplateBinding Content}"
+                                                ContentTemplate="{TemplateBinding ContentTemplate}" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter Property="Opacity" Value="0.35" />
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter Property="Opacity" Value="0.6" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ui:Button.Template>
                                 <ui:SymbolIcon FontSize="16" Symbol="Delete20" />
                             </ui:Button>
                             <ui:ToggleSwitch
