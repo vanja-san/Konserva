@@ -52,13 +52,15 @@ public sealed class UpdateService : IUpdateService, IDisposable
         CheckStarted?.Invoke();
         var updateInfo = await FetchAndSaveAsync(force: true);
         CheckCompleted?.Invoke(updateInfo);
-
-        if (updateInfo.IsAvailable)
-        {
-            UpdateAvailable?.Invoke(updateInfo);
-        }
+        RaiseIfAvailable(updateInfo);
 
         return updateInfo;
+    }
+
+    private void RaiseIfAvailable(UpdateInfo updateInfo)
+    {
+        if (updateInfo.IsAvailable)
+            UpdateAvailable?.Invoke(updateInfo);
     }
 
     /// <summary>
@@ -103,6 +105,7 @@ public sealed class UpdateService : IUpdateService, IDisposable
             CheckStarted?.Invoke();
             var updateInfo = await FetchAndSaveAsync();
             CheckCompleted?.Invoke(updateInfo);
+            RaiseIfAvailable(updateInfo);
 
             var config = _config.GetConfig();
 
@@ -137,6 +140,7 @@ public sealed class UpdateService : IUpdateService, IDisposable
                         CheckStarted?.Invoke();
                         var result = await FetchAndSaveAsync();
                         CheckCompleted?.Invoke(result);
+                        RaiseIfAvailable(result);
                     }
                 }
             }

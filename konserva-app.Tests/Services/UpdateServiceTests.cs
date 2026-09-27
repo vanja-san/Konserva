@@ -93,6 +93,51 @@ public class UpdateServiceTests : IDisposable
     await Task.CompletedTask;
   }
 
+  [Fact]
+  public async Task Start_WithAvailableUpdate_RaisesUpdateAvailable()
+  {
+    // Arrange
+    var updateInfo = new UpdateInfo
+    {
+      CurrentVersion = "1.0.0",
+      NewVersion = "1.1.0",
+      IsCheckSuccessful = true,
+      IsAvailable = true
+    };
+    _updateCheckerMock.Setup(c => c.CheckAsync()).ReturnsAsync(updateInfo);
+
+    var tcs = new TaskCompletionSource<UpdateInfo>(TaskCreationOptions.RunContinuationsAsynchronously);
+    _service.UpdateAvailable += i => tcs.TrySetResult(i);
+
+    // Act
+    _service.Start();
+
+    // Assert
+    var completed = await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+    completed.Should().BeSameAs(tcs.Task, "автопроверка при запуске должна опубликовать UpdateAvailable");
+    (await tcs.Task).Should().BeSameAs(updateInfo);
+  }
+
+  [Fact]
+  public async Task Start_WithNoUpdate_DoesNotRaiseUpdateAvailable()
+  {
+    // Arrange — мок возвращает IsAvailable=false по умолчанию
+    var checkCompleted = new TaskCompletionSource<UpdateInfo>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var updateAvailableRaised = false;
+    _service.UpdateAvailable += _ => updateAvailableRaised = true;
+    _service.CheckCompleted += i => checkCompleted.TrySetResult(i);
+
+    // Act
+    _service.Start();
+
+    // Assert
+    var completed = await Task.WhenAny(checkCompleted.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+    completed.Should().BeSameAs(checkCompleted.Task, "стартовая проверка должна завершиться");
+
+    await Task.Delay(200);
+    updateAvailableRaised.Should().BeFalse();
+  }
+
   public void Dispose()
   {
     _service.Dispose();
