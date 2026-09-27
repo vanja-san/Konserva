@@ -511,7 +511,7 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Foreground" Value="{ui:ThemeResource AccentFillColorDefaultBrush}" />
+                                                <Setter Property="Foreground" Value="{ui:ThemeResource AccentTextFillColorPrimaryBrush}" />
                                             </Trigger>
                                             <Trigger Property="IsEnabled" Value="False">
                                                 <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorDisabledBrush}" />
