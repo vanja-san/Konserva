@@ -209,6 +209,7 @@
                         </StackPanel>
                         <ui:ToggleSwitch
                             x:Name="SettingAutoRestart"
+                            Grid.Column="1"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Click="Setting_Click" />
@@ -277,6 +278,7 @@
                         </StackPanel>
                         <ui:ToggleSwitch
                             x:Name="SettingJavaAutoSelect"
+                            Grid.Column="1"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Click="Setting_Click"
@@ -365,6 +367,7 @@
                         </StackPanel>
                         <ui:ToggleSwitch
                             x:Name="SettingEnableUpnp"
+                            Grid.Column="1"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Click="SettingEnableUpnp_Click" />
@@ -474,7 +477,7 @@
                             Visibility="Collapsed" />
                     </Grid>
                 </ui:CardExpander.Header>
-                <Grid Margin="8,0" RowDefinitions="Auto,Auto">
+                <Grid Margin="8,0" RowDefinitions="Auto,Auto,Auto">
                     <Grid
                         Grid.Row="0"
                         Margin="0,4,0,4"
@@ -508,6 +511,31 @@
                             <TextBlock VerticalAlignment="Center" Text="{loc:Loc ServerDetail_Settings_ModBackup_Clear}" />
                         </StackPanel>
                     </ui:Button>
+                    <Grid
+                        Grid.Row="2"
+                        Margin="0,8,0,0"
+                        ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0">
+                            <ui:TextBlock FontSize="13" Text="{loc:Loc ServerDetail_Settings_UpdateChannel}" />
+                            <ui:TextBlock
+                                FontSize="11"
+                                Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{loc:Loc ServerDetail_Settings_UpdateChannel_Desc}" />
+                        </StackPanel>
+                        <ComboBox
+                            x:Name="SettingUpdateChannelComboBox"
+                            Grid.Column="1"
+                            MinWidth="180"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            MaxDropDownHeight="200"
+                            SelectionChanged="SettingUpdateChannelComboBox_SelectionChanged">
+                            <ComboBoxItem Content="{loc:Loc ServerDetail_Settings_UpdateChannel_None}" Tag="Release" />
+                            <ComboBoxItem Content="{loc:Loc ServerDetail_Settings_UpdateChannel_BetaOnly}" Tag="BetaOnly" />
+                            <ComboBoxItem Content="{loc:Loc ServerDetail_Settings_UpdateChannel_AlphaOnly}" Tag="AlphaOnly" />
+                            <ComboBoxItem Content="{loc:Loc ServerDetail_Settings_UpdateChannel_All}" Tag="All" />
+                        </ComboBox>
+                    </Grid>
                 </Grid>
             </ui:CardExpander>
 

@@ -132,6 +132,11 @@ public class ServerSettings : ObservableObject
     public bool ModBackupEnabled { get; set; } = true;
 
     /// <summary>
+    /// Канал обновлений модов: какие версии (стабильные/бета/альфа) предлагать.
+    /// </summary>
+    public ModUpdateChannel UpdateChannel { get; set; } = ModUpdateChannel.Release;
+
+    /// <summary>
     /// Копирование настроек
     /// </summary>
     public ServerSettings Clone() => new()
@@ -146,7 +151,8 @@ AutoRestart = AutoRestart,
         AutoRestartDelay = AutoRestartDelay,
         EnableUpnp = EnableUpnp,
         EnableUpdateNotification = EnableUpdateNotification,
-        ModBackupEnabled = ModBackupEnabled
+        ModBackupEnabled = ModBackupEnabled,
+        UpdateChannel = UpdateChannel
     };
 
     /// <summary>

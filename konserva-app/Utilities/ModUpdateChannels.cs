@@ -9,8 +9,9 @@ public static class ModUpdateChannels
 {
     public static IReadOnlyList<string> ToVersionTypes(ModUpdateChannel channel) => channel switch
     {
-        ModUpdateChannel.Beta => ["release", "beta"],
-        ModUpdateChannel.Alpha => ["release", "beta", "alpha"],
+        ModUpdateChannel.BetaOnly => ["beta"],
+        ModUpdateChannel.AlphaOnly => ["alpha"],
+        ModUpdateChannel.All => ["release", "beta", "alpha"],
         _ => ["release"]
     };
 }

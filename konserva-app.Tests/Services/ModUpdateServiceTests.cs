@@ -255,12 +255,12 @@ public class ModUpdateServiceTests : IDisposable
             })
             .ReturnsAsync(new Dictionary<string, ModrinthVersion>());
 
-        await CreateService().CheckForUpdatesAsync(
-            [path], ModLoaderType.Quilt, "1.20.1", ModUpdateChannel.Beta);
+await CreateService().CheckForUpdatesAsync(
+            [path], ModLoaderType.Quilt, "1.20.1", ModUpdateChannel.BetaOnly);
 
         loaders.Should().Equal("quilt", "fabric");
         gameVersion.Should().Be("1.20.1");
-        versionTypes.Should().Equal("release", "beta");
+        versionTypes.Should().Equal("beta");
     }
 
     // --- ResolveModMetadataAsync ---

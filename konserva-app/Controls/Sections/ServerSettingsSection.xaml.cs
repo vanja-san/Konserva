@@ -24,6 +24,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     private readonly IModLoaderService _modLoaderService;
     private Server? _server;
     private bool _disposed;
+    private bool _isLoadingSettings;
 
     private CancellationTokenSource? _updateCts;
     private string? _currentLoaderVersion;
@@ -70,25 +71,52 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         if (_server == null)
             return;
 
-        SettingName.Text = _viewModel.SettingsName;
-        SettingRamMin.Text = _viewModel.SettingsRamMin.ToString();
-        SettingRamMax.Text = _viewModel.SettingsRamMax.ToString();
-        SettingAutoRestart.IsChecked = _viewModel.SettingsAutoRestart;
-        SettingAutoRestartDelay.Text = _viewModel.SettingsAutoRestartDelay.ToString();
+        _isLoadingSettings = true;
+        try
+        {
+            SettingName.Text = _viewModel.SettingsName;
+            SettingRamMin.Text = _viewModel.SettingsRamMin.ToString();
+            SettingRamMax.Text = _viewModel.SettingsRamMax.ToString();
+            SettingAutoRestart.IsChecked = _viewModel.SettingsAutoRestart;
+            SettingAutoRestartDelay.Text = _viewModel.SettingsAutoRestartDelay.ToString();
 
-        SettingJavaAutoSelect.IsChecked = _viewModel.SettingsJavaAutoSelect;
-        LoadJavaComboBox();
-        UpdateJavaComboBoxVisibility();
+            SettingJavaAutoSelect.IsChecked = _viewModel.SettingsJavaAutoSelect;
+            LoadJavaComboBox();
+            UpdateJavaComboBoxVisibility();
 
-        SettingEnableUpnp.IsChecked = _viewModel.SettingsEnableUpnp;
-        UpdateServerAddressDisplay();
+            SettingEnableUpnp.IsChecked = _viewModel.SettingsEnableUpnp;
+            UpdateServerAddressDisplay();
 
-        SettingModBackup.IsChecked = _viewModel.SettingsModBackupEnabled;
-        UpdateModBackupControlsState();
-        SettingJvmArgs.Text = _viewModel.SettingsJvmArgs;
+            SettingModBackup.IsChecked = _viewModel.SettingsModBackupEnabled;
+            UpdateModBackupControlsState();
+            UpdateModUpdateChannelComboBox();
+            SettingJvmArgs.Text = _viewModel.SettingsJvmArgs;
 
-        UpdateSettingsAvailability();
-        LoadUpdateForm();
+            UpdateSettingsAvailability();
+            LoadUpdateForm();
+        }
+        finally
+        {
+            _isLoadingSettings = false;
+        }
+    }
+
+    /// <summary>
+    /// Восстанавливает выбранный канал обновлений модов из настроек сервера.
+    /// </summary>
+    private void UpdateModUpdateChannelComboBox()
+    {
+        var current = _viewModel.SettingsUpdateChannel.ToString();
+        foreach (var item in SettingUpdateChannelComboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Tag as string, current, StringComparison.OrdinalIgnoreCase))
+            {
+                SettingUpdateChannelComboBox.SelectedItem = item;
+                return;
+            }
+        }
+
+        SettingUpdateChannelComboBox.SelectedIndex = 0;
     }
 
     /// <summary>
@@ -235,6 +263,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
                 nameof(SettingAutoRestart) or nameof(SettingAutoRestartDelay) => AutoRestartSaveStatus,
                 nameof(SettingJavaAutoSelect) => JavaSaveStatus,
                 nameof(SettingModBackup) => ModsSaveStatus,
+                nameof(SettingUpdateChannelComboBox) => ModsSaveStatus,
                 _ => null
             };
         }
@@ -275,6 +304,10 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
                 ? selectedItem.Tag as string
                 : null;
             var jvmArgs = SettingJvmArgs.Text;
+            var updateChannel = SettingUpdateChannelComboBox.SelectedItem is ComboBoxItem channelItem
+                && Enum.TryParse<ModUpdateChannel>(channelItem.Tag as string, out var parsedChannel)
+                ? parsedChannel
+                : ModUpdateChannel.Release;
 
             // ─── Валидация ──────────────────────────────────────────
             if (statusText != null)
@@ -306,7 +339,8 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
                 ModBackupEnabled: modBackup,
                 JavaAutoSelect: javaAutoSelect,
                 JavaId: javaId,
-                JvmArgs: jvmArgs
+                JvmArgs: jvmArgs,
+                UpdateChannel: updateChannel
             ));
 
             // Проверяем ошибку переименования папки
@@ -470,6 +504,17 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     private void SettingJavaComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         AutoSaveSettings(JavaSaveStatus);
+    }
+
+    /// <summary>
+    /// Обработка выбора канала обновлений модов (автосохранение).
+    /// </summary>
+    private void SettingUpdateChannelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoadingSettings)
+            return;
+
+        AutoSaveSettings(ModsSaveStatus);
     }
 
     /// <summary>

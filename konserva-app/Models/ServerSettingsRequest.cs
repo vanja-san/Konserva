@@ -9,5 +9,6 @@ public record ServerSettingsRequest(
     bool? ModBackupEnabled,
     bool JavaAutoSelect,
     string? JavaId,
-    string JvmArgs
+    string JvmArgs,
+    ModUpdateChannel UpdateChannel
 );

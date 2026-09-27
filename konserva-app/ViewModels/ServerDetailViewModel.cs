@@ -143,6 +143,9 @@ public partial class ServerDetailViewModel : ObservableObject
     private bool _settingsModBackupEnabled = true;
 
     [ObservableProperty]
+    private ModUpdateChannel _settingsUpdateChannel = ModUpdateChannel.Release;
+
+    [ObservableProperty]
     private string _settingsJvmArgs = string.Empty;
 
     [ObservableProperty]
@@ -224,6 +227,7 @@ public partial class ServerDetailViewModel : ObservableObject
         SettingsEnableUpnp = server.Settings.EnableUpnp;
         SettingsEnableUpdateNotification = server.Settings.EnableUpdateNotification;
         SettingsModBackupEnabled = server.Settings.ModBackupEnabled;
+        SettingsUpdateChannel = server.Settings.UpdateChannel;
         SettingsJvmArgs = server.Settings.JvmArgsText;
 
         UpdateServerAddressDisplay();
@@ -282,6 +286,10 @@ public partial class ServerDetailViewModel : ObservableObject
         // Бэкап модов при обновлении
         if (request.ModBackupEnabled.HasValue && request.ModBackupEnabled.Value != _server.Settings.ModBackupEnabled)
             _server.Settings.ModBackupEnabled = request.ModBackupEnabled.Value;
+
+        // Канал обновлений модов
+        if (request.UpdateChannel != _server.Settings.UpdateChannel)
+            _server.Settings.UpdateChannel = request.UpdateChannel;
 
         // Java
         if (request.JavaAutoSelect != _server.Settings.JavaAutoSelect)
@@ -539,7 +547,7 @@ public partial class ServerDetailViewModel : ObservableObject
             var paths = Mods.Select(m => m.FilePath).ToList();
             var hashes = await BuildModHashMapAsync(Mods).ConfigureAwait(false);
             var updates = await _modUpdateService.CheckForUpdatesAsync(
-                paths, _server.ModLoader.Type, _server.McVersion, ModUpdateChannel.Release,
+                paths, _server.ModLoader.Type, _server.McVersion, _server.Settings.UpdateChannel,
                 progress: null, precomputedHashes: hashes);
 
             foreach (var mod in Mods)
