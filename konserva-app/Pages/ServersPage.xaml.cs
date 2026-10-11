@@ -107,8 +107,9 @@ public partial class ServersPage : Page, IDisposable
     {
         if (sender is WpfButton { Tag: Server server })
         {
-            if (_viewModel.PlayCommand.CanExecute(server))
-                _viewModel.PlayCommand.Execute(server);
+            // No CanExecute guard: the ViewModel takes the busy flag atomically, so the
+            // check-then-act window between CanExecute and Execute could not be closed here.
+            _viewModel.PlayCommand.Execute(server);
         }
     }
 
@@ -128,8 +129,7 @@ public partial class ServersPage : Page, IDisposable
                 messageFormat: LocalizationManager.Get("MsgDel_Confirm") ?? "Are you sure you want to delete server \"{0}\"?");
             if (result == ContentDialogResult.Primary)
             {
-                if (_viewModel.DeleteCommand.CanExecute(server))
-                    _viewModel.DeleteCommand.Execute(server);
+                _viewModel.DeleteCommand.Execute(server);
             }
         }
     }

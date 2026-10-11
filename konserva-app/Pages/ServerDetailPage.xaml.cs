@@ -29,6 +29,7 @@ public partial class ServerDetailPage : Page, IDisposable
     private McServerProcess? _process;
     private bool _disposed;
     private bool _isBusy;
+    private bool _isLoaded;
     private CancellationTokenSource? _statusCts;
     private CancellationTokenSource? _errorResetCts;
 
@@ -67,10 +68,12 @@ public partial class ServerDetailPage : Page, IDisposable
         if (_disposed)
             return;
 
-        // Передаём serverId в ViewModel (устанавливается через конструктор или DataContext)
+        _isLoaded = true;
+
+        // Pass serverId to the ViewModel (set via the constructor or DataContext)
         _viewModel.ServerId = _serverId;
 
-        // Подписываемся на событие ошибки запуска
+        // Subscribe to the start error event
         Ioc.Default.GetService<IServerManager>()!.OnServerStartError += OnServerStartError;
 
         EnsureConsoleSection();
@@ -78,7 +81,7 @@ public partial class ServerDetailPage : Page, IDisposable
         StartStatusTimer();
         LoadServer();
 
-        // Синхронизируем порт с моделью сервера при сохранении свойств
+        // Sync the port with the server model when properties are saved
         PropertiesEditor.PropertiesSaved += OnPropertiesSaved;
     }
 
@@ -87,12 +90,14 @@ public partial class ServerDetailPage : Page, IDisposable
         if (_disposed)
             return;
 
-        // Отписываемся от события ошибки запуска
+        _isLoaded = false;
+
+        // Unsubscribe from the start error event
         Ioc.Default.GetService<IServerManager>()!.OnServerStartError -= OnServerStartError;
         PropertiesEditor.PropertiesSaved -= OnPropertiesSaved;
 
-        // Страница может быть выгружена и загружена снова (Frame с OwnsJournal),
-        // поэтому освобождаем только ресурсы текущего показа, а не «сжигаем» страницу.
+        // The page can be unloaded and loaded again (Frame with OwnsJournal),
+        // so we release only the resources of the current display instead of "burning" the page.
         Teardown();
     }
 
@@ -279,7 +284,11 @@ public partial class ServerDetailPage : Page, IDisposable
     /// </summary>
     private void ApplyStatus(ServerStatus status)
     {
-        if (_disposed)
+        // A queued ApplyStatus can run after Unloaded: without this guard it would call
+        // ConnectToProcess and re-subscribe to the process events of a page that is no
+        // longer on screen, leaving a live subscription (and a dispatcher operation per
+        // server log line) for the rest of the session.
+        if (_disposed || !_isLoaded)
             return;
 
         // Если сервер успешно запущен — сбрасываем флаг ошибки

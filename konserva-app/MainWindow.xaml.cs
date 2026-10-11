@@ -161,7 +161,7 @@ public partial class MainWindow : FluentWindow, IDisposable
         // Watch the system theme so it auto-refreshes when Windows switches
         Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this);
 
-        AutoDetectJava();
+        AutoDetectJavaAsync().SafeFireAndForget(errorMessage: "Java auto-detection failed");
         StartStatusBarTimer();
         StartUpdateCheckLoop();
 
@@ -298,34 +298,64 @@ public partial class MainWindow : FluentWindow, IDisposable
     /// Auto-detection of installed Java.
     /// On every launch it scans the system and adds only new installations (matched by path).
     /// </summary>
-    private void AutoDetectJava()
+    /// <remarks>
+    /// The scan spawns <c>java -version</c> for every candidate found in PATH and in the
+    /// registry, each with a 10-second timeout. Run synchronously it froze the window for
+    /// seconds to a minute on launch, so it goes to the thread pool and only touches the
+    /// status bar when it finishes.
+    /// </remarks>
+    private async Task AutoDetectJavaAsync()
     {
-        var config = _config.GetConfig();
-
-        // No Java in the config yet — first launch, do the full setup
-        if (config.JavaInstallations.Count == 0)
+        try
         {
-            var foundJava = _javaService.FindInstalledJava();
-            foreach (var java in foundJava)
+            var config = await Task.Run(_config.GetConfig);
+
+            var changed = await Task.Run(() =>
             {
-                config.JavaInstallations.Add(java);
+                // No Java in the config yet — first launch, do the full setup
+                if (config.JavaInstallations.Count == 0)
+                {
+                    var foundJava = _javaService.FindInstalledJava();
+                    config.MutateJavaInstallations(list =>
+                    {
+                        foreach (var java in foundJava)
+                        {
+                            list.Add(java);
+                        }
+                    });
+
+                    return true;
+                }
+
+                // Java is already there — just add the new ones (without overwriting existing ones)
+                _javaService.ScanAndAddJava();
+                return false;
+            });
+
+            if (changed)
+            {
+                var snapshot = config.GetJavaInstallationsSnapshot();
+                if (snapshot.Count > 0 && string.IsNullOrEmpty(config.DefaultJavaId))
+                {
+                    var firstJava = snapshot[0];
+                    config.MutateJavaInstallations(list =>
+                    {
+                        foreach (var java in list)
+                        {
+                            java.IsDefault = java.Id == firstJava.Id;
+                        }
+                    });
+                    config.DefaultJavaId = firstJava.Id;
+                }
+
+                await Task.Run(() => _config.SaveConfig(config));
             }
 
-            if (config.JavaInstallations.Count > 0 && string.IsNullOrEmpty(config.DefaultJavaId))
-            {
-                var firstJava = config.JavaInstallations.First();
-                firstJava.IsDefault = true;
-                config.DefaultJavaId = firstJava.Id;
-            }
-
-            _config.SaveConfig(config);
-            UpdateStatusBar();
+            await this.InvokeAsync(() => UpdateStatusBar());
         }
-        else
+        catch (Exception ex)
         {
-            // Java is already there — just add the new ones (without overwriting existing ones)
-            _javaService.ScanAndAddJava();
-            UpdateStatusBar();
+            Logger.Warning($"AutoDetectJava failed: {ex.Message}", "MainWindow");
         }
     }
 
@@ -566,6 +596,10 @@ public partial class MainWindow : FluentWindow, IDisposable
         _statusBarCts?.Cancel();
         _statusBarCts?.Dispose();
         _statusBarCts = null;
+
+        // Release the current page explicitly. Pages kept in the Frame journal for GoBack
+        // are disposed when the journal entry drops them, or by Application shutdown.
+        (ContentFrame.Content as IDisposable)?.Dispose();
 
         _disposed = true;
     }

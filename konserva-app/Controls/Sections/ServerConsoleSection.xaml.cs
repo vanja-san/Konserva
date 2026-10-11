@@ -3,6 +3,7 @@ using ICSharpCode.AvalonEdit.Rendering;
 using Konserva.Localization;
 using Konserva.Services;
 using Konserva.Utilities;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,6 +22,13 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
     private bool _colorizerInitialized;
     private bool _consoleAutoScroll;
     private bool _consoleWordWrap;
+
+    private const int LogBatchIntervalMs = 50;
+    private const int LogBatchMaxChars = 64 * 1024;
+    private const int MaxConsoleLines = 5000;
+
+    private readonly System.Collections.Concurrent.ConcurrentQueue<string> _pendingLines = new();
+    private int _flushScheduled;
 
     public ServerConsoleSection()
     {
@@ -98,36 +106,101 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
 
     /// <summary>
     /// Appends a new log line to the console.
+    /// <para>
+    /// Lines are buffered and flushed in batches. A busy server emits hundreds of lines
+    /// per second, and dispatching each one separately meant one dispatcher operation plus
+    /// a document re-measure and ScrollToEnd per line — the UI fell behind the server and
+    /// the dispatcher queue grew without bound. Batching bounds the work per tick.
+    /// </para>
     /// </summary>
-    public async void AppendLog(string line)
+    public void AppendLog(string line)
+    {
+        _pendingLines.Enqueue(line);
+
+        // Any pending batch already has a flush scheduled.
+        if (Interlocked.Exchange(ref _flushScheduled, 1) == 1)
+            return;
+
+        _ = FlushLoopAsync();
+    }
+
+    /// <summary>
+    /// Waits one batch interval, then writes every buffered line in a single operation.
+    /// </summary>
+    private async Task FlushLoopAsync()
     {
         try
         {
-            await this.InvokeAsync(() =>
+            await Task.Delay(LogBatchIntervalMs);
+
+            var batch = new StringBuilder();
+            while (_pendingLines.TryDequeue(out var line))
             {
-                if (_consoleAutoScroll)
-                {
-                    LogBox.Document.Insert(LogBox.Document.TextLength, line + "\n");
-                    ConsolePlaceholder.Visibility = Visibility.Collapsed;
-                    LogBox.ScrollToEnd();
-                }
-                else
-                {
-                    double oldOffset = LogBox.VerticalOffset;
-                    LogBox.Document.Insert(LogBox.Document.TextLength, line + "\n");
-                    ConsolePlaceholder.Visibility = Visibility.Collapsed;
-                    LogBox.ScrollToVerticalOffset(oldOffset);
-                }
-            });
-        }
-        catch (TaskCanceledException)
-        {
-            // Ignore — the application is closing, the dispatcher no longer works
+                batch.Append(line).Append('\n');
+
+                // Bound the batch size so a huge backlog does not produce one giant
+                // document edit that blocks the dispatcher for a visible time.
+                if (batch.Length >= LogBatchMaxChars)
+                    break;
+            }
+
+            if (batch.Length > 0)
+            {
+                var text = batch.ToString();
+                await this.InvokeAsync(() => InsertText(text));
+            }
         }
         catch (Exception ex)
         {
             Logger.Warning($"[AppendLog] Error: {ex.Message}", "ServerConsoleSection");
         }
+        finally
+        {
+            // Allow the next line to schedule another flush; if lines arrived while
+            // this batch was running, restart immediately.
+            Interlocked.Exchange(ref _flushScheduled, 0);
+
+            if (!_pendingLines.IsEmpty && Interlocked.Exchange(ref _flushScheduled, 1) == 0)
+                _ = FlushLoopAsync();
+        }
+    }
+
+    /// <summary>
+    /// Inserts a batch of text at the end of the console. Must run on the UI thread.
+    /// </summary>
+    private void InsertText(string text)
+    {
+        if (_consoleAutoScroll)
+        {
+            LogBox.Document.Insert(LogBox.Document.TextLength, text);
+            ConsolePlaceholder.Visibility = Visibility.Collapsed;
+            LogBox.ScrollToEnd();
+        }
+        else
+        {
+            double oldOffset = LogBox.VerticalOffset;
+            LogBox.Document.Insert(LogBox.Document.TextLength, text);
+            ConsolePlaceholder.Visibility = Visibility.Collapsed;
+            LogBox.ScrollToVerticalOffset(oldOffset);
+        }
+
+        TrimDocument();
+    }
+
+    /// <summary>
+    /// Keeps the editor document bounded. Without this the document grew for the whole
+    /// session (unlike the server-side log buffer, which is capped), so every insert at the
+    /// tail paid an ever-growing redraw cost.
+    /// </summary>
+    private void TrimDocument()
+    {
+        var document = LogBox.Document;
+        if (document.LineCount <= MaxConsoleLines)
+            return;
+
+        int removeTo = document.LineCount - MaxConsoleLines;
+        var firstKeptLine = document.GetLineByNumber(removeTo + 1);
+        document.Remove(firstKeptLine.Offset, document.TextLength - firstKeptLine.Offset);
     }
 
     private void SendCommand_Click(object sender, RoutedEventArgs e)
@@ -296,18 +369,52 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
             }
 
             // 5. Lines without special tags — we check the whole start/stop line
-            if (!tsMatch.Success && !levelMatch.Success && !stderrMatch.Success)
+            if (!tsMatch.Success && !levelMatch.Success && !stderrMatch.Success &&
+                ContainsMilestoneText(lineText))
             {
-                var text = lineText.AsSpan();
-                if (text.Contains(LocalizationManager.Get("Log_ServerStarted").AsSpan(), StringComparison.Ordinal) ||
-                    text.Contains(LocalizationManager.Get("Log_ServerReady").AsSpan(), StringComparison.Ordinal) ||
-                    text.Contains(LocalizationManager.Get("Log_ServerStoppedSuccessfully").AsSpan(), StringComparison.Ordinal))
-                {
-                    ChangeLinePart(
-                        line.Offset,
-                        line.EndOffset,
-                        e => e.TextRunProperties.SetForegroundBrush(SuccessBrush));
-                }
+                ChangeLinePart(
+                    line.Offset,
+                    line.EndOffset,
+                    e => e.TextRunProperties.SetForegroundBrush(SuccessBrush));
+            }
+        }
+
+        /// <summary>
+        /// Localized milestone strings, refreshed once per language instead of on every
+        /// rendered line. <see cref="LocalizationManager.Get"/> takes a lock and does several
+        /// dictionary lookups, which this hot path called up to three times per line.
+        /// </summary>
+        private static readonly Lock MilestoneLock = new();
+        private static string _lastMilestoneLanguage = string.Empty;
+        private static string _serverStarted = string.Empty;
+        private static string _serverReady = string.Empty;
+        private static string _serverStopped = string.Empty;
+
+        private static void RefreshMilestonesIfLanguageChanged()
+        {
+            var language = LocalizationManager.CurrentCulture.Name;
+
+            lock (MilestoneLock)
+            {
+                if (string.Equals(language, _lastMilestoneLanguage, StringComparison.Ordinal))
+                    return;
+
+                _serverStarted = LocalizationManager.Get("Log_ServerStarted");
+                _serverReady = LocalizationManager.Get("Log_ServerReady");
+                _serverStopped = LocalizationManager.Get("Log_ServerStoppedSuccessfully");
+                _lastMilestoneLanguage = language;
+            }
+        }
+
+        private static bool ContainsMilestoneText(string lineText)
+        {
+            RefreshMilestonesIfLanguageChanged();
+
+            lock (MilestoneLock)
+            {
+                return lineText.Contains(_serverStarted, StringComparison.Ordinal) ||
+                       lineText.Contains(_serverReady, StringComparison.Ordinal) ||
+                       lineText.Contains(_serverStopped, StringComparison.Ordinal);
             }
         }
     }

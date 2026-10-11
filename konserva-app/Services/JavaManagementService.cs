@@ -598,62 +598,74 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         var foundJava = FindInstalledJava();
         var changed = false;
 
-        // 1. Clean up missing entries and update paths to javaw.exe
-        var toRemove = new List<string>();
-        foreach (var existing in config.JavaInstallations)
+        // The whole read-modify-write runs under the config lock: this method mutates the
+        // list that a starting server reads from another thread.
+        config.MutateJavaInstallations(list =>
         {
-            if (!existing.Exists)
+            // 1. Clean up missing entries and update paths to javaw.exe
+            var toRemove = new List<string>();
+            foreach (var existing in list)
             {
-                toRemove.Add(existing.Id);
-                continue;
-            }
-
-            var preferredPath = ResolvePreferredJavaPath(existing.Path);
-            if (!string.Equals(existing.Path, preferredPath, StringComparison.OrdinalIgnoreCase))
-            {
-                var updated = GetJavaInfo(preferredPath);
-                if (updated != null)
+                if (!existing.Exists)
                 {
-                    existing.Path = updated.Path;
-                    existing.Version = updated.Version;
-                    existing.MajorVersion = updated.MajorVersion;
-                    existing.Name = updated.Name;
-                    changed = true;
+                    toRemove.Add(existing.Id);
+                    continue;
+                }
+
+                var preferredPath = ResolvePreferredJavaPath(existing.Path);
+                if (!string.Equals(existing.Path, preferredPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    var updated = GetJavaInfo(preferredPath);
+                    if (updated != null)
+                    {
+                        existing.Path = updated.Path;
+                        existing.Version = updated.Version;
+                        existing.MajorVersion = updated.MajorVersion;
+                        existing.Name = updated.Name;
+                        changed = true;
+                    }
                 }
             }
-        }
 
-        foreach (var id in toRemove)
-        {
-            config.JavaInstallations.Remove(config.JavaInstallations.First(j => j.Id == id));
-            if (config.DefaultJavaId == id)
+            foreach (var id in toRemove)
             {
-                var newDefault = config.JavaInstallations.FirstOrDefault();
-                config.DefaultJavaId = newDefault?.Id;
-                if (newDefault != null) newDefault.IsDefault = true;
+                var entry = list.FirstOrDefault(j => j.Id == id);
+                if (entry == null)
+                    continue;
+
+                list.Remove(entry);
+                if (config.DefaultJavaId == id)
+                {
+                    var newDefault = list.FirstOrDefault();
+                    config.DefaultJavaId = newDefault?.Id;
+                    if (newDefault != null) newDefault.IsDefault = true;
+                }
+                changed = true;
             }
-            changed = true;
-        }
 
-        // 2. Add new installations (paths are already resolved to javaw.exe by GetJavaInfo)
-        foreach (var java in foundJava)
-        {
-            if (config.JavaInstallations.Any(j => string.Equals(j.Path, java.Path, StringComparison.OrdinalIgnoreCase)))
-                continue;
+            // 2. Add new installations (paths are already resolved to javaw.exe by GetJavaInfo)
+            foreach (var java in foundJava)
+            {
+                if (list.Any(j => string.Equals(j.Path, java.Path, StringComparison.OrdinalIgnoreCase)))
+                    continue;
 
-            if (config.JavaInstallations.Count == 0)
-                java.IsDefault = true;
+                if (list.Count == 0)
+                    java.IsDefault = true;
 
-            config.JavaInstallations.Add(java);
-            changed = true;
-        }
+                list.Add(java);
+                changed = true;
+            }
+
+            if (changed)
+            {
+                var newDefault = list.FirstOrDefault(j => j.IsDefault);
+                if (newDefault != null)
+                    config.DefaultJavaId = newDefault.Id;
+            }
+        });
 
         if (changed)
         {
-            var newDefault = config.JavaInstallations.FirstOrDefault(j => j.IsDefault);
-            if (newDefault != null)
-                config.DefaultJavaId = newDefault.Id;
-
             configService.SaveConfig(config);
         }
 

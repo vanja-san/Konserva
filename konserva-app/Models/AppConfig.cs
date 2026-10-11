@@ -8,6 +8,13 @@ namespace Konserva.Models;
 /// </summary>
 public class AppConfig
 {
+    // JavaInstallations is an ObservableCollection because the settings UI binds to it
+    // directly, but it is also read from the server-start thread (Java selection) while
+    // the UI thread mutates it during a Java rescan. Enumerating a collection mid-mutation
+    // throws InvalidOperationException, which surfaced as "Collection was modified" and
+    // aborted the server start with a misleading critical-error dialog.
+    private readonly Lock _javaLock = new();
+
     public string Theme { get; set; } = "System";
     public string Language { get; set; } = "System";
 
@@ -84,17 +91,46 @@ public class AppConfig
     }
 
     /// <summary>
+    /// Returns a stable snapshot of the installed Java list.
+    /// <para>
+    /// Safe to enumerate from any thread: the copy is taken under the lock, so a
+    /// concurrent rescan on the UI thread cannot invalidate the enumeration.
+    /// </para>
+    /// </summary>
+    public IReadOnlyList<JavaInstallation> GetJavaInstallationsSnapshot()
+    {
+        lock (_javaLock)
+        {
+            return [.. JavaInstallations];
+        }
+    }
+
+    /// <summary>
+    /// Mutates the Java list under the lock.
+    /// The action must only touch the list it is given.
+    /// </summary>
+    public void MutateJavaInstallations(Action<ObservableCollection<JavaInstallation>> mutate)
+    {
+        lock (_javaLock)
+        {
+            mutate(JavaInstallations);
+        }
+    }
+
+    /// <summary>
     /// Gets the default Java installation
     /// </summary>
     public JavaInstallation? GetDefaultJava()
     {
+        var installations = GetJavaInstallationsSnapshot();
+
         if (string.IsNullOrEmpty(DefaultJavaId))
         {
-            return JavaInstallations.FirstOrDefault(j => j.IsDefault)
-                ?? JavaInstallations.FirstOrDefault();
+            return installations.FirstOrDefault(j => j.IsDefault)
+                ?? installations.FirstOrDefault();
         }
 
-        return JavaInstallations.FirstOrDefault(j => j.Id == DefaultJavaId);
+        return installations.FirstOrDefault(j => j.Id == DefaultJavaId);
     }
 
     /// <summary>
