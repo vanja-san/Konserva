@@ -5,13 +5,13 @@ using System.Net.Http;
 namespace Konserva.Services;
 
 /// <summary>
-/// Расширения для стандартизации конфигурации HttpClient'ов
+/// Extensions that standardize the configuration of HttpClient instances
 /// </summary>
 internal static class HttpClientDefaults
 {
     /// <summary>
-    /// Создаёт стандартный SocketsHttpHandler с объединёнными соединениями,
-    /// сжатием и лимитами.
+    /// Creates a default SocketsHttpHandler with connection pooling,
+    /// decompression and limits.
     /// </summary>
     public static SocketsHttpHandler CreateDefaultHandler()
     {
@@ -25,8 +25,29 @@ internal static class HttpClientDefaults
     }
 
     /// <summary>
-    /// Добавляет именованный HttpClient с дефолтным SocketsHttpHandler
-    /// и стандартной политикой повторных попыток (exponential + jitter).
+    /// Creates a handler that refuses to follow redirects at all.
+    /// <para>
+    /// Used for the self-update download: the reference checksum arrives in the same
+    /// unsigned manifest as the URL, so a redirect that downgrades https:// to http://
+    /// would let an on-path attacker serve both the payload and a matching hash.
+    /// Ordinary API clients keep following redirects — several of the version APIs
+    /// legitimately redirect to a CDN.
+    /// </para>
+    /// </summary>
+    public static SocketsHttpHandler CreateStrictHandler()
+    {
+        return new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+            MaxConnectionsPerServer = 2,
+            AutomaticDecompression = DecompressionMethods.All,
+            AllowAutoRedirect = false
+        };
+    }
+
+    /// <summary>
+    /// Registers a named HttpClient with the default SocketsHttpHandler
+    /// and a standard retry policy (exponential + jitter).
     /// </summary>
     public static IHttpClientBuilder AddHttpClientWithDefaults(
         this IServiceCollection services,
@@ -38,8 +59,8 @@ internal static class HttpClientDefaults
     }
 
     /// <summary>
-    /// Добавляет типизированный HttpClient с теми же настройками, что и
-    /// именованный. Нужен для <c>AddHttpClient&lt;TClient, TImpl&gt;</c>.
+    /// Registers a typed HttpClient with the same settings as the named one.
+    /// Required for <c>AddHttpClient&lt;TClient, TImpl&gt;</c>.
     /// </summary>
     public static IHttpClientBuilder AddHttpClientWithDefaults<TClient, TImplementation>(
         this IServiceCollection services,

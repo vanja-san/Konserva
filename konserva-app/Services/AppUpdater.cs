@@ -10,7 +10,7 @@ using System.Windows;
 namespace Konserva.Services
 {
     /// <summary>
-    /// Скачивает обновление, распаковывает и заменяет файлы через батник.
+    /// Downloads the update, unpacks it and replaces the files via a batch script.
     /// </summary>
     public sealed class AppUpdater : IAppUpdater
     {
@@ -24,7 +24,7 @@ namespace Konserva.Services
         }
 
         /// <summary>
-        /// Выполняет обновление: скачивает ZIP, распаковывает, запускает батник, закрывает приложение.
+        /// Performs the update: downloads the ZIP, unpacks it, launches the batch script, closes the application.
         /// </summary>
         public async Task<bool> ApplyAsync(UpdateInfo updateInfo, IProgress<double>? progress = null)
         {
@@ -36,9 +36,9 @@ namespace Konserva.Services
 
             try
             {
-                // Шаг 0: Проверяем, что манифест вообще содержит контрольную сумму.
-                // Без неё мы не можем отличить подменённый ассет от повреждённого,
-                // поэтому применять такой апдейт нельзя.
+                // Step 0: Make sure the manifest actually contains a checksum.
+                // Without it we cannot tell a tampered asset apart from a corrupted one,
+                // so such an update must not be applied.
                 if (!IsValidSha256(updateInfo.Sha256))
                 {
                     const string reason =
@@ -52,7 +52,7 @@ namespace Konserva.Services
                 var tempDir = Path.Combine(downloadDir, "KonservaUpdate");
                 var zipPath = Path.Combine(tempDir, "update.zip");
 
-                // Шаг 1: Подготовка
+                // Step 1: Preparation
                 progress?.Report(10);
                 UpdateLog($"Starting update to {updateInfo.NewVersion}");
 
@@ -60,13 +60,13 @@ namespace Konserva.Services
                     Directory.Delete(tempDir, true);
                 Directory.CreateDirectory(tempDir);
 
-                // Шаг 2: Скачивание
+                // Step 2: Downloading
                 progress?.Report(20);
                 UpdateLog($"Downloading {updateInfo.AssetName} ({FormatSize(updateInfo.SizeBytes)})");
 
                 await DownloadFileAsync(updateInfo.DownloadUrl, zipPath, updateInfo.CurrentVersion, progress);
 
-                // Шаг 2.5: Обязательная проверка целостности скачанного архива
+                // Step 2.5: Mandatory integrity check of the downloaded archive
                 UpdateLog("Verifying SHA-256...");
                 await VerifySha256Async(zipPath, updateInfo.Sha256);
 
@@ -83,21 +83,21 @@ namespace Konserva.Services
                     }
                 }
 
-                // Шаг 3: Распаковка
+                // Step 3: Unpacking
                 progress?.Report(90);
                 UpdateLog("Extracting archive...");
 
                 var extractDir = Path.Combine(tempDir, "extracted");
                 await ZipFile.ExtractToDirectoryAsync(zipPath, extractDir, CancellationToken.None);
 
-                // Шаг 4: Создание батника (вне tempDir, чтобы можно было удалить всю папку)
+                // Step 4: Creating the batch script (outside tempDir so the whole folder can be deleted)
                 UpdateLog("Creating update script...");
 
                 var appDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
                 var batchPath = Path.Combine(downloadDir, $"KonservaUpdate_{Guid.NewGuid():N}.bat");
                 CreateUpdateScript(tempDir, appDir, batchPath);
 
-                // Шаг 5: Запуск батника и закрытие
+                // Step 5: Launching the batch script and shutting down
                 progress?.Report(100);
                 UpdateLog("Launching update script and restarting...");
 
@@ -126,15 +126,15 @@ namespace Konserva.Services
         }
 
         /// <summary>
-        /// Создаёт batch-скрипт для замены файлов.
-        /// Пути экранируются от batch-метасимволов (&, |, %, ^, ! и др.).
-        /// Батник создаётся вне tempDir, чтобы можно было удалить всю временную папку целиком.
+        /// Creates a batch script that replaces the files.
+        /// Paths are escaped from batch metacharacters (&, |, %, ^, ! and others).
+        /// The batch script is created outside tempDir so the entire temporary folder can be deleted.
         /// </summary>
         private void CreateUpdateScript(string tempDir, string appDir, string batchPath)
         {
             var extractedDir = Path.Combine(tempDir, "extracted");
 
-            // Санитизируем пути для batch-скриптов — экранируем &, |, %, ^, ! и др.
+            // Sanitize paths for batch scripts — escape &, |, %, ^, ! and others.
             var extractedEscaped = PathValidator.SanitizeForBatch(extractedDir);
             var tempDirEscaped = PathValidator.SanitizeForBatch(tempDir);
             var appEscaped = PathValidator.SanitizeForBatch(appDir);
@@ -184,7 +184,7 @@ exit
         }
 
         /// <summary>
-        /// Валидирует формат контрольной суммы: ровно 64 hex-символа.
+        /// Validates the checksum format: exactly 64 hex characters.
         /// </summary>
         private static bool IsValidSha256(string? sha256)
         {
@@ -206,8 +206,8 @@ exit
         }
 
         /// <summary>
-        /// Считает SHA-256 файла и сравнивает с ожидаемым (регистронезависимо).
-        /// При несовпадении архив удаляется и выбрасывается <see cref="InvalidDataException"/>.
+        /// Computes the SHA-256 of a file and compares it with the expected value (case-insensitive).
+        /// On mismatch the archive is deleted and an <see cref="InvalidDataException"/> is thrown.
         /// </summary>
         private static async Task VerifySha256Async(string filePath, string expectedSha256)
         {
@@ -246,21 +246,30 @@ exit
             }
         }
 
-        /// <summary>
-        /// Скачивает файл по указанному URL. Все ресурсы освобождаются до возврата.
-        /// </summary>
-        private async Task DownloadFileAsync(string url, string destPath, string currentVersion, IProgress<double>? progress)
+/// <summary>
+    /// Downloads a file from the given URL. All resources are released before returning.
+    /// </summary>
+    private async Task DownloadFileAsync(string url, string destPath, string currentVersion, IProgress<double>? progress)
+    {
+        // The URL arrives from version.json. Only HTTPS is accepted: the reference SHA-256
+        // travels in the same unsigned document, so an http:// URL would let an on-path
+        // attacker serve both the payload and a matching checksum.
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
         {
-            _client.DefaultRequestHeaders.UserAgent.ParseAdd($"Konserva/{currentVersion}");
+            throw new InvalidOperationException($"Refusing to download the update over a non-HTTPS URL: {url}");
+        }
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-            using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
-            response.EnsureSuccessStatusCode();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        request.Headers.UserAgent.ParseAdd($"Konserva/{currentVersion}");
+
+        using var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+        response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? -1;
             var canReportProgress = totalBytes != -1;
 
-            // Копируем в отдельный scope — stream закроется до выхода из метода
+            // Copy into a separate scope — the stream is closed before the method returns
             using (var contentStream = await response.Content.ReadAsStreamAsync())
             using (var fileStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
             {
@@ -285,7 +294,7 @@ exit
         }
 
         /// <summary>
-        /// Логирует сообщение в Update.log.
+        /// Logs a message to Update.log.
         /// </summary>
         private static void UpdateLog(string message, string level = "INFO")
         {
