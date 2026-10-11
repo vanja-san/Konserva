@@ -31,7 +31,7 @@ public static class UiHelper
         catch (Exception ex)
         {
             Logger.Warning($"Failed to open folder: {ex.Message}", "UiHelper");
-            _ = ShowWarning(LocalizationManager.Get("UiHelper_OpenFolderError") ?? "Не удалось открыть папку");
+            _ = ShowWarning(LocalizationManager.Get("UiHelper_OpenFolderError"));
         }
     }
 
@@ -55,7 +55,7 @@ public static class UiHelper
         {
             Title = string.IsNullOrEmpty(title) ? LocalizationManager.Get("MsgTitle_Info") : title,
             Content = message,
-            CloseButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
+            CloseButtonText = LocalizationManager.Get("MsgBtn_OK"),
             CloseButtonIcon = new SymbolIcon(SymbolRegular.Info24),
             DefaultButton = ContentDialogButton.Close
         };
@@ -75,7 +75,7 @@ public static class UiHelper
         {
             Title = string.IsNullOrEmpty(title) ? LocalizationManager.Get("MsgTitle_Warning") : title,
             Content = message,
-            CloseButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
+            CloseButtonText = LocalizationManager.Get("MsgBtn_OK"),
             DefaultButton = ContentDialogButton.Close
         };
 
@@ -94,7 +94,7 @@ public static class UiHelper
         {
             Title = string.IsNullOrEmpty(title) ? LocalizationManager.Get("MsgTitle_Error") : title,
             Content = message,
-            CloseButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
+            CloseButtonText = LocalizationManager.Get("MsgBtn_OK"),
             CloseButtonIcon = new SymbolIcon(SymbolRegular.DismissCircle24),
             DefaultButton = ContentDialogButton.Close
         };
@@ -121,9 +121,9 @@ public static class UiHelper
                 Padding = new Thickness(0),
                 FontSize = 14
             },
-            PrimaryButtonText = LocalizationManager.Get("MsgBtn_Yes") ?? "Yes",
+            PrimaryButtonText = LocalizationManager.Get("MsgBtn_Yes"),
             PrimaryButtonIcon = new SymbolIcon(SymbolRegular.Checkmark24),
-            CloseButtonText = LocalizationManager.Get("MsgBtn_No") ?? "No",
+            CloseButtonText = LocalizationManager.Get("MsgBtn_No"),
             CloseButtonIcon = new SymbolIcon(SymbolRegular.Dismiss24),
             DefaultButton = ContentDialogButton.Primary
         };

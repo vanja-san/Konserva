@@ -38,7 +38,7 @@ public static class ConfirmDeleteDialog
                 new TextBlock
                 {
                     Text = string.Format(
-                        messageFormat ?? LocalizationManager.Get("MsgDelete_Confirm") ?? "Are you sure you want to delete \"{0}\"?",
+                        messageFormat ?? LocalizationManager.Get("MsgDelete_Confirm"),
                         itemName),
                     FontSize = 14,
                     FontWeight = FontWeights.SemiBold,
@@ -62,7 +62,7 @@ public static class ConfirmDeleteDialog
                     },
                     new TextBlock
                     {
-                        Text = LocalizationManager.Get("MsgDel_Irreversible") ?? "This action is irreversible!",
+                        Text = LocalizationManager.Get("MsgDel_Irreversible"),
                         FontWeight = FontWeights.Bold
                     }
                 }
@@ -71,11 +71,11 @@ public static class ConfirmDeleteDialog
 
         var dialog = new ContentDialog
         {
-            Title = title ?? LocalizationManager.Get("MsgDelete_Title") ?? "Confirm Deletion",
+            Title = title ?? LocalizationManager.Get("MsgDelete_Title"),
             Content = dialogContent,
-            PrimaryButtonText = LocalizationManager.Get("MsgBtn_Delete") ?? "Delete",
+            PrimaryButtonText = LocalizationManager.Get("MsgBtn_Delete"),
             PrimaryButtonAppearance = ControlAppearance.Danger,
-            CloseButtonText = LocalizationManager.Get("MsgBtn_Cancel") ?? "Cancel",
+            CloseButtonText = LocalizationManager.Get("MsgBtn_Cancel"),
             DefaultButton = ContentDialogButton.Close
         };
 

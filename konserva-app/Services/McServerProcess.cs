@@ -166,7 +166,8 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             ct.ThrowIfCancellationRequested();
 
             if (!Directory.Exists(Server.Path))
-                throw new DirectoryNotFoundException($"Папка сервера не найдена: {Server.Path}");
+                throw new DirectoryNotFoundException(
+                    string.Format(LocalizationManager.Get("Err_ServerFolderNotFound"), Server.Path));
 
             ValidateEula();
 
@@ -181,8 +182,9 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             {
                 var fileList = Directory.Exists(Server.Path)
                     ? string.Join(", ", Directory.GetFiles(Server.Path, "*.jar").Select(Path.GetFileName))
-                    : "папка пуста";
-                throw new FileNotFoundException($"Не найден jar файл сервера. Файлы в папке: {fileList}");
+                    : LocalizationManager.Get("Err_ServerFolderEmpty");
+                throw new FileNotFoundException(
+                    string.Format(LocalizationManager.Get("Err_ServerJarNotFound"), fileList));
             }
             if (!string.IsNullOrEmpty(jarFile))
                 AppendLog($" {string.Format(LocalizationManager.Get("Log_JarFile"), Path.GetFileName(jarFile), Math.Max(1, new FileInfo(jarFile).Length / (1024 * 1024)))}");
@@ -199,7 +201,8 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             {
                 Logger.Error($"Java check failed: {javaCheckResult.Error}", null, "McServerProcess");
                 LogJavaNotFoundError(javaPath, javaCheckResult.Error);
-                throw new FileNotFoundException($"Java не найдена или не работает: {javaPath}. {javaCheckResult.Error}");
+                throw new FileNotFoundException(string.Format(
+                    LocalizationManager.Get("Err_JavaNotFoundOrBroken"), javaPath, javaCheckResult.Error));
             }
 
             _lastJavaMajorVersion = javaCheckResult.MajorVersion;
@@ -473,7 +476,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
         try
         {
-            var cmdLabel = command == "stop" ? "Остановка сервера" : "Console";
+            var cmdLabel = command == "stop" ? LocalizationManager.Get("Log_SendCommand_Stop") : "Console";
             AppendLog($"[{cmdLabel}] {string.Format(LocalizationManager.Get("Log_CommandSent"), command)}");
             Logger.Info($"[SendCommand] Запись в StandardInput: {command}", "McServerProcess");
             _process.StandardInput.WriteLine(command);

@@ -1,3 +1,4 @@
+using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Utilities;
 using System.IO;
@@ -344,7 +345,7 @@ public sealed class ModUpdateService : IModUpdateService
         var oldPath = update.FilePath;
         var directory = Path.GetDirectoryName(oldPath);
         if (string.IsNullOrEmpty(directory) || string.IsNullOrWhiteSpace(oldPath))
-            return ModUpdateApplyResult.Fail("Не указан путь к файлу мода");
+            return ModUpdateApplyResult.Fail(LocalizationManager.Get("Err_ModFilePathMissing"));
 
         var isDisabled = oldPath.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase);
 
@@ -358,12 +359,12 @@ public sealed class ModUpdateService : IModUpdateService
             !string.Equals(safeFileName, update.DownloadFileName, StringComparison.Ordinal))
         {
             Logger.Error($"Rejected unsafe mod file name from API: '{update.DownloadFileName}'", null, "ModUpdateService");
-            return ModUpdateApplyResult.Fail("Недопустимое имя файла мода");
+            return ModUpdateApplyResult.Fail(LocalizationManager.Get("Err_ModFileNameUnsafe"));
         }
 
         var newFileName = isDisabled ? $"{safeFileName}.disabled" : safeFileName;
         if (string.IsNullOrWhiteSpace(newFileName))
-            return ModUpdateApplyResult.Fail("Не указано новое имя файла мода");
+            return ModUpdateApplyResult.Fail(LocalizationManager.Get("Err_ModFileNameMissing"));
 
         var targetPath = Path.Combine(directory, newFileName);
         var tempPath = Path.Combine(directory, $".{newFileName}.{Guid.NewGuid():N}.tmp");
@@ -374,32 +375,32 @@ public sealed class ModUpdateService : IModUpdateService
             PathValidator.SafeCombine(directory, Path.GetFileName(tempPath)) is null)
         {
             Logger.Error($"Rejected mod update target outside of '{directory}'", null, "ModUpdateService");
-            return ModUpdateApplyResult.Fail("Путь обновления выходит за пределы папки модов");
+            return ModUpdateApplyResult.Fail(LocalizationManager.Get("Err_ModPathOutOfMods"));
         }
 
         try
         {
-            progress?.Report($"Скачивание {update.DownloadFileName}");
+            progress?.Report(string.Format(LocalizationManager.Get("ModUpdate_Downloading"), update.DownloadFileName));
             await _downloader.DownloadAsync(update.DownloadUrl, tempPath, ct).ConfigureAwait(false);
 
-            progress?.Report("Проверка целостности");
+            progress?.Report(LocalizationManager.Get("ModUpdate_Verifying"));
             var actualHash = await FileHash.Sha512Async(tempPath, ct).ConfigureAwait(false);
             if (!string.Equals(actualHash, update.LatestHash, StringComparison.OrdinalIgnoreCase))
             {
                 Logger.Warning($"SHA-512 не совпал для {update.DownloadFileName}", "ModUpdateService");
-                return ModUpdateApplyResult.Fail("Скачанный файл повреждён (SHA-512 не совпадает)");
+                return ModUpdateApplyResult.Fail(LocalizationManager.Get("Err_ModChecksumMismatch"));
             }
 
             string? backupPath = null;
             if (File.Exists(oldPath) && !string.IsNullOrWhiteSpace(backupDirectory))
             {
-                progress?.Report("Резервное копирование");
+                progress?.Report(LocalizationManager.Get("ModUpdate_BackingUp"));
                 Directory.CreateDirectory(backupDirectory);
                 backupPath = Path.Combine(backupDirectory, Path.GetFileName(oldPath));
                 File.Copy(oldPath, backupPath, overwrite: true);
             }
 
-            progress?.Report("Замена файла");
+            progress?.Report(LocalizationManager.Get("ModUpdate_Replacing"));
             if (File.Exists(targetPath))
                 File.Delete(targetPath);
             File.Move(tempPath, targetPath);

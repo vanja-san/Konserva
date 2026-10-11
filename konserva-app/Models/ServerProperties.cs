@@ -1,4 +1,5 @@
-﻿using Konserva.Utilities;
+﻿using Konserva.Localization;
+using Konserva.Utilities;
 using System.IO;
 using System.Text;
 
@@ -527,26 +528,28 @@ public class ServerProperties
     }
 
     /// <summary>
-    /// Gets the game mode display name
+    /// Gets the game mode display name.
+    /// Localized — the same strings back the ComboBox items in ServerPropertiesEditor.
     /// </summary>
     public string GamemodeDisplayName => Gamemode.ToLower() switch
     {
-        "survival" => "Выживание",
-        "creative" => "Творчество",
-        "adventure" => "Приключение",
-        "spectator" => "Наблюдатель",
+        "survival" => LocalizationManager.Get("ServerProperties_Gamemode_Survival"),
+        "creative" => LocalizationManager.Get("ServerProperties_Gamemode_Creative"),
+        "adventure" => LocalizationManager.Get("ServerProperties_Gamemode_Adventure"),
+        "spectator" => LocalizationManager.Get("ServerProperties_Gamemode_Spectator"),
         _ => Gamemode
     };
 
     /// <summary>
-    /// Gets the difficulty display name
+    /// Gets the difficulty display name.
+    /// Localized — the same strings back the ComboBox items in ServerPropertiesEditor.
     /// </summary>
     public string DifficultyDisplayName => Difficulty.ToLower() switch
     {
-        "peaceful" => "Мирный",
-        "easy" => "Легкий",
-        "normal" => "Нормальный",
-        "hard" => "Сложный",
+        "peaceful" => LocalizationManager.Get("ServerProperties_Difficulty_Peaceful"),
+        "easy" => LocalizationManager.Get("ServerProperties_Difficulty_Easy"),
+        "normal" => LocalizationManager.Get("ServerProperties_Difficulty_Normal"),
+        "hard" => LocalizationManager.Get("ServerProperties_Difficulty_Hard"),
         _ => Difficulty
     };
 }

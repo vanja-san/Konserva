@@ -651,7 +651,8 @@ public partial class ServerDetailViewModel : ObservableObject
             }
             else
             {
-                await UiHelper.ShowWarning($"Ошибка: {result.Error}");
+                await UiHelper.ShowWarning(string.Format(
+                    LocalizationManager.Get("ModUpdate_Prefix"), result.Error));
             }
 
             return result;

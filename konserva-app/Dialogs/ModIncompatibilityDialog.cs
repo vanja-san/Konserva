@@ -29,7 +29,7 @@ public static class ModIncompatibilityDialog
             {
                 DataContext = ModIncompatibilityViewBuilder.From(info)
             },
-            CloseButtonText = LocalizationManager.Get("MsgBtn_OK") ?? "OK",
+            CloseButtonText = LocalizationManager.Get("MsgBtn_OK"),
             DefaultButton = ContentDialogButton.Close
         };
 

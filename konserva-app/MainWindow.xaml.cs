@@ -104,7 +104,7 @@ public partial class MainWindow : FluentWindow, IDisposable
             {
                 Icon = new BitmapImage(
                     new Uri("pack://application:,,,/Assets/app-icon.ico")),
-                TooltipText = "Konserva — Minecraft Server Manager",
+                TooltipText = LocalizationManager.Get("Tray_Tooltip"),
                 MenuOnRightClick = true,
                 FocusOnLeftClick = false,
                 Menu = contextMenu
@@ -505,7 +505,7 @@ public partial class MainWindow : FluentWindow, IDisposable
 
             _trayIcon.TooltipText = running > 0
                 ? $"Konserva — {running}/{total} {LocalizationManager.Get("StatusBar_Running").ToLowerInvariant()}"
-                : "Konserva — Minecraft Server Manager";
+                : LocalizationManager.Get("Tray_Tooltip");
         }
         catch (Exception ex)
         {

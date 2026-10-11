@@ -330,17 +330,17 @@ public partial class McServerProcess
 
                 using var process = Process.Start(startInfo);
                 if (process == null)
-                    return new JavaCheckResult { Success = false, Error = "Не удалось запустить процесс java" };
+                    return new JavaCheckResult { Success = false, Error = LocalizationManager.Get("Err_JavaProcessStartFailed") };
 
                 versionOutput = process.StandardError.ReadToEnd();
                 if (!process.WaitForExit(Constants.JavaCheckTimeoutMs))
                 {
                     try { process.Kill(); } catch { }
-                    return new JavaCheckResult { Success = false, Error = "Проверка Java зависла (таймаут)" };
+                    return new JavaCheckResult { Success = false, Error = LocalizationManager.Get("Err_JavaCheckTimeout") };
                 }
 
                 if (process.ExitCode != 0)
-                    return new JavaCheckResult { Success = false, Error = $"java вернула код выхода {process.ExitCode}" };
+                    return new JavaCheckResult { Success = false, Error = LocalizationManager.Get("Err_JavaExitCode", process.ExitCode) };
 
                 try
                 {
@@ -367,7 +367,7 @@ public partial class McServerProcess
             else
             {
                 if (!File.Exists(javaPath) && !File.Exists(javaPath + ".exe"))
-                return new JavaCheckResult { Success = false, Error = $"Не удалось запустить: {javaPath}" };
+                return new JavaCheckResult { Success = false, Error = LocalizationManager.Get("Err_JavaProcessStartFailedPath", javaPath) };
 
                 actualJavaPath = File.Exists(javaPath) ? javaPath : javaPath + ".exe";
 
@@ -382,17 +382,17 @@ public partial class McServerProcess
 
                 using var process = Process.Start(startInfo);
                 if (process == null)
-                    return new JavaCheckResult { Success = false, Error = "Не удалось запустить процесс" };
+                    return new JavaCheckResult { Success = false, Error = LocalizationManager.Get("Err_JavaProcessStartFailed") };
 
                 versionOutput = process.StandardError.ReadToEnd();
                 if (!process.WaitForExit(Constants.JavaCheckTimeoutMs))
                 {
                     try { process.Kill(); } catch { }
-                    return new JavaCheckResult { Success = false, Error = "Проверка Java зависла (таймаут)" };
+                    return new JavaCheckResult { Success = false, Error = LocalizationManager.Get("Err_JavaCheckTimeout") };
                 }
 
                 if (process.ExitCode != 0)
-                    return new JavaCheckResult { Success = false, Error = $"Java вернула код выхода {process.ExitCode}" };
+                    return new JavaCheckResult { Success = false, Error = LocalizationManager.Get("Err_JavaExitCodeUpper", process.ExitCode) };
             }
 
             var version = JavaVersionParser.ParseVersion(versionOutput);
@@ -421,11 +421,11 @@ public partial class McServerProcess
     {
         var eulaPath = Path.Combine(Server.Path, "eula.txt");
         if (!File.Exists(eulaPath))
-            throw new FileNotFoundException("Файл eula.txt не найден. Сервер не был установлен корректно.");
+            throw new FileNotFoundException(LocalizationManager.Get("Err_EulaFileMissing"));
 
         var eulaContent = File.ReadAllText(eulaPath, Encoding.UTF8);
         if (!eulaContent.Contains("eula=true", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("EULA не принята! Откройте файл eula.txt и установите eula=true");
+            throw new InvalidOperationException(LocalizationManager.Get("Err_EulaNotAccepted"));
 
         AppendLog($" {LocalizationManager.Get("Log_EulaAccepted")}");
     }
@@ -446,7 +446,7 @@ public partial class McServerProcess
             LogJavaVersionError(requiredJavaVersion, javaCheckResult);
             Logger.Error($"Java version mismatch: required {requiredJavaVersion}+, found {javaCheckResult.MajorVersion}", null, "McServerProcess");
             throw new InvalidOperationException(
-                $"РўСЂРµР±СѓРµС‚СЃСЏ Java {requiredJavaVersion}+ РґР»СЏ Minecraft {Server.McVersion}, РЅРѕ РЅР°Р№РґРµРЅР° Java {javaCheckResult.MajorVersion} ({javaCheckResult.Version})");
+                LocalizationManager.Get("Err_JavaVersionMismatch", requiredJavaVersion, Server.McVersion, javaCheckResult.MajorVersion, javaCheckResult.Version));
         }
     }
 
@@ -455,9 +455,9 @@ public partial class McServerProcess
     /// </summary>
     private void LogJavaVersionError(int required, JavaCheckResult actual)
     {
-        AppendLog($"[ERROR] в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ");
+        AppendLog($"[ERROR] ═════════════════════════════════════════════════════════");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaVersionMismatch")}");
-        AppendLog($"[ERROR] в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ");
+        AppendLog($"[ERROR] ═════════════════════════════════════════════════════════");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaVersionMismatch_Detail", Server.McVersion, required)}");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaFound", actual.Version, actual.MajorVersion)}");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaPath", actual.JavaPath)}");
@@ -466,7 +466,7 @@ public partial class McServerProcess
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution_Install_Java", required)}");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution_Add_Java", required)}");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution_Older_Minecraft")}");
-        AppendLog($"[ERROR] в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ");
+        AppendLog($"[ERROR] ═════════════════════════════════════════════════════════");
     }
 
     /// <summary>
@@ -474,9 +474,9 @@ public partial class McServerProcess
     /// </summary>
     private void LogJavaNotFoundError(string javaPath, string error)
     {
-        AppendLog($"[ERROR] в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ");
+        AppendLog($"[ERROR] ═════════════════════════════════════════════════════════");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaNotFound")}");
-        AppendLog($"[ERROR] в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ");
+        AppendLog($"[ERROR] ═════════════════════════════════════════════════════════");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaNotFound_Path", javaPath)}");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaNotFound_Error", error)}");
         AppendLog($"[ERROR] ");
@@ -484,7 +484,7 @@ public partial class McServerProcess
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution_Install_Java_General")}");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution_Add_Java_Settings")}");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_Solution_Check_PATH")}");
-        AppendLog($"[ERROR] в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ");
+        AppendLog($"[ERROR] ═════════════════════════════════════════════════════════");
     }
 
     /// <summary>
@@ -516,7 +516,7 @@ public partial class McServerProcess
         };
 
         if (!_process.Start())
-            throw new InvalidOperationException($"Не удалось запустить процесс: {javaPath} {utf8Args}");
+            throw new InvalidOperationException(LocalizationManager.Get("Err_ProcessLaunchFailed", javaPath, utf8Args));
 
         _process.OutputDataReceived += OnOutput;
         _process.ErrorDataReceived += OnError;
@@ -535,18 +535,18 @@ public partial class McServerProcess
         Status = ServerStatus.Error;
         LastError = ex.Message + (string.IsNullOrEmpty(_pendingErrorOutput)
             ? ""
-            : $"\n[Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ: {_pendingErrorOutput}]");
+            : $"\n[{LocalizationManager.Get("Log_ErrorAdditional")}: {_pendingErrorOutput}]");
         _process = null;
 
         OnStatusChanged?.Invoke(Status);
 
-        AppendLog($"[ERROR] в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ");
+        AppendLog($"[ERROR] ═════════════════════════════════════════════════════════");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_CriticalError")}");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_ErrorType", ex.GetType().Name)}");
         AppendLog($"[ERROR] {LocalizationManager.Get("Log_ErrorMessage", ex.Message)}");
         if (!string.IsNullOrEmpty(ex.StackTrace))
             AppendLog($"[ERROR] StackTrace: {ex.StackTrace}");
-        AppendLog($"[ERROR] в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ");
+        AppendLog($"[ERROR] ═════════════════════════════════════════════════════════");
 
         if (!string.IsNullOrEmpty(_pendingErrorOutput))
             AppendLog($"[ERROR] {LocalizationManager.Get("Log_ErrorOutput", _pendingErrorOutput)}");

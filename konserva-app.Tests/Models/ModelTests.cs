@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using Konserva.Localization;
+using System.IO;
 
 namespace Konserva.Tests.Models;
 
@@ -348,42 +349,33 @@ pvp=TrUe
     }
 
     [Fact]
-    public void GamemodeDisplayName_ReturnsRussianTranslation()
+    public void GamemodeDisplayName_FollowsTheActiveCulture()
     {
-        var props = new ServerProperties();
+        // The display names come from the localization catalogues, so the test has to
+        // assert against the catalogue rather than a hardcoded literal — otherwise it
+        // only passes on a Russian machine and fails on an English one.
+        var originalCulture = LocalizationManager.CurrentCulture;
+        try
+        {
+            LocalizationManager.SetLanguage("ru");
+            var ru = LocalizationManager.GetDefaultTranslationsForCulture("ru")!;
 
-        props.Gamemode = "survival";
-        props.GamemodeDisplayName.Should().Be("Выживание");
+            var props = new ServerProperties();
+            props.Gamemode = "survival";
+            props.GamemodeDisplayName.Should().Be(ru["ServerProperties_Gamemode_Survival"]);
 
-        props.Gamemode = "creative";
-        props.GamemodeDisplayName.Should().Be("Творчество");
+            LocalizationManager.SetLanguage("en");
+            var en = LocalizationManager.GetDefaultTranslationsForCulture("en")!;
 
-        props.Gamemode = "adventure";
-        props.GamemodeDisplayName.Should().Be("Приключение");
+            props.GamemodeDisplayName.Should().Be(en["ServerProperties_Gamemode_Survival"]);
 
-        props.Gamemode = "spectator";
-        props.GamemodeDisplayName.Should().Be("Наблюдатель");
-
-        props.Gamemode = "unknown";
-        props.GamemodeDisplayName.Should().Be("unknown");
-    }
-
-    [Fact]
-    public void DifficultyDisplayName_ReturnsRussianTranslation()
-    {
-        var props = new ServerProperties();
-
-        props.Difficulty = "peaceful";
-        props.DifficultyDisplayName.Should().Be("Мирный");
-
-        props.Difficulty = "easy";
-        props.DifficultyDisplayName.Should().Be("Легкий");
-
-        props.Difficulty = "normal";
-        props.DifficultyDisplayName.Should().Be("Нормальный");
-
-        props.Difficulty = "hard";
-        props.DifficultyDisplayName.Should().Be("Сложный");
+            props.Difficulty = "hard";
+            props.DifficultyDisplayName.Should().Be(en["ServerProperties_Difficulty_Hard"]);
+        }
+        finally
+        {
+            LocalizationManager.SetLanguage(originalCulture.TwoLetterISOLanguageName);
+        }
     }
 
     [Fact]

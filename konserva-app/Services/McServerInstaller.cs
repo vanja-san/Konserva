@@ -131,7 +131,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
         }
         catch (OperationCanceledException)
         {
-            return (false, "Загрузка отменена");
+            return (false, LocalizationManager.Get("Err_InstallCancelled"));
         }
         catch (Exception ex)
         {
@@ -178,13 +178,14 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                     ModLoaderType.Quilt => await InstallQuiltServer(mcVersion, loaderVersion, serverPath, progress, ct),
                     _ => await DownloadVanillaServer(mcVersion, serverPath, progress, ct)
                 };
-                installResult = success ? new InstallResult { Success = true } : new InstallResult { Success = false, Error = "Installation failed" };
+                installResult = success ? new InstallResult { Success = true } : new InstallResult { Success = false, Error = LocalizationManager.Get("Err_InstallFailed") };
             }
 
             if (!installResult.Success)
             {
                 result.Success = false;
-                result.Error = installResult.Error ?? $"Не удалось установить сервер для {modLoaderType}";
+                result.Error = installResult.Error
+                    ?? string.Format(LocalizationManager.Get("Err_InstallFailedFor"), modLoaderType);
                 result.Status = InstallStatus.Failed;
                 return result;
             }
@@ -208,7 +209,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
         catch (OperationCanceledException)
         {
             result.Success = false;
-            result.Error = "Установка отменена";
+            result.Error = LocalizationManager.Get("Err_InstallAborted");
             result.Status = InstallStatus.Failed;
             return result;
         }
