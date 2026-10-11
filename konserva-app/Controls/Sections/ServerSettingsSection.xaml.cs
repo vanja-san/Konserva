@@ -837,10 +837,8 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
             return;
         }
 
-        var current = _currentLoaderVersion;
-        var selectable = string.IsNullOrEmpty(current)
-            ? _allLoaderVersions
-            : [.. _allLoaderVersions.Where(v => VersionCompare.CompareLoaderVersions(v, current) > 0)];
+        var selectable = LoaderVersionSelector.GetSelectableVersions(
+            _allLoaderVersions, _currentLoaderVersion);
 
         if (selectable.Length > 0)
         {
@@ -870,9 +868,11 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     private void UpdateUpdateAvailability()
     {
         var notifyEnabled = SettingUpdateNotifications.IsChecked ?? false;
+        // An unknown current version is not reported as an update: there is
+        // nothing to compare against, and the header notification would be noise.
         var hasUpdate = notifyEnabled
             && !string.IsNullOrEmpty(_currentLoaderVersion)
-            && _allLoaderVersions.Any(v => VersionCompare.CompareLoaderVersions(v, _currentLoaderVersion) > 0);
+            && LoaderVersionSelector.HasUpdates(_allLoaderVersions, _currentLoaderVersion);
 
         UpdateAvailabilityChanged?.Invoke(hasUpdate, _latestLoaderVersion);
     }
