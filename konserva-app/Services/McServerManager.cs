@@ -8,13 +8,13 @@ using System.Management;
 namespace Konserva.Services;
 
 /// <summary>
-/// Сервис управления серверами Minecraft
+/// Service for managing Minecraft servers
 /// </summary>
 public class McServerManager(IDispatcher dispatcher, IServerStorageService storage, IConfigService configService, IServerInstaller installer, IPortForwardingService? portForwarding = null) : IServerManager
 {
-    // Создаём отдельную копию списка, чтобы _servers не был привязан к
-    // внутреннему кэшу FileBasedStore (_cached). Это предотвращает возможные
-    // расхождения порядка при перезагрузках кэша.
+    // Create a separate copy of the list so that _servers is not bound to the
+    // FileBasedStore internal cache (_cached). This prevents possible ordering
+    // discrepancies when the cache is reloaded.
     private readonly List<Server> _servers = [.. storage.LoadServers()];
     private readonly ConcurrentDictionary<string, McServerProcess> _processes = new();
     private readonly ConcurrentDictionary<string, Action<ServerStatus>> _statusHandlers = new();
@@ -25,8 +25,30 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
     // CPU tracking
     private readonly ConcurrentDictionary<int, (DateTime time, TimeSpan cpu)> _cpuSamples = new();
 
+    // Deferred persistence.
+    // Status changes arrive from the process stdout reader thread; serializing the whole
+    // server index to disk right there stalls the child process once the OS pipe buffer
+    // fills, which stalls the Minecraft server itself. Changes are therefore coalesced
+    // here and flushed by a single background writer.
+    private readonly ConcurrentDictionary<string, Server> _pendingPersistence = new();
+    private readonly SemaphoreSlim _persistenceSignal = new(0, int.MaxValue);
+    private CancellationTokenSource? _persistenceCts;
+    private Task? _persistenceTask;
+
     public event Action? OnServersChanged;
-    public event Action<Server, string>? OnServerStartError;  // Событие об ошибке запуска
+    public event Action<Server, string>? OnServerStartError;  // Event raised on a start failure
+
+    /// <summary>
+    /// Raises <see cref="OnServersChanged"/> on the UI thread.
+    /// <para>
+    /// Subscribers mutate WPF state (ObservableCollection, TextBlock.Text), and several of
+    /// them are reached from background threads — the process stdout reader and the
+    /// status handler below. Raising the event directly from those threads produces
+    /// cross-thread exceptions inside the WPF collections, so every raise goes through
+    /// the dispatcher.
+    /// </para>
+    /// </summary>
+    private void RaiseServersChanged() => _dispatcher.Post(() => OnServersChanged?.Invoke());
 
     public IReadOnlyList<Server> GetServers()
     {
@@ -85,7 +107,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
             _serversLock.ExitWriteLock();
         }
 
-        OnServersChanged?.Invoke();
+        RaiseServersChanged();
         return server;
     }
 
@@ -103,7 +125,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
     }
 
     /// <summary>
-    /// Проверка: можно ли запустить сервер
+    /// Check: whether the server can be started
     /// </summary>
     private bool CanStartServer(string id, out McServerProcess? existingProcess)
     {
@@ -111,7 +133,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
 
         if (_processes.TryGetValue(id, out var process))
         {
-            // проверяем, что процесс уже не запущен (не Stopped и не Error)
+            // check that the process is not already running (neither Stopped nor Error)
             if (process.Status is not (ServerStatus.Stopped or ServerStatus.Error))
             {
                 return false;
@@ -124,18 +146,22 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
     }
 
     /// <summary>
-    /// Удаляем процесс с состоянием Stopped/Error
+    /// Removes a process in the Stopped/Error state
     /// </summary>
     private void RemoveStoppedOrErroredProcess(string id, McServerProcess? process)
     {
         if (process is { Status: ServerStatus.Stopped or ServerStatus.Error })
         {
-            CleanupProcess(id);
+            // Must dispose, not merely unsubscribe: the wrapper owns an OS Process handle
+            // and an AutoRestart task that would otherwise start a second Java instance.
+            CleanupAndDisposeProcess(id);
         }
     }
 
     /// <summary>
-    /// Очищает процесс: отписывает обработчики событий, удаляет из словаря
+    /// Removes the process and its status handler without disposing the wrapper.
+    /// Prefer <see cref="CleanupAndDisposeProcess"/> — leaving the wrapper alive keeps its
+    /// AutoRestart task and OS process handle running outside the manager's control.
     /// </summary>
     private void CleanupProcess(string id)
     {
@@ -148,13 +174,13 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
         }
         else
         {
-            // Если процесса уже нет в словаре, всё равно чистим обработчик
+            // If the process is already gone from the dictionary, still clean up the handler
             _statusHandlers.TryRemove(id, out _);
         }
     }
 
     /// <summary>
-    /// Очищает процесс и полностью утилизирует его
+    /// Cleans up the process and fully disposes of it
     /// </summary>
     private void CleanupAndDisposeProcess(string id)
     {
@@ -173,15 +199,20 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
     }
 
     /// <summary>
-    /// Запускает сервер в фоне. Возвращает Task, который завершается после попытки запуска.
+    /// Starts the server in the background. Returns a Task that completes after the start attempt.
     /// </summary>
     private async Task StartServerCoreAsync(Server server, CancellationToken ct)
     {
-        // Очищаем предыдущий процесс (если был), чтобы избежать утечки событий
-        CleanupProcess(server.Id);
+        // Clean up the previous process (if any): unsubscribing alone would leak the
+        // Process handle and leave its AutoRestart task free to launch a second
+        // server on top of the one we are about to start.
+        CleanupAndDisposeProcess(server.Id);
 
-        // Убиваем зависшие Java процессы из папки этого сервера (могут держать session.lock)
-        KillZombieProcesses(server.Path);
+        // Kill hung Java processes from this server folder (they may hold session.lock).
+        // WMI enumeration is slow and can block for seconds — keep it off the UI thread.
+        // No CancellationToken here: an already-cancelled token would throw here and skip
+        // the graceful handling further down. StartAsync(ct) honours it a few lines later.
+        await Task.Run(() => KillZombieProcesses(server.Path));
 
         var process = new McServerProcess(server, configService, installer);
         _processes[server.Id] = process;
@@ -191,7 +222,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
 
         Logger.Info($"[StartServerInternal] Starting server {server.Id} ({server.Name})", "McServerManager");
 
-        // Используем Interlocked для thread-safe флага — race condition между OnStatusChanged и Task.Run
+        // Use Interlocked for a thread-safe flag — race condition between OnStatusChanged and Task.Run
         int errorNotified = 0;
 
         Action<ServerStatus> onStatusChanged = status =>
@@ -199,22 +230,19 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
             server.Status = status;
             if (status is ServerStatus.Running or ServerStatus.Stopped or ServerStatus.Error)
             {
-                storage.UpdateServer(server);
+                QueuePersistence(server);
             }
 
-            // Если статус стал Error и мы ещё не уведовляли об ошибке — уведомляем
+            // If the status became Error and we have not notified about it yet — notify
             if (status == ServerStatus.Error && Interlocked.CompareExchange(ref errorNotified, 1, 0) == 0 && !string.IsNullOrEmpty(process.LastError))
             {
                 server.LastErrorMessage = process.LastError;
-                storage.UpdateServer(server);
+                QueuePersistence(server);
                 OnServerStartError?.Invoke(server, process.LastError);
             }
 
-            // Обновляем UI при любом изменении статуса (неблокирующе)
-            _dispatcher.Post(() =>
-            {
-                OnServersChanged?.Invoke();
-            });
+            // Refresh the UI on any status change (non-blocking)
+            RaiseServersChanged();
         };
 
         _statusHandlers[server.Id] = onStatusChanged;
@@ -227,7 +255,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
 
             Logger.Info($"[StartServerInternal] process.Start() completed for {server.Name}", "McServerManager");
 
-            // UPnP: автоматический проброс порта, если включено
+            // UPnP: automatic port forwarding if enabled
             if (_portForwarding != null && server.Settings.EnableUpnp)
             {
                 var port = server.Port;
@@ -241,28 +269,123 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
                 Logger.Error($"[StartServerInternal] Ошибка запуска сервера {server.Id} ({server.Name}): {ex.Message}", ex, "McServerManager");
                 server.Status = ServerStatus.Error;
                 server.LastErrorMessage = ex.Message;
-                storage.UpdateServer(server);
+                QueuePersistence(server);
 
                 OnServerStartError?.Invoke(server, ex.Message);
 
-                _ = _dispatcher.InvokeAsync(() =>
-                {
-                    OnServersChanged?.Invoke();
-                });
+                RaiseServersChanged();
             }
+        }
+    }
+
+    /// <summary>
+    /// Schedules a server for persistence on the background writer.
+    /// Repeated calls for the same server collapse into a single write.
+    /// </summary>
+    private void QueuePersistence(Server server)
+    {
+        _pendingPersistence[server.Id] = server;
+        EnsurePersistenceWriter();
+
+        // The semaphore is only used as a wake-up signal; a full count is not an error.
+        try { _persistenceSignal.Release(); }
+        catch (SemaphoreFullException) { /* a wake-up is already pending */ }
+    }
+
+    private void EnsurePersistenceWriter()
+    {
+        if (_persistenceTask != null)
+            return;
+
+        _persistenceCts = new CancellationTokenSource();
+        _persistenceTask = PersistenceLoopAsync(_persistenceCts.Token);
+    }
+
+    /// <summary>
+    /// Drains the pending-persistence queue on the thread pool, coalescing bursts:
+    /// a burst of status changes results in one disk write, not one per change.
+    /// </summary>
+    private async Task PersistenceLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                await _persistenceSignal.WaitAsync(ct);
+
+                // Short debounce window — lets a burst of changes collapse into one write.
+                await Task.Delay(250, ct);
+
+                while (_persistenceSignal.Wait(0))
+                {
+                    // Drain: the single write below covers all queued servers.
+                }
+
+                if (_pendingPersistence.IsEmpty)
+                    continue;
+
+                var batch = _pendingPersistence.Values.ToArray();
+                _pendingPersistence.Clear();
+
+                try
+                {
+                    foreach (var server in batch)
+                        storage.UpdateServer(server);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Failed to persist server state: {ex.Message}", ex, "McServerManager");
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected shutdown
+        }
+    }
+
+    /// <summary>
+    /// Flushes any queued persistence work synchronously (application shutdown).
+    /// </summary>
+    public void FlushPendingWrites()
+    {
+        _persistenceCts?.Cancel();
+        _persistenceCts?.Dispose();
+        _persistenceCts = null;
+        _persistenceTask = null;
+
+        FlushPersistence();
+    }
+
+    /// <summary>
+    /// Writes every queued server out to disk (blocking).
+    /// </summary>
+    private void FlushPersistence()
+    {
+        if (_pendingPersistence.IsEmpty)
+            return;
+
+        var batch = _pendingPersistence.Values.ToArray();
+        _pendingPersistence.Clear();
+
+        try
+        {
+            foreach (var server in batch)
+                storage.UpdateServer(server);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Failed to flush server state: {ex.Message}", ex, "McServerManager");
         }
     }
 
     public async Task StopServerAsync(string id, CancellationToken ct = default)
     {
-        // UPnP: удаляем проброс порта при остановке (если включено)
-        await TryDeleteUpnpMappingForServerAsync(id);
-
         if (_processes.TryRemove(id, out var process))
         {
             try
             {
-                await process.StopAsync();
+                await process.StopAsync(ct);
             }
             finally
             {
@@ -277,6 +400,15 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
         {
             _statusHandlers.TryRemove(id, out _);
         }
+
+        // UPnP: remove the port forwarding after the process is stopped.
+        // Doing it first blocks shutdown on a 5-second SSDP discovery while the server
+        // is still running and its port is still open.
+        await TryDeleteUpnpMappingForServerAsync(id);
+
+        // The final Stopped status was queued by the status handler; write it through
+        // before returning so the caller never observes a stale "Running" on disk.
+        FlushPersistence();
     }
 
     public void SendCommand(string id, string command)
@@ -295,17 +427,17 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
             var existing = _servers.FirstOrDefault(s => s.Id == server.Id);
             if (existing != null)
             {
-                // Обновляем существующий сервер новыми значениями
+                // Update the existing server with the new values
                 existing.Name = server.Name;
                 existing.Port = server.Port;
-                existing.Settings = server.Settings.Clone();  // Глубокое копирование
+                existing.Settings = server.Settings.Clone();  // Deep copy
                 existing.AutoStart = server.AutoStart;
                 existing.LastPlayed = server.LastPlayed;
                 existing.McVersion = server.McVersion;
                 existing.ModLoader = server.ModLoader;
                 existing.Path = server.Path;
 
-                // Обновляем хранилище внутри блокировки
+                // Update the storage while holding the lock
                 storage.UpdateServer(existing);
             }
         }
@@ -314,7 +446,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
             _serversLock.ExitWriteLock();
         }
 
-        // Уведомляем UI после выхода из блокировки
+        // Notify the UI after releasing the lock
         OnServersChanged?.Invoke();
     }
 
@@ -356,10 +488,10 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
 
             if (string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase))
             {
-                // Имя то же самое — просто обновляем регистр букв
+                // The name is the same — only the letter case is updated
                 if (!string.Equals(oldPath, newPath, StringComparison.Ordinal))
                 {
-                    // Меняем только регистр — нужно через временное имя
+                    // Only the case changes — has to go through a temporary name
                     var tempPath = Path.Combine(parentDir, newName + "_tmp_rename");
                     Directory.Move(oldPath, tempPath);
                     Directory.Move(tempPath, newPath);
@@ -377,7 +509,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
 
             if (!Directory.Exists(oldPath))
             {
-                // Папка не существует — просто обновляем путь
+                // The folder does not exist — just update the path
                 server.Path = newPath;
                 server.Name = newName;
                 storage.UpdateServer(server);
@@ -406,7 +538,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
     {
         Server? server;
 
-        // останавливаем процесс сервера, если он запущен
+        // stop the server process if it is running
         if (_processes.TryRemove(id, out var process))
         {
             if (_statusHandlers.TryRemove(id, out var handler))
@@ -414,14 +546,29 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
                 process.OnStatusChanged -= handler;
             }
 
-            await process.StopAsync();
-            process.Dispose();
+            try
+            {
+                await process.StopAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                // Must not escape: the wrapper owns an OS handle and a still-registered
+                // handler, so both have to be released regardless of the stop outcome.
+                Logger.Warning($"Failed to stop server before delete: {ex.Message}", "McServerProcess");
+            }
+            finally
+            {
+                process.Dispose();
+            }
         }
         else
         {
             _statusHandlers.TryRemove(id, out _);
         }
 
+        // ReaderWriterLockSlim is thread-affine: awaiting inside the lock would release
+        // it from a different thread and throw. Mutate under the lock, persist after it.
+        List<Server> remaining;
         _serversLock.EnterWriteLock();
         try
         {
@@ -430,14 +577,16 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
                 return;
 
             _servers.RemoveAll(s => s.Id == id);
-            await storage.SaveServersAsync(_servers, ct);
+            remaining = [.. _servers];
         }
         finally
         {
             _serversLock.ExitWriteLock();
         }
 
-        // удаляем папку сервера
+        await storage.SaveServersAsync(remaining, ct);
+
+        // delete the server folder
         if (!string.IsNullOrWhiteSpace(server.Path) &&
             !PathValidator.ContainsTraversalSequences(server.Path) &&
             PathValidator.IsPathSafe(server.Path, storage.ServersPath) &&
@@ -453,7 +602,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
             }
         }
 
-        OnServersChanged?.Invoke();
+        RaiseServersChanged();
     }
 
     public (int total, int running, int stopped) GetStats()
@@ -479,8 +628,11 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
                 {
                     return p.Process?.WorkingSet64 ?? 0;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    // Process died between the filter and the read, or access was denied.
+                    // Logged so a permanent failure is distinguishable from a 0 reading.
+                    Logger.Warning($"GetTotalMemoryUsage: {ex.Message}", "McServerManager");
                     return 0;
                 }
             });
@@ -497,15 +649,17 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
             if (process.Status != ServerStatus.Running)
                 continue;
 
-            var proc = process.Process;
-            if (proc == null || proc.HasExited)
-                continue;
-
+            // The Process object is disposed and nulled by the exit monitor concurrently,
+            // so the null/HasExited checks must live inside the try as well — outside it
+            // an InvalidOperationException escapes into the UI dispatcher.
             try
             {
-                _ = proc.Id; // throws if process died
-                var currentCpu = proc.TotalProcessorTime;
+                var proc = process.Process;
+                if (proc == null || proc.HasExited)
+                    continue;
+
                 var processId = proc.Id;
+                var currentCpu = proc.TotalProcessorTime;
                 activeIds.Add(processId);
 
                 if (_cpuSamples.TryGetValue(processId, out var prev))
@@ -522,9 +676,9 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
 
                 _cpuSamples[processId] = (now, currentCpu);
             }
-            catch
+            catch (Exception ex)
             {
-                // Process exited between checks
+                Logger.Warning($"GetTotalCpuUsage: {ex.Message}", "McServerManager");
             }
         }
 
@@ -539,18 +693,18 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
     }
 
     /// <summary>
-    /// Убивает «зомби»-процессы Java, оставшиеся от предыдущих запусков Konserva
-    /// и удерживающие блокировки файлов сервера (например <c>world/session.lock</c>).
+    /// Kills "zombie" Java processes left over from previous Konserva runs
+    /// that keep the server file locks (for example <c>world/session.lock</c>).
     /// </summary>
     /// <remarks>
-    /// Признак процесса — командная строка: она содержит путь к папке сервера
-    /// (рабочий каталог процесса и/или абсолютный путь к server.jar).
+    /// The sign of a process is its command line: it contains the path to the server folder
+    /// (the process working directory and/or an absolute path to server.jar).
     /// <para>
-    /// Раньше здесь сравнивался <c>Process.MainModule.FileName</c> с папкой сервера, но это
-    /// путь к самому <c>java.exe</c>/<c>javaw.exe</c> (например <c>C:\Program Files\Java\bin\javaw.exe</c>),
-    /// который никогда не лежит внутри папки сервера — совпадение было невозможно, и метод
-    /// молча ничего не делал. Теперь используется WMI (<c>Win32_Process.CommandLine</c>):
-    /// в отличие от <c>wmic</c> в консоли он отдаёт корректный Unicode для кириллических путей.
+    /// Previously <c>Process.MainModule.FileName</c> was compared with the server folder, but that is
+    /// the path to <c>java.exe</c>/<c>javaw.exe</c> itself (for example <c>C:\Program Files\Java\bin\javaw.exe</c>),
+    /// which is never located inside the server folder — a match was impossible, and the method
+    /// silently did nothing. Now WMI is used (<c>Win32_Process.CommandLine</c>):
+    /// unlike <c>wmic</c> in the console, it returns correct Unicode for Cyrillic paths.
     /// </para>
     /// </remarks>
     internal static void KillZombieProcesses(string serverPath)
@@ -562,7 +716,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
         {
             var normalizedPath = serverPath.Replace('/', '\\').TrimEnd('\\');
 
-            // Кандидаты: java/javaw, чья командная строка ссылается на папку сервера.
+            // Candidates: java/javaw processes whose command line references the server folder.
             foreach (var pid in FindJavaPidsForPath(normalizedPath))
             {
                 if (pid == Environment.ProcessId)
@@ -573,11 +727,12 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
                     using var proc = Process.GetProcessById(pid);
                     Logger.Info($"[KillZombieProcesses] Killing zombie PID={pid} for {serverPath}", "McServerManager");
                     proc.Kill(entireProcessTree: true);
-                    proc.WaitForExit(5000);
+                    // No WaitForExit: this runs before the server start and a blocking wait
+                    // here freezes the window for seconds per matched process.
                 }
                 catch (Exception ex)
                 {
-                    // Процесс мог завершиться сам между поиском и kill — это не ошибка.
+                    // The process may have exited on its own between the lookup and the kill — that is not an error.
                     Logger.Info($"[KillZombieProcesses] PID={pid} could not be killed: {ex.Message}", "McServerManager");
                 }
             }
@@ -589,7 +744,15 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
     }
 
     /// <summary>
-    /// Возвращает PID процессов java/javaw, чья командная строка указывает на <paramref name="serverPath"/>.
+    /// Returns the PIDs of java/javaw processes whose command line points to <paramref name="serverPath"/>.
+    /// <para>
+    /// The WQL query is intentionally fixed: the server path is a free-form user string
+    /// (a folder name may contain apostrophes, <c>%</c> or <c>_</c>), and interpolating it
+    /// into the query allowed breaking out of the <c>LIKE</c> literal — for example a folder
+    /// named <c>x' OR CommandLine LIKE '%</c> turned the predicate into
+    /// <c>(A AND B) OR C</c> and matched every java.exe on the machine, all of which were
+    /// then killed. Matching is therefore done in managed code on the returned command lines.
+    /// </para>
     /// </summary>
     private static List<int> FindJavaPidsForPath(string normalizedServerPath)
     {
@@ -598,12 +761,9 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
         var scope = new ManagementScope();
         scope.Connect();
 
-        // "\" в WQL-строках является экранированным обратным слэшем.
-        var escapedPath = normalizedServerPath.Replace("\\", "\\\\");
-
         var query = new ObjectQuery(
             "SELECT ProcessId, CommandLine FROM Win32_Process " +
-            $"WHERE (Name = 'java.exe' OR Name = 'javaw.exe') AND CommandLine LIKE '%{escapedPath}%'");
+            "WHERE (Name = 'java.exe' OR Name = 'javaw.exe')");
 
         using var searcher = new ManagementObjectSearcher(scope, query);
         using var results = searcher.Get();
@@ -611,6 +771,13 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
         foreach (var item in results)
         {
             using var entry = item;
+
+            if (entry["CommandLine"] is not string commandLine || string.IsNullOrEmpty(commandLine))
+                continue;
+
+            if (!CommandLineReferencesPath(commandLine, normalizedServerPath))
+                continue;
+
             if (entry["ProcessId"] is uint pid)
                 result.Add((int)pid);
         }
@@ -618,10 +785,31 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
         return result;
     }
 
+    /// <summary>
+    /// Returns true when <paramref name="commandLine"/> contains <paramref name="path"/> as a
+    /// plain substring. Paths are compared after normalizing separators and dropping the
+    /// surrounding quotes the JVM launcher may add.
+    /// </summary>
+    private static bool CommandLineReferencesPath(string commandLine, string path)
+    {
+        var normalized = path.Replace('/', '\\').TrimEnd('\\');
+
+        // The path may be quoted inside the command line — strip one layer of quotes
+        // from each token before comparing.
+        foreach (var token in commandLine.Split('"', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var candidate = token.Replace('/', '\\').TrimEnd('\\');
+            if (candidate.Length > 0 && candidate.Contains(normalized, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return commandLine.Replace('/', '\\').Contains(normalized, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ===== UPnP helpers =====
 
     /// <summary>
-    /// Fire-and-forget: создаёт UPnP проброс порта для сервера.
+    /// Fire-and-forget: creates a UPnP port forwarding rule for the server.
     /// </summary>
     private async Task TryCreateUpnpMappingAsync(int port, string serverName, string serverId)
     {
@@ -649,7 +837,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
     }
 
     /// <summary>
-    /// Удаляет UPnP проброс порта для сервера (синхронный вызов).
+    /// Removes the UPnP port forwarding rule for the server (synchronous call).
     /// </summary>
     private void TryDeleteUpnpMappingForServer(string id)
     {
@@ -671,7 +859,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
     }
 
     /// <summary>
-    /// Удаляет UPnP проброс порта для сервера (асинхронный вызов).
+    /// Removes the UPnP port forwarding rule for the server (asynchronous call).
     /// </summary>
     private async Task TryDeleteUpnpMappingForServerAsync(string id)
     {
@@ -693,7 +881,7 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
     }
 
     /// <summary>
-    /// Удаляет проброс порта по номеру порта.
+    /// Removes the port forwarding rule by port number.
     /// </summary>
     private async Task TryDeleteUpnpMappingAsync(int port)
     {

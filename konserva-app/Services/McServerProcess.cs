@@ -11,18 +11,18 @@ using System.Text.RegularExpressions;
 namespace Konserva.Services;
 
 /// <summary>
-/// Управление процессом сервера Minecraft
+/// Management of a Minecraft server process
 /// </summary>
 public partial class McServerProcess(Server server, IConfigService? configService = null, IServerInstaller? installer = null) : IDisposable
 {
-    // Храним installer как nullable — если не передан, будет выброшено исключение при первом обращении
+    // Keep the installer as nullable — if it was not passed in, an exception will be thrown on first access
     private readonly IServerInstaller? _installerField = installer;
 
     private IServerInstaller GetInstaller() => _installerField ?? throw new InvalidOperationException(
         "IServerInstaller is not available. Ensure McServerProcess is created with an installer (e.g., via DI).");
     private Process? _process;
     private readonly StringBuilder _logs = new();
-    private readonly List<string> _logLines = [];
+    private readonly Queue<string> _logLines = new();
     private readonly Lock _lock = new();
     private readonly Lock _startStopLock = new();
     private CancellationTokenSource? _startCts;
@@ -48,22 +48,22 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     public event Action<int>? OnPlayersChanged;
 
     /// <summary>
-    /// Получить логи сервера
+    /// Gets the server log lines
     /// </summary>
     public IReadOnlyList<string> GetLogs()
     {
         lock (_lock)
         {
-            // Именно копия, а не AsReadOnly()-обёртка: обёртка отражает изменения
-            // List'а, а перечисление происходит уже вне lock — параллельный
-            // AppendLog успевал бы изменить версию коллекции и выбросить
-            // InvalidOperationException прямо посреди отрисовки консоли.
-            return _logLines.ToArray();
+            // Exactly a copy, not an AsReadOnly() wrapper: the wrapper reflects changes
+            // to the queue, while enumeration happens outside the lock — a concurrent
+            // AppendLog would manage to change the collection version and throw
+            // InvalidOperationException right in the middle of rendering the console.
+            return [.. _logLines];
         }
     }
 
     /// <summary>
-    /// Получить полный лог
+    /// Gets the full log
     /// </summary>
     public string GetFullLog()
     {
@@ -74,7 +74,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     }
 
     /// <summary>
-    /// Запустить сервер (синхронная версия)
+    /// Starts the server (synchronous version)
     /// </summary>
     public void Start()
     {
@@ -87,16 +87,25 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     }
 
     /// <summary>
-    /// Запустить сервер
+    /// Starts the server
     /// </summary>
     public async Task StartAsync(CancellationToken ct = default)
     {
+        // A disposed instance can still be reached through a pending AutoRestart task:
+        // starting here would launch a Java process that is no longer registered
+        // in the manager, so nothing would be able to stop it or track it.
+        if (_disposed)
+        {
+            Logger.Warning($"[StartAsync] Ignored: the process wrapper for {Server.Name} is already disposed", "McServerProcess");
+            return;
+        }
+
         Logger.Info($"[StartAsync] Starting for server {Server.Name}", "McServerProcess");
 
         CancellationToken linkedCt;
         lock (_startStopLock)
         {
-            // Если уже запускается или запущен — выходим
+            // If it is already starting or running — exit
             if (_isStarting || _process is { HasExited: false })
             {
                 Logger.Warning($"[StartAsync] Already starting or running: {Server.Name}", "McServerProcess");
@@ -105,9 +114,10 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             _isStarting = true;
             _startCts?.Cancel();
+            _startCts?.Dispose();
             _startCts = new CancellationTokenSource();
 
-            // Объединяем внешний токен с внутренним
+            // Combine the external token with the internal one
             linkedCt = ct == CancellationToken.None
                 ? _startCts.Token
                 : CancellationTokenSource.CreateLinkedTokenSource(ct, _startCts.Token).Token;
@@ -133,16 +143,16 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     }
 
     /// <summary>
-    /// Внутренняя логика запуска
+    /// Internal start logic
     /// </summary>
     private async Task StartInternalAsync(CancellationToken ct)
     {
         Logger.Info($"[StartInternalAsync] Beginning for {Server.Name}", "McServerProcess");
 
-        _intentionalStop = false;  // Сбрасываем флаг намеренной остановки
+        _intentionalStop = false;  // Reset the intentional stop flag
         _stopCts = new CancellationTokenSource();
         _pendingErrorOutput = null;
-        _serverReady = false;  // Сбрасываем флаг готовности
+        _serverReady = false;  // Reset the ready flag
         Status = ServerStatus.Starting;
         OnStatusChanged?.Invoke(Status);
 
@@ -166,7 +176,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             var jarFile = FindServerJar(Server.Path);
 
-            // Modern Forge (47.x+) и NeoForge запускаются через @args файлы, без -jar
+            // Modern Forge (47.x+) and NeoForge are launched via @args files, without -jar
             if (string.IsNullOrEmpty(jarFile) && launchType is not ServerLaunchType.Forge and not ServerLaunchType.NeoForge)
             {
                 var fileList = Directory.Exists(Server.Path)
@@ -212,15 +222,15 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             ct.ThrowIfCancellationRequested();
 
-            // Создаём пустой server.properties, если его нет — иначе Minecraft сервер пишет ERROR в лог
+            // Create an empty server.properties if it is missing — otherwise the Minecraft server writes ERROR to the log
             var serverPropsPath = Path.Combine(Server.Path, "server.properties");
             if (!File.Exists(serverPropsPath))
                 File.Create(serverPropsPath).Dispose();
 
-            // Запуск процесса
+            // Process launch
             StartProcess(javaCheckResult.JavaPath, javaArgs);
 
-            // После создания процесса — сбрасываем флаг запуска
+            // After the process is created — reset the starting flag
             lock (_startStopLock)
             {
                 _isStarting = false;
@@ -228,7 +238,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             _ = MonitorProcessExitAsync();
 
-            // Статус устанавливается в StartProcess после успешного запуска
+            // The status is set in StartProcess after a successful launch
             AppendLog($" {LocalizationManager.Get("Log_WaitingForStartup")}");
             AppendLog("========================================");
         }
@@ -237,7 +247,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             AppendLog($" {LocalizationManager.Get("Log_LaunchCancelled")}");
             Status = ServerStatus.Stopped;
             OnStatusChanged?.Invoke(Status);
-            throw; // Пробрасываем отмену дальше
+            throw; // Re-throw the cancellation further up
         }
         catch (Exception ex)
         {
@@ -247,12 +257,12 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         }
     }
 
-    public async Task StopAsync() => await StopInternalAsync();
+    public async Task StopAsync(CancellationToken ct = default) => await StopInternalAsync(ct);
 
     /// <summary>
-    /// Внутренняя логика остановки (универсальная)
+    /// Internal stop logic (universal)
     /// </summary>
-    private async Task StopInternalAsync()
+    private async Task StopInternalAsync(CancellationToken ct = default)
     {
         bool isStarting;
         bool isReady;
@@ -262,14 +272,17 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             isStarting = _isStarting;
             isReady = _serverReady;
 
-            // Если ещё идёт запуск — принудительная отмена
+            // If the start is still in progress — force cancellation
             if (isStarting)
             {
                 _startCts?.Cancel();
                 _isStarting = false;
 
-                // Просто сбрасываем состояние, не трогаем процесс
-                _process = null;
+                // The Java process may already have been created by StartProcess but the
+                // starting flag not yet cleared. Dropping the reference without killing it
+                // would leave an orphan holding the game port and world/session.lock.
+                KillOrphanProcess();
+
                 Status = ServerStatus.Stopped;
                 OnStatusChanged?.Invoke(Status);
                 _intentionalStop = true;
@@ -278,7 +291,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             }
         }
 
-        // Если сервер ещё не запущен — выходим
+        // If the server has not been started yet — exit
         if (_process == null || _process.HasExited)
         {
             Status = ServerStatus.Stopped;
@@ -287,7 +300,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             return;
         }
 
-        // Если сервер ещё не загрузился — принудительная остановка
+        // If the server has not finished loading yet — force stop
         if (!isReady)
         {
             _intentionalStop = true;
@@ -295,40 +308,92 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             return;
         }
 
-        // Сервер запущен и готов — graceful остановка
+        // The server is running and ready — graceful stop
         _intentionalStop = true;
-        await GracefulStopAsync();
+        await GracefulStopAsync(ct);
     }
 
     /// <summary>
-    /// Принудительная остановка процесса (для Starting/не готовых серверов)
+    /// Kills the currently referenced OS process (if any) and drops the reference.
+    /// <para>
+    /// The field is captured and cleared atomically, so a concurrent
+    /// <see cref="StartProcess"/> cannot slip a new process into the slot we are about
+    /// to dispose — otherwise the freshly started server would be killed.
+    /// </para>
+    /// </summary>
+    private void KillOrphanProcess()
+    {
+        var process = Interlocked.Exchange(ref _process, null);
+        if (process == null)
+            return;
+
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit(5000);
+            }
+        }
+        catch (Exception ex)
+        {
+            // The process may have exited on its own between the check and the kill — not an error.
+            Logger.Warning($"[KillOrphanProcess] Kill failed for {Server.Name}: {ex.Message}", "McServerProcess");
+        }
+        finally
+        {
+            try { process.Dispose(); }
+            catch (Exception ex) { Logger.Warning($"[KillOrphanProcess] Dispose failed: {ex.Message}", "McServerProcess"); }
+        }
+    }
+
+    /// <summary>
+    /// Forced stop of the process (for Starting/not yet ready servers)
     /// </summary>
     private async Task ForceKillProcessAsync()
     {
         try
         {
-            _process?.Kill();
-            await Task.Run(() => _process?.Dispose());
+            // Capture the reference before awaiting: _process must not be read inside
+            // the Task.Run lambda, otherwise a concurrent restart could hand us a new
+            // process and we would dispose the one just launched.
+            var process = Interlocked.Exchange(ref _process, null);
+            if (process == null)
+                return;
+
+            try
+            {
+                if (!process.HasExited)
+                    process.Kill();
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Failed to kill process: {ex.Message}", "McServerProcess");
+            }
+            finally
+            {
+                await Task.Run(process.Dispose);
+            }
+
             AppendLog("");
             AppendLog($" {LocalizationManager.Get("Log_ProcessForceKilled")}");
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Failed to kill process: {ex.Message}", "McServerProcess");
+            Logger.Warning($"ForceKillProcessAsync failed: {ex.Message}", "McServerProcess");
             AppendLog($"[ERROR] {LocalizationManager.Get("Log_ExitError")} {ex.Message}");
         }
         finally
         {
-            _process = null;
             Status = ServerStatus.Stopped;
             OnStatusChanged?.Invoke(Status);
         }
     }
 
     /// <summary>
-    /// Корректная остановка через команду stop (для Running серверов)
+    /// Proper stop via the stop command (for Running servers)
     /// </summary>
-    private async Task GracefulStopAsync()
+    private async Task GracefulStopAsync(CancellationToken ct = default)
     {
         Status = ServerStatus.Stopping;
         OnStatusChanged?.Invoke(Status);
@@ -340,7 +405,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
 
             while (_process != null && !_process.HasExited && (Environment.TickCount64 - startTime) < Constants.ServerStopTimeoutMs)
             {
-                await Task.Delay(100);
+                await Task.Delay(100, ct);
             }
 
             if (_process is { HasExited: false })
@@ -351,14 +416,14 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             }
             else
             {
-                // Ждём немного для обработки последних строк вывода
-                await Task.Delay(Constants.ServerStatusCheckDelayMs);
+                // Wait a little to process the last output lines
+                await Task.Delay(Constants.ServerStatusCheckDelayMs, ct);
             }
         }
         catch (OperationCanceledException)
         {
             AppendLog($" {LocalizationManager.Get("Log_StopCancelled")}");
-            // Принудительное завершение при отмене
+            // Force termination on cancellation
             try
             {
                 _process?.Kill();
@@ -386,14 +451,14 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         }
         finally
         {
-            // Обновляем статус сразу после завершения
+            // Update the status right after completion
             Status = ServerStatus.Stopped;
             OnStatusChanged?.Invoke(Status);
         }
     }
 
     /// <summary>
-    /// Отправить команду в сервер
+    /// Sends a command to the server
     /// </summary>
     public void SendCommand(string command)
     {
@@ -424,19 +489,19 @@ public partial class McServerProcess(Server server, IConfigService? configServic
     }
 
     /// <summary>
-    /// Найти jar файл сервера
+    /// Finds the server jar file
     /// </summary>
     private string FindServerJar(string path) => GetInstaller().FindServerJar(path);
 
     /// <summary>
-    /// Построить аргументы Java
+    /// Builds the Java arguments
     /// </summary>
     public void Dispose()
     {
         if (_disposed)
             return;
 
-        // Отписка от событий процесса
+        // Unsubscribe from the process events
         if (_process != null)
         {
             _process.OutputDataReceived -= OnOutput;
@@ -445,7 +510,7 @@ public partial class McServerProcess(Server server, IConfigService? configServic
             _process = null;
         }
 
-        // Отмена всех операций
+        // Cancel all operations
         _startCts?.Cancel();
         _startCts?.Dispose();
         _startCts = null;
@@ -458,20 +523,20 @@ public partial class McServerProcess(Server server, IConfigService? configServic
         _readyMsgCts?.Dispose();
         _readyMsgCts = null;
 
-        // Очистка логов
+        // Clear the logs
         lock (_lock)
         {
             _logs.Clear();
             _logLines.Clear();
         }
 
-        // Сброс всех событий (отписка внешних подписчиков)
+        // Reset all events (unsubscribe external subscribers)
         OnLog = null;
         OnStatusChanged = null;
         OnPlayersChanged = null;
 
-        // Примечание: _installerField не диспозим — он получен через DI (singleton),
-        // фабрика/контейнер управляет его жизненным циклом.
+        // Note: _installerField is not disposed — it comes from DI (singleton),
+        // the factory/container manages its lifetime.
 
         _disposed = true;
         GC.SuppressFinalize(this);

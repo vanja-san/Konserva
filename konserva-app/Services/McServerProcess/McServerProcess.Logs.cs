@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 namespace Konserva.Services;
 
 /// <summary>
-/// Обработка вывода, парсинг логов, мониторинг завершения процесса
+/// Output handling, log parsing, process exit monitoring
 /// </summary>
 public partial class McServerProcess
 {
@@ -22,8 +22,8 @@ public partial class McServerProcess
         var trimmed = e.Data.TrimStart();
         bool isStackTraceLine = trimmed.StartsWith("at ", StringComparison.Ordinal);
 
-        // Обнаружили несовместимость модов — захватываем весь блок (заголовок, решения,
-        // подробности) до стек-трейса, а не только строки с ключевыми словами.
+        // Mod incompatibility detected — capture the whole block (header, solutions,
+        // details) up to the stack trace, not just the lines with keywords.
         if (ModIncompatibilityParser.IsModIncompatibility(e.Data))
             _captureModIncompatibility = true;
 
@@ -33,16 +33,27 @@ public partial class McServerProcess
             || e.Data.Contains("failed", StringComparison.OrdinalIgnoreCase);
 
         if (capture)
-        {
-            _pendingErrorOutput ??= "";
-            _pendingErrorOutput += e.Data + "\n";
-        }
+            CaptureErrorOutput(e.Data);
 
         if (_captureModIncompatibility && isStackTraceLine)
             _captureModIncompatibility = false;
 
         AppendLog(e.Data);
         ParseOutput(e.Data);
+    }
+
+    /// <summary>
+    /// Appends a line to the pending error buffer.
+    /// The stdout and stderr readers run on two independent threads, so string
+    /// concatenation here must be serialized — otherwise whole stack-trace
+    /// fragments are silently lost and the user sees a truncated error.
+    /// </summary>
+    private void CaptureErrorOutput(string line)
+    {
+        lock (_lock)
+        {
+            _pendingErrorOutput += line + "\n";
+        }
     }
 
     private void OnError(object sender, DataReceivedEventArgs e)
@@ -52,8 +63,7 @@ public partial class McServerProcess
 
         var errorLine = $"[STDERR] {e.Data}";
         AppendLog(errorLine);
-        _pendingErrorOutput ??= "";
-        _pendingErrorOutput += e.Data + "\n";
+        CaptureErrorOutput(e.Data);
     }
 
     private async Task MonitorProcessExitAsync()
@@ -64,7 +74,7 @@ public partial class McServerProcess
 
             await _process.WaitForExitAsync();
 
-            // Дочитываем оставшийся вывод после завершения процесса
+            // Flush the remaining output after the process has finished
             await Task.Delay(200);
 
             var exitCode = _process.ExitCode;
@@ -92,7 +102,7 @@ public partial class McServerProcess
 
                 if (classVersionLine != null)
                 {
-                    // Специфичная ошибка: слишком новая Java для старых версий Forge
+                    // Specific error: Java is too new for older Forge versions
                     AppendLog($"[ERROR] {LocalizationManager.Get("Log_JavaClassFileVersionError", _lastJavaDisplayName ?? "Java", _lastJavaMajorVersion)}");
                 }
                 else
@@ -117,12 +127,18 @@ public partial class McServerProcess
             _process?.Dispose();
             _process = null;
 
-            if (Server.Settings.AutoRestart && !_intentionalStop)
+            if (Server.Settings.AutoRestart && !_intentionalStop && !_disposed)
             {
                 AppendLog($" {LocalizationManager.Get("Log_AutoRestart")} {Server.Settings.AutoRestartDelay} {LocalizationManager.Get("Log_Seconds")}...");
                 await Task.Delay(Server.Settings.AutoRestartDelay * Constants.MsPerSecond);
-                if (!_intentionalStop)
-                    Start();
+
+                // The user may have stopped or deleted the server (and disposed this
+                // wrapper) while the delay was running. Starting anyway would launch an
+                // orphan Java process that nothing tracks or can shut down.
+                if (_intentionalStop || _disposed)
+                    return;
+
+                Start();
             }
         }
         catch (OperationCanceledException)
@@ -137,10 +153,10 @@ public partial class McServerProcess
     }
 
     /// <summary>
-    /// Формирует блок текста ошибки для окна сообщения.
-    /// 1) class file version — специфичная Java-ошибка (одна строка);
-    /// 2) несовместимость модов — весь блок (заголовок + решения + подробности) до стек-трейса;
-    /// 3) иначе — первые 2 строки вывода как раньше.
+    /// Builds the error text block for the message box.
+    /// 1) class file version — a specific Java error (a single line);
+    /// 2) mod incompatibility — the whole block (header + solutions + details) up to the stack trace;
+    /// 3) otherwise — the first 2 output lines as before.
     /// </summary>
     private static string ExtractErrorBlock(string[] lines, out string? classVersionLine)
     {
@@ -194,7 +210,7 @@ public partial class McServerProcess
     }
 
     /// <summary>
-    /// Удаляет ANSI escape-последовательности и управляющие символы из строки
+    /// Strips ANSI escape sequences and control characters from a line
     /// </summary>
     private static string SanitizeOutput(string input) =>
         AnsiRegex().Replace(input, "").Replace("\r", "");
@@ -204,16 +220,19 @@ public partial class McServerProcess
 
     internal void AppendLog(string line)
     {
+        Action<string>? handler;
+        string logLine;
+
         lock (_lock)
         {
-            var logLine = SanitizeOutput(line);
+            logLine = SanitizeOutput(line);
 
             _logs.AppendLine(logLine);
-            _logLines.Add(logLine);
+            _logLines.Enqueue(logLine);
 
             if (_logLines.Count > Constants.MaxLogLines)
             {
-                _logLines.RemoveAt(0);
+                _logLines.Dequeue();
                 if (_logs.Length > 100_000)
                 {
                     var fullText = _logs.ToString();
@@ -223,16 +242,21 @@ public partial class McServerProcess
                 }
             }
 
-            OnLog?.Invoke(logLine);
+            // Captured here, raised below the lock: subscribers touch the UI and may
+            // call back into GetLogs()/GetFullLog(), which take the same lock.
+            handler = OnLog;
         }
+
+        handler?.Invoke(logLine);
     }
 
     /// <summary>
-    /// Показать сообщение о готовности сервера с задержкой
+    /// Show the server ready message with a delay
     /// </summary>
     private async Task ShowServerReadyDelayedAsync()
     {
         _readyMsgCts?.Cancel();
+        _readyMsgCts?.Dispose();
         _readyMsgCts = new CancellationTokenSource();
         var token = _readyMsgCts.Token;
 
@@ -250,7 +274,7 @@ public partial class McServerProcess
         }
         catch (OperationCanceledException)
         {
-            // Отменено — новый сигнал готовности уже в пути
+            // Cancelled — a new ready signal is already on its way
         }
     }
 

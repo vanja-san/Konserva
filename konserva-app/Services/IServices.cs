@@ -3,7 +3,7 @@
 namespace Konserva.Services;
 
 /// <summary>
-/// Сервис конфигурации приложения
+/// Application configuration service
 /// </summary>
 public interface IConfigService
 {
@@ -15,12 +15,12 @@ public interface IConfigService
 }
 
 /// <summary>
-/// Сервис хранения данных серверов
+/// Server data storage service
 /// </summary>
 public interface IServerStorageService
 {
     /// <summary>
-    /// Путь к директории хранения серверов (берётся из конфига).
+    /// Path to the server storage directory (taken from the config).
     /// </summary>
     string ServersPath { get; }
 
@@ -34,12 +34,12 @@ public interface IServerStorageService
 }
 
 /// <summary>
-/// Сервис управления серверами
+/// Server management service
 /// </summary>
 public interface IServerManager
 {
     event Action? OnServersChanged;
-    event Action<Server, string>? OnServerStartError;  // Событие об ошибке запуска
+    event Action<Server, string>? OnServerStartError;  // Event raised on a start failure
 
     IReadOnlyList<Server> GetServers();
     Server? GetServer(string id);
@@ -55,10 +55,16 @@ public interface IServerManager
     Task StartServerAsync(string id, CancellationToken ct = default);
     Task StopServerAsync(string id, CancellationToken ct = default);
     Task DeleteServerAsync(string id, CancellationToken ct = default);
+
+    /// <summary>
+    /// Flushes pending server-state writes to disk and stops the background writer.
+    /// Called on application shutdown.
+    /// </summary>
+    void FlushPendingWrites();
 }
 
 /// <summary>
-/// Сервис для работы с API версий Minecraft
+/// Service for working with the Minecraft version APIs
 /// </summary>
 public interface IMcVersionsApi
 {
@@ -74,7 +80,7 @@ public interface IMcVersionsApi
 }
 
 /// <summary>
-/// Сервис для установки серверов
+/// Service for installing servers
 /// </summary>
 public interface IServerInstaller
 {
@@ -85,7 +91,7 @@ public interface IServerInstaller
 }
 
 /// <summary>
-/// Сервис для управления Java
+/// Service for Java management
 /// </summary>
 public interface IJavaManagementService
 {
@@ -106,22 +112,22 @@ public interface IJavaManagementService
 }
 
 /// <summary>
-/// Сервис проверки обновлений приложения через version.json на GitHub
+/// Service for checking application updates via version.json on GitHub
 /// </summary>
 public interface IUpdateChecker
 {
-    /// <summary>Текущая версия приложения (из AssemblyVersion)</summary>
+    /// <summary>Current application version (from AssemblyVersion)</summary>
     string GetCurrentVersion();
 
-    /// <summary>Проверить наличие обновлений</summary>
+    /// <summary>Check for available updates</summary>
     Task<UpdateInfo> CheckAsync();
 }
 
 /// <summary>
-/// Сервис скачивания и применения обновлений приложения
+/// Service for downloading and applying application updates
 /// </summary>
 public interface IAppUpdater
 {
-    /// <summary>Скачать и применить обновление</summary>
+    /// <summary>Download and apply an update</summary>
     Task<bool> ApplyAsync(UpdateInfo updateInfo, IProgress<double>? progress = null);
 }
