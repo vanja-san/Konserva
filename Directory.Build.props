@@ -1,0 +1,18 @@
+<Project>
+
+  <!--
+    Settings shared by every project in the repository.
+    Previously duplicated across both csproj files, where they had already drifted:
+    TreatWarningsAsErrors was set for the app but not for the tests.
+  -->
+
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

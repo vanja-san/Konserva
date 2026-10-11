@@ -3,8 +3,6 @@
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <RootNamespace>Konserva.Tests</RootNamespace>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     
     <!-- Помечаем как тестовый проект -->
     <IsTestProject>true</IsTestProject>

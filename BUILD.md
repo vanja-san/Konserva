@@ -110,46 +110,69 @@ publish/
 ## Project Structure
 
 ```
-konserva-app/
-├── konserva-app/                    # Main application
-│   ├── Models/                      # Data models
-│   ├── Services/                    # Business logic services
-│   ├── Views/                       # WPF views (XAML)
-│   ├── ViewModels/                  # View models (if used)
-│   ├── Converters/                  # Value converters
-│   ├── Controls/                    # Custom controls
-│   └── App.xaml / MainWindow.xaml   # Application entry
-├── konserva-app.Tests/              # Test project (xUnit)
-│   ├── Models/                      # Model tests
-│   ├── Services/                    # Service tests
-│   ├── Utilities/                   # Utility tests
-│   ├── Converters/                  # Converter tests
-│   └── Localization/                # Localization tests
-├── .github/
+konserva-app/                        # Main application
+├── Models/                          # Data models
+├── Services/                        # Business logic services
+│   ├── McServerInstaller/           # Per-loader installers (partial class)
+│   └── McServerProcess/             # Process lifecycle, logs, Java (partial class)
+├── ViewModels/                      # MVVM view models
+├── Pages/                           # Page views (code-behind)
+├── Controls/                        # Custom controls
+│   └── Sections/                    # Server detail sections
+├── Dialogs/                         # Modal dialogs
+├── Converters/                      # Value converters
+├── Localization/                    # Localization manager and string tables
+├── Utilities/                       # Helpers (logger, paths, hashing)
+├── App.xaml / MainWindow.xaml       # Application entry
+├── konserva-app.csproj
+└── konserva-app.slnx
+konserva-app.Tests/                  # Test project (xUnit v3)
+├── Models/                          # Model tests
+├── Services/                        # Service tests
+├── Utilities/                       # Utility tests
+├── Converters/                      # Converter tests
+├── Localization/                    # Localization tests
+└── Regression/                      # Regression tests for fixed defects
+Directory.Build.props                # Settings shared by both projects
+.github/
 │   └── workflows/                   # CI/CD workflows
-├── publish/                         # Build output
-├── build-publish-full.bat       # Full build script
-├── build-publish-deps.bat       # Deps build script
-├── BUILD.md                         # This file
-├── README.md                        # User documentation (EN)
-└── README.ru.md                     # User documentation (RU)
+publish/                             # Build output
+build-publish-full.bat               # Full build script
+build-publish-deps.bat               # Deps build script
+BUILD.md                             # This file
+README.md                            # User documentation (EN)
+README.ru.md                         # User documentation (RU)
 ```
 
 ## Build Settings
 
-### Release Configuration (.csproj)
+### Release Configuration (konserva-app/konserva-app.csproj)
 ```xml
 <Optimize>true</Optimize>
-<DebugType>none</DebugType>
+<DebugType>embedded</DebugType>
+<DebugSymbols>true</DebugSymbols>
 ```
 
-### Publish Settings
+`<DebugType>none</DebugType>` and `<DebugSymbols>false</DebugSymbols>` are passed on the
+command line by the publish scripts to keep release symbols out of the distributed archive.
+
+### Publish Settings (Full build)
 ```bash
 -p:PublishSingleFile=true
 -p:EnableCompressionInSingleFile=true
--p:PublishReadyToRun=true
 -p:IncludeNativeLibrariesForSelfExtract=true
+-p:DebugType=none
+-p:DebugSymbols=false
 ```
+
+`PublishReadyToRun` is **not** used. The csproj sets it to `false` deliberately: ReadyToRun
+precompilation and single-file compression work against each other, and enabling both
+produced a considerably larger archive for no measurable startup gain in this WPF app.
+
+### Shared build settings
+`Directory.Build.props` holds the settings common to both projects: `Nullable`,
+`ImplicitUsings`, `LangVersion`, `AnalysisLevel`, `EnforceCodeStyleInBuild` and
+`TreatWarningsAsErrors`. Warnings are errors in the test project too.
 
 ## Testing
 
@@ -197,8 +220,8 @@ decodes BOM-less files as UTF-8, which is why the project builds with a mix of
 both. If a Russian string looks garbled, the file was most likely saved in a
 legacy single-byte codepage.
 
-### WPF UI errors
-Make sure WPF UI 4.2.0 package is restored:
+### WPF-UI errors
+Make sure the WPF-UI packages are restored:
 ```bash
 dotnet restore
 ```
@@ -242,14 +265,22 @@ Update version in:
 
 ## Data Directory
 
-Application data location:
+Application data is stored **next to the executable** — Konserva is fully portable and
+writes nothing to the registry or to `%AppData%`:
+
 ```
-%AppData%\Konserva\
+<folder containing Konserva.exe>\
 ├── config.json          # Application settings
-├── servers.json         # Server list
-├── Servers/             # Server installations
-└── Logs/                # Application logs
+├── Servers\             # Server installations
+│   └── servers.json     # Server list (inside the Servers directory)
+├── Logs\                # Application logs
+├── i18n\                # Generated translation files
+└── downloads\           # Installer and update downloads (temporary)
 ```
+
+Because the data sits in the install directory, it must be **writable**. Installing to a
+protected location such as `C:\Program Files` breaks configuration saving, logging and
+server installation. Use a per-user directory instead.
 
 ## API Endpoints
 
@@ -267,13 +298,15 @@ Used by application for version resolution:
 
 ## Key Technical Decisions
 
-1. **UTF-8 with BOM** — Required for Russian text in WPF
+1. **UTF-8 without BOM** — a BOM is not required; the SDK decodes BOM-less UTF-8 correctly. Keep every file in UTF-8 so the Russian strings survive.
 2. **Single File Publish** — Simplifies distribution
 3. **Self-contained by default** — No .NET installation required for users
-4. **WPF UI 4.2.0** — Modern Fluent Design controls
+4. **WPF-UI 4.3** — Modern Fluent Design controls
 5. **.NET 10** — Latest LTS framework
-6. **xUnit Testing** — 400 tests, tagged with a `Category` trait (`Unit` / `Integration`); no E2E suite yet
+6. **xUnit Testing** — tests tagged with a `Category` trait (`Unit` / `Integration`); no E2E suite yet. Run `dotnet test` for the current count.
+7. **Writes next to the executable** — portable by design; the install directory must be writable
+8. **Updates are HTTPS-only and are never redirected** — the expected SHA-256 travels in the same manifest as the URL, so a downgrade redirect would defeat the integrity check
 
 ---
 
-**Last Updated**: 2026-06-27
+**Last Updated**: 2026-10-11
