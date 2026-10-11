@@ -156,7 +156,6 @@ public partial class ServerDetailPage : Page, IDisposable
         // Загружаем данные через ViewModel
         _viewModel.ServerId = _serverId;
         _server = _viewModel.Server;
-        _process = _viewModel.Process;
 
         if (_server == null)
             return;
@@ -452,6 +451,11 @@ public partial class ServerDetailPage : Page, IDisposable
             _process.OnStatusChanged -= UpdateStatus;
             _process.OnPlayersChanged -= UpdatePlayers;
         }
+
+        // Ссылку нужно сбрасывать вместе с отпиской: иначе ConnectToProcess
+        // при следующей загрузке увидит тот же экземпляр и пропустит
+        // и LoadExistingLogs, и повторную подписку.
+        _process = null;
     }
 
     private void Back_Click(object sender, RoutedEventArgs e)
