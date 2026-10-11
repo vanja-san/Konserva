@@ -347,14 +347,35 @@ public sealed class ModUpdateService : IModUpdateService
             return ModUpdateApplyResult.Fail("Не указан путь к файлу мода");
 
         var isDisabled = oldPath.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase);
-        var newFileName = isDisabled
-            ? $"{update.DownloadFileName}.disabled"
-            : update.DownloadFileName;
+
+        // DownloadFileName comes from the Modrinth API response and is attacker-controlled
+        // if that origin is ever compromised. Without this check a value such as
+        // "..\..\..\Users\victim\Startup\evil.jar" escapes the mods folder: the download
+        // writes outside it, File.Delete removes an arbitrary file and File.Move writes an
+        // arbitrary one. The name must stay a bare file name inside the same directory.
+        var safeFileName = Path.GetFileName(update.DownloadFileName);
+        if (string.IsNullOrWhiteSpace(safeFileName) ||
+            !string.Equals(safeFileName, update.DownloadFileName, StringComparison.Ordinal))
+        {
+            Logger.Error($"Rejected unsafe mod file name from API: '{update.DownloadFileName}'", null, "ModUpdateService");
+            return ModUpdateApplyResult.Fail("Недопустимое имя файла мода");
+        }
+
+        var newFileName = isDisabled ? $"{safeFileName}.disabled" : safeFileName;
         if (string.IsNullOrWhiteSpace(newFileName))
             return ModUpdateApplyResult.Fail("Не указано новое имя файла мода");
 
         var targetPath = Path.Combine(directory, newFileName);
         var tempPath = Path.Combine(directory, $".{newFileName}.{Guid.NewGuid():N}.tmp");
+
+        // Belt and braces: the name is already a bare file name, but confirm the resolved
+        // paths really stay inside the mods directory before touching the disk.
+        if (PathValidator.SafeCombine(directory, safeFileName) is null ||
+            PathValidator.SafeCombine(directory, Path.GetFileName(tempPath)) is null)
+        {
+            Logger.Error($"Rejected mod update target outside of '{directory}'", null, "ModUpdateService");
+            return ModUpdateApplyResult.Fail("Путь обновления выходит за пределы папки модов");
+        }
 
         try
         {

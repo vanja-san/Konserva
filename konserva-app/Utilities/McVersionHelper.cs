@@ -5,6 +5,43 @@ namespace Konserva.Utilities;
 /// </summary>
 public static class McVersionHelper
 {
+    // Minecraft versions and snapshots look like 1.21.1, 1.20.4-pre1, 24w14potato, 1.0.
+    // The first character must be alphanumeric (so "-help", "--foo" are rejected) and the
+    // rest is limited to the characters these names actually use. Spaces, quotes, &, |,
+    // ; and = are excluded, which is what stops argument injection.
+    private static readonly System.Text.RegularExpressions.Regex McVersionPattern =
+        new(@"^[0-9A-Za-z][0-9A-Za-z._\-]*$",
+            System.Text.RegularExpressions.RegexOptions.Compiled |
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    // A JVM main class is a dotted sequence of Java identifiers. Anything else in that
+    // position is an attempt to append further arguments to the command line.
+    private static readonly System.Text.RegularExpressions.Regex JavaClassNamePattern =
+        new(@"^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$",
+            System.Text.RegularExpressions.RegexOptions.Compiled |
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Returns true when <paramref name="version"/> is shaped like a Minecraft version.
+    /// <para>
+    /// Version strings reach a process command line and an installer URL. An imported
+    /// server folder supplies its own <c>version.json</c>, so the value is untrusted:
+    /// without this check a value such as <c>1.20.1 --help</c> or one containing a quote
+    /// appends extra arguments to the launcher (for example <c>-javaagent:</c>).
+    /// </para>
+    /// </summary>
+    public static bool IsSafeVersionString(string? version) =>
+        !string.IsNullOrWhiteSpace(version) &&
+        version.Length <= 64 &&
+        McVersionPattern.IsMatch(version);
+
+    /// <summary>
+    /// Returns true when <paramref name="className"/> is a valid, fully qualified Java class name.
+    /// </summary>
+    public static bool IsSafeJavaClassName(string? className) =>
+        !string.IsNullOrWhiteSpace(className) &&
+        className.Length <= 512 &&
+        JavaClassNamePattern.IsMatch(className);
     /// <summary>
     /// Splits a Minecraft version into major.minor (for example "1.20.1" → major=1, minor=20).
     /// </summary>

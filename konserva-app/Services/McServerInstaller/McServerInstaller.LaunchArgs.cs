@@ -148,6 +148,22 @@ public partial class McServerInstaller
             var launchConfig = LoadNeoForgeLaunchConfig(serverPath);
             if (launchConfig != null)
             {
+                // The launch config is a file inside the server folder, which users import
+                // and share. Validate the fields that reach the command line: an absolute
+                // ClassPath would bypass serverPath entirely, and a MainClass containing
+                // spaces would smuggle extra JVM arguments (for example -javaagent:).
+                if (!McVersionHelper.IsSafeJavaClassName(launchConfig.MainClass))
+                {
+                    Logger.Error($"Rejected unsafe NeoForge MainClass from launch config: '{launchConfig.MainClass}'", null, "McServerInstaller");
+                    return "-jar \"" + Path.GetFileName(jarPath) + "\" nogui";
+                }
+
+                if (Path.IsPathRooted(launchConfig.ClassPath))
+                {
+                    Logger.Error($"Rejected absolute NeoForge classPath from launch config: '{launchConfig.ClassPath}'", null, "McServerInstaller");
+                    return "-jar \"" + Path.GetFileName(jarPath) + "\" nogui";
+                }
+
                 if (!string.IsNullOrEmpty(launchConfig.ArgsFile))
                 {
                     // ClassPath holds a relative path to the argument file — convert it to an absolute path

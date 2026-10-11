@@ -131,6 +131,15 @@ public partial class McServerInstaller
 
         Logger.Info($"Using Java: {javaPath} for Quilt installer", "McServerInstaller");
 
+        // mcVersion is interpolated into the argument string unquoted. It can originate
+        // from an imported server's version.json, so reject anything that is not shaped
+        // like a Minecraft version before it can append extra arguments to the launcher.
+        if (!McVersionHelper.IsSafeVersionString(mcVersion))
+        {
+            Logger.Error($"Unsafe Minecraft version string rejected: '{mcVersion}'", null, "McServerInstaller");
+            return false;
+        }
+
         var startInfo = new ProcessStartInfo
         {
             FileName = javaPath,
