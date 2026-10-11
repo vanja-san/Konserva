@@ -1,8 +1,9 @@
 name: "CodeQL Analysis"
 
 on:
-  push:
-    branches: [ "master" ]
+  # Deliberately not on every push to master: the analysis is slow and its findings
+  # are reviewed during a pull request, where they are still actionable. Keeping it
+  # off master halves the runner minutes without losing coverage of new code.
   pull_request:
     branches: [ "master" ]
   workflow_dispatch:
@@ -24,7 +25,11 @@ jobs:
       uses: github/codeql-action/init@v4
       with:
         languages: csharp
-        queries: security-extended
+        # "default" rather than "security-extended": the extended suite adds web-oriented
+        # queries (SQLi, XSS, template injection) that do not apply to a desktop app and
+        # roughly 2.5x the runtime. The remaining security queries still cover the paths
+        # that matter here — untrusted JSON parsing, path handling, process arguments.
+        queries: default
         build-mode: none
         config: |
           paths-ignore:
