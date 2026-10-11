@@ -6,6 +6,11 @@ using Xunit;
 
 namespace Konserva.Tests.Localization;
 
+// Both localization test classes mutate the same process-wide
+// LocalizationManager.I18nPath. Left in different collections, xUnit runs them in
+// parallel: one class creates a temp i18n directory while the other opens a file inside
+// it, and the first one's Directory.Delete then fails with "file in use".
+[Collection("Sequential")]
 [Trait("Category", "Unit")]
 public class LocalizationManagerTests
 {

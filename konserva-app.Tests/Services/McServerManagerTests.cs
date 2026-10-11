@@ -37,6 +37,22 @@ public class FakeServerStorageService : IServerStorageService
 }
 
 /// <summary>
+/// Runs marshalled actions inline. McServerManager routes every OnServersChanged raise
+/// through IDispatcher (UI-bound subscribers must not be invoked from a reader thread),
+/// so a no-op mock would silently swallow the event the tests assert on.
+/// </summary>
+public sealed class InlineDispatcher : IDispatcher
+{
+    public void Post(Action action) => action();
+
+    public Task InvokeAsync(Action action)
+    {
+        action();
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>
 /// Тесты для McServerManager
 /// </summary>
 [Collection("Sequential")]
@@ -60,7 +76,7 @@ public class McServerManagerTests : IDisposable
         _configMock.Setup(c => c.GetConfig()).Returns(new AppConfig());
         _installerMock = new Mock<IServerInstaller>();
 
-        _manager = new McServerManager(Mock.Of<IDispatcher>(), _storage, _configMock.Object, _installerMock.Object);
+        _manager = new McServerManager(new InlineDispatcher(), _storage, _configMock.Object, _installerMock.Object);
     }
 
     #region GetServers Tests

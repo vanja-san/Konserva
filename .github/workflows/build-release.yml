@@ -18,10 +18,10 @@ on:
         type: boolean
         default: true
 
+# Only 'contents: write' is used (manifest commit + release). issues/pull-requests
+# were granted at workflow level without being needed by any step.
 permissions:
   contents: write
-  issues: write
-  pull-requests: write
 
 jobs:
   build:
@@ -102,7 +102,13 @@ jobs:
         exit 0
 
     - name: Restore dependencies
-      run: dotnet restore konserva-app/konserva-app.csproj
+      run: dotnet restore konserva-app.slnx
+
+    # Publishing a release whose tests never ran is how a broken build reaches users.
+    # The test project lives outside konserva-app/, so restore/publish of the app alone
+    # would not even compile it.
+    - name: Run tests
+      run: dotnet test konserva-app.Tests/konserva-app.Tests.csproj -c Release --no-restore
 
     - name: Build Full (Self-contained, ~60 MB)
       run: |

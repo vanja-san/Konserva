@@ -10,6 +10,7 @@ namespace Konserva.Tests.Services;
 /// <summary>
 /// Тесты для системы локализации
 /// </summary>
+[Collection("Sequential")]
 [Trait("Category", "Integration")]
 public class LocalizationTests : IDisposable
 {
