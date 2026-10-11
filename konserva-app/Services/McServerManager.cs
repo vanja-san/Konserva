@@ -90,9 +90,11 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
             Path = path,
             Settings = new ServerSettings
             {
-                RamMin = 1024,
-                RamMax = 4096,
-                EnableUpnp = true
+                RamMin = Constants.DefaultRamMinMb,
+                RamMax = Constants.DefaultRamMaxMb,
+                // Opening a port to the internet is not something to do silently.
+                // Users opt in explicitly in the server settings.
+                EnableUpnp = false
             }
         };
 
@@ -818,7 +820,8 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
             if (_portForwarding == null)
                 return;
 
-            var description = $"Konserva - {serverName}";
+            // The prefix is what DeleteMappingAsync uses to prove ownership of the rule.
+            var description = $"{PortForwardingService.DescriptionPrefix} - {serverName}";
             var result = await _portForwarding.CreateMappingAsync(port, description);
 
             if (result)

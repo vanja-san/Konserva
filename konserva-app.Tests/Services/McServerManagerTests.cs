@@ -117,12 +117,23 @@ public class McServerManagerTests : IDisposable
     #region CreateServer Tests
 
     [Fact]
-    public void CreateServer_SetsUpnpEnabledByDefault()
+    public void CreateServer_DoesNotEnableUpnpByDefault()
     {
         var server = _manager.CreateServer("Test", "1.21.1", new ModLoader { Type = ModLoaderType.Vanilla }, _testServerPath);
 
-        server.Settings.EnableUpnp.Should().BeTrue();
+        // Opening a port on the router exposes the server to the internet. It used to be
+        // enabled silently on every new server; it must now be an explicit opt-in.
+        server.Settings.EnableUpnp.Should().BeFalse();
         server.Settings.EnableUpdateNotification.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CreateServer_SetsDefaultRamFromConstants()
+    {
+        var server = _manager.CreateServer("Test", "1.21.1", new ModLoader { Type = ModLoaderType.Vanilla }, _testServerPath);
+
+        server.Settings.RamMin.Should().Be(Constants.DefaultRamMinMb);
+        server.Settings.RamMax.Should().Be(Constants.DefaultRamMaxMb);
     }
 
     #endregion

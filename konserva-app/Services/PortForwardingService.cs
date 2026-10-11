@@ -8,6 +8,10 @@ namespace Konserva.Services;
 /// </summary>
 public sealed class PortForwardingService : IPortForwardingService, IDisposable
 {
+    // Every rule Konserva creates carries this prefix. Deleting "our" rule is only safe
+    // when we can prove we own it — see DeleteMappingAsync.
+    internal const string DescriptionPrefix = "Konserva";
+
     private INatDevice? _device;
     private string? _lastExternalIp;
     private bool _disposed;
@@ -94,6 +98,11 @@ public sealed class PortForwardingService : IPortForwardingService, IDisposable
 
     /// <summary>
     /// Removes a port forwarding rule (TCP) from the router.
+    /// <para>
+    /// The existing rule is read first and only deleted when its description matches
+    /// <see cref="DescriptionPrefix"/>. Deleting purely by port number could tear down a
+    /// rule another application created on the same port.
+    /// </para>
     /// </summary>
     public async Task<bool> DeleteMappingAsync(int port)
     {
@@ -104,6 +113,26 @@ public sealed class PortForwardingService : IPortForwardingService, IDisposable
         try
         {
             Logger.Info($"Deleting UPnP mapping for port {port}", "UPnP");
+
+            Mapping? existing;
+            try
+            {
+                existing = await device.GetSpecificMappingAsync(Protocol.Tcp, port);
+            }
+            catch (NotSupportedException)
+            {
+                // The router cannot report existing rules, so ownership cannot be proven.
+                Logger.Warning("UPnP device cannot list existing mappings — refusing to delete by port number only", "UPnP");
+                return false;
+            }
+
+            if (existing != null && !IsOwnedByKonserva(existing.Description))
+            {
+                Logger.Warning(
+                    $"UPnP rule for port {port} was not created by Konserva (description: '{existing.Description}') — leaving it untouched",
+                    "UPnP");
+                return false;
+            }
 
             var mapping = new Mapping(Protocol.Tcp, port, port);
             await device.DeletePortMapAsync(mapping);
@@ -118,6 +147,13 @@ public sealed class PortForwardingService : IPortForwardingService, IDisposable
             return true;
         }
     }
+
+    /// <summary>
+    /// Returns true when a mapping description was created by this application.
+    /// </summary>
+    internal static bool IsOwnedByKonserva(string? description) =>
+        !string.IsNullOrWhiteSpace(description) &&
+        description.StartsWith(DescriptionPrefix, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Checks whether a port forwarding rule (TCP) exists on the router.
