@@ -5,9 +5,9 @@ using System.Windows.Data;
 namespace Konserva.Converters;
 
 /// <summary>
-/// Возвращает CornerRadius, BorderThickness или Visibility разделителя
-/// в зависимости от позиции элемента в группе слитных карточек.
-/// Параметр: "cornerRadius" (по умолчанию), "borderThickness", "separator"
+/// Returns the CornerRadius, BorderThickness or separator Visibility
+/// depending on the element's position in a group of joined cards.
+/// Parameter: "cornerRadius" (default), "borderThickness", "separator"
 /// </summary>
 public class CardGroupPositionConverter : IMultiValueConverter
 {

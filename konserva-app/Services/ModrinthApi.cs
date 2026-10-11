@@ -9,8 +9,8 @@ using System.Text.Json.Serialization;
 namespace Konserva.Services;
 
 /// <summary>
-/// Клиент Modrinth API v2 для проверки обновлений модов по SHA-512 хешам файлов.
-/// Использует только публичные эндпоинты — API-ключ не требуется.
+/// Modrinth API v2 client for checking mod updates by file SHA-512 hashes.
+/// Uses only public endpoints — no API key required.
 /// </summary>
 public sealed class ModrinthApi : IModRepositoryApi
 {
@@ -80,7 +80,7 @@ public sealed class ModrinthApi : IModRepositoryApi
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    // Повторяем только транзиентные 5xx, остальные ошибки бессмысленно ретраить
+                    // Retry only transient 5xx responses, retrying the other errors is pointless
                     if ((int)response.StatusCode >= 500 && attempt == 1)
                     {
                         Logger.Warning($"Modrinth {operation}: HTTP {(int)response.StatusCode}, повторная попытка", "ModrinthApi");

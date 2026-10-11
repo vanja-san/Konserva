@@ -4,7 +4,7 @@ using System.IO;
 namespace Konserva.Models;
 
 /// <summary>
-/// Конфигурация приложения
+/// Application configuration
 /// </summary>
 public class AppConfig
 {
@@ -12,17 +12,17 @@ public class AppConfig
     public string Language { get; set; } = "System";
 
     /// <summary>
-    /// Список установленных Java
+    /// List of installed Java installations
     /// </summary>
     public ObservableCollection<JavaInstallation> JavaInstallations { get; set; } = [];
 
     /// <summary>
-    /// ID Java по умолчанию
+    /// ID of the default Java installation
     /// </summary>
     public string? DefaultJavaId { get; set; }
 
     /// <summary>
-    /// Путь к Java по умолчанию (для обратной совместимости)
+    /// Path to the default Java executable (for backward compatibility)
     /// </summary>
     public string DefaultJavaPath
     {
@@ -41,39 +41,39 @@ public class AppConfig
     public bool CheckUpdates { get; set; } = false;
 
     /// <summary>
-    /// Интервал проверки обновлений в часах (1–168, по умолчанию 24).
+    /// Update check interval in hours (1–168, default 24).
     /// </summary>
     public int UpdateCheckIntervalHours { get; set; } = 24;
 
     /// <summary>
-    /// Режим сворачивания в трей: None, OnClose, OnMinimize, Always
+    /// Minimize-to-tray mode: None, OnClose, OnMinimize, Always
     /// </summary>
     public string MinimizeToTrayMode { get; set; } = "None";
 
     /// <summary>
-    /// Источник загрузки: VanillaApi (официальный) или BMCLAPI (зеркало)
+    /// Download source: VanillaApi (official) or BMCLAPI (mirror)
     /// </summary>
     public string DownloadSource { get; set; } = "VanillaApi";
 
     /// <summary>
-    /// Автопрокрутка консоли к последней строке при появлении новых логов
+    /// Auto-scroll the console to the last line when new log lines appear
     /// </summary>
     public bool ConsoleAutoScroll { get; set; } = true;
 
     /// <summary>
-    /// Перенос строк в консоли сервера
+    /// Word wrap in the server console
     /// </summary>
     public bool ConsoleWordWrap { get; set; }
 
     /// <summary>
-    /// Последняя проверка обновлений (UTC).
+    /// Last update check (UTC).
     /// </summary>
     public DateTime? LastUpdateCheck { get; set; }
 
     public List<string> RecentServers { get; set; } = [];
 
     /// <summary>
-    /// Путь к конфигурационной папке (рядом с exe)
+    /// Path to the configuration directory (next to the exe)
     /// </summary>
     public static string ConfigDirectory
     {
@@ -84,7 +84,7 @@ public class AppConfig
     }
 
     /// <summary>
-    /// Получить Java по умолчанию
+    /// Gets the default Java installation
     /// </summary>
     public JavaInstallation? GetDefaultJava()
     {
@@ -98,7 +98,7 @@ public class AppConfig
     }
 
     /// <summary>
-    /// Получить путь к Java по умолчанию
+    /// Gets the path to the default Java executable
     /// </summary>
     public string GetDefaultJavaPath() => GetDefaultJava()?.Path ?? DefaultJavaPath;
 }

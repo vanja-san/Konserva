@@ -6,7 +6,7 @@ using Wpf.Ui.Controls;
 namespace Konserva.Controls;
 
 /// <summary>
-/// Окно для просмотра подробного лога установки сервера
+/// Window for viewing the detailed server installation log
 /// </summary>
 public partial class InstallLogWindow : FluentWindow
 {
@@ -37,11 +37,11 @@ public partial class InstallLogWindow : FluentWindow
     }
 
     /// <summary>
-    /// Добавить новую строку в лог
+    /// Appends a new line to the log
     /// </summary>
     public void AppendLog(string line)
     {
-        // Удаляем \r — иначе текст может «съезжать» в WPF TextBox
+        // Remove \r — otherwise the text may shift in a WPF TextBox
         var cleanLine = line.Replace("\r", "");
         if (!string.IsNullOrEmpty(LogTextBox.Text))
             LogTextBox.AppendText(Environment.NewLine);

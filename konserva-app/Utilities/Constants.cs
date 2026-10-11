@@ -3,156 +3,156 @@ using System.IO;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Общие константы приложения
+/// Application-wide constants
 /// </summary>
 public static class Constants
 {
-    #region Общие
+    #region Common
 
     /// <summary>
-    /// Символы новой строки для Split
+    /// Newline characters used for Split
     /// </summary>
     public static readonly char[] NewLineChars = { '\r', '\n' };
 
     #endregion
 
-    #region Базовые константы
+    #region Basic constants
 
     /// <summary>
-    /// Миллисекунд в одной секунде
+    /// Milliseconds in one second
     /// </summary>
     public const int MsPerSecond = 1000;
 
     #endregion
 
-    #region Таймауты и задержки (мс)
+    #region Timeouts and delays (ms)
 
     /// <summary>
-    /// Таймаут ожидания проверки Java (10 сек)
+    /// Timeout for waiting on the Java check (10 sec)
     /// </summary>
     public const int JavaCheckTimeoutMs = 10000;
 
     /// <summary>
-    /// Таймаут ожидания проверки пути Java (5 сек)
+    /// Timeout for waiting on the Java path check (5 sec)
     /// </summary>
     public const int JavaPathCheckTimeoutMs = 5000;
 
     /// <summary>
-    /// Таймаут ожидания остановки сервера (60 сек)
+    /// Timeout for waiting on server shutdown (60 sec)
     /// </summary>
     public const int ServerStopTimeoutMs = 60000;
 
     /// <summary>
-    /// Задержка между проверками статуса сервера (1 сек)
+    /// Delay between server status checks (1 sec)
     /// </summary>
     public const int ServerStatusCheckDelayMs = 1000;
 
     /// <summary>
-    /// Длина усечения для логов (символов)
+    /// Truncation length for logs (characters)
     /// </summary>
     public const int LogTruncationLength = 200;
 
     /// <summary>
-    /// Таймаут ожидания установки сервера (5 сек)
+    /// Timeout for waiting on the server install check (5 sec)
     /// </summary>
     public const int ServerInstallCheckTimeoutMs = 5000;
 
     /// <summary>
-    /// Базовая задержка для повторных попыток (1 сек)
+    /// Base delay for retries (1 sec)
     /// </summary>
     public const int RetryBaseDelayMs = 1000;
 
     #endregion
 
-    #region Ограничения RAM (MB)
+    #region RAM limits (MB)
 
     /// <summary>
-    /// Минимальное значение RAM (256 MB)
+    /// Minimum RAM value (256 MB)
     /// </summary>
     public const int MinRamMb = 256;
 
     /// <summary>
-    /// Максимальное значение RAM (64 GB)
+    /// Maximum RAM value (64 GB)
     /// </summary>
     public const int MaxRamMb = 65536;
 
     /// <summary>
-    /// RAM по умолчанию (4 GB)
+    /// Default RAM (4 GB)
     /// </summary>
     public const int DefaultRamMinMb = 1024;
 
     /// <summary>
-    /// RAM по умолчанию (4 GB)
+    /// Default RAM (4 GB)
     /// </summary>
     public const int DefaultRamMaxMb = 4096;
 
     #endregion
 
-    #region Ограничения путей
+    #region Path limits
 
     /// <summary>
-    /// Максимальная длина пути (260 символов для Windows)
+    /// Maximum path length (260 characters on Windows)
     /// </summary>
     public const int MaxPathLength = 260;
 
     /// <summary>
-    /// Базовая директория серверов (относительно каталога приложения)
+    /// Base servers directory (relative to the application directory)
     /// </summary>
     public static string ServersPath => Path.Combine(AppContext.BaseDirectory, "Servers");
 
     /// <summary>
-    /// Директория для временных загрузок (установщики, обновления) рядом с приложением
+    /// Directory for temporary downloads (installers, updates) next to the application
     /// </summary>
     public static string DownloadsPath => Path.Combine(AppContext.BaseDirectory, "downloads");
 
     #endregion
 
-    #region Ограничения настроек
+    #region Settings limits
 
     /// <summary>
-    /// Максимальная длина названия сервера (ограничение файловой системы)
+    /// Maximum server name length (file system limitation)
     /// </summary>
     public const int MaxServerNameLength = 50;
 
     /// <summary>
-    /// Максимальная задержка авто-рестарта (3600 сек = 1 час)
+    /// Maximum auto-restart delay (3600 sec = 1 hour)
     /// </summary>
     public const int MaxAutoRestartDelaySec = 3600;
 
     /// <summary>
-    /// Порт сервера по умолчанию (25565)
+    /// Default server port (25565)
     /// </summary>
     public const int DefaultServerPort = 25565;
 
     #endregion
 
-    #region Задержки UI (мс)
+    #region UI delays (ms)
 
     /// <summary>
-    /// Задержка авто-закрытия InfoBar (5 сек)
+    /// InfoBar auto-close delay (5 sec)
     /// </summary>
     public const int InfoBarAutoCloseDelayMs = 5000;
 
     #endregion
 
-    #region Ограничения логов
+    #region Log limits
 
     /// <summary>
-    /// Максимальное количество строк в логе (1000)
+    /// Maximum number of lines in the log (1000)
     /// </summary>
     public const int MaxLogLines = 1000;
 
     #endregion
 
-    #region Сетевые настройки
+    #region Network settings
 
     /// <summary>
-    /// Порог компрессии сети (256 байт)
+    /// Network compression threshold (256 bytes)
     /// </summary>
     public const int NetworkCompressionThreshold = 256;
 
     /// <summary>
-    /// Максимальное время тика сервера (60000 мс = 1 мин)
+    /// Maximum server tick time (60000 ms = 1 min)
     /// </summary>
     public const int MaxTickTimeMs = 60000;
 

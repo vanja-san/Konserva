@@ -3,37 +3,37 @@
 namespace Konserva.Models;
 
 /// <summary>
-/// Информация о плагине
+/// Information about a plugin
 /// </summary>
 public partial class PluginItem : ObservableObject, IItemEntry
 {
     /// <summary>
-    /// Имя плагина (без расширения)
+    /// Plugin name (without extension)
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Версия плагина
+    /// Plugin version
     /// </summary>
     public string Version { get; set; } = string.Empty;
 
     /// <summary>
-    /// Имя файла (например "Essentials.jar")
+    /// File name (for example "Essentials.jar")
     /// </summary>
     public string FileName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Полный путь к файлу (может быть .jar или .jar.disabled)
+    /// Full path to the file (may be .jar or .jar.disabled)
     /// </summary>
     public string FilePath { get; set; } = string.Empty;
 
     /// <summary>
-    /// Размер файла в байтах
+    /// File size in bytes
     /// </summary>
     public long FileSize { get; set; }
 
     /// <summary>
-    /// Включён ли плагин (.jar) или отключён (.jar.disabled)
+    /// Whether the plugin is enabled (.jar) or disabled (.jar.disabled)
     /// </summary>
     [ObservableProperty]
     private bool _enabled = true;

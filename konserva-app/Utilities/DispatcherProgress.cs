@@ -24,15 +24,15 @@ public sealed class DispatcherProgress<T> : IProgress<T>
 
     public void Report(T value)
     {
-        // Всегда диспатчим на UI-поток — даже если уже на нём,
-        // Dispatcher.Invoke исполнит синхронно
+        // Always dispatch to the UI thread — even when already on it,
+        // Dispatcher.Invoke will run synchronously
         try
         {
             _dispatcher.Invoke(_handler, _priority, value);
         }
         catch (TaskCanceledException)
         {
-            // Dispatcher завершает работу — окно закрывается, игнорируем
+            // Dispatcher is shutting down — the window is closing, so ignore it
         }
     }
 }

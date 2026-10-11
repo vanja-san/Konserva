@@ -9,7 +9,7 @@ using WpfButton = Wpf.Ui.Controls.Button;
 namespace Konserva.Controls.Sections;
 
 /// <summary>
-/// Секция списка плагинов: включение/отключение, удаление.
+/// Plugin list section: enabling/disabling, deleting.
 /// </summary>
 public partial class ServerPluginsSection : System.Windows.Controls.UserControl
 {
@@ -22,7 +22,7 @@ public partial class ServerPluginsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Инициализация секции: привязка ViewModel и сервера, загрузка списка.
+    /// Initializes the section: binds the ViewModel and the server, loads the list.
     /// </summary>
     public void Initialize(ServerDetailViewModel viewModel, Server? server)
     {
@@ -31,7 +31,7 @@ public partial class ServerPluginsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Перезагружает список плагинов (вызывается при каждом открытии раздела).
+    /// Reloads the plugin list (called every time the section is opened).
     /// </summary>
     public void Load() => LoadPlugins();
 

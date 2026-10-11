@@ -5,9 +5,9 @@ using System.IO;
 namespace Konserva.Services;
 
 /// <summary>
-/// Проверка обновлений модов по SHA-512 хешам через Modrinth.
-/// Алгоритм повторяет Mod Menu: сначала узнаём локальные версии (для даты),
-/// затем — последние совместимые, и отбрасываем даунгрейды.
+/// Mod update checking by SHA-512 hashes via Modrinth.
+/// The algorithm mirrors Mod Menu: first resolve the local versions (for the date),
+/// then the latest compatible ones, and discard downgrades.
 /// </summary>
 public sealed class ModUpdateService : IModUpdateService
 {
@@ -82,11 +82,11 @@ public sealed class ModUpdateService : IModUpdateService
             if (file is null || string.IsNullOrEmpty(latestHash))
                 continue;
 
-            // Файл не изменился — обновлять нечего
+            // The file has not changed — there is nothing to update
             if (string.Equals(latestHash, hash, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            // Защита от даунгрейда: последняя совместимая версия не новее локальной
+            // Downgrade protection: the latest compatible version is not newer than the local one
             if (currentVersions.TryGetValue(hash, out var local) &&
                 latest.DatePublished <= local.DatePublished)
             {
@@ -113,11 +113,11 @@ public sealed class ModUpdateService : IModUpdateService
     }
 
     /// <summary>
-    /// Fallback для модов, по которым /version_files/update не вернул кандидата,
-    /// хотя локальная версия в репозитории известна. Строгий серверный фильтр
-    /// иногда не находит совместимую версию (например, версия Minecraft указана
-    /// как 1.20.x, а мод помечен 1.20). Сверяемся по всем версиям проекта
-    /// с мягким матчингом major.minor.
+    /// Fallback for mods for which /version_files/update returned no candidate
+    /// even though the local version is known in the repository. The strict server-side filter
+    /// sometimes finds no compatible version (for example, the Minecraft version is specified
+    /// as 1.20.x while the mod is tagged 1.20). We check all versions of the project
+    /// with a soft major.minor match.
     /// </summary>
     private async Task ApplyProjectFallbackAsync(
         Dictionary<string, string> hashToPath,

@@ -1,7 +1,7 @@
 ﻿namespace Konserva.Models;
 
 /// <summary>
-/// Тип модлоадера
+/// Mod loader type
 /// </summary>
 public enum ModLoaderType
 {
@@ -14,7 +14,7 @@ public enum ModLoaderType
 }
 
 /// <summary>
-/// Конфигурация модлоадера
+/// Mod loader configuration
 /// </summary>
 public class ModLoader
 {
@@ -23,17 +23,17 @@ public class ModLoader
     public string? LoaderVersion { get; set; }
 
     /// <summary>
-    /// Проверка: используется ли кастомный модлоадер (не Vanilla)
+    /// Check: whether a custom mod loader is used (not Vanilla)
     /// </summary>
     public bool IsModded => Type != ModLoaderType.Vanilla;
 
     /// <summary>
-    /// Полное название модлоадера
+    /// Full mod loader name
     /// </summary>
     public string FullName => IsModded ? $"{Type} {LoaderVersion ?? Version}" : "Vanilla";
 
     /// <summary>
-    /// Клонирование модлоадера
+    /// Clones the mod loader
     /// </summary>
     public ModLoader Clone() => new()
     {

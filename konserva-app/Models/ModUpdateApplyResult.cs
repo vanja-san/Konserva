@@ -1,19 +1,19 @@
 namespace Konserva.Models;
 
 /// <summary>
-/// Результат применения обновления мода.
+/// Result of applying a mod update.
 /// </summary>
 public class ModUpdateApplyResult
 {
     public bool Success { get; private init; }
 
-    /// <summary>Путь к резервной копии старого файла (если создавалась).</summary>
+    /// <summary>Path to the backup of the old file (if one was created).</summary>
     public string? BackupPath { get; private init; }
 
-    /// <summary>Имя нового файла после обновления.</summary>
+    /// <summary>Name of the new file after the update.</summary>
     public string? NewFileName { get; private init; }
 
-    /// <summary>Текст ошибки при неудаче.</summary>
+    /// <summary>Error text on failure.</summary>
     public string? Error { get; private init; }
 
     public static ModUpdateApplyResult Ok(string? backupPath = null, string? newFileName = null) =>

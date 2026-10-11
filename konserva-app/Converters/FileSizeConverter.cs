@@ -4,7 +4,7 @@ using System.Windows.Data;
 namespace Konserva.Converters;
 
 /// <summary>
-/// Конвертирует числовое значение в формат размера (B, KB, MB, GB)
+/// Converts a numeric value into a size format (B, KB, MB, GB)
 /// </summary>
 public class FileSizeConverter : IValueConverter
 {

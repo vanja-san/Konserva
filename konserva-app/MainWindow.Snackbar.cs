@@ -15,7 +15,7 @@ public partial class MainWindow
 
         Logger.Info($"[ShowJavaErrorSnackbar] server={server.Name}, required={requiredVersion}, found={foundVersion}, isServersPage={isServersPage}, isDetailPage={isDetailPage}", "MainWindow");
 
-        // Специфичная ошибка: Java 8 >= 8u400 с Forge — NoSuchMethodError на ManifestEntryVerifier
+        // Specific error: Java 8 >= 8u400 with Forge — NoSuchMethodError on ManifestEntryVerifier
         if (errorMessage.Contains("NoSuchMethodError", StringComparison.OrdinalIgnoreCase) &&
             errorMessage.Contains("ManifestEntryVerifier", StringComparison.OrdinalIgnoreCase))
         {

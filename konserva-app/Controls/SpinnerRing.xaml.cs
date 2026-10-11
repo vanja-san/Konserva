@@ -6,9 +6,9 @@ using Wpf.Ui.Controls;
 namespace Konserva.Controls;
 
 /// <summary>
-/// Надёжная индикация загрузки: дуга, вращение которой запускается из кода
-/// (в отличие от WPF UI ProgressRing, где Storyboard стартует по триггеру шаблона).
-/// Эффект «кометы»: дуга нарастает от точки до почти полного кольца, держится и схлопывается.
+/// Reliable loading indicator: an arc whose rotation is started from code
+/// (unlike the WPF UI ProgressRing, where the Storyboard starts on a template trigger).
+/// "Comet" effect: the arc grows from a point to almost a full ring, holds, and then collapses.
 /// </summary>
 public partial class SpinnerRing : System.Windows.Controls.UserControl
 {
@@ -26,7 +26,7 @@ public partial class SpinnerRing : System.Windows.Controls.UserControl
     private void OnUnloaded(object sender, RoutedEventArgs e) => StopSpin();
 
     /// <summary>
-    /// Запускает вращение. Повторный вызов безопасен — анимация не дублируется.
+    /// Starts the rotation. A repeated call is safe — the animation is not duplicated.
     /// </summary>
     public void StartSpin()
     {
@@ -42,9 +42,9 @@ public partial class SpinnerRing : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Останавливает вращение и сбрасывает угол.
-    /// Обязательно вызывается при скрытии: анимация с RepeatBehavior.Forever
-    /// иначе продолжает молотить рендер-путь всё время жизни приложения.
+    /// Stops the rotation and resets the angle.
+    /// Must be called on hide: an animation with RepeatBehavior.Forever
+    /// would otherwise keep hammering the render path for the whole application lifetime.
     /// </summary>
     public void StopSpin()
     {

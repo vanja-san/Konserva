@@ -11,13 +11,13 @@ using System.Windows.Media;
 namespace Konserva.Pages;
 
 /// <summary>
-/// Страница настроек приложения
+/// Application settings page
 /// </summary>
 public partial class SettingsPage : Page
 {
     private readonly SettingsViewModel _viewModel;
-    private bool _isUpdating; // Флаг для предотвращения рекурсивного сохранения
-    private bool _isLoading = true; // Флаг загрузки страницы
+    private bool _isUpdating; // Flag to prevent recursive saving
+    private bool _isLoading = true; // Page loading flag
 
     public SettingsPage()
     {
@@ -41,15 +41,15 @@ public partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Допустимые интервалы проверки обновлений в часах.
+    /// Allowed update check intervals in hours.
     /// </summary>
     private static readonly int[] UpdateIntervalOptions = [1, 2, 6, 12, 24, 48, 72, 168];
 
     /// <summary>
-    /// Строит выпадающее меню интервалов из локализованных подписей.
-    /// Раньше пункты были захардкожены в XAML русским текстом, из-за чего
-    /// английский интерфейс показывал «24 ч», а разбор подписи обратно в
-    /// число молча сбрасывал интервал на 24 часа.
+    /// Builds the interval dropdown menu from localized labels.
+    /// Previously the items were hardcoded in XAML with Russian text, which made
+    /// the English UI show "24 h", and parsing the label back into a number
+    /// silently reset the interval to 24 hours.
     /// </summary>
     private void PopulateUpdateIntervalMenu()
     {
@@ -73,15 +73,15 @@ public partial class SettingsPage : Page
     private void OnLanguageChanged(string culture)
     {
         Title = LocalizationManager.Get("Settings_Title");
-        // Обновляем текст кнопок/заголовков, которые установлены в коде
+        // Refresh the button/header texts that are set in code
         CheckUpdatesModeButton.Content = _viewModel.CheckUpdatesModeText;
         UpdateIntervalButton.Content = _viewModel.UpdateIntervalText;
         MinimizeToTrayModeButton.Content = GetMinimizeToTrayModeText(_viewModel.MinimizeToTrayMode);
         ScanJavaButton.ToolTip = LocalizationManager.Get("Settings_Java_Scan");
-        // Сбрасываем текст кнопки проверки обновлений на значение по умолчанию
+        // Reset the update check button text to its default value
         CheckUpdatesButtonText.Text = LocalizationManager.Get("Settings_CheckForUpdates");
 
-        // Пересобираем меню интервалов под новый язык
+        // Rebuild the interval menu for the new language
         PopulateUpdateIntervalMenu();
     }
 
@@ -90,12 +90,12 @@ public partial class SettingsPage : Page
         _viewModel.LoadSettings();
         RefreshUI();
 
-        // Подписываемся на смену языка для обновления код-бихайнд текста
+        // Subscribe to language changes to refresh the code-behind text
         LocalizationManager.LanguageChanged += OnLanguageChanged;
     }
 
     /// <summary>
-    /// Обновляет UI из ViewModel
+    /// Updates the UI from the ViewModel
     /// </summary>
     private void RefreshUI()
     {
@@ -112,19 +112,19 @@ public partial class SettingsPage : Page
         MinimizeToTrayModeButton.Content = GetMinimizeToTrayModeText(_viewModel.MinimizeToTrayMode);
         UpdateMinimizeToTrayMenuChecks(_viewModel.MinimizeToTrayMode);
 
-        // Загрузка темы
+        // Theme loading
         if (!ThemeComboBox.SelectItemByTag(_viewModel.Theme))
             ThemeComboBox.SelectedIndex = 0;
 
-        // Загрузка языка
+        // Language loading
         if (!LanguageComboBox.SelectItemByTag(_viewModel.Language))
             LanguageComboBox.SelectedIndex = 0;
 
-        // Загрузка источника загрузки
+        // Download source loading
         if (!DownloadSourceComboBox.SelectItemByTag(_viewModel.DownloadSource))
             DownloadSourceComboBox.SelectedIndex = 0;
 
-        // Настройки консоли
+        // Console settings
         ConsoleAutoScrollBox.IsChecked = _viewModel.ConsoleAutoScroll;
         ConsoleWordWrapBox.IsChecked = _viewModel.ConsoleWordWrap;
 
@@ -132,22 +132,22 @@ public partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Автосохранение настроек.
-    /// Интервал берётся напрямую из ViewModel — раньше он разбирался из текста
-    /// кнопки («24 ч» / «2 д»), что молча сбрасывало значение на 24 часа
-    /// при любом другом языке интерфейса.
+    /// Auto-save of the settings.
+    /// The interval is taken directly from the ViewModel — it used to be parsed from the
+    /// button text ("24 h" / "2 d"), which silently reset the value to 24 hours
+    /// in any other UI language.
     /// </summary>
     private void AutoSaveSettings(Wpf.Ui.Controls.TextBlock? statusText = null)
     {
-        if (_isLoading || _isUpdating) return; // Защита от сохранения при загрузке и рекурсии
+        if (_isLoading || _isUpdating) return; // Guard against saving during load and recursion
 
         try
         {
             _isUpdating = true;
 
-            // Синхронизируем UI → ViewModel перед сохранением.
-            // UpdateIntervalHours намеренно не синхронизируется: он уже хранится
-            // во ViewModel и меняется только через Tag пунктов меню.
+            // Sync the UI → ViewModel before saving.
+            // UpdateIntervalHours is intentionally not synced: it is already stored
+            // in the ViewModel and only changes through the Tag of the menu items.
             _viewModel.CheckUpdatesScheduled = CheckUpdatesScheduledItem.IsChecked;
             _viewModel.MinimizeToTrayMode = GetSelectedMinimizeToTrayMode();
             _viewModel.ConsoleAutoScroll = ConsoleAutoScrollBox.IsChecked == true;
@@ -162,7 +162,7 @@ public partial class SettingsPage : Page
                 if (_viewModel.Theme != newTheme)
                 {
                     _viewModel.Theme = newTheme;
-                    // Применяем тему сразу
+                    // Apply the theme immediately
                     var mainWindow = Application.Current.MainWindow as MainWindow;
                     mainWindow?.ApplyTheme(newTheme);
                 }
@@ -175,7 +175,7 @@ public partial class SettingsPage : Page
 
             _viewModel.SaveSettings();
 
-            // Показ уведомления об успешном сохранении
+            // Show the save success notification
             ShowSaveNotification(statusText);
         }
         catch (Exception ex)
@@ -191,7 +191,7 @@ public partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Показ уведомления об успешном сохранении рядом с заголовком группы
+    /// Shows the save success notification next to the group header
     /// </summary>
     private void ShowSaveNotification(Wpf.Ui.Controls.TextBlock? statusText = null)
     {
@@ -202,8 +202,8 @@ public partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Показывает временный статус сохранения (зелёный — успех, красный — ошибка)
-    /// с автоматическим скрытием через 2 секунды.
+    /// Shows a temporary save status (green — success, red — error)
+    /// that hides automatically after 2 seconds.
     /// </summary>
     private static System.Windows.Media.Brush GetThemeBrush(string key) =>
         System.Windows.Application.Current.TryFindResource(key) as System.Windows.Media.Brush
@@ -220,7 +220,7 @@ public partial class SettingsPage : Page
         statusText.Visibility = Visibility.Visible;
         statusText.Opacity = 0;
 
-        // Плавное появление
+        // Smooth fade in
         var fadeIn = new System.Windows.Media.Animation.DoubleAnimation
         {
             From = 0,
@@ -230,10 +230,10 @@ public partial class SettingsPage : Page
         };
         statusText.BeginAnimation(OpacityProperty, fadeIn);
 
-        // Ждём 2 секунды
+        // Wait 2 seconds
         await Task.Delay(2000);
 
-        // Плавное исчезновение
+        // Smooth fade out
         var fadeOut = new System.Windows.Media.Animation.DoubleAnimation
         {
             From = 1,
@@ -246,7 +246,7 @@ public partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Асинхронно скрывает InfoBar через указанную задержку.
+    /// Asynchronously hides the InfoBar after the specified delay.
     /// </summary>
     private async Task AutoHideInfoBarAsync(Wpf.Ui.Controls.InfoBar infoBar, int delayMs)
     {
@@ -295,7 +295,7 @@ public partial class SettingsPage : Page
 
             _viewModel.SetCheckUpdatesMode(isScheduled);
 
-            // Обновляем UI
+            // Update the UI
             CheckUpdatesOnLaunchItem.IsChecked = !isScheduled;
             CheckUpdatesScheduledItem.IsChecked = isScheduled;
             CheckUpdatesModeButton.Content = _viewModel.CheckUpdatesModeText;
@@ -303,13 +303,13 @@ public partial class SettingsPage : Page
 
             AutoSaveSettings(ServersSaveStatus);
 
-            // Перезапускаем фоновый цикл проверки обновлений
+            // Restart the background update check loop
             Ioc.Default.GetService<MainWindow>()?.StartUpdateCheckLoop();
         }
     }
 
     /// <summary>
-    /// Показывает или скрывает карточку выбора интервала в зависимости от режима.
+    /// Shows or hides the interval selection card depending on the mode.
     /// </summary>
     private void UpdateCheckModeVisibility(bool isScheduled)
     {
@@ -322,18 +322,18 @@ public partial class SettingsPage : Page
     {
         if (sender is System.Windows.Controls.MenuItem item && item.Tag is string tag)
         {
-            // Обновляем UI
+            // Update the UI
             MinimizeToTrayModeButton.Content = GetMinimizeToTrayModeText(tag);
             UpdateMinimizeToTrayMenuChecks(tag);
 
-            // Сохраняем
+            // Save
             _viewModel.MinimizeToTrayMode = tag;
             AutoSaveSettings(ServersSaveStatus);
         }
     }
 
     /// <summary>
-    /// Возвращает локализованный текст для указанного режима трея.
+    /// Returns the localized text for the specified tray mode.
     /// </summary>
     private string GetMinimizeToTrayModeText(string mode) => mode switch
     {
@@ -345,7 +345,7 @@ public partial class SettingsPage : Page
     };
 
     /// <summary>
-    /// Обновляет галочки в меню выбора режима трея.
+    /// Updates the checkmarks in the tray mode selection menu.
     /// </summary>
     private void UpdateMinimizeToTrayMenuChecks(string mode)
     {
@@ -356,7 +356,7 @@ public partial class SettingsPage : Page
     }
 
     /// <summary>
-    /// Возвращает выбранный режим трея по галочкам в меню.
+    /// Returns the selected tray mode from the menu checkmarks.
     /// </summary>
     private string GetSelectedMinimizeToTrayMode()
     {
@@ -382,12 +382,12 @@ public partial class SettingsPage : Page
         {
             CheckUpdatesButton.IsEnabled = false;
 
-            // Показываем индикатор загрузки
+            // Show the loading indicator
             UpdateWaveDots.ShowIndeterminate();
 
             var updateInfo = await _viewModel.ForceCheckUpdatesAsync();
 
-            // Убираем индикатор, обновляем текст
+            // Hide the indicator, update the text
             UpdateWaveDots.HideIndeterminate();
 
             if (!updateInfo.IsAvailable)
@@ -409,7 +409,7 @@ public partial class SettingsPage : Page
         }
         finally
         {
-            // Возвращаем кнопку в активное состояние через 3 секунды
+            // Return the button to its active state after 3 seconds
             _ = ResetCheckUpdatesButtonAsync();
         }
     }
@@ -438,7 +438,7 @@ public partial class SettingsPage : Page
 
         if (ThemeComboBox.SelectedItem is ComboBoxItem)
         {
-            AutoSaveSettings(AppearanceSaveStatus); // AutoSaveSettings сам применит тему
+            AutoSaveSettings(AppearanceSaveStatus); // AutoSaveSettings will apply the theme itself
         }
     }
 

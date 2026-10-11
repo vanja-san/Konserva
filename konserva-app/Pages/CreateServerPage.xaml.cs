@@ -15,7 +15,7 @@ using Wpf.Ui.Controls;
 namespace Konserva.Pages;
 
 /// <summary>
-/// Страница создания нового сервера
+/// Page for creating a new server
 /// </summary>
 public partial class CreateServerPage : Page
 {
@@ -83,7 +83,7 @@ public partial class CreateServerPage : Page
             McVersionBox.SelectionChanged += McVersionBox_SelectionChanged;
             LoaderVersionBox.SelectionChanged += _loaderVersionChangedHandler;
 
-            // Инициализируем ViewModel (загружает и фильтрует версии)
+            // Initialize the ViewModel (loads and filters versions)
             await _viewModel.InitializeAsync();
 
             Logger.Info($"Loaded {_viewModel.McVersionList.Length} Minecraft versions", "CreateServerPage");
@@ -94,7 +94,7 @@ public partial class CreateServerPage : Page
             await FilterMcVersionsAsync();
             Logger.Info("FilterMcVersionsAsync completed", "CreateServerPage");
 
-            // ProgressRing запускается автоматически при отображении панели
+            // ProgressRing starts automatically when the panel is displayed
         }
         catch (Exception ex)
         {
@@ -109,16 +109,16 @@ public partial class CreateServerPage : Page
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        // Отписываемся от событий UI
+        // Unsubscribe from UI events
         ShowSnapshotsBox.Checked -= ShowSnapshotsBox_Changed;
         ShowSnapshotsBox.Unchecked -= ShowSnapshotsBox_Changed;
         ModLoaderBox.SelectionChanged -= ModLoaderBox_SelectionChanged;
         McVersionBox.SelectionChanged -= McVersionBox_SelectionChanged;
         LoaderVersionBox.SelectionChanged -= _loaderVersionChangedHandler;
 
-        // ProgressRing останавливается автоматически при скрытии панели
+        // ProgressRing stops automatically when the panel is hidden
 
-        // Отменяем установку, если пользователь ушёл со страницы
+        // Cancel the installation if the user has left the page
         if (_isInstalling && _installCts != null)
         {
             _wasCancelled = true;
@@ -130,7 +130,7 @@ public partial class CreateServerPage : Page
     }
 
     /// <summary>
-    /// Навигация назад к списку серверов
+    /// Navigate back to the server list
     /// </summary>
     private void NavigateBackToServers()
     {
@@ -145,7 +145,7 @@ public partial class CreateServerPage : Page
         }
     }
 
-    // ======================== Фильтрация версий ========================
+    // ======================== Version filtering ========================
 
     private async Task FilterMcVersionsAsync(string? modLoaderOverride = null)
     {
@@ -174,7 +174,7 @@ public partial class CreateServerPage : Page
 
             if (selectedModLoader == "NeoForge")
             {
-                // NeoForge — MC 1.16+ (не поддерживает более старые версии)
+                // NeoForge — MC 1.16+ (does not support older versions)
                 supportedVersions = [.. _viewModel.McVersionList.Where(v =>
                     McVersionHelper.TryParseMcVersion(v, out var major, out var minor) && (major > 1 || minor >= 16))];
             }
@@ -236,14 +236,14 @@ public partial class CreateServerPage : Page
                 return;
             }
 
-            // Если версии загрузчика не загружены или нужна проверка стабильности
+            // If the loader versions are not loaded yet or a stability check is needed
             var modLoader = _viewModel.SelectedModLoader;
             if (!string.IsNullOrEmpty(modLoader) && modLoader is "Forge" or "NeoForge" or "Fabric" or "Quilt" or "Paper")
             {
                 var selectedMcVersion = (McVersionBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
                 var showSnapshotsLocal = ShowSnapshotsBox?.IsChecked ?? false;
 
-                // Для Quilt без снапшотов — проверяем, есть ли стабильные версии
+                // For Quilt without snapshots — check whether stable versions exist
                 if (!string.IsNullOrEmpty(selectedMcVersion) &&
                     !showSnapshotsLocal && modLoader == "Quilt")
                 {
@@ -279,15 +279,15 @@ public partial class CreateServerPage : Page
     }
 
     /// <summary>
-    /// Проверяет, все ли обязательные поля заполнены и возвращает список ошибок
+    /// Checks whether all required fields are filled in and returns a list of errors
     /// </summary>
     private List<string> GetValidationErrors()
     {
-        // Синхронизируем данные с ViewModel
+        // Sync the data with the ViewModel
         _viewModel.ServerName = ServerNameBox.Text;
         _viewModel.ServerPath = ServerPathBox.Text;
 
-        // Синхронизируем выбранную версию загрузчика из ComboBox в ViewModel
+        // Sync the selected loader version from the ComboBox into the ViewModel
         if (LoaderVersionBox.SelectedItem is ComboBoxItem { Content: string loaderVersion })
             _viewModel.SelectedLoaderVersion = loaderVersion;
 
@@ -295,7 +295,7 @@ public partial class CreateServerPage : Page
     }
 
     /// <summary>
-    /// Обновляет состояние кнопки Создать и иконку предупреждения
+    /// Updates the state of the Create button and the warning icon
     /// </summary>
     private void UpdateCreateButtonState()
     {
@@ -317,12 +317,12 @@ public partial class CreateServerPage : Page
             ValidationIcon.ToolTip = null;
         }
 
-        // ─── Per-field валидация ────────────────────────────────────
-        // ServerName: предупреждение показывается только после потери фокуса (ServerNameBox_LostFocus)
+        // ─── Per-field validation ───────────────────────────────────
+        // ServerName: the warning is shown only after focus is lost (ServerNameBox_LostFocus)
         if (!string.IsNullOrWhiteSpace(ServerNameBox.Text))
             ServerNameValidation.Visibility = Visibility.Collapsed;
 
-        // ServerPath: read-only, предупреждение показываем если путь пуст
+        // ServerPath: read-only, we show the warning if the path is empty
         if (string.IsNullOrWhiteSpace(ServerPathBox.Text))
         {
             ServerPathValidation.Text = LocalizationManager.Get("CreateServer_Validation_NoFolder");
@@ -334,9 +334,9 @@ public partial class CreateServerPage : Page
         }
     }
 
-    // Статические методы TryParseMcVersion, IsSnapshot, IsNeoForgeSnapshot, IsQuiltSnapshot
-    // вынесены в общий класс McVersionHelper в Utilities.
-    // Используйте McVersionHelper.* вместо этих методов.
+    // The static methods TryParseMcVersion, IsSnapshot, IsNeoForgeSnapshot, IsQuiltSnapshot
+    // were moved to the shared McVersionHelper class in Utilities.
+    // Use McVersionHelper.* instead of these methods.
 
 
 
@@ -447,7 +447,7 @@ public partial class CreateServerPage : Page
         }
     }
 
-    // ======================== Загрузка версий загрузчика ========================
+    // ======================== Loading loader versions ========================
 
     private async Task LoadLoaderVersions(string modLoaderType, string mcVersion)
     {
@@ -500,7 +500,7 @@ public partial class CreateServerPage : Page
                 });
                 LoaderVersionBox.IsEnabled = false;
 
-                // Синхронизируем с ViewModel для валидации
+                // Sync with the ViewModel for validation
                 _viewModel.LoaderVersions.Clear();
                 _viewModel.SelectedLoaderVersion = string.Empty;
                 return;
@@ -521,7 +521,7 @@ public partial class CreateServerPage : Page
                 LoaderVersionBox.Items.Add(new ComboBoxItem { Content = version });
             }
 
-            // Синхронизируем с ViewModel для валидации
+            // Sync with the ViewModel for validation
             _viewModel.LoaderVersions = new System.Collections.ObjectModel.ObservableCollection<string>(versions);
             _viewModel.SelectedLoaderVersion = firstVersion;
         }
@@ -537,7 +537,7 @@ public partial class CreateServerPage : Page
             });
             LoaderVersionBox.IsEnabled = false;
 
-            // Синхронизируем с ViewModel для валидации
+            // Sync with the ViewModel for validation
             _viewModel.LoaderVersions.Clear();
             _viewModel.SelectedLoaderVersion = string.Empty;
         }
@@ -580,7 +580,7 @@ public partial class CreateServerPage : Page
         }
     }
 
-    // ======================== Путь к серверу ========================
+    // ======================== Server path ========================
 
     private void BrowsePath_Click(object sender, RoutedEventArgs e)
     {
@@ -611,11 +611,11 @@ public partial class CreateServerPage : Page
         }
         catch
         {
-            // Игнорируем ошибки сохранения
+            // Ignore save errors
         }
     }
 
-    // ======================== Импорт сервера ========================
+    // ======================== Server import ========================
 
     private async void Import_Click(object sender, RoutedEventArgs e)
     {
@@ -694,7 +694,7 @@ public partial class CreateServerPage : Page
         }
     }
 
-    // ======================== Состояние установки ========================
+    // ======================== Installation state ========================
 
     private void SetInstallingState(bool isInstalling)
     {
@@ -709,11 +709,11 @@ public partial class CreateServerPage : Page
 
         Dispatcher.Invoke(() =>
         {
-if (isInstalling)
-                {
-                    ProgressPanel.Visibility = Visibility.Visible;
-                    ProgressRing.ShowIndeterminate();
-                    ProgressText.Text = LocalizationManager.Get("Installer_Preparing");
+            if (isInstalling)
+            {
+                ProgressPanel.Visibility = Visibility.Visible;
+                ProgressRing.ShowIndeterminate();
+                ProgressText.Text = LocalizationManager.Get("Installer_Preparing");
 
                 ActionOrCancelButton.Content = LocalizationManager.Get("CreateServer_Cancel");
                 ActionOrCancelButton.Appearance = ControlAppearance.Danger;
@@ -759,7 +759,7 @@ if (isInstalling)
         }
     }
 
-    // ======================== Создание сервера ========================
+    // ======================== Server creation ========================
 
     private async Task Create_Click_Handler()
     {
@@ -879,8 +879,8 @@ if (isInstalling)
             server.LastErrorMessage = string.Format(LocalizationManager.Get("CreateServer_Installing_Progress"), server.Name);
             Ioc.Default.GetService<IServerManager>()!.UpdateServer(server);
 
-            // Используем Dispatcher напрямую вместо Progress<T>,
-            // чтобы гарантированно доставлять обновления на UI-поток
+            // Use Dispatcher directly instead of Progress<T>
+            // to reliably deliver updates on the UI thread
             var uiDispatcher = Dispatcher;
 
             var installResult = await _installer.InstallServer(
@@ -956,10 +956,10 @@ if (isInstalling)
                     Logger.Info($"Server build number saved: {server.ServerBuild}", "CreateServerPage");
                 }
 
-                // Задержка, чтобы пользователь увидел зелёное сообщение "Сервер успешно установлен!"
+                // Delay so the user can see the green "Server installed successfully!" message
                 await Dispatcher.InvokeAsync(async () =>
                 {
-                    // Красим текст прогресса в зелёный (Installer_Success уже показан)
+                    // Color the progress text green (Installer_Success is already shown)
                     if (ProgressText.TryFindResource("SystemFillColorSuccessBrush") is Brush successBrush)
                         ProgressText.Foreground = successBrush;
 

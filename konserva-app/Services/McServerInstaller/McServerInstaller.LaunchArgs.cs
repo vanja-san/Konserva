@@ -6,15 +6,15 @@ using System.Text;
 namespace Konserva.Services;
 
 /// <summary>
-/// Построение аргументов Java для запуска сервера,
-/// поиск @args файлов Forge/NeoForge, сохранение конфига запуска NeoForge.
+/// Building the Java arguments used to start the server,
+/// locating the Forge/NeoForge @args files, saving the NeoForge launch config.
 /// </summary>
 public partial class McServerInstaller
 {
     /// <summary>
-    /// Прочитать файл аргументов Java (@-файл) и добавить его содержимое в StringBuilder.
-    /// Заменяет использование @file на прямую передачу аргументов, что необходимо,
-    /// так как некоторые Java-сборки (например, openjdk8-redhat) не поддерживают @-синтаксис.
+    /// Read a Java argument file (@-file) and append its content to a StringBuilder.
+    /// This replaces the use of @file with passing the arguments directly, which is necessary
+    /// because some Java builds (for example, openjdk8-redhat) do not support the @-syntax.
     /// </summary>
     private static void AppendArgsFile(StringBuilder args, string absolutePath)
     {
@@ -30,8 +30,8 @@ public partial class McServerInstaller
             if (string.IsNullOrWhiteSpace(line))
                 continue;
 
-            // Каждая строка может содержать один или несколько аргументов
-            // (разделённых пробелами). Разделяем и добавляем каждый.
+            // Each line may contain one or more arguments
+            // (separated by spaces). Split them and append each one.
             var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
             foreach (var part in parts)
             {
@@ -41,7 +41,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Найти win_args.txt или unix_args.txt для современной версии Forge (47.x+, 1.20.1+).
+    /// Locate win_args.txt or unix_args.txt for a modern Forge version (47.x+, 1.20.1+).
     /// </summary>
     private static string? FindModernForgeArgsFile(string serverPath)
     {
@@ -71,7 +71,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Найти win_args.txt или unix_args.txt в папке версии NeoForge в libraries/.
+    /// Locate win_args.txt or unix_args.txt in the NeoForge version folder inside libraries/.
     /// </summary>
     private static string? FindNeoForgeArgsFile(string serverPath)
     {
@@ -106,33 +106,33 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Построить аргументы Java для запуска
+    /// Build the Java arguments used for launching
     /// </summary>
-    /// <param name="jarPath">Путь к jar файлу сервера</param>
-    /// <param name="settings">Настройки сервера</param>
-    /// <param name="launchType">Тип модлоадера</param>
+    /// <param name="jarPath">Path to the server jar file</param>
+    /// <param name="settings">Server settings</param>
+    /// <param name="launchType">Mod loader type</param>
     public string BuildLaunchArgs(string jarPath, ServerSettings settings, ServerLaunchType launchType = ServerLaunchType.Standard, int javaMajorVersion = 0, string? serverPath = null)
     {
         var args = new StringBuilder();
 
-        // RAM настройки
+        // RAM settings
         args.Append($"-Xms{settings.RamMin}M -Xmx{settings.RamMax}M ");
 
-        // Принудительно UTF-8 для всего вывода (чтобы русский текст не кракозябрился)
+        // Force UTF-8 for all output (so that Russian text is not garbled)
         args.Append("-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 ");
 
-        // Подавляем "Advanced terminal features are not available in this environment"
-        // Сервер запущен без реального терминала (через GUI), это ожидаемо
-        // ANSI выключен, чтобы escape-последовательности не засоряли лог
+        // Suppress "Advanced terminal features are not available in this environment"
+        // The server runs without a real terminal (through the GUI), so this is expected
+        // ANSI is disabled so that escape sequences do not pollute the log
         args.Append("-Dterminal.jline=false -Dterminal.ansi=false ");
 
-        // Пользовательские JVM аргументы (GC оптимизации и т.п. — настраивается в настройках сервера)
+        // Custom JVM arguments (GC optimizations and so on — configurable in the server settings)
         foreach (var arg in settings.JavaArgs)
         {
             if (string.IsNullOrWhiteSpace(arg))
                 continue;
 
-            // ParallelRefProcEnabled deprecated в Java 26+, пропускаем для JDK >= 26
+            // ParallelRefProcEnabled is deprecated in Java 26+, skip it for JDK >= 26
             if (javaMajorVersion >= 26 && arg.Contains("ParallelRefProcEnabled", StringComparison.OrdinalIgnoreCase))
             {
                 Logger.Info($"Skipping deprecated arg '{arg}' for Java {javaMajorVersion}", "McServerInstaller");
@@ -142,7 +142,7 @@ public partial class McServerInstaller
             args.Append($"{arg} ");
         }
 
-        // NeoForge (21.x+) не использует -jar, нужен classpath/module-path + bootstrap main class
+        // NeoForge (21.x+) does not use -jar, it needs a classpath/module-path + bootstrap main class
         if (launchType == ServerLaunchType.NeoForge && !string.IsNullOrEmpty(serverPath))
         {
             var launchConfig = LoadNeoForgeLaunchConfig(serverPath);
@@ -150,7 +150,7 @@ public partial class McServerInstaller
             {
                 if (!string.IsNullOrEmpty(launchConfig.ArgsFile))
                 {
-                    // ClassPath хранит относительный путь к файлу аргументов — конвертируем в абсолютный
+                    // ClassPath holds a relative path to the argument file — convert it to an absolute path
                     var neoArgsPath = Path.Combine(serverPath, launchConfig.ClassPath);
                     AppendArgsFile(args, neoArgsPath);
                     args.Append("nogui ");
@@ -168,7 +168,7 @@ public partial class McServerInstaller
             }
         }
 
-        // Modern Forge (47.x+, 1.20.1+): forge-*.jar без Main-Class, запуск через @args файл
+        // Modern Forge (47.x+, 1.20.1+): forge-*.jar without Main-Class, launched via the @args file
         if (launchType == ServerLaunchType.Forge && !string.IsNullOrEmpty(serverPath)
             && (string.IsNullOrEmpty(jarPath) || !HasMainClass(jarPath)))
         {
@@ -181,18 +181,18 @@ public partial class McServerInstaller
             }
         }
 
-        // Jar файл и nogui
-        // Для jar из папки libraries — используем относительный путь от serverPath,
-        // иначе — только имя файла (jar лежит в корне сервера)
+        // Jar file and nogui
+        // For a jar from the libraries folder — use the path relative to serverPath,
+        // otherwise — only the file name (the jar sits in the server root)
         string jarName;
         if (!string.IsNullOrEmpty(serverPath) && jarPath.StartsWith(serverPath, StringComparison.OrdinalIgnoreCase))
         {
-            // Делаем путь относительным от serverPath
+            // Make the path relative to serverPath
             jarName = jarPath.Substring(serverPath.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
         else
         {
-            // Просто имя файла (jar в корне сервера или тесты)
+            // Just the file name (jar in the server root or tests)
             jarName = Path.GetFileName(jarPath);
         }
         args.Append($"-jar \"{jarName}\" nogui");
@@ -201,9 +201,9 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Сохранить конфигурацию запуска NeoForge (classpath + main class).
-    /// Сначала пробует прочитать win_args.txt/unix_args.txt (содержат точный classpath от установщика),
-    /// иначе сканирует libraries/.
+    /// Save the NeoForge launch configuration (classpath + main class).
+    /// It first tries to read win_args.txt/unix_args.txt (which contain the exact classpath from the installer),
+    /// otherwise it scans libraries/.
     /// </summary>
     public async Task SaveNeoForgeLaunchConfigAsync(string serverPath, CancellationToken ct = default)
     {
@@ -218,12 +218,12 @@ public partial class McServerInstaller
         string? classPath = null;
         string? argsFilePath = null;
 
-        // Шаг 1: ищем win_args.txt/unix_args.txt через общий helper
+        // Step 1: look for win_args.txt/unix_args.txt via the shared helper
         argsFilePath = FindNeoForgeArgsFile(serverPath);
         if (argsFilePath != null)
         {
             Logger.Info($"Found NeoForge args file: {argsFilePath}", "McServerInstaller");
-            // Делаем путь относительным от serverPath для использования с @ в Java команде
+            // Make the path relative to serverPath for use with @ in the Java command
             classPath = argsFilePath.Substring(serverPath.Length)
                 .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
@@ -231,7 +231,7 @@ public partial class McServerInstaller
         {
             Logger.Info("No NeoForge args file found, scanning libraries for classpath...", "McServerInstaller");
 
-            // Собираем все jar-файлы из libraries (исключая sources, javadoc)
+            // Collect all jar files from libraries (excluding sources, javadoc)
             var allJars = Directory.GetFiles(librariesDir, "*.jar", SearchOption.AllDirectories)
                 .Where(j => !j.EndsWith("-sources.jar", StringComparison.OrdinalIgnoreCase) &&
                             !j.EndsWith("-javadoc.jar", StringComparison.OrdinalIgnoreCase))
@@ -255,7 +255,7 @@ public partial class McServerInstaller
             Logger.Info($"Built classpath from {allJars.Count} jars", "McServerInstaller");
         }
 
-        // Сохраняем конфиг
+        // Save the config
         var config = new NeoForgeLaunchConfig
         {
             ClassPath = classPath,
@@ -271,7 +271,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Загрузить конфигурацию запуска NeoForge
+    /// Load the NeoForge launch configuration
     /// </summary>
     public NeoForgeLaunchConfig? LoadNeoForgeLaunchConfig(string serverPath)
     {
@@ -292,7 +292,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Конфигурация запуска NeoForge (classpath + main class вместо -jar)
+    /// NeoForge launch configuration (classpath + main class instead of -jar)
     /// </summary>
     public class NeoForgeLaunchConfig
     {

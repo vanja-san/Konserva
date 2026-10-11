@@ -12,7 +12,7 @@ using WpfButton = Wpf.Ui.Controls.Button;
 namespace Konserva.Pages;
 
 /// <summary>
-/// Страница списка серверов
+/// Server list page
 /// </summary>
 public partial class ServersPage : Page, IDisposable
 {
@@ -41,9 +41,9 @@ public partial class ServersPage : Page, IDisposable
 
         Ioc.Default.GetService<IServerManager>()!.OnServerStartError += OnServerStartError;
 
-        // Подписка на события ViewModel живёт ровно пока страница видима.
-        // Иначе старые экземпляры страницы (их держит Frame-журнал) оставались бы
-        // подписанными на события singleton-ViewModel и не собирались GC.
+        // The ViewModel event subscription lives exactly as long as the page is visible.
+        // Otherwise old page instances (kept alive by the Frame journal) would stay
+        // subscribed to the singleton ViewModel events and never be garbage collected.
         _viewModel.NavigateToServerRequested += OnNavigateToServer;
         _viewModel.OpenFolderRequested += OnOpenFolder;
 
@@ -79,7 +79,7 @@ public partial class ServersPage : Page, IDisposable
         UiHelper.OpenFolder(server.Path);
     }
 
-    // ========== Обработчики UI (поиск, фильтры, навигация) ==========
+    // ========== UI handlers (search, filters, navigation) ==========
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
@@ -136,7 +136,7 @@ public partial class ServersPage : Page, IDisposable
 
     private void ServerCard_Click(object sender, RoutedEventArgs e)
     {
-        // Игнорируем клик, если нажата кнопка (чтобы не было двойного срабатывания)
+        // Ignore the click if a button was pressed (to avoid double activation)
         if (e.OriginalSource is WpfButton)
             return;
 
@@ -235,6 +235,6 @@ public partial class ServersPage : Page, IDisposable
 
         OnUnloaded(this, new RoutedEventArgs());
 
-        // ViewModel — singleton, его Dispose не вызываем: он переживёт страницу.
+        // The ViewModel is a singleton, we don't call its Dispose: it outlives the page.
     }
 }

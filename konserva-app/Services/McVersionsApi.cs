@@ -10,7 +10,7 @@ using static Konserva.Models.ApiUrls;
 namespace Konserva.Services;
 
 /// <summary>
-/// API для получения версий Minecraft и модов
+/// API for fetching Minecraft and mod loader versions
 /// </summary>
 public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposable
 {
@@ -25,7 +25,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     private Task? _fileCacheLoadTask;
     private VersionsCache? _fileCache;
 
-    // Кэши для Quilt supported versions (загружаются один раз, persist в singleton)
+    // Caches for Quilt supported versions (loaded once, persisted in the singleton)
     private Task<HashSet<string>>? _quiltSupportedTask;
     private Task<HashSet<string>>? _paperApiVersionsTask;
 
@@ -42,7 +42,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     }
 
     /// <summary>
-    /// Конструктор с указанием папки кэша (для тестов)
+    /// Constructor with an explicit cache folder (for tests)
     /// </summary>
     internal McVersionsApi(HttpClient httpClient, string cacheFolder, IConfigService? configService = null)
     {
@@ -54,25 +54,25 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     }
 
     /// <summary>
-    /// Выбранный источник загрузки (из конфига или VanillaApi по умолчанию)
+    /// The selected download source (from the config, or VanillaApi by default)
     /// </summary>
     private string DownloadSource => _configService?.GetConfig().DownloadSource ?? "VanillaApi";
 
     /// <summary>
-    /// Получение всех версий Minecraft
+    /// Gets all Minecraft versions
     /// </summary>
     public async Task<string[]> GetMcVersions(CancellationToken ct = default)
     {
-        // Пытаемся получить сеть (всегда проверяем на новые версии)
+        // Try the network first (always check for new versions)
         string[]? networkVersions = null;
 
-        // Выбираем URL в зависимости от источника загрузки
+        // Select the URL depending on the download source
         var manifestUrl = DownloadSource == "BMCLAPI" ? BmclapiManifest : MojangManifest;
 
         try
         {
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            linkedCts.CancelAfter(TimeSpan.FromSeconds(10)); // Короткий таймаут
+            linkedCts.CancelAfter(TimeSpan.FromSeconds(10)); // Short timeout
 
             var response = await GetStringWithDecompressionAsync(
                 manifestUrl, linkedCts.Token);
@@ -83,7 +83,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
                 .Select(v => v.GetProperty("id").GetString()!)
                 .ToArray();
 
-            // Сохраняем в файл кэш
+            // Save to the file cache
             SaveMcVersionsToFileCache(networkVersions);
         }
         catch (Exception ex)
@@ -98,7 +98,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
             return networkVersions;
         }
 
-        // Сеть недоступна - используем кэш
+        // The network is unavailable - use the cache
         var cachedVersions = GetMcVersionsFromFileCache();
         if (cachedVersions != null)
         {
@@ -107,18 +107,18 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
             return cachedVersions;
         }
 
-        // Если совсем ничего нет, возвращаем последние известные версии
+        // If there is nothing at all, return the last known versions
         string[]? memoryCached = _mcVersions;
         if (memoryCached != null)
             return memoryCached;
 
-        // Финальный fallback - пустой массив
+        // Final fallback - an empty array
         _mcVersions = [];
         return _mcVersions;
     }
 
     /// <summary>
-    /// Получение версий Forge для версии Minecraft
+    /// Gets the Forge versions for a Minecraft version
     /// </summary>
     public async Task<string[]> GetForgeVersions(string mcVersion, CancellationToken ct = default)
     {
@@ -134,7 +134,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     }
 
     /// <summary>
-    /// Попытка получить версии Forge из Maven
+    /// Tries to get the Forge versions from Maven
     /// </summary>
     private async Task<string[]?> TryGetForgeFromMaven(string mcVersion, CancellationToken ct)
     {
@@ -183,7 +183,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     }
 
     /// <summary>
-    /// Попытка получить версии Forge из BMCLAPI
+    /// Tries to get the Forge versions from BMCLAPI
     /// </summary>
     private async Task<string[]?> TryGetForgeFromBmclapi(string mcVersion, CancellationToken ct)
     {
@@ -229,7 +229,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     }
 
     /// <summary>
-    /// Получение версий Fabric для версии Minecraft
+    /// Gets the Fabric versions for a Minecraft version
     /// </summary>
     public async Task<string[]> GetFabricVersions(string mcVersion, CancellationToken ct = default)
     {
@@ -289,12 +289,12 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     }
 
     /// <summary>
-    /// Получение версий NeoForge для указанной версии Minecraft.
-    /// Основной источник: BMCLAPI (JSON). Fallback: Maven XML и launchermeta.
+    /// Gets the NeoForge versions for the given Minecraft version.
+    /// Primary source: BMCLAPI (JSON). Fallback: Maven XML and launchermeta.
     /// </summary>
     public async Task<string[]> GetNeoForgeVersions(string mcVersion, CancellationToken ct = default)
     {
-        // Проверяем memory-кэш NeoForge
+        // Check the NeoForge in-memory cache
         await _neoForgeCacheLock.WaitAsync(ct);
         try
         {
@@ -316,7 +316,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
             ct2 => TryGetNeoForgeFromMaven(mcVersion, ct2),
             ct2 => TryGetNeoForgeFromLauncherMeta(ct2));
 
-        // Сохраняем в memory-кэш если получили real данные (не fallback)
+        // Store in the in-memory cache if we got real data (not the fallback)
         if (result.Length > 1 || (result.Length == 1 && result[0] != "latest"))
             CacheInMemory(mcVersion, result, ct);
 
@@ -398,16 +398,16 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     }
 
     /// <summary>
-    /// Парсинг NeoForge версий из Maven XML maven-metadata.xml.
+    /// Parses NeoForge versions from the Maven XML maven-metadata.xml.
     /// </summary>
     private static List<string> ParseNeoForgeVersionsFromXml(string xml, string mcVersion)
     {
         var versions = new List<string>();
         var matches = XmlVersionRegex().Matches(xml);
 
-        // NeoForge версии в Maven имеют формат XX.Y.Z (без префикса "1.")
-        // MC 1.21.1 → ищем версии, начинающиеся с "21.1."
-        // MC 1.20.1 → ищем версии, начинающиеся с "20.1."
+        // NeoForge versions in Maven use the XX.Y.Z format (without the "1." prefix)
+        // MC 1.21.1 → look for versions starting with "21.1."
+        // MC 1.20.1 → look for versions starting with "20.1."
         var neoForgePrefix = mcVersion.StartsWith("1.") ? mcVersion[2..] : mcVersion;
 
         foreach (Match match in matches)
@@ -424,7 +424,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     }
 
     /// <summary>
-    /// Fallback: получает список версий NeoForge через launchermeta.mojang.com.
+    /// Fallback: gets the list of NeoForge versions via launchermeta.mojang.com.
     /// </summary>
     private async Task<List<string>> GetNeoForgeFromLauncherMeta(CancellationToken ct)
     {
@@ -444,7 +444,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     }
 
     /// <summary>
-    /// Сохранить результат в memory-кэш NeoForge.
+    /// Stores the result in the NeoForge in-memory cache.
     /// </summary>
     private void CacheInMemory(string mcVersion, string[] versions, CancellationToken ct)
     {
@@ -461,7 +461,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     }
 
     /// <summary>
-    /// Получение версий Quilt
+    /// Gets the Quilt versions
     /// </summary>
     public async Task<string[]> GetQuiltVersions(string mcVersion, CancellationToken ct = default)
     {
@@ -527,8 +527,8 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     }
 
     /// <summary>
-    /// Получение сборок Paper для указанной версии Minecraft.
-    /// Возвращает массив строк вида "131" (STABLE) или "132 (ALPHA)" (ALPHA).
+    /// Gets the Paper builds for the given Minecraft version.
+    /// Returns an array of strings like "131" (STABLE) or "132 (ALPHA)" (ALPHA).
     /// </summary>
     public async Task<string[]> GetPaperVersions(string mcVersion, CancellationToken ct = default)
     {
@@ -611,19 +611,19 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     void IDisposable.Dispose() => _ = DisposeAsync().AsTask();
 
     /// <summary>
-    /// Получение строки с поддержкой gzip/deflate
+    /// Gets a string with gzip/deflate support
     /// </summary>
     public async Task<string> GetStringWithDecompressionAsync(string url, CancellationToken ct = default)
     {
         return await _http.GetStringAsync(url, ct);
     }
 
-    // ─── Quilt Supported Versions (кэшируется в singleton) ─────────
+    // ─── Quilt Supported Versions (cached in the singleton) ─────────
 
     /// <summary>
-    /// Возвращает список версий Minecraft, которые поддерживает Quilt.
-    /// Результат кэшируется в памяти (McVersionsApi — singleton).
-    /// Запросы выполняются параллельно (до 5 одновременных).
+    /// Returns the list of Minecraft versions supported by Quilt.
+    /// The result is cached in memory (McVersionsApi is a singleton).
+    /// Requests run in parallel (up to 5 at the same time).
     /// </summary>
     public async Task<HashSet<string>> GetQuiltSupportedVersionsAsync(CancellationToken ct = default)
     {
@@ -672,15 +672,15 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
                 }
                 catch (HttpRequestException httpEx) when (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    // 404 — не поддерживается
+                    // 404 — not supported
                 }
                 catch (OperationCanceledException)
                 {
-                    // Отмена
+                    // Cancelled
                 }
                 catch
                 {
-                    // Игнорируем
+                    // Ignore
                 }
             });
 
@@ -696,11 +696,11 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
         }
     }
 
-    // ─── Paper API Versions (кэшируется в singleton) ──────────────
+    // ─── Paper API Versions (cached in the singleton) ──────────────
 
     /// <summary>
-    /// Возвращает список версий Minecraft, доступных для Paper.
-    /// Результат кэшируется в памяти (McVersionsApi — singleton).
+    /// Returns the list of Minecraft versions available for Paper.
+    /// The result is cached in memory (McVersionsApi is a singleton).
     /// </summary>
     public async Task<HashSet<string>> GetPaperApiVersionsAsync(CancellationToken ct = default)
     {
@@ -732,9 +732,9 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
     }
 
     /// <summary>
-    /// Универсальный метод для получения версий загрузчиков с кэшированием и fallback.
-    /// Проверяет файловый кэш, при промахе вызывает fetcher'ы по порядку (null пропускаются),
-    /// сохраняет результат в кэш и возвращает fallbackResult если всё остальное не удалось.
+    /// Universal method for fetching loader versions with caching and fallback.
+    /// Checks the file cache, on a miss calls the fetchers in order (nulls are skipped),
+    /// stores the result in the cache and returns fallbackResult if everything else fails.
     /// </summary>
     private async Task<string[]> FetchLoaderVersionsAsync(
         string cacheKey,
@@ -743,7 +743,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
         CancellationToken ct,
         params Func<CancellationToken, Task<string[]?>>?[] fetchers)
     {
-        // 1. Проверяем файловый кэш
+        // 1. Check the file cache
         var cachedVersions = GetFromFileCache(cacheKey, mcVersion);
         if (cachedVersions != null)
         {
@@ -751,7 +751,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
             return cachedVersions;
         }
 
-        // 2. Пробуем fetcher'ы по порядку
+        // 2. Try the fetchers in order
         foreach (var fetcher in fetchers)
         {
             if (fetcher == null) continue;
@@ -764,7 +764,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
             }
         }
 
-        // 3. Все источники не сработали — fallback
+        // 3. All sources failed — fall back
         Logger.Warning($"All sources failed for {cacheKey} MC {mcVersion}, returning fallback", "McVersionsApi");
         return fallbackResult;
     }
@@ -818,8 +818,8 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
 
     private string[]? GetFromFileCache(string loader, string mcVersion)
     {
-        // Если кэш ещё не загружен — не ждём, просто возвращаем null.
-        // Сетевой источник будет использован, а кэш сохранится при следующем успешном запросе.
+        // If the cache has not been loaded yet — do not wait, just return null.
+        // The network source will be used, and the cache will be saved on the next successful request.
         if (_fileCacheLoadTask?.IsCompleted == false)
             return null;
 
@@ -856,7 +856,7 @@ public partial class McVersionsApi : IMcVersionsApi, IAsyncDisposable, IDisposab
 
     private string[]? GetMcVersionsFromFileCache()
     {
-        // Если кэш ещё не загружен — не ждём, возвращаем null.
+        // If the cache has not been loaded yet — do not wait, return null.
         if (_fileCacheLoadTask?.IsCompleted == false)
             return null;
         return _fileCache?.McVersions;

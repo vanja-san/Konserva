@@ -1,7 +1,7 @@
 namespace Konserva.Models;
 
 /// <summary>
-/// Тип запуска сервера (определяет аргументы JVM и способ запуска).
+/// Server launch type (determines the JVM arguments and the launch method).
 /// </summary>
 public enum ServerLaunchType
 {

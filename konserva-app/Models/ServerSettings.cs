@@ -5,7 +5,7 @@ using ObservableObject = CommunityToolkit.Mvvm.ComponentModel.ObservableObject;
 namespace Konserva.Models;
 
 /// <summary>
-/// Настройки сервера
+/// Server settings
 /// </summary>
 public class ServerSettings : ObservableObject
 {
@@ -14,7 +14,7 @@ public class ServerSettings : ObservableObject
     private int _cpuCores = Environment.ProcessorCount;
 
     /// <summary>
-    /// Минимум RAM (MB). Минимум: 256, Максимум: RamMax
+    /// Minimum RAM (MB). Minimum: 256, Maximum: RamMax
     /// </summary>
     [Range(Constants.MinRamMb, int.MaxValue)]
     public int RamMin
@@ -29,7 +29,7 @@ public class ServerSettings : ObservableObject
     }
 
     /// <summary>
-    /// Максимум RAM (MB). Минимум: RamMin, Максимум: 65536
+    /// Maximum RAM (MB). Minimum: RamMin, Maximum: 65536
     /// </summary>
     [Range(1, Constants.MaxRamMb)]
     public int RamMax
@@ -44,7 +44,7 @@ public class ServerSettings : ObservableObject
     }
 
     /// <summary>
-    /// Количество ядер CPU. Минимум: 1, Максимум: количество доступных
+    /// Number of CPU cores. Minimum: 1, Maximum: number of available cores
     /// </summary>
     [Range(1, 128)]
     public int CpuCores
@@ -58,23 +58,23 @@ public class ServerSettings : ObservableObject
     }
 
     /// <summary>
-    /// ID выбранной Java версии (если null, используется Java по умолчанию)
+    /// ID of the selected Java version (if null, the default Java is used)
     /// </summary>
     public string? JavaId { get; set; }
 
     /// <summary>
-    /// Автоматический выбор версии Java на основе версии Minecraft
+    /// Automatic Java version selection based on the Minecraft version
     /// </summary>
     public bool JavaAutoSelect { get; set; } = true;
 
     /// <summary>
-    /// Аргументы запуска Java (пользовательские, можно безопасно менять/удалять)
+    /// Custom Java launch arguments (safe for the user to change/remove)
     /// </summary>
     public List<string> JavaArgs { get; set; } = DefaultJvmArgs;
 
     /// <summary>
-    /// Стандартные JVM аргументы оптимизации (безопасны для удаления пользователем).
-    /// Критические аргументы (encoding, terminal, -jar) остаются в коде.
+    /// Default JVM optimization arguments (safe for the user to remove).
+    /// Critical arguments (encoding, terminal, -jar) stay in the code.
     /// </summary>
     public static List<string> DefaultJvmArgs { get; } =
     [
@@ -94,7 +94,7 @@ public class ServerSettings : ObservableObject
     ];
 
     /// <summary>
-    /// Текстовое представление JVM аргументов (по одному аргументу на строку) для UI.
+    /// Text representation of the JVM arguments (one argument per line) for the UI.
     /// </summary>
     public string JvmArgsText
     {
@@ -106,38 +106,38 @@ public class ServerSettings : ObservableObject
     }
 
     /// <summary>
-    /// Автоматический рестарт при остановке
+    /// Automatic restart on stop
     /// </summary>
     public bool AutoRestart { get; set; }
 
     /// <summary>
-    /// Задержка перед автоматическим рестартом (сек). Минимум: 0, Максимум: 3600
+    /// Delay before the automatic restart (sec). Minimum: 0, Maximum: 3600
     /// </summary>
     [Range(0, Constants.MaxAutoRestartDelaySec)]
     public int AutoRestartDelay { get; set; } = 5;
 
     /// <summary>
-    /// Автоматический проброс порта через UPnP при запуске сервера.
+    /// Automatically forward the port via UPnP when the server starts.
     /// </summary>
     public bool EnableUpnp { get; set; }
 
     /// <summary>
-    /// Показывать уведомление о доступном обновлении загрузчика.
+    /// Show a notification when a loader update is available.
     /// </summary>
     public bool EnableUpdateNotification { get; set; } = true;
 
     /// <summary>
-    /// Создавать резервную копию модов перед обновлением.
+    /// Create a backup of the mods before updating.
     /// </summary>
     public bool ModBackupEnabled { get; set; } = true;
 
     /// <summary>
-    /// Канал обновлений модов: какие версии (стабильные/бета/альфа) предлагать.
+    /// Mod update channel: which versions (stable/beta/alpha) to offer.
     /// </summary>
     public ModUpdateChannel UpdateChannel { get; set; } = ModUpdateChannel.Release;
 
     /// <summary>
-    /// Копирование настроек
+    /// Clones the settings
     /// </summary>
     public ServerSettings Clone() => new()
     {
@@ -156,7 +156,7 @@ AutoRestart = AutoRestart,
     };
 
     /// <summary>
-    /// Валидация настроек
+    /// Settings validation
     /// </summary>
     public bool Validate() => RamMin >= Constants.MinRamMb && RamMax >= RamMin && RamMax <= Constants.MaxRamMb &&
                                CpuCores >= 1 && CpuCores <= 128 &&

@@ -3,7 +3,7 @@ using Konserva.Models;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Преобразование канала обновлений в список version_types Modrinth.
+/// Conversion of an update channel to a Modrinth version_types list.
 /// </summary>
 public static class ModUpdateChannels
 {

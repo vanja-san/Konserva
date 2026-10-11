@@ -10,19 +10,19 @@
     Title="Settings">
 
     <Page.Resources>
-        <!--  Стиль заголовка группы карточек  -->
+        <!--  Card group header style  -->
         <Style x:Key="CardGroupHeader" TargetType="ui:TextBlock">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Margin" Value="0,0,0,8" />
         </Style>
 
-        <!--  Стиль заголовка настройки  -->
+        <!--  Setting title style  -->
         <Style x:Key="SettingTitle" TargetType="ui:TextBlock">
             <Setter Property="FontSize" Value="14" />
         </Style>
 
-        <!--  Стиль описания настройки  -->
+        <!--  Setting description style  -->
 
         <Style x:Key="SettingDescription" TargetType="ui:TextBlock">
             <Setter Property="FontSize" Value="12" />
@@ -30,7 +30,7 @@
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
 
-        <!--  Конвертер для позиционирования в группе слитных карточек  -->
+        <!--  Converter for positioning within a joined card group  -->
         <converters:CardGroupPositionConverter x:Key="CardGroupPositionConverter" />
     </Page.Resources>
 
@@ -42,7 +42,7 @@
             <StackPanel Margin="0,0,0,16">
 
                 <!--  =========================================================  -->
-                <!--  Группа 1: Серверы (Общие настройки)  -->
+                <!--  Group 1: Servers (General settings)  -->
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <Grid Margin="0,0,0,8" ColumnDefinitions="*,Auto">
@@ -62,7 +62,7 @@
                     </Grid>
 
                     <StackPanel>
-                        <!--  Карточка: Папка серверов (верхняя — скругление сверху)  -->
+                        <!--  Card: Servers folder (top, rounded at the top)  -->
                         <Border
                             Padding="16,12"
                             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -94,10 +94,10 @@
                             </Grid>
                         </Border>
 
-                        <!--  Разделитель  -->
+                        <!--  Divider  -->
                         <Rectangle Height="1" Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
 
-                        <!--  Карточка: Проверка обновлений (середина)  -->
+                        <!--  Card: Check for updates (middle)  -->
                         <Border
                             Padding="16,12"
                             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -131,14 +131,14 @@
                             </Grid>
                         </Border>
 
-                        <!--  Разделитель (показан, когда чекбокс включён)  -->
+                        <!--  Divider (shown when the checkbox is enabled)  -->
                         <Rectangle
                             x:Name="UpdateIntervalSeparator"
                             Height="1"
                             Fill="{ui:ThemeResource ControlElevationBorderBrush}"
                             Visibility="Collapsed" />
 
-                        <!--  Карточка: Интервал проверки (середина)  -->
+                        <!--  Card: Check interval (middle)  -->
                         <Border
                             x:Name="UpdateIntervalCard"
                             Padding="16,12"
@@ -157,19 +157,19 @@
                                     Grid.Column="1"
                                     Content="24">
                                     <ui:DropDownButton.Flyout>
-                                        <!-- Пункты заполняются из кода (PopulateUpdateIntervalMenu):
-                                             список часов и заголовки берутся из локализации,
-                                             чтобы подписи не расходились с текстом на кнопке. -->
+                                        <!-- Items are populated in code (PopulateUpdateIntervalMenu):
+                                             the hour list and headers come from localization
+                                             so the labels stay in sync with the button text. -->
                                         <ContextMenu x:Name="UpdateIntervalMenu" />
                                     </ui:DropDownButton.Flyout>
                                 </ui:DropDownButton>
                             </Grid>
                         </Border>
 
-                        <!--  Разделитель между секцией проверки обновлений и треем  -->
+                        <!--  Divider between the update check section and the tray  -->
                         <Rectangle Height="1" Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
 
-                        <!--  Карточка: Режим сворачивания в трей (нижняя — скругление снизу)  -->
+                        <!--  Card: Minimize-to-tray mode (bottom, rounded at the bottom)  -->
                         <Border
                             Padding="16,12"
                             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -217,7 +217,7 @@
                 </StackPanel>
 
                 <!--  =========================================================  -->
-                <!--  Группа 2: Java  -->
+                <!--  Group 2: Java  -->
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <Grid
@@ -265,7 +265,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <!--  Список Java — слитные карточки как в остальных группах  -->
+                    <!--  Java list — joined cards like in the other groups  -->
                     <StackPanel>
                         <ItemsControl x:Name="JavaItemsControl" AlternationCount="9999">
                             <ItemsControl.ItemTemplate>
@@ -322,7 +322,7 @@
                                             </Grid>
                                         </Border>
 
-                                        <!--  Разделитель между карточками (скрыт у последней)  -->
+                                        <!--  Divider between cards (hidden for the last one)  -->
                                         <Rectangle Height="1" Fill="{ui:ThemeResource ControlElevationBorderBrush}">
                                             <Rectangle.Visibility>
                                                 <MultiBinding Converter="{StaticResource CardGroupPositionConverter}" ConverterParameter="separator">
@@ -347,7 +347,7 @@
                 </StackPanel>
 
                 <!--  =========================================================  -->
-                <!--  Группа 3: Внешний вид (Тема + Язык)  -->
+                <!--  Group 3: Appearance (Theme + Language)  -->
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <Grid Margin="0,0,0,8" ColumnDefinitions="*,Auto">
@@ -367,7 +367,7 @@
                     </Grid>
 
                     <StackPanel>
-                        <!--  Карточка: Тема (верхняя — скругление сверху)  -->
+                        <!--  Card: Theme (top, rounded at the top)  -->
                         <Border
                             Padding="16,12"
                             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -392,10 +392,10 @@
                             </Grid>
                         </Border>
 
-                        <!--  Разделитель  -->
+                        <!--  Divider  -->
                         <Rectangle Height="1" Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
 
-                        <!--  Карточка: Язык (нижняя — скругление снизу)  -->
+                        <!--  Card: Language (bottom, rounded at the bottom)  -->
                         <Border
                             Padding="16,12"
                             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -422,7 +422,7 @@
                 </StackPanel>
 
                 <!--  =========================================================  -->
-                <!--  Группа 4: Консоль  -->
+                <!--  Group 4: Console  -->
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <Grid Margin="0,0,0,8" ColumnDefinitions="*,Auto">
@@ -442,7 +442,7 @@
                     </Grid>
 
                     <StackPanel>
-                        <!--  Карточка: Автопрокрутка (верхняя — скругление сверху)  -->
+                        <!--  Card: Auto-scroll (top, rounded at the top)  -->
                         <Border
                             Padding="16,12"
                             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -462,10 +462,10 @@
                             </Grid>
                         </Border>
 
-                        <!--  Разделитель  -->
+                        <!--  Divider  -->
                         <Rectangle Height="1" Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
 
-                        <!--  Карточка: Перенос строк (нижняя — скругление снизу)  -->
+                        <!--  Card: Word wrap (bottom, rounded at the bottom)  -->
                         <Border
                             Padding="16,12"
                             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -488,7 +488,7 @@
                 </StackPanel>
 
                 <!--  =========================================================  -->
-                <!--  Группа 5: Загрузки (Downloads)  -->
+                <!--  Group 5: Downloads  -->
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <Grid Margin="0,0,0,8" ColumnDefinitions="*,Auto">
@@ -508,7 +508,7 @@
                     </Grid>
 
                     <StackPanel>
-                        <!--  Карточка: Источник загрузки (единственная)  -->
+                        <!--  Card: Download source (only card)  -->
                         <Border
                             Padding="16,12"
                             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -534,13 +534,13 @@
                 </StackPanel>
 
                 <!--  =========================================================  -->
-                <!--  Группа 6: О программе  -->
+                <!--  Group 6: About  -->
                 <!--  =========================================================  -->
                 <StackPanel Margin="0,0,0,24">
                     <ui:TextBlock Style="{StaticResource CardGroupHeader}" Text="{loc:Loc Settings_About}" />
 
                     <StackPanel>
-                        <!--  Карточка: Информация о приложении (верхняя) + проверка обновлений  -->
+                        <!--  Card: App information (top) + check for updates  -->
                         <Border
                             Padding="16,16"
                             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -589,10 +589,10 @@
                             </Grid>
                         </Border>
 
-                        <!--  Разделитель  -->
+                        <!--  Divider  -->
                         <Rectangle Height="1" Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
 
-                        <!--  Карточка: Модлоадеры (нижняя)  -->
+                        <!--  Card: Mod loaders (bottom)  -->
                         <Border
                             Padding="16,12"
                             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -639,7 +639,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!--  InfoBar для уведомления об успешной установке Java  -->
+        <!--  InfoBar for the successful Java installation notification  -->
         <ui:InfoBar
             x:Name="JavaSuccessInfoBar"
             Grid.Row="1"

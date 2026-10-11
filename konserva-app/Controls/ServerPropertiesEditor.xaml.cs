@@ -8,7 +8,7 @@ using System.Windows.Controls;
 namespace Konserva.Controls;
 
 /// <summary>
-/// Редактор server.properties в GUI
+/// GUI editor for server.properties
 /// </summary>
 public partial class ServerPropertiesEditor : UserControl
 {
@@ -18,7 +18,7 @@ public partial class ServerPropertiesEditor : UserControl
     public event EventHandler? PropertiesSaved;
 
     /// <summary>
-    /// Текущий порт сервера из загруженных свойств
+    /// Current server port from the loaded properties
     /// </summary>
     public int CurrentPort => _properties?.ServerPort ?? Constants.DefaultServerPort;
 
@@ -28,13 +28,13 @@ public partial class ServerPropertiesEditor : UserControl
     }
 
     /// <summary>
-    /// Загружает настройки из файла
+    /// Loads the settings from the file
     /// </summary>
     public void Load(string path)
     {
         _propertiesPath = path;
 
-        // Проверяем существование файла
+        // Check whether the file exists
         if (!File.Exists(path))
         {
             NoFileMessage.Visibility = Visibility.Visible;
@@ -43,7 +43,7 @@ public partial class ServerPropertiesEditor : UserControl
             return;
         }
 
-        // Файл существует - показываем редактор
+        // The file exists - show the editor
         NoFileMessage.Visibility = Visibility.Collapsed;
         PropertiesScrollViewer.Visibility = Visibility.Visible;
         _properties = ServerProperties.Load(path);
@@ -52,7 +52,7 @@ public partial class ServerPropertiesEditor : UserControl
     }
 
     /// <summary>
-    /// Заполняет поля значениями
+    /// Fills the fields with values
     /// </summary>
     private void PopulateFields()
     {
@@ -66,7 +66,7 @@ public partial class ServerPropertiesEditor : UserControl
         ViewDistanceBox.Text = _properties.ViewDistance.ToString();
         SimulationDistanceBox.Text = _properties.SimulationDistance.ToString();
         PauseWhenEmptySecondsBox.Text = _properties.PauseWhenEmptySeconds.ToString();
-        // MotdBox и EnableStatusBox отсутствуют в XAML
+        // MotdBox and EnableStatusBox are missing from the XAML
         // MotdBox.Text = _properties.Motd;
         // EnableStatusBox.IsChecked = _properties.EnableStatus;
 
@@ -160,19 +160,19 @@ public partial class ServerPropertiesEditor : UserControl
         SpawnAnimalsBox.IsChecked = _properties.SpawnAnimals;
         SpawnMonstersBox.IsChecked = _properties.SpawnMonsters;
 
-        // Обновляем видимость строк на основе найденных в файле ключей
+        // Update the row visibility based on the keys found in the file
         UpdateRowVisibility();
     }
 
     /// <summary>
-    /// Обновляет видимость строк на основе ключей, найденных в файле
+    /// Updates the row visibility based on the keys found in the file
     /// </summary>
     private void UpdateRowVisibility()
     {
         if (_properties == null) return;
         var keys = _properties.FoundKeys;
 
-        // Helper для установки видимости обеих частей строки (label + control)
+        // Helper that sets the visibility of both parts of a row (label + control)
         static void SetRowVisibility(bool exists, FrameworkElement labelParent, FrameworkElement? control)
         {
             var visibility = exists ? Visibility.Visible : Visibility.Collapsed;
@@ -184,16 +184,16 @@ public partial class ServerPropertiesEditor : UserControl
         static bool ContainsKey(HashSet<string> set, params string[] names) =>
             names.Any(n => set.Contains(n));
 
-        // Общие свойства
+        // General properties
         SetRowVisibility(ContainsKey(keys, "server-port"), ServerPortBoxParent, ServerPortBox);
         SetRowVisibility(ContainsKey(keys, "server-ip"), ServerIpBoxParent, ServerIpBox);
         SetRowVisibility(ContainsKey(keys, "max-players"), MaxPlayersBoxParent, MaxPlayersBox);
         SetRowVisibility(ContainsKey(keys, "view-distance"), ViewDistanceBoxParent, ViewDistanceBox);
         SetRowVisibility(ContainsKey(keys, "simulation-distance"), SimulationDistanceBoxParent, SimulationDistanceBox);
         SetRowVisibility(ContainsKey(keys, "pause-with-zero-players-delay-seconds"), PauseWhenEmptySecondsBoxParent, PauseWhenEmptySecondsBox);
-        // MotdBoxParent и EnableStatusBoxParent временно отключены - поля отсутствуют в XAML
+        // MotdBoxParent and EnableStatusBoxParent are temporarily disabled - the fields are missing from the XAML
 
-        // Режим игры
+        // Game mode
         SetRowVisibility(ContainsKey(keys, "gamemode"), GamemodeBoxParent, GamemodeBox);
         SetRowVisibility(ContainsKey(keys, "force-gamemode"), ForceGamemodeBoxParent, ForceGamemodeBox);
         SetRowVisibility(ContainsKey(keys, "difficulty"), DifficultyBoxParent, DifficultyBox);
@@ -205,7 +205,7 @@ public partial class ServerPropertiesEditor : UserControl
         SetRowVisibility(ContainsKey(keys, "spawn-animals"), SpawnAnimalsBoxParent, SpawnAnimalsBox);
         SetRowVisibility(ContainsKey(keys, "spawn-monsters"), SpawnMonstersBoxParent, SpawnMonstersBox);
 
-        // Мир
+        // World
         SetRowVisibility(ContainsKey(keys, "level-name"), LevelNameBoxParent, LevelNameBox);
         SetRowVisibility(ContainsKey(keys, "level-seed"), LevelSeedBoxParent, LevelSeedBox);
         SetRowVisibility(ContainsKey(keys, "level-type"), LevelTypeBoxParent, LevelTypeBox);
@@ -215,7 +215,7 @@ public partial class ServerPropertiesEditor : UserControl
         SetRowVisibility(ContainsKey(keys, "allow-nether"), AllowNetherBoxParent, AllowNetherBox);
         SetRowVisibility(ContainsKey(keys, "spawn-radius"), SpawnRadiusBoxParent, SpawnRadiusBox);
 
-        // Сеть
+        // Network
         SetRowVisibility(ContainsKey(keys, "online-mode"), OnlineModeBoxParent, OnlineModeBox);
         SetRowVisibility(ContainsKey(keys, "enforce-secure-profile"), EnforceSecureProfileBoxParent, EnforceSecureProfileBox);
         SetRowVisibility(ContainsKey(keys, "prevent-proxy-connections"), PreventProxyConnectionsBoxParent, PreventProxyConnectionsBox);
@@ -281,25 +281,25 @@ public partial class ServerPropertiesEditor : UserControl
         SetRowVisibility(ContainsKey(keys, "text-filtering-config"), TextFilteringConfigBoxParent, TextFilteringConfigBox);
         SetRowVisibility(ContainsKey(keys, "text-filtering-version"), TextFilteringVersionBoxParent, TextFilteringVersionBox);
 
-        // Скрываем пустые экспандеры
+        // Hide the empty expanders
         UpdateExpanderVisibility();
     }
 
     /// <summary>
-    /// Скрывает экспандеры, у которых все строки скрыты
+    /// Hides the expanders whose rows are all hidden
     /// </summary>
     private void UpdateExpanderVisibility()
     {
         static bool IsVisible(FrameworkElement? el) => el?.Visibility == Visibility.Visible;
 
-        // Общие свойства
+        // General properties
         GeneralExpander.Visibility =
             IsVisible(ServerPortBoxParent) || IsVisible(ServerIpBoxParent) ||
             IsVisible(MaxPlayersBoxParent) || IsVisible(ViewDistanceBoxParent) ||
             IsVisible(SimulationDistanceBoxParent) || IsVisible(PauseWhenEmptySecondsBoxParent)
                 ? Visibility.Visible : Visibility.Collapsed;
 
-        // Режим игры
+        // Game mode
         GamemodeExpander.Visibility =
             IsVisible(GamemodeBoxParent) || IsVisible(ForceGamemodeBoxParent) ||
             IsVisible(DifficultyBoxParent) || IsVisible(HardcoreBoxParent) ||
@@ -308,7 +308,7 @@ public partial class ServerPropertiesEditor : UserControl
             IsVisible(SpawnAnimalsBoxParent) || IsVisible(SpawnMonstersBoxParent)
                 ? Visibility.Visible : Visibility.Collapsed;
 
-        // Мир
+        // World
         WorldExpander.Visibility =
             IsVisible(LevelNameBoxParent) || IsVisible(LevelSeedBoxParent) ||
             IsVisible(LevelTypeBoxParent) || IsVisible(GeneratorSettingsBoxParent) ||
@@ -316,7 +316,7 @@ public partial class ServerPropertiesEditor : UserControl
             IsVisible(AllowNetherBoxParent) || IsVisible(SpawnRadiusBoxParent)
                 ? Visibility.Visible : Visibility.Collapsed;
 
-        // Сеть
+        // Network
         NetworkExpander.Visibility =
             IsVisible(OnlineModeBoxParent) || IsVisible(EnforceSecureProfileBoxParent) ||
             IsVisible(PreventProxyConnectionsBoxParent) || IsVisible(RateLimitBoxParent) ||
@@ -381,7 +381,7 @@ public partial class ServerPropertiesEditor : UserControl
     }
 
     /// <summary>
-    /// Выбирает элемент в ComboBox по значению
+    /// Selects the item in the ComboBox matching the value
     /// </summary>
     private void SelectComboBoxItem(ComboBox comboBox, string value)
     {
@@ -396,7 +396,7 @@ public partial class ServerPropertiesEditor : UserControl
     }
 
     /// <summary>
-    /// Получает значение из ComboBox
+    /// Gets the value from the ComboBox
     /// </summary>
     private string GetComboBoxValue(ComboBox comboBox, string defaultValue)
     {
@@ -408,7 +408,7 @@ public partial class ServerPropertiesEditor : UserControl
     }
 
     /// <summary>
-    /// Получает целое число из TextBox
+    /// Gets an integer value from the TextBox
     /// </summary>
     private int GetIntValue(TextBox textBox, int defaultValue)
     {
@@ -418,7 +418,7 @@ public partial class ServerPropertiesEditor : UserControl
     }
 
     /// <summary>
-    /// Получает булево значение из ToggleSwitch
+    /// Gets a boolean value from the ToggleSwitch
     /// </summary>
     private bool GetBoolValue(Wpf.Ui.Controls.ToggleSwitch toggleSwitch)
     {
@@ -426,7 +426,7 @@ public partial class ServerPropertiesEditor : UserControl
     }
 
     /// <summary>
-    /// Сохраняет настройки в файл
+    /// Saves the settings to the file
     /// </summary>
     public void Save()
     {
@@ -445,7 +445,7 @@ public partial class ServerPropertiesEditor : UserControl
             _properties.ViewDistance = GetIntValue(ViewDistanceBox, 10);
             _properties.SimulationDistance = GetIntValue(SimulationDistanceBox, 10);
             _properties.PauseWhenEmptySeconds = GetIntValue(PauseWhenEmptySecondsBox, 60);
-            // MotdBox и EnableStatusBox отсутствуют в XAML
+            // MotdBox and EnableStatusBox are missing from the XAML
             // _properties.Motd = MotdBox.Text;
             // _properties.EnableStatus = GetBoolValue(EnableStatusBox);
 
@@ -539,7 +539,7 @@ public partial class ServerPropertiesEditor : UserControl
             _properties.SpawnAnimals = GetBoolValue(SpawnAnimalsBox);
             _properties.SpawnMonsters = GetBoolValue(SpawnMonstersBox);
 
-            // Сохраняем
+            // Save
             _properties.Save(_propertiesPath);
 
             ShowStatus(LocalizationManager.Get("Props_Saved"), false);
@@ -553,7 +553,7 @@ public partial class ServerPropertiesEditor : UserControl
     }
 
     /// <summary>
-    /// Сброс настроек
+    /// Resets the settings
     /// </summary>
     public void Reset()
     {
@@ -565,7 +565,7 @@ public partial class ServerPropertiesEditor : UserControl
     }
 
     /// <summary>
-    /// Отображает статус в панели
+    /// Displays the status in the panel
     /// </summary>
     private void ShowStatus(string message, bool isError)
     {

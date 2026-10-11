@@ -14,7 +14,7 @@ using MenuItem = System.Windows.Controls.MenuItem;
 namespace Konserva;
 
 /// <summary>
-/// Главное окно приложения
+/// Main application window
 /// </summary>
 public partial class MainWindow : FluentWindow, IDisposable
 {
@@ -56,12 +56,12 @@ public partial class MainWindow : FluentWindow, IDisposable
         StateChanged += MainWindow_StateChanged;
         IsVisibleChanged += (_, _) => UpdateTrayIconVisibility();
 
-        // Инициализация трея (после InitializeComponent)
+        // Tray initialization (after InitializeComponent)
         InitTray();
     }
 
     /// <summary>
-    /// Инициализация событий трея.
+    /// Initializes the tray events.
     /// </summary>
     private void InitTray()
     {
@@ -98,8 +98,8 @@ public partial class MainWindow : FluentWindow, IDisposable
             contextMenu.Items.Add(new Separator());
             contextMenu.Items.Add(exitItem);
 
-            // Создаём NotifyIcon в коде — без XAML, чтобы OnRender не вызвал
-            // автоматическую регистрацию в трее. Управляем Register/Unregister сами.
+            // We create the NotifyIcon in code — without XAML, so that OnRender does not trigger
+            // automatic registration in the tray. We manage Register/Unregister ourselves.
             _trayIcon = new NotifyIcon
             {
                 Icon = new BitmapImage(
@@ -114,7 +114,7 @@ public partial class MainWindow : FluentWindow, IDisposable
             _trayIcon.LeftClick += OnTrayLeftClick;
 #pragma warning restore CS8622
 
-            // Применяем начальную видимость иконки в трее
+            // Apply the initial tray icon visibility
             UpdateTrayIconVisibility();
         }
         catch (Exception ex)
@@ -134,7 +134,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Сервис для отображения ContentDialog
+    /// Service used to display ContentDialog
     /// </summary>
     public IContentDialogService ContentDialogService
     {
@@ -154,35 +154,35 @@ public partial class MainWindow : FluentWindow, IDisposable
 
     private void InitializeMainWindow()
     {
-        // Применяем тему из конфига
+        // Apply the theme from the config
         var config = _config.GetConfig();
         ApplyTheme(config.Theme ?? "System");
 
-        // Отслеживаем системную тему для авто-обновления при смене в Windows
+        // Watch the system theme so it auto-refreshes when Windows switches
         Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this);
 
         AutoDetectJava();
         StartStatusBarTimer();
         StartUpdateCheckLoop();
 
-        // Начальный заголовок (до первой навигации)
+        // Initial title (before the first navigation)
         WindowTitleText.Text = LocalizationManager.Get("MainWindow_Header");
 
-        // Подписываемся на смену языка для обновления заголовка окна
+        // Subscribe to language changes to update the window title
         LocalizationManager.LanguageChanged += OnLanguageChanged;
 
-        // Подписываемся на событие навигации для обновления кнопки "Назад" и заголовка
+        // Subscribe to the navigation event to update the "Back" button and the title
         ContentFrame.Navigated += ContentFrame_Navigated;
 
         // Navigate to Servers page by default
         ContentFrame.Navigate(new Pages.ServersPage());
 
-        // Инициализируем SnackbarService (визуальное дерево уже загружено)
+        // Initialize SnackbarService (the visual tree is already loaded)
         _ = SnackbarService;
     }
 
     /// <summary>
-    /// Обработчик события навигации — обновляет кнопку "Назад" и заголовок в TitleBar
+    /// Navigation event handler — updates the "Back" button and the TitleBar title
     /// </summary>
     private void ContentFrame_Navigated(object sender, System.Windows.Navigation.NavigationEventArgs e)
     {
@@ -191,18 +191,18 @@ public partial class MainWindow : FluentWindow, IDisposable
             BackButton.Visibility = ContentFrame.CanGoBack ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        // Скрываем статусбар на страницах, где он не нужен (создание сервера, настройки)
+        // Hide the status bar on pages that do not need it (server creation, settings)
         StatusBarPanel.Visibility = e.Content is Pages.CreateServerPage or Pages.SettingsPage
             ? Visibility.Collapsed
             : Visibility.Visible;
 
-        // Обновляем заголовок окна: "Konserva Manager — <page title>"
+        // Update the window title: "Konserva Manager — <page title>"
         var mainTitle = LocalizationManager.Get("MainWindow_Header");
         WindowTitleText.Text = e.Content is System.Windows.Controls.Page page && !string.IsNullOrEmpty(page.Title?.ToString())
             ? $"{mainTitle} — {page.Title}"
             : mainTitle;
 
-        // Анимация появления страницы — стартуем когда UI готов к взаимодействию
+        // Page fade-in animation — start it once the UI is ready for interaction
         if (e.Content is FrameworkElement pageContent)
         {
             if (pageContent.IsLoaded)
@@ -228,10 +228,10 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Обновляет заголовок окна при смене языка.
-    /// Использует Dispatcher.InvokeAsync, чтобы дать возможность страницам
-    /// сначала обновить свой Title (через подписку на LanguageChanged),
-    /// и только затем MainWindow читает актуальный page.Title.
+    /// Updates the window title when the language changes.
+    /// Uses Dispatcher.InvokeAsync so that pages can update their Title first
+    /// (through their LanguageChanged subscription), and only afterwards
+    /// MainWindow reads the up-to-date page.Title.
     /// </summary>
     private void OnLanguageChanged(string culture)
     {
@@ -242,8 +242,8 @@ public partial class MainWindow : FluentWindow, IDisposable
                 ? $"{mainTitle} — {page.Title}"
                 : mainTitle;
 
-            // Контекстное меню трея создаётся в коде, поэтому его подписи
-            // не обновляются через {loc:Loc} — переустанавливаем вручную.
+            // The tray context menu is created in code, so its labels
+            // are not updated via {loc:Loc} — we set them manually.
             if (_trayOpenMenuItem != null)
                 _trayOpenMenuItem.Header = LocalizationManager.Get("Tray_Open");
 
@@ -255,7 +255,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Запуск обновления статусбара
+    /// Starts the status bar refresh
     /// </summary>
     private void StartStatusBarTimer()
     {
@@ -265,7 +265,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Остановка обновления статусбара
+    /// Stops the status bar refresh
     /// </summary>
     private void StopStatusBarTimer()
     {
@@ -275,7 +275,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Цикл обновления статусбара каждые 5 секунд
+    /// Status bar refresh loop, every 5 seconds
     /// </summary>
     private async Task StatusBarLoopAsync(CancellationToken ct)
     {
@@ -290,19 +290,19 @@ public partial class MainWindow : FluentWindow, IDisposable
         }
         catch (OperationCanceledException)
         {
-            // Ожидаемая отмена
+            // Expected cancellation
         }
     }
 
     /// <summary>
-    /// Авто-поиск установленных Java.
-    /// При каждом запуске сканирует систему и добавляет только новые установки (по пути).
+    /// Auto-detection of installed Java.
+    /// On every launch it scans the system and adds only new installations (matched by path).
     /// </summary>
     private void AutoDetectJava()
     {
         var config = _config.GetConfig();
 
-        // Если в конфиге ещё нет ни одной Java — первый запуск, делаем полную настройку
+        // No Java in the config yet — first launch, do the full setup
         if (config.JavaInstallations.Count == 0)
         {
             var foundJava = _javaService.FindInstalledJava();
@@ -323,14 +323,14 @@ public partial class MainWindow : FluentWindow, IDisposable
         }
         else
         {
-            // Уже есть Java — просто добавляем новые (без перезаписи существующих)
+            // Java is already there — just add the new ones (without overwriting existing ones)
             _javaService.ScanAndAddJava();
             UpdateStatusBar();
         }
     }
 
     /// <summary>
-    /// Навигация к странице настроек
+    /// Navigation to the settings page
     /// </summary>
     public void NavigateToSettings()
     {
@@ -341,7 +341,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Навигация к странице создания сервера
+    /// Navigation to the server creation page
     /// </summary>
     public void NavigateToCreateServer()
     {
@@ -352,7 +352,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Обновление статусбара
+    /// Status bar refresh
     /// </summary>
     public void UpdateStatusBar()
     {
@@ -390,7 +390,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     // ===== Tray =====
 
     /// <summary>
-    /// При сворачивании окна — в трей в зависимости от режима.
+    /// When the window is minimized — go to the tray depending on the mode.
     /// </summary>
     private void MainWindow_StateChanged(object? sender, EventArgs e)
     {
@@ -412,7 +412,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Обновляет видимость иконки в трее в зависимости от настроек и состояния окна.
+    /// Updates the tray icon visibility depending on the settings and the window state.
     /// </summary>
     public void UpdateTrayIconVisibility()
     {
@@ -444,11 +444,11 @@ public partial class MainWindow : FluentWindow, IDisposable
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
-        // Если приложение действительно завершается (из Exit меню), не отменяем
+        // If the app is really shutting down (from the Exit menu), do not cancel
         if (_isExiting)
             return;
 
-        // Сворачиваем в трей при закрытии в зависимости от режима
+        // Minimize to the tray on close depending on the mode
         var config = _config.GetConfig();
         var mode = Enum.TryParse<MinimizeToTrayMode>(config.MinimizeToTrayMode, out var m) ? m : MinimizeToTrayMode.OnClose;
         if (mode is MinimizeToTrayMode.OnClose or MinimizeToTrayMode.Always)
@@ -460,7 +460,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Обновляет статус в трее (количество серверов, подсказка).
+    /// Updates the tray status (server count, tooltip).
     /// </summary>
     private void UpdateTrayStatus()
     {
@@ -484,7 +484,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Навигация к деталям сервера (добавляет в историю навигации)
+    /// Navigation to the server details (adds to the navigation history)
     /// </summary>
     public void NavigateToServer(string serverId)
     {
@@ -492,7 +492,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Команда для навигации из XAML
+    /// Command used for navigation from XAML
     /// </summary>
     public static void NavigateToServerCommand(object parameter)
     {
@@ -505,7 +505,7 @@ public partial class MainWindow : FluentWindow, IDisposable
 
     private void NavButton_Click(object sender, RoutedEventArgs e)
     {
-        // Проверяем, не открыта ли уже страница настроек
+        // Check whether the settings page is already open
         if (ContentFrame.Content is Pages.SettingsPage)
         {
             return;
@@ -523,8 +523,8 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Применение темы приложения через WPF-UI
-    /// (переключает словари WPF-UI::ThemesDictionary на месте; Violeta-словари статичны)
+    /// Applies the application theme via WPF-UI
+    /// (swaps the WPF-UI::ThemesDictionary dictionaries in place; the Violeta dictionaries are static)
     /// </summary>
     public void ApplyTheme(string theme)
     {
@@ -559,7 +559,7 @@ public partial class MainWindow : FluentWindow, IDisposable
         _serverManager.OnServersChanged -= UpdateTrayStatus;
         LocalizationManager.LanguageChanged -= OnLanguageChanged;
 
-        // Удаляем иконку из трея
+        // Remove the icon from the tray
         try { _trayIcon?.Dispose(); } catch { /* ignored */ }
 
         // Dispose CTS
@@ -576,8 +576,8 @@ public partial class MainWindow : FluentWindow, IDisposable
     {
         _ = Dispatcher.InvokeAsync(() =>
         {
-            // Уведомление само показывает "vX → vY", поэтому статичную версию скрываем,
-            // чтобы версия не выводилась дважды (v1.0v1.0 → v1.1).
+            // The notification itself shows "vX → vY", so we hide the static version
+            // so the version is not printed twice (v1.0v1.0 → v1.1).
             VersionText.Visibility = Visibility.Collapsed;
             UpdateNotificationControl.Show(updateInfo);
         });
@@ -614,7 +614,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Запускает фоновый цикл авто-проверки обновлений.
+    /// Starts the background auto-update check loop.
     /// </summary>
     public void StartUpdateCheckLoop()
     {
@@ -622,7 +622,7 @@ public partial class MainWindow : FluentWindow, IDisposable
     }
 
     /// <summary>
-    /// Принудительная проверка обновлений (вызывается из SettingsPage).
+    /// Forced update check (called from SettingsPage).
     /// </summary>
     public async Task<UpdateInfo> ForceCheckForUpdatesAsync()
     {

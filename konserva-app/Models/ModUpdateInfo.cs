@@ -1,37 +1,37 @@
 namespace Konserva.Models;
 
 /// <summary>
-/// Найденное в репозитории обновление конкретного файла мода.
+/// An update for a specific mod file found in the repository.
 /// </summary>
 public class ModUpdateInfo
 {
-    /// <summary>Путь к локальному jar-файлу.</summary>
+    /// <summary>Path to the local jar file.</summary>
     public string FilePath { get; set; } = string.Empty;
 
-    /// <summary>SHA-512 локального файла.</summary>
+    /// <summary>SHA-512 of the local file.</summary>
     public string CurrentHash { get; set; } = string.Empty;
 
-    /// <summary>Версия, соответствующая локальному файлу (если найдена в репозитории).</summary>
+    /// <summary>Version matching the local file (if found in the repository).</summary>
     public string? CurrentVersion { get; set; }
 
-    /// <summary>Идентификатор версии в репозитории.</summary>
+    /// <summary>Version identifier in the repository.</summary>
     public string VersionId { get; set; } = string.Empty;
 
-    /// <summary>Идентификатор проекта в репозитории.</summary>
+    /// <summary>Project identifier in the repository.</summary>
     public string ProjectId { get; set; } = string.Empty;
 
-    /// <summary>Номер новой версии.</summary>
+    /// <summary>Number of the new version.</summary>
     public string LatestVersion { get; set; } = string.Empty;
 
-    /// <summary>URL для скачивания новой версии.</summary>
+    /// <summary>URL for downloading the new version.</summary>
     public string DownloadUrl { get; set; } = string.Empty;
 
-    /// <summary>Имя файла новой версии.</summary>
+    /// <summary>File name of the new version.</summary>
     public string DownloadFileName { get; set; } = string.Empty;
 
-    /// <summary>SHA-512 новой версии (для проверки после скачивания).</summary>
+    /// <summary>SHA-512 of the new version (for verification after download).</summary>
     public string LatestHash { get; set; } = string.Empty;
 
-    /// <summary>Ссылка на страницу версии (для открытия в браузере).</summary>
+    /// <summary>Link to the version page (to open it in a browser).</summary>
     public string VersionPageUrl => $"https://modrinth.com/project/{ProjectId}/version/{VersionId}";
 }

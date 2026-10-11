@@ -25,7 +25,7 @@
         <ui:TitleBar Grid.Row="0" Height="32">
             <ui:TitleBar.Header>
                 <Grid ColumnDefinitions="Auto,Auto">
-                    <!--  Кнопка "Назад"  -->
+                    <!--  "Back" button  -->
                     <ui:Button
                         x:Name="BackButton"
                         Grid.Column="0"
@@ -37,7 +37,7 @@
                         Visibility="Collapsed">
                         <ui:SymbolIcon FontSize="13" Symbol="ArrowLeft32" />
                     </ui:Button>
-                    <!--  Иконка и заголовок (прозрачны для мыши)  -->
+                    <!--  Icon and title (transparent to mouse input)  -->
                     <StackPanel
                         Grid.Column="1"
                         Margin="8,0,0,0"
@@ -184,7 +184,7 @@
                         FontSize="12"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         Text="{utils:AppVersion Prefix=v}" />
-                    <!--  SpinnerRing — виден только во время проверки обновлений  -->
+                    <!--  SpinnerRing — visible only while checking for updates  -->
                     <controls:SpinnerRing
                         x:Name="UpdateProgressRing"
                         Width="16"
@@ -193,7 +193,7 @@
                         VerticalAlignment="Center"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         Visibility="Collapsed" />
-                    <!--  Checkmark — виден, когда версия актуальна  -->
+                    <!--  Checkmark — visible when the version is up to date  -->
                     <ui:SymbolIcon
                         x:Name="UpdateCheckmarkIcon"
                         Margin="4,0,0,0"
@@ -207,7 +207,7 @@
             </Grid>
         </Border>
 
-        <!--  Snackbar Presenter — поверх всего контента  -->
+        <!--  Snackbar Presenter — above all content  -->
         <ui:SnackbarPresenter
             x:Name="SnackbarPresenter"
             Grid.Row="0"
@@ -217,7 +217,7 @@
             VerticalAlignment="Bottom"
             Panel.ZIndex="100" />
 
-        <!--  ContentDialog Host — для модальных диалогов  -->
+        <!--  ContentDialog Host — for modal dialogs  -->
         <ui:ContentDialogHost
             x:Name="ContentDialogPresenter"
             Grid.Row="0"

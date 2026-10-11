@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 namespace Konserva.Services;
 
 /// <summary>
-/// Сервис автоматической установки серверов Minecraft
+/// Service for automatic installation of Minecraft servers
 /// </summary>
 public partial class McServerInstaller : IServerInstaller, IDisposable
 {
@@ -37,7 +37,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
         if (_disposed)
             return;
         _disposed = true;
-        // HttpClient получен из IHttpClientFactory — не диспозим, фабрика управляет его жизнью
+        // HttpClient comes from IHttpClientFactory — do not dispose it, the factory manages its lifetime
     }
 
     private HttpClient GetHttpClient()
@@ -47,7 +47,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     }
 
     /// <summary>
-    /// Информация о версии Minecraft
+    /// Information about a Minecraft version
     /// </summary>
     public class VersionInfo
     {
@@ -57,7 +57,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     }
 
     /// <summary>
-    /// Получить манифест версий
+    /// Gets the version manifest
     /// </summary>
     private async Task<List<VersionInfo>> GetVersionManifest(CancellationToken ct = default)
     {
@@ -81,7 +81,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     }
 
     /// <summary>
-    /// Скачать файл по URL с прогрессом
+    /// Downloads a file from a URL with progress reporting
     /// </summary>
     private async Task<(bool success, string? error)> DownloadFile(string url, string destinationPath, string fileName,
         IProgress<string>? progress = null, CancellationToken ct = default)
@@ -114,7 +114,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                 await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct);
                 downloadedBytes += bytesRead;
 
-                // Сообщаем прогресс при каждом новом проценте
+                // Report progress on every new percent
                 if (totalBytes > 0)
                 {
                     var percent = (int)(downloadedBytes * 100 / totalBytes);
@@ -141,7 +141,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     }
 
     /// <summary>
-    /// Полная установка сервера
+    /// Full server installation
     /// </summary>
     public async Task<InstallResult> InstallServer(
         ModLoaderType modLoaderType,
@@ -161,7 +161,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
             progress?.Report(LocalizationManager.Get("Installer_Preparing"));
             result.Status = InstallStatus.Installing;
 
-            // Для Paper используем InstallResult, для остальных — bool
+            // Paper uses InstallResult, the others — bool
             InstallResult installResult;
             if (modLoaderType == ModLoaderType.Paper)
             {
@@ -189,13 +189,13 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                 return result;
             }
 
-            // Сохраняем номер сборки для Paper
+            // Store the build number for Paper
             if (installResult.BuildNumber.HasValue)
             {
                 result.BuildNumber = installResult.BuildNumber;
             }
 
-            // Создание конфигурационных файлов (server.properties создастся при запуске)
+            // Creating the configuration files (server.properties is created on startup)
             progress?.Report(LocalizationManager.Get("Installer_Configuring"));
             result.Status = InstallStatus.Configuring;
             CreateEula(serverPath);
@@ -225,7 +225,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     #region Общие методы
 
     /// <summary>
-    /// Выполнить HTTP GET и прочитать ответ как строку с decompression.
+    /// Performs an HTTP GET and reads the response as a string with decompression.
     /// </summary>
     private async Task<string> FetchStringAsync(string url, CancellationToken ct = default)
     {
@@ -239,7 +239,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     }
 
     /// <summary>
-    /// Выполнить HTTP GET и распарсить JSON-ответ.
+    /// Performs an HTTP GET and parses the JSON response.
     /// </summary>
     private async Task<JsonDocument> FetchJsonAsync(string url, CancellationToken ct = default)
     {
@@ -248,7 +248,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     }
 
     /// <summary>
-    /// Ожидание стабилизации файлов после установки (Forge / NeoForge / Quilt).
+    /// Waits for files to settle after installation (Forge / NeoForge / Quilt).
     /// </summary>
     private async Task WaitForFileStabilityAsync(string destinationPath, string loaderPrefix, CancellationToken ct,
         IProgress<string>? progress = null, int maxWaitSeconds = 60, bool checkRunBat = true)
@@ -324,7 +324,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     }
 
     /// <summary>
-    /// Проверить что файл не заблокирован другим процессом
+    /// Checks that a file is not locked by another process
     /// </summary>
     private bool IsFileUnlocked(string filePath)
     {
@@ -332,21 +332,21 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
         {
             using (FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
             {
-                return true; // Файл доступен — не заблокирован
+                return true; // File is accessible — not locked
             }
         }
         catch (IOException)
         {
-            return false; // Файл заблокирован
+            return false; // File is locked
         }
         catch (UnauthorizedAccessException)
         {
-            return false; // Нет доступа
+            return false; // Access denied
         }
     }
 
     /// <summary>
-    /// Создать eula.txt
+    /// Creates eula.txt
     /// </summary>
     public void CreateEula(string serverPath)
     {
@@ -362,13 +362,13 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
 
 
     /// <summary>
-    /// Найти путь к Java
+    /// Finds the path to Java
     /// </summary>
     private string? FindJavaPath()
     {
         Logger.Info("Finding Java path...");
 
-        // 1. Проверяем Java из конфигурации приложения
+        // 1. Check the Java installation from the application config
         try
         {
             var config = _configService?.GetConfig();
@@ -383,7 +383,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                     return defaultJava.Path;
                 }
 
-                // Если нет Java по умолчанию, берём первую доступную
+                // If there is no default Java, take the first available one
                 var firstJava = config.JavaInstallations.FirstOrDefault(j => j.Exists);
                 if (firstJava != null)
                 {
@@ -407,7 +407,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
             Logger.Error($"Error checking config for Java: {ex.Message}");
         }
 
-        // 2. Проверяем JAVA_HOME
+        // 2. Check JAVA_HOME
         var javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
         if (!string.IsNullOrEmpty(javaHome))
         {
@@ -424,7 +424,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
             Logger.Info("JAVA_HOME not set");
         }
 
-        // 3. Проверяем PATH
+        // 3. Check PATH
         try
         {
             var startInfo = new ProcessStartInfo
@@ -465,25 +465,25 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     }
 
     /// <summary>
-    /// Найти Java путь для конкретной версии Minecraft.
-    /// Использует централизованный <see cref="JavaVersionParser.GetRequiredJavaVersion"/>.
+    /// Finds the Java path for a specific Minecraft version.
+    /// Uses the centralized <see cref="JavaVersionParser.GetRequiredJavaVersion"/>.
     /// </summary>
     private string? FindJavaPathForVersion(string mcVersion)
     {
         Logger.Info($"Finding Java for Minecraft version {mcVersion}", "McServerInstaller");
 
-        // Определяем требуемую версию Java через централизованный парсер
+        // Determine the required Java version via the centralized parser
         int requiredJavaVersion = JavaVersionParser.GetRequiredJavaVersion(mcVersion, ServerLaunchType.Standard);
 
         Logger.Info($"Minecraft {mcVersion} requires Java {requiredJavaVersion}", "McServerInstaller");
 
-        // Пытаемся найти Java нужной версии в конфигурации
+        // Try to find a Java of the required version in the config
         try
         {
             var config = _configService?.GetConfig();
             if (config != null)
             {
-                // Ищем Java с точным совпадением major-версии (используем MajorVersion, а не строку Version)
+                // Look for Java with an exact major version match (use MajorVersion, not the Version string)
                 var matchingJava = config.JavaInstallations
                     .FirstOrDefault(j => j.Exists && j.MajorVersion == requiredJavaVersion);
 
@@ -493,7 +493,7 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
                     return matchingJava.Path;
                 }
 
-                // Если не нашли точное совпадение, пробуем найти Java с большей версией
+                // If there is no exact match, try to find a Java with a higher version
                 var newerJava = config.JavaInstallations
                     .FirstOrDefault(j => j.Exists && j.MajorVersion >= requiredJavaVersion);
 
@@ -509,37 +509,37 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
             Logger.Error($"Error checking config for Java version: {ex.Message}", ex, "McServerInstaller");
         }
 
-        // Fallback на обычный поиск Java
+        // Fall back to the regular Java lookup
         Logger.Warning($"Java {requiredJavaVersion} not found, using any available Java", "McServerInstaller");
         return FindJavaPath();
     }
 
     /// <summary>
-    /// Распарсить версию Minecraft на major и minor компоненты.
-    /// Делегирует в <see cref="McVersionHelper.TryParseMcVersion"/>.
+    /// Parses a Minecraft version into major and minor components.
+    /// Delegates to <see cref="McVersionHelper.TryParseMcVersion"/>.
     /// </summary>
     public bool TryParseMcVersion(string version, out int major, out int minor)
         => McVersionHelper.TryParseMcVersion(version, out major, out minor);
 
     /// <summary>
-    /// Конвертировать версию Minecraft в формат NeoForge
+    /// Converts a Minecraft version to the NeoForge format
     /// 1.21.10 -> 21.10, 1.20.4 -> 20.4, 1.18.2 -> 18.2
     /// </summary>
     private string ConvertMcVersionToNeoForgeFormat(string mcVersion)
     {
         if (TryParseMcVersion(mcVersion, out var major, out var minor))
         {
-            // Для версий 1.X.Y возвращаем X.Y
+            // For 1.X.Y versions return X.Y
             if (major == 1)
                 return $"{minor}.{GetPatchVersion(mcVersion)}";
-            // Для версий 2.X+ возвращаем X.Y
+            // For 2.X+ versions return X.Y
             return $"{major}.{minor}";
         }
         return mcVersion;
     }
 
     /// <summary>
-    /// Получить patch версию из строки (третий компонент)
+    /// Gets the patch version from a version string (third component)
     /// </summary>
     private int GetPatchVersion(string version)
     {
@@ -552,14 +552,14 @@ public partial class McServerInstaller : IServerInstaller, IDisposable
     #endregion
 
     /// <summary>
-    /// Результат установки
+    /// Installation result
     /// </summary>
     public class InstallResult
     {
         public bool Success { get; set; }
         public InstallStatus Status { get; set; }
         public string? Error { get; set; }
-        public int? BuildNumber { get; set; }  // Номер сборки для Paper
+        public int? BuildNumber { get; set; }  // Build number for Paper
     }
 
     public enum InstallStatus

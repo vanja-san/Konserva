@@ -11,12 +11,12 @@ using TextBlock = Wpf.Ui.Controls.TextBlock;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Утилита для отображения ContentDialog и UI-операций
+/// Utility for showing ContentDialogs and performing UI operations
 /// </summary>
 public static class UiHelper
 {
     /// <summary>
-    /// Открыть папку в проводнике
+    /// Open a folder in Explorer
     /// </summary>
     public static void OpenFolder(string path)
     {
@@ -36,7 +36,7 @@ public static class UiHelper
     }
 
     /// <summary>
-    /// Получает ContentDialogService из MainWindow
+    /// Gets the ContentDialogService from MainWindow
     /// </summary>
     private static IContentDialogService? GetDialogService()
     {
@@ -44,7 +44,7 @@ public static class UiHelper
     }
 
     /// <summary>
-    /// Показ информационного сообщения
+    /// Shows an informational message
     /// </summary>
     public static async Task<ContentDialogResult> ShowInfo(string message, string title = "")
     {
@@ -64,7 +64,7 @@ public static class UiHelper
     }
 
     /// <summary>
-    /// Показ предупреждения
+    /// Shows a warning
     /// </summary>
     public static async Task<ContentDialogResult> ShowWarning(string message, string title = "")
     {
@@ -83,7 +83,7 @@ public static class UiHelper
     }
 
     /// <summary>
-    /// Показ ошибки
+    /// Shows an error
     /// </summary>
     public static async Task<ContentDialogResult> ShowError(string message, string title = "")
     {
@@ -103,7 +103,7 @@ public static class UiHelper
     }
 
     /// <summary>
-    /// Показ подтверждения
+    /// Shows a confirmation prompt
     /// </summary>
     public static async Task<ContentDialogResult> ShowConfirm(string message, string title = "")
     {

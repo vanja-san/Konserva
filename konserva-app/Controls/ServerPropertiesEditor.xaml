@@ -9,7 +9,7 @@
     <UserControl.Resources>
         <Style x:Key="ExpanderHeaderStyle" TargetType="TextBlock" />
 
-        <!--  Единые отступы для элементов формы  -->
+        <!--  Consistent padding for form elements  -->
         <Style BasedOn="{StaticResource {x:Type ui:TextBox}}" TargetType="ui:TextBox">
             <Setter Property="Height" Value="34" />
             <Setter Property="Margin" Value="12,8,0,8" />
@@ -29,7 +29,7 @@
     </UserControl.Resources>
 
     <Grid RowDefinitions="*,Auto">
-        <!--  Сообщение если файла нет  -->
+        <!--  Message shown when the file does not exist  -->
         <Border
             x:Name="NoFileMessage"
             Grid.Row="0"
@@ -55,7 +55,7 @@
             </StackPanel>
         </Border>
 
-        <!--  Основной контент (скрыт пока файл не создан)  -->
+        <!--  Main content (hidden until the file is created)  -->
         <ScrollViewer
             x:Name="PropertiesScrollViewer"
             Grid.Row="0"
@@ -187,7 +187,7 @@
                     </Grid>
                 </ui:CardExpander>
 
-                <!--  Режим игры  -->
+                <!--  Game mode  -->
                 <ui:CardExpander
                     x:Name="GamemodeExpander"
                     Margin="0,0,0,8"
@@ -336,7 +336,7 @@
                             Grid.Column="1"
                             HorizontalAlignment="Right" />
 
-                        <!--  Спавн существ (перемещено из устаревших)  -->
+                        <!--  Creature spawning (moved from the deprecated ones)  -->
                         <StackPanel
                             x:Name="SpawnNpcsBoxParent"
                             Grid.Row="7"
@@ -390,7 +390,7 @@
                     </Grid>
                 </ui:CardExpander>
 
-                <!--  Мир  -->
+                <!--  World  -->
                 <ui:CardExpander
                     x:Name="WorldExpander"
                     Margin="0,0,0,8"
@@ -552,8 +552,8 @@
                     </Grid>
                 </ui:CardExpander>
 
-                <!--  Безопасность и ограничения  -->
-                <!--  Сеть и безопасность  -->
+                <!--  Security and restrictions  -->
+                <!--  Network and security  -->
                 <ui:CardExpander
                     x:Name="NetworkExpander"
                     Margin="0,0,0,8"
@@ -1555,7 +1555,7 @@
                 </ui:CardExpander>
             </StackPanel>
         </ScrollViewer>
-        <!--  Нижняя панель (кнопки действий)  -->
+        <!--  Bottom panel (action buttons)  -->
         <Border
             Grid.Row="1"
             Margin="0,16,0,0"

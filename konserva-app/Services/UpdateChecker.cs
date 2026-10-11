@@ -9,8 +9,8 @@ using static Konserva.Models.ApiUrls;
 namespace Konserva.Services
 {
     /// <summary>
-    /// Проверяет наличие обновлений через version.json в корне репозитория.
-    /// Файл раздаётся через raw.githubusercontent.com (CDN, без rate limit).
+    /// Checks for updates via version.json in the repository root.
+    /// The file is served through raw.githubusercontent.com (a CDN, no rate limit).
     /// </summary>
     public sealed class UpdateChecker : IUpdateChecker
     {
@@ -22,7 +22,7 @@ namespace Konserva.Services
         }
 
         /// <summary>
-        /// Проверяет наличие обновления через version.json на raw.githubusercontent.com.
+        /// Checks for an update via version.json on raw.githubusercontent.com.
         /// </summary>
         public async Task<UpdateInfo> CheckAsync()
         {
@@ -53,7 +53,7 @@ namespace Konserva.Services
                     return updateInfo;
                 }
 
-                // Ищем ассет под наш тип сборки
+                // Look for the asset matching our build type
                 var download = manifest.Downloads?.GetValueOrDefault(buildType);
                 if (download == null || string.IsNullOrEmpty(download.Url))
                 {
@@ -93,8 +93,8 @@ namespace Konserva.Services
         }
 
         /// <summary>
-        /// Определяет тип сборки по размеру exe (порог 30 МБ).
-        /// Full ≈ 60 МБ, Deps ≈ 9 МБ.
+        /// Determines the build type from the exe size (30 MB threshold).
+        /// Full ≈ 60 MB, Deps ≈ 9 MB.
         /// </summary>
         public static string DetectBuildType()
         {
@@ -115,7 +115,7 @@ namespace Konserva.Services
         }
 
         /// <summary>
-        /// Публичный доступ к текущей версии (без вызова API).
+        /// Public access to the current version (without calling the API).
         /// </summary>
         public string GetCurrentVersion()
         {

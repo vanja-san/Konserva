@@ -3,7 +3,7 @@
 namespace Konserva.Models;
 
 /// <summary>
-/// Информация об установленной Java
+/// Information about an installed Java
 /// </summary>
 public class JavaInstallation
 {
@@ -16,19 +16,19 @@ public class JavaInstallation
     public DateTime? AddedDate { get; set; } = SystemTime.Now;
 
     /// <summary>
-    /// Отображаемое имя
+    /// Display name
     /// </summary>
     public string DisplayName => string.IsNullOrEmpty(Name)
         ? $"Java {Version}"
         : $"{Name} {Version}";
 
     /// <summary>
-    /// Проверка: существует ли файл Java
+    /// Check: whether the Java file exists
     /// </summary>
     public bool Exists => System.IO.File.Exists(Path) || System.IO.File.Exists(Path + ".exe");
 
     /// <summary>
-    /// Создание копии
+    /// Creates a copy
     /// </summary>
     public JavaInstallation Clone() => new()
     {

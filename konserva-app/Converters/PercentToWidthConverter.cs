@@ -4,7 +4,7 @@ using System.Windows.Data;
 namespace Konserva.Converters;
 
 /// <summary>
-/// Конвертирует процент в ширину прогресс бара
+/// Converts a percentage to the width of a progress bar
 /// </summary>
 public class PercentToWidthConverter : IValueConverter
 {

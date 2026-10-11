@@ -1,14 +1,14 @@
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Сравнение версий загрузчиков по числовым компонентам.
+/// Comparison of loader versions by numeric components.
 /// </summary>
 public static class VersionCompare
 {
     /// <summary>
-    /// Сравнивает версии загрузчика по числовым компонентам
-    /// ("0.19.4" &lt; "0.19.5"; сборки Paper "492 (ALPHA)" — по ведущему числу).
-    /// Возвращает отрицательное, ноль или положительное значение.
+    /// Compares loader versions by numeric components
+    /// ("0.19.4" &lt; "0.19.5"; Paper builds like "492 (ALPHA)" — by the leading number).
+    /// Returns a negative, zero or positive value.
     /// </summary>
     public static int CompareLoaderVersions(string a, string b)
     {
@@ -24,7 +24,7 @@ public static class VersionCompare
             var aPart = i < aParts.Length ? aParts[i] : "0";
             var bPart = i < bParts.Length ? bParts[i] : "0";
 
-            // Числовой префикс части (до пробела) — напр. "492 (ALPHA)"
+            // Numeric prefix of the part (up to the space) — e.g. "492 (ALPHA)"
             var aNumStr = aPart.Split(' ')[0];
             var bNumStr = bPart.Split(' ')[0];
 

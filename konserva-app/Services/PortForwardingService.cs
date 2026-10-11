@@ -4,7 +4,7 @@ using SharpOpenNat;
 namespace Konserva.Services;
 
 /// <summary>
-/// Реализация проброса портов через UPnP / NAT-PMP с использованием SharpOpenNat.
+/// Port forwarding implementation via UPnP / NAT-PMP using SharpOpenNat.
 /// </summary>
 public sealed class PortForwardingService : IPortForwardingService, IDisposable
 {
@@ -14,7 +14,7 @@ public sealed class PortForwardingService : IPortForwardingService, IDisposable
     private readonly SemaphoreSlim _discoverLock = new(1, 1);
 
     /// <summary>
-    /// Ищет UPnP/NAT-PMP роутер в локальной сети. Кэширует результат.
+    /// Looks for a UPnP/NAT-PMP router on the local network. Caches the result.
     /// </summary>
     private async Task<INatDevice?> GetDeviceAsync(CancellationToken ct = default)
     {
@@ -58,7 +58,7 @@ public sealed class PortForwardingService : IPortForwardingService, IDisposable
     }
 
     /// <summary>
-    /// Проверяет, доступен ли UPnP-роутер.
+    /// Checks whether a UPnP router is available.
     /// </summary>
     public async Task<bool> IsAvailableAsync()
     {
@@ -67,7 +67,7 @@ public sealed class PortForwardingService : IPortForwardingService, IDisposable
     }
 
     /// <summary>
-    /// Создаёт проброс порта (TCP) на роутере.
+    /// Creates a port forwarding rule (TCP) on the router.
     /// </summary>
     public async Task<bool> CreateMappingAsync(int port, string description)
     {
@@ -93,7 +93,7 @@ public sealed class PortForwardingService : IPortForwardingService, IDisposable
     }
 
     /// <summary>
-    /// Удаляет проброс порта (TCP) с роутера.
+    /// Removes a port forwarding rule (TCP) from the router.
     /// </summary>
     public async Task<bool> DeleteMappingAsync(int port)
     {
@@ -113,14 +113,14 @@ public sealed class PortForwardingService : IPortForwardingService, IDisposable
         }
         catch (MappingException ex)
         {
-            // 404/725 — правило уже удалено или не существует
+            // 404/725 — the rule was already removed or does not exist
             Logger.Info($"UPnP mapping for port {port} already removed ({ex.Message})", "UPnP");
             return true;
         }
     }
 
     /// <summary>
-    /// Проверяет, существует ли проброс порта (TCP) на роутере.
+    /// Checks whether a port forwarding rule (TCP) exists on the router.
     /// </summary>
     public async Task<bool> CheckMappingAsync(int port)
     {
@@ -148,7 +148,7 @@ public sealed class PortForwardingService : IPortForwardingService, IDisposable
     }
 
     /// <summary>
-    /// Получает внешний (публичный) IP-адрес через UPnP-роутер. Результат кэшируется.
+    /// Gets the external (public) IP address through the UPnP router. The result is cached.
     /// </summary>
     public async Task<string?> GetExternalIpAsync()
     {
@@ -175,7 +175,7 @@ public sealed class PortForwardingService : IPortForwardingService, IDisposable
     }
 
     /// <summary>
-    /// Возвращает последний известный внешний IP без перезапроса к роутеру.
+    /// Returns the last known external IP without querying the router again.
     /// </summary>
     public string? TryGetCachedExternalIp() => _lastExternalIp;
 

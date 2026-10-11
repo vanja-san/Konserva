@@ -6,12 +6,12 @@ using System.Windows.Media;
 namespace Konserva.Converters;
 
 /// <summary>
-/// Конвертирует статус сервера в кисть
+/// Converts a server status to a brush
 /// </summary>
 public class StatusToBrushConverter : IValueConverter
 {
-    // Резервные цвета, если ресурса темы нет (например, в юнит-тестах).
-    // Они никогда не меняются, поэтому их можно заморозить.
+    // Fallback colors used when the theme resource is missing (for example, in unit tests).
+    // They never change, so they can be frozen.
     private static readonly SolidColorBrush FallbackSuccess = Frozen(0x22, 0xC5, 0x5E);
     private static readonly SolidColorBrush FallbackWarning = Frozen(0xF5, 0x9E, 0x0B);
     private static readonly SolidColorBrush FallbackError = Frozen(0xEF, 0x44, 0x44);
@@ -25,11 +25,11 @@ public class StatusToBrushConverter : IValueConverter
     }
 
     /// <summary>
-    /// Берёт кисть из словаря ресурсов темы.
+    /// Gets the brush from the theme resource dictionary.
     /// <para>
-    /// Ресурс читается на каждый вызов, а не кэшируется в static-поле:
-    /// иначе цвета «замерзали» на момент первого обращения и не менялись
-    /// при переключении светлой/тёмной темы.
+    /// The resource is read on every call instead of being cached in a static field:
+    /// otherwise the colors "froze" at the time of the first access and did not change
+    /// when switching between the light/dark theme.
     /// </para>
     /// </summary>
     private static SolidColorBrush FromTheme(string key, SolidColorBrush fallback)

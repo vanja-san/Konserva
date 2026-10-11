@@ -1,31 +1,31 @@
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Обёртка над TimeProvider для тестируемости.
-/// По умолчанию использует TimeProvider.System.
-/// Может быть переопределён в тестах через SetProvider().
+/// Wrapper around TimeProvider for testability.
+/// Uses TimeProvider.System by default.
+/// Can be overridden in tests via SetProvider().
 /// </summary>
 public static class SystemTime
 {
     private static TimeProvider _provider = TimeProvider.System;
 
     /// <summary>
-    /// Текущее локальное время.
+    /// Current local time.
     /// </summary>
     public static DateTime Now => _provider.GetLocalNow().DateTime;
 
     /// <summary>
-    /// Текущее UTC время.
+    /// Current UTC time.
     /// </summary>
     public static DateTime UtcNow => _provider.GetUtcNow().DateTime;
 
     /// <summary>
-    /// Возвращает TimeProvider (для передачи в API, которые его принимают).
+    /// Returns the TimeProvider (for passing to APIs that accept one).
     /// </summary>
     public static TimeProvider Provider => _provider;
 
     /// <summary>
-    /// Устанавливает провайдер времени (из DI или для тестов).
+    /// Sets the time provider (from DI or for tests).
     /// </summary>
     public static void SetProvider(TimeProvider provider)
     {
@@ -33,7 +33,7 @@ public static class SystemTime
     }
 
     /// <summary>
-    /// Сбрасывает на системное время (для тестов).
+    /// Resets to system time (for tests).
     /// </summary>
     public static void Reset()
     {

@@ -10,7 +10,7 @@ public class ConfigService : IConfigService, IDisposable
     private bool _disposed;
 
     /// <summary>
-    /// Основной конструктор. Путь к файлу конфигурации: BaseDirectory/config.json
+    /// Main constructor. Configuration file path: BaseDirectory/config.json
     /// </summary>
     public ConfigService()
         : this(Path.Combine(AppContext.BaseDirectory, "config.json"))
@@ -18,7 +18,7 @@ public class ConfigService : IConfigService, IDisposable
     }
 
     /// <summary>
-    /// Конструктор с указанием пути (используется в тестах)
+    /// Constructor with an explicit path (used in tests)
     /// </summary>
     internal ConfigService(string configPath)
     {
@@ -26,7 +26,7 @@ public class ConfigService : IConfigService, IDisposable
     }
 
     /// <summary>
-    /// Создание необходимых директорий при первом обращении
+    /// Creates the required directories on first access
     /// </summary>
     private static void EnsureDirectoriesExist()
     {

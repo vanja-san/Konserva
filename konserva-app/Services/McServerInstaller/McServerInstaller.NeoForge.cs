@@ -7,47 +7,47 @@ using System.Text.RegularExpressions;
 namespace Konserva.Services;
 
 /// <summary>
-/// Установка NeoForge сервера: получение URL, версий из Maven metadata, установка
+/// NeoForge server installation: resolving the URL, reading versions from Maven metadata, installing
 /// </summary>
 public partial class McServerInstaller
 {
     /// <summary>
-    /// Получить URL NeoForge installer
+    /// Get the NeoForge installer URL
     /// </summary>
     public async Task<string?> GetNeoForgeInstallerUrl(string mcVersion, string neoforgeVersion, CancellationToken ct = default)
     {
         try
         {
-            // Если версия "latest", нужно получить конкретную версию
+            // If the version is "latest", we need to resolve a concrete version
             var actualVersion = neoforgeVersion;
             if (neoforgeVersion == "latest" || neoforgeVersion == "recommended")
             {
                 Logger.Info($"Fetching NeoForge version list for {mcVersion} to resolve '{neoforgeVersion}'", "McServerInstaller");
 
-                // Пробуем получить последнюю версию из Maven metadata
-                // NeoForge promotions API (promotions_slim.json) был удалён после разделения Forge и NeoForge
+                // Try to obtain the latest version from the Maven metadata
+                // The NeoForge promotions API (promotions_slim.json) was removed after the Forge/NeoForge split
                 actualVersion = await GetLatestNeoForgeVersionFromMetadata(mcVersion, ct) ?? neoforgeVersion;
             }
 
-            // Формируем URL с версией NeoForge
-            // Для MC < 1.21 используется neoforged/forge/, для MC >= 1.21 — neoforged/neoforge/
+            // Build the URL with the NeoForge version
+            // For MC < 1.21 the neoforged/forge/ path is used, for MC >= 1.21 — neoforged/neoforge/
             var isNewNeoForge = IsNewNeoForgePath(mcVersion);
             var baseGroup = isNewNeoForge ? "neoforge" : "forge";
             var prefix = isNewNeoForge ? "neoforge-" : "forge-";
             string mavenPath = actualVersion;
 
-            // Проверяем несколько форматов URL
+            // Try several URL formats
             var urls = new List<string>
             {
-                // Формат 1: Maven классический (новый путь neoforged/neoforge/ или старый neoforged/forge/)
+                // Format 1: classic Maven (new neoforged/neoforge/ path or old neoforged/forge/)
                 $"https://maven.neoforged.net/releases/net/neoforged/{baseGroup}/{mavenPath}/{prefix}{mavenPath}-installer.jar",
-                // Формат 2: Maven с mc версией
+                // Format 2: Maven with the mc version
                 $"https://maven.neoforged.net/releases/net/neoforged/{baseGroup}/{mcVersion}-{mavenPath}/{prefix}{mcVersion}-{mavenPath}-installer.jar",
-                // Формат 3: Прямой download
+                // Format 3: direct download
                 $"https://maven.neoforged.net/api/v1/installer/{mcVersion}-{mavenPath}"
             };
 
-            // Если не уверены в пути, пробуем оба варианта
+            // If we are not sure about the path, try both variants
             if (!isNewNeoForge)
             {
                 urls.Insert(0, $"https://maven.neoforged.net/releases/net/neoforged/neoforge/{mavenPath}/neoforge-{mavenPath}-installer.jar");
@@ -79,7 +79,7 @@ public partial class McServerInstaller
                 }
             }
 
-            // Если все URL не работали, пробуем получить версию из Maven metadata (fallback)
+            // If none of the URLs worked, try to get the version from the Maven metadata (fallback)
             Logger.Info("Trying to fetch NeoForge version from Maven metadata (fallback)...", "McServerInstaller");
             var fallbackVersion = await GetLatestNeoForgeVersionFromMetadata(mcVersion, ct);
             if (fallbackVersion != null)
@@ -100,11 +100,11 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Определить, используется новый путь NeoForge (neoforged/neoforge/) для данной MC версии
+    /// Determine whether the new NeoForge path (neoforged/neoforge/) is used for a given MC version
     /// </summary>
     private static bool IsNewNeoForgePath(string mcVersion)
     {
-        // NeoForge перешёл на neoforged/neoforge/ начиная с MC 1.21
+        // NeoForge switched to neoforged/neoforge/ starting with MC 1.21
         if (Version.TryParse(mcVersion, out var ver))
         {
             return ver.Major >= 1 && ver.Minor >= 21;
@@ -113,7 +113,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Получить последнюю версию NeoForge из Maven metadata, соответствующую MC версии
+    /// Get the latest NeoForge version matching an MC version from the Maven metadata
     /// </summary>
     private async Task<string?> GetLatestNeoForgeVersionFromMetadata(string mcVersion, CancellationToken ct = default)
     {
@@ -133,7 +133,7 @@ public partial class McServerInstaller
                     Logger.Info($"Fetching NeoForge metadata: {metadataUrl}", "McServerInstaller");
                     var metadata = await GetHttpClient().GetStringAsync(metadataUrl, ct);
 
-                    // Ищем все версии
+                    // Search for all versions
                     var versionMatches = Regex.Matches(metadata, @"<version>([^<]+)</version>");
                     var versions = versionMatches
                         .Select(m => m.Groups[1].Value)
@@ -142,7 +142,7 @@ public partial class McServerInstaller
 
                     if (versions.Count > 0)
                     {
-                        // Сортируем по убыванию (последняя версия)
+                        // Sort in descending order (latest version first)
                         var latest = versions.OrderByDescending(v => v).First();
                         Logger.Info($"Found NeoForge version {latest} for MC {mcVersion} in {metadataUrl}", "McServerInstaller");
                         return latest;
@@ -156,7 +156,7 @@ public partial class McServerInstaller
                 }
             }
 
-            // Fallback на известные версии
+            // Fallback to known versions
             var fallback = mcVersion switch
             {
                 "1.21.4" => "21.4.0",
@@ -182,7 +182,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Установить NeoForge сервер автоматически
+    /// Install a NeoForge server automatically
     /// </summary>
     public async Task<bool> InstallNeoForgeServer(string mcVersion, string neoforgeVersion,
         string destinationPath, IProgress<string>? progress = null, CancellationToken ct = default)
@@ -200,7 +200,7 @@ public partial class McServerInstaller
                 return false;
             }
 
-            // 1. Скачиваем installer
+            // 1. Download the installer
             var downloadsDir = Constants.DownloadsPath;
             Directory.CreateDirectory(downloadsDir);
             var installerPath = Path.Combine(downloadsDir, "neoforge-installer.jar");
@@ -217,7 +217,7 @@ public partial class McServerInstaller
 
             Logger.Info("NeoForge installer downloaded, running installer...");
 
-            // 2. Запускаем installer
+            // 2. Run the installer
             progress?.Report(string.Format(LocalizationManager.Get("Installer_RunningInstaller"), "NeoForge"));
             var success = await RunForgeInstaller(installerPath, destinationPath, ct, progress);
 
@@ -230,7 +230,7 @@ public partial class McServerInstaller
             {
                 await WaitForFileStabilityAsync(destinationPath, "neoforge", ct, progress);
 
-                // Сохраняем конфигурацию запуска NeoForge (classpath + main class)
+                // Save the NeoForge launch configuration (classpath + main class)
                 try
                 {
                     await SaveNeoForgeLaunchConfigAsync(destinationPath, ct);

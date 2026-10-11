@@ -10,13 +10,13 @@ using WpfButton = Wpf.Ui.Controls.Button;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Общие UI-хелперы для списков элементов (моды, плагины):
-/// счётчик, кнопка «включить всё», контекстные меню, переключение и удаление.
+/// Common UI helpers for item lists (mods, plugins):
+/// counter, "enable all" button, context menus, toggling and deletion.
 /// </summary>
 public static class ItemUiHelper
 {
     /// <summary>
-    /// Обновляет счётчик в InfoBadge видимости и состояние кнопки «включить всё».
+    /// Updates the counter in the InfoBadge and the visibility/state of the "enable all" button.
     /// </summary>
     public static void ReloadItemsPanel(ItemsControl list, InfoBadge badge, int count, Action updateToggle)
     {
@@ -26,7 +26,7 @@ public static class ItemUiHelper
     }
 
     /// <summary>
-    /// Обновляет тултип кнопки «включить всё» (включить/выключить всё).
+    /// Updates the tooltip of the "enable all" button (enable/disable all).
     /// </summary>
     public static void UpdateToggleBtn(WpfButton toggleBtn, Func<bool> checkAllDisabled, string enableKey, string disableKey)
     {
@@ -35,7 +35,7 @@ public static class ItemUiHelper
     }
 
     /// <summary>
-    /// Открывает меню «…» у карточки элемента.
+    /// Opens the "…" menu of an item card.
     /// </summary>
     public static void ShowItemMoreMenu(WpfButton btn, IItemEntry item, string enableKey, string disableKey, string deleteKey,
         RoutedEventHandler toggleHandler, RoutedEventHandler deleteHandler)
@@ -53,7 +53,7 @@ public static class ItemUiHelper
     }
 
     /// <summary>
-    /// Собирает контекстное меню карточки (включить/выключить, удалить).
+    /// Builds the context menu of a card (enable/disable, delete).
     /// </summary>
     public static void BuildItemContextMenu(CardControl card, IItemEntry item, string enableKey, string disableKey, string deleteKey,
         RoutedEventHandler toggleHandler, RoutedEventHandler deleteHandler)
@@ -101,14 +101,14 @@ public static class ItemUiHelper
     }
 
     /// <summary>
-    /// Кисть «критического» цвета из темы (красный), с фолбэком для статического контекста.
+    /// The "critical" brush from the theme (red), with a fallback for static contexts.
     /// </summary>
     private static Brush CriticalBrush =>
         Application.Current.TryFindResource("SystemFillColorCriticalBrush") as Brush
         ?? new SolidColorBrush(Color.FromRgb(220, 100, 100));
 
     /// <summary>
-    /// Извлекает элемент-отправитель события (кнопка с Tag или MenuItem с Tag).
+    /// Extracts the event sender item (a button with Tag or a MenuItem with Tag).
     /// </summary>
     public static T? ExtractSender<T>(object sender) where T : class, IItemEntry
     {
@@ -118,7 +118,7 @@ public static class ItemUiHelper
     }
 
     /// <summary>
-    /// Переключает состояог элемента и перезагружает список.
+    /// Toggles the state of an item and reloads the list.
     /// </summary>
     public static async Task ToggleItemAsync<T>(object sender, Func<T, Task> toggleAsync, Action reload) where T : class, IItemEntry
     {
@@ -129,7 +129,7 @@ public static class ItemUiHelper
     }
 
     /// <summary>
-    /// Безопасный вызов ShowError из sync-контекста (fire-and-forget с try/catch).
+    /// Safe call of ShowError from a sync context (fire-and-forget with try/catch).
     /// </summary>
     public static async void ShowErrorSafe(string message, string context)
     {
@@ -138,7 +138,7 @@ public static class ItemUiHelper
     }
 
     /// <summary>
-    /// Безопасный вызов ShowWarning из sync-контекста (fire-and-forget с try/catch).
+    /// Safe call of ShowWarning from a sync context (fire-and-forget with try/catch).
     /// </summary>
     public static async void ShowWarningSafe(string message, string context)
     {
@@ -147,7 +147,7 @@ public static class ItemUiHelper
     }
 
     /// <summary>
-    /// Открывает папку подкаталога сервера (mods/plugins), иначе предупреждение.
+    /// Opens the server subdirectory folder (mods/plugins), otherwise shows a warning.
     /// </summary>
     public static void OpenItemFolder(Server server, string subDir, string notFoundKey, string context)
     {
@@ -158,7 +158,7 @@ public static class ItemUiHelper
     }
 
     /// <summary>
-    /// Подтверждает и удаляет элемент, затем перезагружает список.
+    /// Confirms and deletes an item, then reloads the list.
     /// </summary>
     public static async Task DeleteItemAsync<T>(object sender, Func<T, Task> deleteAsync, Action reload, string confirmKey, string titleKey)
         where T : class, IItemEntry

@@ -4,12 +4,12 @@ using System.Text.Json;
 namespace Konserva.Services;
 
 /// <summary>
-/// Скачивание Paper сервера через PaperMC Downloads Service v3
+/// Downloading the Paper server via the PaperMC Downloads Service v3
 /// </summary>
 public partial class McServerInstaller
 {
     /// <summary>
-    /// Скачать Paper сервер
+    /// Download a Paper server
     /// </summary>
     public async Task<InstallResult> DownloadPaperServer(string version, string destinationPath,
         string? loaderVersion = null, IProgress<string>? progress = null, CancellationToken ct = default)
@@ -18,18 +18,18 @@ public partial class McServerInstaller
 
         try
         {
-            // PaperMC Downloads Service v3 (Cloudflare) — официальный API
+            // PaperMC Downloads Service v3 (Cloudflare) — the official API
             var apiUrl = $"https://fill.papermc.io/v3/projects/paper/versions/{version}/builds";
             Logger.Info($"Fetching Paper builds for {version}: {apiUrl}", "McServerInstaller");
 
             using var doc = await FetchJsonAsync(apiUrl, ct);
             Logger.Info($"Paper API response: doc loaded", "McServerInstaller");
-            // v3 возвращает JSON-массив build'ов в порядке убывания (новейший — первый)
+            // v3 returns a JSON array of builds in descending order (newest first)
             var builds = doc.RootElement.EnumerateArray().ToArray();
 
             JsonElement selectedBuild = default;
 
-            // Если указан конкретный номер сборки — ищем её
+            // If a specific build number is given — look it up
             if (!string.IsNullOrEmpty(loaderVersion))
             {
                 var buildNumberStr = loaderVersion;
@@ -49,7 +49,7 @@ public partial class McServerInstaller
                 }
             }
 
-            // Если сборка не найдена или не указана — ищем автоматически
+            // If the build was not found or none was specified — search automatically
             if (selectedBuild.ValueKind == JsonValueKind.Undefined)
             {
                 selectedBuild = builds.FirstOrDefault(b =>

@@ -3,19 +3,19 @@
 namespace Konserva.Models;
 
 /// <summary>
-/// Информация о моде
+/// Information about a mod
 /// </summary>
 public partial class ModItem : ObservableObject, IItemEntry
 {
     /// <summary>
-    /// Имя мода (без расширения)
+    /// Mod name (without extension)
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasVersion))]
     private string _name = string.Empty;
 
     /// <summary>
-    /// Версия мода
+    /// Mod version
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasVersion))]
@@ -24,45 +24,45 @@ public partial class ModItem : ObservableObject, IItemEntry
     private string _version = string.Empty;
 
     /// <summary>
-    /// Показывать ли версию рядом с названием (не пустая)
+    /// Whether to show the version next to the name (not empty)
     /// </summary>
     public bool HasVersion => !string.IsNullOrWhiteSpace(Version);
 
     /// <summary>
-    /// Показывать ли строку версии (текущая или "текущая -> новая")
+    /// Whether to show the version line (current or "current -> new")
     /// </summary>
     public bool HasVersionDisplay => HasVersion || UpdateAvailable;
 
     /// <summary>
-    /// Версия для отображения: текущая, либо "текущая -> новая" при доступном обновлении
+    /// Version to display: the current one, or "current -> new" when an update is available
     /// </summary>
     public string VersionDisplay => UpdateAvailable && LatestVersion != null
         ? (HasVersion ? $"{Version} -> {LatestVersion}" : LatestVersion)
         : Version;
 
     /// <summary>
-    /// Имя файла (например "OptiFine.jar")
+    /// File name (for example "OptiFine.jar")
     /// </summary>
     public string FileName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Полный путь к файлу (может быть .jar или .jar.disabled)
+    /// Full path to the file (may be .jar or .jar.disabled)
     /// </summary>
     public string FilePath { get; set; } = string.Empty;
 
     /// <summary>
-    /// Размер файла в байтах
+    /// File size in bytes
     /// </summary>
     public long FileSize { get; set; }
 
     /// <summary>
-    /// Включён ли мод (.jar) или отключён (.jar.disabled)
+    /// Whether the mod is enabled (.jar) or disabled (.jar.disabled)
     /// </summary>
     [ObservableProperty]
     private bool _enabled = true;
 
     /// <summary>
-    /// Доступно ли обновление для этого мода
+    /// Whether an update is available for this mod
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateTooltip))]
@@ -71,26 +71,26 @@ public partial class ModItem : ObservableObject, IItemEntry
     private bool _updateAvailable;
 
     /// <summary>
-    /// Идёт ли сейчас обновление этого мода
+    /// Whether this mod is currently being updated
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotUpdating))]
     private bool _isUpdating;
 
     /// <summary>
-    /// НЕ идёт обновление и нет успешного результата (кнопка видна)
+    /// No update in progress and no successful result (the button is visible)
     /// </summary>
     public bool IsNotUpdating => !IsUpdating && !UpdateSucceeded;
 
     /// <summary>
-    /// Успешно ли завершилось обновление (показать галочку)
+    /// Whether the update completed successfully (show the check mark)
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotUpdating))]
     private bool _updateSucceeded;
 
     /// <summary>
-    /// Номер доступной новой версии
+    /// Version number of the available new version
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdateTooltip))]
@@ -99,7 +99,7 @@ public partial class ModItem : ObservableObject, IItemEntry
     private string? _latestVersion;
 
     /// <summary>
-    /// Тултип кнопки обновления: "Обновить до vX.X.X"
+    /// Update button tooltip: "Update to vX.X.X"
     /// </summary>
     public string? UpdateTooltip => LatestVersion != null
         ? $"{Localization.LocalizationManager.Get("ServerDetail_Mods_UpdateTo")} v{LatestVersion}"

@@ -19,7 +19,7 @@ namespace Konserva.Controls
         }
 
         /// <summary>
-        /// Показывает уведомление о доступном обновлении.
+        /// Shows the available update notification.
         /// </summary>
         public void Show(UpdateInfo updateInfo)
         {
@@ -41,7 +41,7 @@ namespace Konserva.Controls
         }
 
         /// <summary>
-        /// Прячет уведомление.
+        /// Hides the notification.
         /// </summary>
         public void Hide()
         {
@@ -50,7 +50,7 @@ namespace Konserva.Controls
         }
 
         /// <summary>
-        /// Показывает статус загрузки.
+        /// Shows the download status.
         /// </summary>
         private void SetUpdatingState(string message)
         {
@@ -60,7 +60,7 @@ namespace Konserva.Controls
         }
 
         /// <summary>
-        /// Показывает ошибку.
+        /// Shows the error state.
         /// </summary>
         private void SetErrorState()
         {
@@ -81,7 +81,7 @@ namespace Konserva.Controls
             {
                 var progress = new Progress<double>(p =>
                 {
-                    // Обновляем текст прогресса в UI-потоке
+                    // Update the progress text on the UI thread
                     Dispatcher.Invoke(() =>
                     {
                         var pct = (int)p;

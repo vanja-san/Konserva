@@ -3,12 +3,12 @@ using Konserva.Utilities;
 namespace Konserva.Services;
 
 /// <summary>
-/// Скачивание Vanilla Minecraft сервера и получение URL для скачивания
+/// Downloading the Vanilla Minecraft server and resolving its download URL
 /// </summary>
 public partial class McServerInstaller
 {
     /// <summary>
-    /// Получить URL для скачивания vanilla сервера
+    /// Get the download URL for a vanilla server
     /// </summary>
     public async Task<string?> GetVanillaServerDownloadUrl(string version, CancellationToken ct = default)
     {
@@ -47,7 +47,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Скачать vanilla сервер
+    /// Download a vanilla server
     /// </summary>
     public async Task<bool> DownloadVanillaServer(string version, string destinationPath,
         IProgress<string>? progress = null, CancellationToken ct = default)

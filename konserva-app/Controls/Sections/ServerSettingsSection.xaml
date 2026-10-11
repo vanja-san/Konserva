@@ -13,7 +13,7 @@
         Padding="0,0,16,0"
         VerticalScrollBarVisibility="Auto">
         <StackPanel>
-            <!--  Баннер: сервер запущен  -->
+            <!--  Banner: server is running  -->
             <Border
                 x:Name="SettingsRunningBanner"
                 Margin="0,0,0,8"
@@ -37,7 +37,7 @@
                 </Grid>
             </Border>
 
-            <!--  Основные настройки  -->
+            <!--  General settings  -->
             <ui:CardExpander
                 Margin="0,0,0,8"
                 Padding="12"
@@ -91,7 +91,7 @@
                 </Grid>
             </ui:CardExpander>
 
-            <!--  Выделение памяти  -->
+            <!--  Memory allocation  -->
             <ui:CardExpander
                 Margin="0,0,0,8"
                 Padding="12"
@@ -169,7 +169,7 @@
                 </Grid>
             </ui:CardExpander>
 
-            <!--  Авто-рестарт  -->
+            <!--  Auto-restart  -->
             <ui:CardExpander
                 Margin="0,0,0,8"
                 Padding="12"
@@ -238,7 +238,7 @@
                 </Grid>
             </ui:CardExpander>
 
-            <!--  Настройки Java  -->
+            <!--  Java settings  -->
             <ui:CardExpander
                 Margin="0,0,0,8"
                 Padding="12"
@@ -301,7 +301,7 @@
                             SelectionChanged="SettingJavaComboBox_SelectionChanged" />
                     </Grid>
 
-                    <!--  JVM аргументы  -->
+                    <!--  JVM arguments  -->
                     <Grid Grid.Row="2" Margin="0,8,0,0">
                         <Grid RowDefinitions="Auto,Auto">
                             <StackPanel Grid.Row="0" Margin="0,0,0,8">
@@ -325,7 +325,7 @@
                 </Grid>
             </ui:CardExpander>
 
-            <!--  UPnP Проброс порта  -->
+            <!--  UPnP port forwarding  -->
             <ui:CardExpander
                 Margin="0,0,0,8"
                 Padding="12"
@@ -353,7 +353,7 @@
                 </ui:CardExpander.Header>
                 <Grid Margin="8,0" RowDefinitions="Auto,Auto,Auto">
 
-                    <!--  Row 0: вкл/выкл UPnP  -->
+                    <!--  Row 0: enable/disable UPnP  -->
                     <Grid
                         Grid.Row="0"
                         Margin="0,16"
@@ -373,7 +373,7 @@
                             Click="SettingEnableUpnp_Click" />
                     </Grid>
 
-                    <!--  Row 1: результат + кнопки проверки  -->
+                    <!--  Row 1: result + check buttons  -->
                     <StackPanel
                         Grid.Row="1"
                         Margin="0,0,0,8"
@@ -427,7 +427,7 @@
                         </ui:Button>
                     </StackPanel>
 
-                    <!--  Row 2: адрес  -->
+                    <!--  Row 2: address  -->
                     <Grid
                         Grid.Row="2"
                         Margin="0,0,0,8"
@@ -451,7 +451,7 @@
                 </Grid>
             </ui:CardExpander>
 
-            <!--  Обновление модов  -->
+            <!--  Mods updates  -->
             <ui:CardExpander
                 Margin="0,0,0,8"
                 Padding="12"
@@ -563,7 +563,7 @@
                 </Grid>
             </ui:CardExpander>
 
-            <!--  Обновление сервера (загрузчик)  -->
+            <!--  Server update (loader)  -->
             <ui:CardExpander
                 x:Name="UpdateServerCard"
                 Margin="0,0,0,8"
@@ -580,7 +580,7 @@
                     <ui:TextBlock VerticalAlignment="Center" Text="{loc:Loc ServerDetail_UpdateLoader_Title}" />
                 </ui:CardExpander.Header>
                 <Grid Margin="8,0" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
-                    <!--  Установленная версия  -->
+                    <!--  Currently installed version  -->
                     <Grid
                         Grid.Row="0"
                         Margin="0,8"
@@ -594,7 +594,7 @@
                             Text="—" />
                     </Grid>
 
-                    <!--  Доступные версии  -->
+                    <!--  Available versions  -->
                     <Grid
                         Grid.Row="1"
                         Margin="0,8"
@@ -615,7 +615,7 @@
                             MaxDropDownHeight="200" />
                     </Grid>
 
-                    <!--  Резервная копия  -->
+                    <!--  Backup  -->
                     <Grid
                         Grid.Row="2"
                         Margin="0,8"
@@ -634,7 +634,7 @@
                             VerticalAlignment="Center" />
                     </Grid>
 
-                    <!--  Уведомление об обновлении  -->
+                    <!--  Update notification  -->
                     <Grid
                         Grid.Row="3"
                         Margin="0,8"
@@ -654,7 +654,7 @@
                             Click="SettingUpdateNotifications_Click" />
                     </Grid>
 
-                    <!--  Статус  -->
+                    <!--  Status  -->
                     <ui:TextBlock
                         x:Name="UpdateStatusText"
                         Grid.Row="4"
@@ -664,7 +664,7 @@
                         TextWrapping="Wrap"
                         Visibility="Collapsed" />
 
-                    <!--  Прогресс + кнопка обновления  -->
+                    <!--  Progress + update button  -->
                     <Grid
                         Grid.Row="5"
                         Margin="0,8,0,0"

@@ -9,7 +9,7 @@
     <Grid
         RowDefinitions="*,Auto"
         PreviewMouseDown="ConsoleSection_PreviewMouseDown">
-        <!--  Лог сервера  -->
+        <!--  Server log  -->
         <Border
             Grid.Row="0"
             Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -30,7 +30,7 @@
                 VerticalScrollBarVisibility="Auto"
                 WordWrap="False" />
         </Border>
-        <!--  Placeholder для пустой консоли  -->
+        <!--  Placeholder for an empty console  -->
         <ui:TextBlock
             x:Name="ConsolePlaceholder"
             HorizontalAlignment="Center"
@@ -39,7 +39,7 @@
             Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
             IsHitTestVisible="False"
             Text="{loc:Loc ServerDetail_Console_Empty}" />
-        <!--  Ввод команды (виден только когда сервер запущен)  -->
+        <!--  Command input (visible only when the server is running)  -->
         <Grid
             x:Name="CommandInputRow"
             Grid.Row="1"

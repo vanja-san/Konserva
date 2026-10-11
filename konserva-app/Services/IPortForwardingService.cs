@@ -1,41 +1,41 @@
 namespace Konserva.Services;
 
 /// <summary>
-/// Сервис для автоматического проброса портов через UPnP/NAT-PMP.
+/// Service for automatic port forwarding via UPnP/NAT-PMP.
 /// </summary>
 public interface IPortForwardingService
 {
     /// <summary>
-    /// Проверяет, доступен ли UPnP-роутер в сети.
+    /// Checks whether a UPnP router is available on the network.
     /// </summary>
     Task<bool> IsAvailableAsync();
 
     /// <summary>
-    /// Создаёт проброс порта (TCP) на роутере.
+    /// Creates a port forwarding rule (TCP) on the router.
     /// </summary>
-    /// <param name="port">Порт для проброса.</param>
-    /// <param name="description">Описание правила (отображается в админке роутера).</param>
+    /// <param name="port">Port to forward.</param>
+    /// <param name="description">Rule description (shown in the router admin UI).</param>
     Task<bool> CreateMappingAsync(int port, string description);
 
     /// <summary>
-    /// Удаляет проброс порта (TCP) с роутера.
+    /// Removes a port forwarding rule (TCP) from the router.
     /// </summary>
     Task<bool> DeleteMappingAsync(int port);
 
     /// <summary>
-    /// Проверяет, существует ли проброс порта (TCP) на роутере.
+    /// Checks whether a port forwarding rule (TCP) exists on the router.
     /// </summary>
-    /// <param name="port">Порт для проверки.</param>
-    /// <returns>true, если проброс существует.</returns>
+    /// <param name="port">Port to check.</param>
+    /// <returns>true if the forwarding rule exists.</returns>
     Task<bool> CheckMappingAsync(int port);
 
     /// <summary>
-    /// Получает внешний IP-адрес (публичный) через UPnP-роутер.
+    /// Gets the external (public) IP address through the UPnP router.
     /// </summary>
     Task<string?> GetExternalIpAsync();
 
     /// <summary>
-    /// Возвращает последний известный внешний IP без обращения к роутеру.
+    /// Returns the last known external IP without querying the router.
     /// </summary>
     string? TryGetCachedExternalIp();
 }

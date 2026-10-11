@@ -5,17 +5,17 @@ using System.Net.Http.Headers;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Утилиты для работы с потоками.
+/// Helpers for working with streams.
 /// </summary>
 public static class StreamUtilities
 {
     /// <summary>
-    /// Возвращает распакованный поток в зависимости от Content-Encoding.
-    /// Поддерживает gzip и deflate. Если кодирование не указано — возвращает исходный поток.
+    /// Returns a decompressed stream depending on the Content-Encoding.
+    /// Supports gzip and deflate. If no encoding is specified — returns the original stream.
     /// </summary>
-    /// <param name="compressedStream">Исходный поток</param>
-    /// <param name="contentEncoding">Заголовок Content-Encoding (коллекция или строка)</param>
-    /// <param name="leaveOpen">Оставлять ли исходный поток открытым после dispose</param>
+    /// <param name="compressedStream">The source stream</param>
+    /// <param name="contentEncoding">The Content-Encoding header (collection or string)</param>
+    /// <param name="leaveOpen">Whether to keep the source stream open after dispose</param>
     public static Stream GetDecompressedStream(Stream compressedStream, IEnumerable<string>? contentEncoding, bool leaveOpen = true)
     {
         var encoding = contentEncoding?.FirstOrDefault()?.ToLowerInvariant();
@@ -30,7 +30,7 @@ public static class StreamUtilities
     }
 
     /// <summary>
-    /// Перегрузка для HttpContentHeaders.
+    /// Overload for HttpContentHeaders.
     /// </summary>
     public static Stream GetDecompressedStream(Stream compressedStream, HttpContentHeaders? headers, bool leaveOpen = true)
     {

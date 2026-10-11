@@ -15,8 +15,8 @@ using WpfButton = Wpf.Ui.Controls.Button;
 namespace Konserva.Controls.Sections;
 
 /// <summary>
-/// Секция настроек сервера: общие параметры, память, авто-рестарт, Java, UPnP
-/// и обновление загрузчика.
+/// Server settings section: general options, memory, auto-restart, Java, UPnP
+/// and loader update.
 /// </summary>
 public partial class ServerSettingsSection : System.Windows.Controls.UserControl, IDisposable
 {
@@ -39,12 +39,12 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     private static readonly Brush DefaultBrush = GetThemeBrush("TextFillColorPrimaryBrush");
 
     /// <summary>
-    /// Событие: изменено имя сервера (для обновления заголовка страницы).
+    /// Event: the server name changed (to update the page title).
     /// </summary>
     public event Action<string>? ServerRenamed;
 
     /// <summary>
-    /// Событие: изменилась доступность обновления загрузчика.
+    /// Event: the loader update availability changed.
     /// </summary>
     public event Action<bool, string?>? UpdateAvailabilityChanged;
 
@@ -54,7 +54,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
 
         InitializeComponent();
 
-        // Подписываемся после InitializeComponent чтобы избежать NullReferenceException
+        // We subscribe after InitializeComponent to avoid a NullReferenceException
         SettingJavaAutoSelect.Checked += SettingJavaAutoSelect_CheckedChanged;
         SettingJavaAutoSelect.Unchecked += SettingJavaAutoSelect_CheckedChanged;
         SettingModBackup.Checked += SettingModBackup_CheckedChanged;
@@ -62,7 +62,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Инициализация секции: привязка ViewModel и сервера, заполнение формы.
+    /// Initializes the section: binds the ViewModel and the server, fills the form.
     /// </summary>
     public void Initialize(ServerDetailViewModel viewModel, Server? server)
     {
@@ -102,7 +102,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Восстанавливает выбранный канал обновлений модов из настроек сервера.
+    /// Restores the selected mod update channel from the server settings.
     /// </summary>
     private void UpdateModUpdateChannelComboBox()
     {
@@ -120,8 +120,8 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Обновляет баннер-предупреждение и доступность настроек
-    /// в зависимости от статуса сервера.
+    /// Updates the warning banner and the settings availability
+    /// depending on the server status.
     /// </summary>
     public void UpdateSettingsAvailability()
     {
@@ -129,7 +129,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
 
         SettingsRunningBanner.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
 
-        // Настройки, которые требуют перезапуска сервера
+        // Settings that require a server restart
         SettingName.IsEnabled = !isRunning;
         SettingRamMin.IsEnabled = !isRunning;
         SettingRamMax.IsEnabled = !isRunning;
@@ -139,7 +139,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Разворачивает карточку обновления загрузчика и прокручивает к ней.
+    /// Expands the loader update card and scrolls to it.
     /// </summary>
     public void ShowUpdateCard()
     {
@@ -171,10 +171,10 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         UpdateSettingsAvailability();
     }
 
-    // ─── Заполнение форм ────────────────────────────────────────────
+    // ─── Filling the forms ────────────────────────────────────────────
 
     /// <summary>
-    /// Заполнение ComboBox со списком Java
+    /// Fills the ComboBox with the Java list
     /// </summary>
     private void LoadJavaComboBox()
     {
@@ -208,7 +208,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Обновление видимости ComboBox Java
+    /// Updates the visibility of the Java ComboBox
     /// </summary>
     private void UpdateJavaComboBoxVisibility()
     {
@@ -217,7 +217,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Обновляет отображение адреса сервера (IP:Port).
+    /// Updates the displayed server address (IP:Port).
     /// </summary>
     private void UpdateServerAddressDisplay()
     {
@@ -236,10 +236,10 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         }
     }
 
-    // ─── Обработчики UI ─────────────────────────────────────────────
+    // ─── UI handlers ─────────────────────────────────────────────
 
     /// <summary>
-    /// Валидация: разрешаем ввод только цифр
+    /// Validation: only digits are allowed as input
     /// </summary>
     private void NumberValidationTextBox_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
     {
@@ -247,10 +247,10 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Автосохранение настроек при изменении
+    /// Auto-save the settings on change
     /// </summary>
     /// <summary>
-    /// Определяет, к какому экспандеру относится контрол-отправитель
+    /// Determines which expander the sender control belongs to
     /// </summary>
     private Wpf.Ui.Controls.TextBlock? GetSaveStatusTarget(object? sender)
     {
@@ -276,7 +276,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Автосохранение настроек при потере фокуса
+    /// Auto-save the settings when the focus is lost
     /// </summary>
     private void Setting_LostFocus(object sender, RoutedEventArgs e)
     {
@@ -284,7 +284,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Автоматическое сохранение настроек сервера
+    /// Automatically saves the server settings
     /// </summary>
     private void AutoSaveSettings(Wpf.Ui.Controls.TextBlock? statusText = null)
     {
@@ -309,7 +309,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
                 ? parsedChannel
                 : ModUpdateChannel.Release;
 
-            // ─── Валидация ──────────────────────────────────────────
+            // ─── Validation ──────────────────────────────────────────
             if (statusText != null)
             {
                 string? validationError = null;
@@ -343,7 +343,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
                 UpdateChannel: updateChannel
             ));
 
-            // Проверяем ошибку переименования папки
+            // Check the folder rename error
             if (_viewModel.LastRenameError != null)
             {
                 if (statusText != null)
@@ -351,19 +351,19 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
                     statusText.Text = _viewModel.LastRenameError;
                     _ = ShowSaveStatus(statusText, isError: true);
                 }
-                // Возвращаем старое имя в поле ввода
+                // Restore the old name in the input field
                 SettingName.Text = _viewModel.Server?.Name ?? newName;
                 ServerRenamed?.Invoke(_viewModel.Server?.Name ?? newName);
             }
             else
             {
-                // Обновляем UI если имя изменилось
+                // Update the UI if the name has changed
                 if (!string.IsNullOrEmpty(newName))
                 {
                     ServerRenamed?.Invoke(newName);
                 }
 
-                // Показываем статус сохранения
+                // Show the save status
                 if (statusText != null)
                     _ = ShowSaveStatus(statusText, isError: false);
             }
@@ -377,7 +377,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Показывает предупреждение валидации (красный текст, автоматическое скрытие)
+    /// Shows a validation warning (red text, auto-hidden)
     /// </summary>
     private async Task ShowValidationWarning(Wpf.Ui.Controls.TextBlock statusText, string message)
     {
@@ -413,8 +413,8 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Показывает временный статус сохранения (зелёный — успех, красный — ошибка)
-    /// с автоматическим скрытием через 2 секунды.
+    /// Shows a temporary save status (green — success, red — error)
+    /// with auto-hide after 2 seconds.
     /// </summary>
     private async Task ShowSaveStatus(Wpf.Ui.Controls.TextBlock statusText, bool isError, string? customMessage = null)
     {
@@ -428,7 +428,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         statusText.Visibility = Visibility.Visible;
         statusText.Opacity = 0;
 
-        // Плавное появление
+        // Smooth fade in
         var fadeIn = new DoubleAnimation
         {
             From = 0,
@@ -438,10 +438,10 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         };
         statusText.BeginAnimation(OpacityProperty, fadeIn);
 
-        // Ждём 2 секунды
+        // Wait 2 seconds
         await Task.Delay(2000);
 
-        // Плавное исчезновение
+        // Smooth fade out
         var fadeOut = new DoubleAnimation
         {
             From = 1,
@@ -454,11 +454,11 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Обработка изменения автоматического выбора Java
+    /// Handles the change of the automatic Java selection
     /// </summary>
     private void SettingJavaAutoSelect_CheckedChanged(object sender, RoutedEventArgs e)
     {
-        // Проверка: защита от вызова до инициализации
+        // Guard: protection against a call before initialization
         if (!IsInitialized || JavaSelectionGrid == null)
             return;
 
@@ -466,7 +466,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Обновляет доступность кнопки удаления бэкапов модов.
+    /// Updates the availability of the mod backup delete button.
     /// </summary>
     private void SettingModBackup_CheckedChanged(object sender, RoutedEventArgs e)
     {
@@ -477,7 +477,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Кнопка удаления бэкапов доступна только при включённом бэкапе модов.
+    /// The delete backups button is only available when the mod backup is enabled.
     /// </summary>
     private void UpdateModBackupControlsState()
     {
@@ -485,7 +485,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Обработка изменения чекбокса UPnP
+    /// Handles the change of the UPnP checkbox
     /// </summary>
     private void SettingEnableUpnp_Click(object sender, RoutedEventArgs e)
     {
@@ -499,7 +499,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Обработка выбора Java в ComboBox (автосохранение)
+    /// Handles the Java selection in the ComboBox (auto-save)
     /// </summary>
     private void SettingJavaComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -507,7 +507,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Обработка выбора канала обновлений модов (автосохранение).
+    /// Handles the mod update channel selection (auto-save).
     /// </summary>
     private void SettingUpdateChannelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -518,7 +518,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Сохранение JVM аргументов при потере фокуса
+    /// Saves the JVM arguments when the focus is lost
     /// </summary>
     private void SettingJvmArgs_LostFocus(object sender, RoutedEventArgs e)
     {
@@ -526,7 +526,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Удаление всех резервных копий модов сервера (с подтверждением).
+    /// Deletes all mod backups of the server (with confirmation).
     /// </summary>
     private async void DeleteModBackupsButton_Click(object sender, RoutedEventArgs e)
     {
@@ -551,7 +551,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Копирует адрес сервера (IP:Port) в буфер обмена.
+    /// Copies the server address (IP:Port) to the clipboard.
     /// </summary>
     private void CopyAddressButton_Click(object sender, RoutedEventArgs e)
     {
@@ -564,7 +564,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
             Clipboard.SetText(address);
             CopyAddressButton.Content = LocalizationManager.Get("Common_Copied");
 
-            // Возвращаем текст кнопки через 2 секунды
+            // Restore the button text after 2 seconds
             var dispatcher = Dispatcher;
             Task.Delay(2000).ContinueWith(_ =>
             {
@@ -581,11 +581,11 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Проверка UPnP доступности
+    /// UPnP availability check
     /// </summary>
     private async void CheckUpnpButton_Click(object sender, RoutedEventArgs e)
     {
-        // Скрываем предыдущий результат перед новой проверкой
+        // Hide the previous result before a new check
         UpnpCheckResultText.Visibility = Visibility.Collapsed;
         UpnpCheckResultIcon.Visibility = Visibility.Collapsed;
 
@@ -639,7 +639,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Сбрасывает результат проверки UPnP через 5 секунд.
+    /// Resets the UPnP check result after 5 seconds.
     /// </summary>
     private async Task ResetCheckUpnpResultAsync()
     {
@@ -660,14 +660,14 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Проверка проброса порта через UPnP. Результат показывается слева от кнопок.
+    /// Checks the port forwarding via UPnP. The result is shown to the left of the buttons.
     /// </summary>
     private async void CheckPortButton_Click(object sender, RoutedEventArgs e)
     {
         if (_server == null)
             return;
 
-        // Скрываем предыдущий результат перед новой проверкой
+        // Hide the previous result before a new check
         UpnpCheckResultText.Visibility = Visibility.Collapsed;
         UpnpCheckResultIcon.Visibility = Visibility.Collapsed;
 
@@ -695,7 +695,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
                 UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_Port_Closed");
                 UpnpCheckResultText.Foreground = ErrorBrush;
 
-                // Скрываем адрес, если порт закрыт
+                // Hide the address if the port is closed
                 UpnpAddressText.Visibility = Visibility.Collapsed;
                 CopyAddressButton.Visibility = Visibility.Collapsed;
             }
@@ -727,7 +727,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Сбрасывает результат проверки порта через 5 секунд.
+    /// Resets the port check result after 5 seconds.
     /// </summary>
     private async Task ResetCheckPortResultAsync()
     {
@@ -747,11 +747,11 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         }
     }
 
-    // ─── Обновление загрузчика сервера ──────────────────────────────
+    // ─── Server loader update ──────────────────────────────
 
     /// <summary>
-    /// Заполняет карточку обновления загрузчика: видимость, текущая версия,
-    /// список доступных версий, уведомление в заголовке.
+    /// Fills the loader update card: visibility, current version,
+    /// list of available versions, notification in the header.
     /// </summary>
     private void LoadUpdateForm()
     {
@@ -779,7 +779,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Загружает доступные версии загрузчика и обновляет карточку.
+    /// Loads the available loader versions and updates the card.
     /// </summary>
     private async Task LoadLoaderVersionsAsync()
     {
@@ -803,7 +803,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
                 return;
             }
 
-            // Последняя доступная версия — максимум по списку
+            // The latest available version — the maximum in the list
             var newest = versions[0];
             foreach (var v in versions)
             {
@@ -823,8 +823,8 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Показывает в выпадающем списке только версии, новее установленной
-    /// (даунгрейд не поддерживается, поэтому более старые отбрасываются).
+    /// Shows only versions newer than the installed one in the drop-down list
+    /// (downgrade is not supported, so older ones are discarded).
     /// </summary>
     private void ApplyVersionFilter()
     {
@@ -848,12 +848,12 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
             UpdateLoaderVersionBox.ItemsSource = selectable;
             UpdateLoaderVersionBox.SelectedIndex = 0;
             UpdateServerButton.IsEnabled = !_updateInProgress;
-            // Не показываем «висящий» статус, когда есть что выбирать
+            // Do not show a "hanging" status when there is something to select
             SetUpdateStatus(string.Empty, null);
         }
         else
         {
-            // Новых версий нет: выключаем список и кнопку, в списке — «актуальная версия»
+            // No new versions: disable the list and the button, show "up to date" in the list
             UpdateLoaderVersionBox.IsEnabled = false;
             UpdateLoaderVersionBox.ItemsSource =
                 new[] { LocalizationManager.Get("ServerDetail_UpdateLoader_NoUpdates") };
@@ -865,7 +865,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Сообщает странице о доступности обновления (для уведомления в заголовке).
+    /// Notifies the page about the update availability (for the header notification).
     /// </summary>
     private void UpdateUpdateAvailability()
     {
@@ -878,8 +878,8 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Обновление загрузчика сервера: подтверждение остановки, резервная копия,
-    /// переустановка загрузчика, сохранение новой версии.
+    /// Server loader update: stop confirmation, backup,
+    /// loader reinstall, saving the new version.
     /// </summary>
     private async void UpdateServerButton_Click(object sender, RoutedEventArgs e)
     {
@@ -890,7 +890,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         if (string.IsNullOrEmpty(newVersion))
             return;
 
-        // 1. Останавливаем запущенный сервер (с подтверждением)
+        // 1. Stop the running server (with confirmation)
         if (_server.IsRunning)
         {
             var confirm = await UiHelper.ShowConfirm(
@@ -930,7 +930,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
 
             AppLogLine(LocalizationManager.Get("ServerDetail_UpdateLoader_Started"));
 
-            // 2. Резервная копия (по желанию)
+            // 2. Backup (optional)
             if (SettingUpdateBackup.IsChecked == true)
             {
                 AppLogLine(LocalizationManager.Get("ServerDetail_UpdateLoader_BackupCreating"));
@@ -939,12 +939,12 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
                     LocalizationManager.Get("ServerDetail_UpdateLoader_BackupCreated"), backupPath));
             }
 
-            // 3. Удаляем файлы, которые установщик пересоздаст сам
+            // 3. Remove the files that the installer recreates on its own
             var removed = ServerBackup.RemoveLoaderFiles(_server.Path, _server.ModLoader.Type);
             foreach (var item in removed)
                 AppLogLine($"{LocalizationManager.Get("ServerDetail_UpdateLoader_LogRemoved")} {item}");
 
-            // 4. Устанавливаем новый загрузчик
+            // 4. Install the new loader
             var result = await installer.InstallServer(
                 _server.ModLoader.Type,
                 _server.McVersion,
@@ -958,7 +958,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
 
             if (result.Success)
             {
-                // 5. Сохраняем новую версию загрузчика
+                // 5. Save the new loader version
                 _server.ModLoader.LoaderVersion = newVersion;
                 if (result.BuildNumber.HasValue)
                     _server.ServerBuild = result.BuildNumber.Value;
@@ -974,7 +974,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
                     oldVersionDisplay, newVersion);
                 updated = true;
                 resultMessage = successMsg;
-                // Успех показываем в прогрессбаре, отдельную строку статуса очищаем
+                // On success we show it in the progress bar and clear the separate status line
                 SetUpdateStatus(string.Empty, null);
             }
             else
@@ -1015,7 +1015,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Добавляет строку в статус карточки обновления (вместо отдельного окна лога).
+    /// Appends a line to the update card status (instead of a separate log window).
     /// </summary>
     private void AppLogLine(string line)
     {
@@ -1023,7 +1023,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Обработка изменения чекбокса «показывать уведомление об обновлении».
+    /// Handles the change of the "show update notification" checkbox.
     /// </summary>
     private void SettingUpdateNotifications_Click(object sender, RoutedEventArgs e)
     {
@@ -1033,7 +1033,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Показывает сообщение статуса в карточке обновления загрузчика.
+    /// Shows the status message in the loader update card.
     /// </summary>
     private void SetUpdateStatus(string message, Brush? brush)
     {
@@ -1045,8 +1045,8 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Плавно прячет прогрессбар после завершения обновления. При успехе показывает
-    /// текст результата в прогрессбаре, держит его чуть дольше и плавно скрывает.
+    /// Smoothly hides the progress bar after the update completes. On success it shows
+    /// the result text in the progress bar, holds it a bit longer and hides it smoothly.
     /// </summary>
     private async Task FinishUpdateAsync(bool success, string? resultMessage)
     {
@@ -1055,7 +1055,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         _updateResultCts = new CancellationTokenSource();
         var token = _updateResultCts.Token;
 
-        // Прогрессбар плавно исчезает при завершении
+        // The progress bar smoothly disappears on completion
         if (UpdateLogProgress.Visibility == Visibility.Visible)
         {
             await FadeAsync(UpdateLogProgress, 1, 0, 300);
@@ -1067,7 +1067,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         if (!success || string.IsNullOrEmpty(resultMessage))
             return;
 
-        // Текст успеха появляется в прогрессбаре
+        // The success text appears in the progress bar
         UpdateResultText.Text = resultMessage;
         UpdateResultText.Foreground = SuccessBrush;
         UpdateResultText.Visibility = Visibility.Visible;
@@ -1076,7 +1076,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
         if (token.IsCancellationRequested)
             return;
 
-        // Держим текст чуть дольше, затем плавно скрываем
+        // Hold the text a bit longer, then hide it smoothly
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(2), token);
@@ -1091,7 +1091,7 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Плавно изменяет прозрачность элемента.
+    /// Smoothly changes the opacity of an element.
     /// </summary>
     private static Task FadeAsync(FrameworkElement element, double from, double to, int milliseconds)
     {

@@ -8,13 +8,13 @@ using System.Text.Json;
 namespace Konserva.Services;
 
 /// <summary>
-/// Установка Quilt сервера: получение информации, загрузка, запуск установщика
+/// Quilt server installation: fetching information, downloading, running the installer
 /// </summary>
 public partial class McServerInstaller
 {
     /// <summary>
-    /// Получить информацию о Quilt installer
-    /// API: https://meta.quiltmc.org/v3/versions/installer (возвращает массив)
+    /// Get information about the Quilt installer
+    /// API: https://meta.quiltmc.org/v3/versions/installer (returns an array)
     /// </summary>
     public async Task<(string url, string version)?> GetQuiltInstallerInfo(CancellationToken ct = default)
     {
@@ -26,7 +26,7 @@ public partial class McServerInstaller
             using var doc = JsonDocument.Parse(response);
             var root = doc.RootElement;
 
-            // Quilt API возвращает просто массив (не объект с value)
+            // The Quilt API returns a plain array (not an object with value)
             var array = root.EnumerateArray();
             if (!array.MoveNext())
                 return null;
@@ -44,7 +44,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Установить Quilt сервер автоматически
+    /// Install a Quilt server automatically
     /// </summary>
     public async Task<bool> InstallQuiltServer(string mcVersion, string loaderVersion,
         string destinationPath, IProgress<string>? progress = null, CancellationToken ct = default)
@@ -54,7 +54,7 @@ public partial class McServerInstaller
             Logger.Info($"Installing Quilt server MC {mcVersion} loader {loaderVersion}", "McServerInstaller");
             Directory.CreateDirectory(destinationPath);
 
-            // 1. Скачиваем Quilt installer
+            // 1. Download the Quilt installer
             var installerInfo = await GetQuiltInstallerInfo(ct);
             if (installerInfo == null)
             {
@@ -77,11 +77,11 @@ public partial class McServerInstaller
 
             Logger.Info("Downloaded Quilt installer, running...", "McServerInstaller");
 
-            // 2. Запускаем installer с флагом --download-server (30-90%)
+            // 2. Run the installer with the --download-server flag (30-90%)
             progress?.Report(string.Format(LocalizationManager.Get("Installer_RunningInstaller"), "Quilt"));
             var success = await RunQuiltInstaller(installerPath, mcVersion, destinationPath, ct, progress);
 
-            // 3. Если Quilt создал подпапку "server" - перемещаем файлы в корень
+            // 3. If Quilt created a "server" subfolder - move the files to the root
             if (success)
             {
                 var serverSubfolder = Path.Combine(destinationPath, "server");
@@ -91,7 +91,7 @@ public partial class McServerInstaller
                 }
             }
 
-            // Удаляем установщик в любом случае
+            // Delete the installer in any case
             try
             {
                 if (File.Exists(installerPath))
@@ -115,13 +115,13 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Запустить Quilt installer
-    /// Официальная команда: java -jar quilt-installer.jar install server MINECRAFT_VERSION --download-server
+    /// Run the Quilt installer
+    /// Official command: java -jar quilt-installer.jar install server MINECRAFT_VERSION --download-server
     /// </summary>
     private async Task<bool> RunQuiltInstaller(string installerPath, string mcVersion,
         string destinationPath, CancellationToken ct, IProgress<string>? progress = null)
     {
-        // Определяем Java версию на основе версии Minecraft
+        // Determine the Java version based on the Minecraft version
         var javaPath = FindJavaPathForVersion(mcVersion);
         if (string.IsNullOrEmpty(javaPath))
         {
@@ -222,7 +222,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Переместить файлы из подпапки server/ в корень (Quilt иногда создаёт вложенную структуру)
+    /// Move the files from the server/ subfolder to the root (Quilt sometimes creates a nested structure)
     /// </summary>
     private async Task MoveQuiltSubfolderAsync(string serverSubfolder, string destinationPath)
     {

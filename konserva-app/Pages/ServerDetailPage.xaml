@@ -8,10 +8,10 @@
     Title="">
 
     <Grid Margin="20,0,20,16" RowDefinitions="Auto,Auto,*">
-        <!--  Заголовок с кнопками управления  -->
+        <!--  Header with control buttons  -->
         <Border Grid.Row="0" Margin="0,16">
             <Grid ColumnDefinitions="*,Auto">
-                <!--  Название сервера  -->
+                <!--  Server name  -->
                 <StackPanel
                     Grid.Column="0"
                     VerticalAlignment="Center"
@@ -29,7 +29,7 @@
                             Foreground="{ui:ThemeResource TextFillColorDisabledBrush}"
                             Text="1.0.0 • ModloaderName" />
                     </StackPanel>
-                    <!--  Уведомление о доступном обновлении загрузчика  -->
+                    <!--  Loader update available notification  -->
                     <ui:Button
                         x:Name="UpdateAvailableButton"
                         Margin="12,0,0,0"
@@ -46,12 +46,12 @@
                     </ui:Button>
                 </StackPanel>
 
-                <!--  Кнопки управления  -->
+                <!--  Control buttons  -->
                 <StackPanel
                     Grid.Column="1"
                     VerticalAlignment="Center"
                     Orientation="Horizontal">
-                    <!--  Старт/Стоп  -->
+                    <!--  Start/Stop  -->
                     <ui:Button
                         x:Name="StartStopButton"
                         Padding="8,4,12,4"
@@ -82,7 +82,7 @@
                         </StackPanel>
                     </ui:Button>
 
-                    <!--  Открыть папку  -->
+                    <!--  Open folder  -->
                     <ui:Button
                         Margin="8,0,8,0"
                         Padding="4"
@@ -91,7 +91,7 @@
                         <ui:SymbolIcon FontSize="20" Symbol="Folder20" />
                     </ui:Button>
 
-                    <!--  Удалить  -->
+                    <!--  Delete  -->
                     <ui:Button
                         Padding="4"
                         Click="Delete_Click"
@@ -105,7 +105,7 @@
             </Grid>
         </Border>
 
-        <!--  Навигация по разделам сервера  -->
+        <!--  Server section navigation  -->
         <Border
             Grid.Row="1"
             Margin="0,0,0,8"
@@ -114,9 +114,9 @@
             BorderThickness="1"
             CornerRadius="4">
             <Grid ColumnDefinitions="Auto,*,Auto">
-                <!--  Левая группа кнопок (Консоль, Моды, Плагины)  -->
+                <!--  Left button group (Console, Mods, Plugins)  -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <!--  Консоль  -->
+                    <!--  Console  -->
                     <ui:Button
                         x:Name="ConsoleNavButton"
                         Padding="12,8"
@@ -140,7 +140,7 @@
                         </StackPanel>
                     </ui:Button>
 
-                    <!--  Моды  -->
+                    <!--  Mods  -->
                     <ui:Button
                         x:Name="ModsNavButton"
                         Padding="12,8"
@@ -164,7 +164,7 @@
                         </StackPanel>
                     </ui:Button>
 
-                    <!--  Плагины  -->
+                    <!--  Plugins  -->
                     <ui:Button
                         x:Name="PluginsNavButton"
                         Padding="12,8"
@@ -189,9 +189,9 @@
                     </ui:Button>
                 </StackPanel>
 
-                <!--  Правая группа кнопок (Свойства, Настройки)  -->
+                <!--  Right button group (Properties, Settings)  -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <!--  Свойства  -->
+                    <!--  Properties  -->
                     <ui:Button
                         x:Name="PropertiesNavButton"
                         Padding="8"
@@ -207,7 +207,7 @@
                             Symbol="DocumentText20" />
                     </ui:Button>
 
-                    <!--  Настройки  -->
+                    <!--  Settings  -->
                     <ui:Button
                         x:Name="SettingsNavButton"
                         Padding="8"
@@ -226,20 +226,20 @@
             </Grid>
         </Border>
 
-        <!--  Содержимое разделов  -->
+        <!--  Section content  -->
         <Border Grid.Row="2" CornerRadius="8">
             <Grid>
-                <!--  Консоль  -->
+                <!--  Console  -->
                 <Grid x:Name="ConsoleHost" Visibility="Visible" />
-                <!--  Моды  -->
+                <!--  Mods  -->
                 <Grid x:Name="ModsHost" Visibility="Collapsed" />
-                <!--  Плагины  -->
+                <!--  Plugins  -->
                 <Grid x:Name="PluginsHost" Visibility="Collapsed" />
-                <!--  Свойства сервера (server.properties)  -->
+                <!--  Server properties (server.properties)  -->
                 <Grid x:Name="PropertiesView" Visibility="Collapsed">
                     <controls:ServerPropertiesEditor x:Name="PropertiesEditor" />
                 </Grid>
-                <!--  Настройки сервера  -->
+                <!--  Server settings  -->
                 <Grid x:Name="SettingsHost" Visibility="Collapsed" />
             </Grid>
         </Border>

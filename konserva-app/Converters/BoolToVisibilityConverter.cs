@@ -5,7 +5,7 @@ using System.Windows.Data;
 namespace Konserva.Converters;
 
 /// <summary>
-/// Конвертирует boolean в Visibility
+/// Converts a boolean to Visibility
 /// </summary>
 public class BoolToVisibilityConverter : IValueConverter
 {

@@ -7,7 +7,7 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
 
     <Grid RowDefinitions="Auto,*">
-        <!--  Тулбар  -->
+        <!--  Toolbar  -->
         <Border
             Grid.Row="0"
             Padding="12,8,8,8"
@@ -130,7 +130,7 @@
             </Grid>
         </Border>
 
-        <!--  Список модов  -->
+        <!--  Mods list  -->
         <Border
             Grid.Row="1"
             Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"

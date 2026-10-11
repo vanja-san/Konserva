@@ -11,7 +11,7 @@
     mc:Ignorable="d">
 
     <Page.Resources>
-        <!--  Стиль заголовка настройки (как на SettingsPage)  -->
+        <!--  Setting title style (same as on SettingsPage)  -->
         <Style x:Key="SettingTitle" TargetType="ui:TextBlock">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -21,17 +21,17 @@
     </Page.Resources>
 
     <Grid RowDefinitions="*,Auto">
-        <!--  Content (скроллируемая форма)  -->
+        <!--  Content (scrollable form)  -->
         <ScrollViewer
             Grid.Row="0"
             Padding="{Binding ComputedVerticalScrollBarVisibility, RelativeSource={RelativeSource Self}, Converter={StaticResource ScrollBarPadding}, ConverterParameter=16}"
             VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="16,12,0,16">
 
-                <!--  Группа карточек: Параметры сервера  -->
+                <!--  Card group: Server settings  -->
                 <StackPanel Margin="0,0,0,24">
 
-                    <!--  Карточка: Название + Версия (верхняя)  -->
+                    <!--  Card: Name + Version (top)  -->
                     <Border
                         Padding="16,12"
                         Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -63,10 +63,10 @@
                         </Grid>
                     </Border>
 
-                    <!--  Разделитель  -->
+                    <!--  Divider  -->
                     <Rectangle Height="1" Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
 
-                    <!--  Карточка: Модлоадер + Версия загрузчика  -->
+                    <!--  Card: Mod loader + Loader version  -->
                     <Border
                         Padding="16,12"
                         Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -112,10 +112,10 @@
                         </Grid>
                     </Border>
 
-                    <!--  Разделитель  -->
+                    <!--  Divider  -->
                     <Rectangle Height="1" Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
 
-                    <!--  Карточка: Snapshot фильтр  -->
+                    <!--  Card: Snapshot filter  -->
                     <Border
                         Padding="16,12"
                         Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -129,10 +129,10 @@
                             ToolTip="{loc:Loc CreateServer_Filter_Stable}" />
                     </Border>
 
-                    <!--  Разделитель  -->
+                    <!--  Divider  -->
                     <Rectangle Height="1" Fill="{ui:ThemeResource ControlElevationBorderBrush}" />
 
-                    <!--  Карточка: Расположение сервера (нижняя)  -->
+                    <!--  Card: Server location (bottom)  -->
                     <Border
                         Padding="16,12"
                         Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -178,7 +178,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!--  Кнопки и прогресс (фиксировано внизу)  -->
+        <!--  Buttons and progress (pinned to the bottom)  -->
         <Border
             Grid.Row="1"
             Padding="16"
@@ -186,14 +186,14 @@
             BorderBrush="{ui:ThemeResource SurfaceStrokeColorFlyoutBrush}"
             BorderThickness="0,1,0,0">
             <Grid Margin="0" ColumnDefinitions="Auto,*,Auto">
-                <!--  Кнопка Импорт  -->
+                <!--  Import button  -->
                 <ui:Button
                     x:Name="ImportButton"
                     Grid.Column="0"
                     Click="Import_Click"
                     Content="{loc:Loc CreateServer_Import}" />
 
-                <!--  Статус установки с анимацией волны  -->
+                <!--  Installation status with wave animation  -->
                 <StackPanel
                     x:Name="ProgressPanel"
                     Grid.Column="1"
@@ -215,7 +215,7 @@
                         TextTrimming="CharacterEllipsis" />
                 </StackPanel>
 
-                <!--  Кнопка Создать/Отмена  -->
+                    <!--  Create/Cancel button  -->
                 <StackPanel
                     Grid.Column="2"
                     HorizontalAlignment="Right"

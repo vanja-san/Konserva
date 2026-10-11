@@ -1,12 +1,12 @@
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Вспомогательные методы для работы с версиями Minecraft и модлоадеров.
+/// Helper methods for working with Minecraft and mod loader versions.
 /// </summary>
 public static class McVersionHelper
 {
     /// <summary>
-    /// Разбирает версию Minecraft на major.minor (например "1.20.1" → major=1, minor=20).
+    /// Splits a Minecraft version into major.minor (for example "1.20.1" → major=1, minor=20).
     /// </summary>
     public static bool TryParseMcVersion(string version, out int major, out int minor)
     {
@@ -32,7 +32,7 @@ public static class McVersionHelper
     }
 
     /// <summary>
-    /// Определяет, является ли версия снапшотом (pre-release, weekly и т.д.).
+    /// Determines whether a version is a snapshot (pre-release, weekly, etc.).
     /// </summary>
     public static bool IsSnapshot(string version)
     {
@@ -51,7 +51,7 @@ public static class McVersionHelper
     }
 
     /// <summary>
-    /// Определяет, является ли версия NeoForge снапшотом.
+    /// Determines whether a NeoForge version is a snapshot.
     /// </summary>
     public static bool IsNeoForgeSnapshot(string fullVersion)
     {
@@ -74,7 +74,7 @@ public static class McVersionHelper
     }
 
     /// <summary>
-    /// Определяет, является ли версия Quilt снапшотом.
+    /// Determines whether a Quilt version is a snapshot.
     /// </summary>
     public static bool IsQuiltSnapshot(string fullVersion)
     {

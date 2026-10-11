@@ -4,7 +4,7 @@ using System.Net.Http;
 namespace Konserva.Services;
 
 /// <summary>
-/// Скачивает файлы модов потоком, не загружая их целиком в память.
+/// Downloads mod files as a stream, without loading them entirely into memory.
 /// </summary>
 public sealed class ModFileDownloader : IModFileDownloader
 {

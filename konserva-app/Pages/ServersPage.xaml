@@ -6,10 +6,10 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="">
     <Grid Margin="16" RowDefinitions="Auto,*">
-        <!--  Поиск и фильтры  -->
+        <!--  Search and filters  -->
         <Border Grid.Row="0" Margin="0,0,0,8">
             <Grid ColumnDefinitions="*, Auto, Auto, Auto">
-                <!--  Поиск с watermark  -->
+                <!--  Search with watermark  -->
                 <Grid
                     Grid.Column="0"
                     Height="32.62"
@@ -173,7 +173,7 @@
             </Grid>
         </Border>
 
-        <!--  Список серверов  -->
+        <!--  Server list  -->
         <Border Grid.Row="1">
             <Grid>
                 <ScrollViewer CanContentScroll="True" VerticalScrollBarVisibility="Auto">
@@ -201,7 +201,7 @@
                                             Symbol="ServerSurface16" />
                                     </ui:CardAction.Icon>
                                     <Grid ColumnDefinitions="*,Auto">
-                                        <!--  Название и информация  -->
+                                        <!--  Name and info  -->
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                             <ui:TextBlock
                                                 FontSize="14"
@@ -234,7 +234,7 @@
                                             </StackPanel>
                                         </StackPanel>
 
-                                        <!--  Кнопки управления  -->
+                                        <!--  Control buttons  -->
                                         <StackPanel
                                             Grid.Column="1"
                                             Margin="16,0,0,0"
@@ -353,7 +353,7 @@
                     </ItemsControl>
                 </ScrollViewer>
 
-                <!--  Нет серверов  -->
+                <!--  No servers  -->
                 <StackPanel
                     x:Name="NoServersPanel"
                     HorizontalAlignment="Center"

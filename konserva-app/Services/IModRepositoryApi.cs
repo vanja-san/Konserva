@@ -3,22 +3,22 @@ using Konserva.Models;
 namespace Konserva.Services;
 
 /// <summary>
-/// Репозиторий версий модов. v1 — только Modrinth (публичные эндпоинты, без API-ключа).
+/// Repository of mod versions. v1 — Modrinth only (public endpoints, no API key).
 /// </summary>
 public interface IModRepositoryApi
 {
     /// <summary>
-    /// Текущие (локальные) версии по SHA-512 хешам файлов.
-    /// Нужны для date_published, чтобы отличить реальное обновление от даунгрейда.
-    /// Ключ словаря — переданный хеш.
+    /// Current (local) versions by file SHA-512 hashes.
+    /// Needed for date_published to tell a real update apart from a downgrade.
+    /// The dictionary key is the hash that was passed in.
     /// </summary>
     Task<IReadOnlyDictionary<string, ModrinthVersion>> GetCurrentVersionsAsync(
         IReadOnlyCollection<string> hashes,
         CancellationToken ct = default);
 
     /// <summary>
-    /// Последние версии, совместимые с указанными лоадерами, версией игры и каналами.
-    /// Файлы без совместимой версии в ответ не попадают. Ключ словаря — переданный хеш.
+    /// Latest versions compatible with the given loaders, game version and channels.
+    /// Files without a compatible version are not included in the response. The dictionary key is the hash that was passed in.
     /// </summary>
     Task<IReadOnlyDictionary<string, ModrinthVersion>> GetLatestVersionsAsync(
         IReadOnlyCollection<string> hashes,
@@ -28,17 +28,17 @@ public interface IModRepositoryApi
         CancellationToken ct = default);
 
     /// <summary>
-    /// Проекты Modrinth по их id (GET /v2/projects?ids=[...]).
-    /// Возвращает словарь: id проекта → проект (нужно для реальных названий модов).
+    /// Modrinth projects by their id (GET /v2/projects?ids=[...]).
+    /// Returns a dictionary: project id → project (needed to resolve the real mod names).
     /// </summary>
     Task<IReadOnlyDictionary<string, ModrinthProject>> GetProjectsAsync(
         IReadOnlyCollection<string> projectIds,
         CancellationToken ct = default);
 
     /// <summary>
-    /// Все версии проекта с фильтрами (GET /v2/project/{id}/version).
-    /// Используется как fallback, когда /version_files/update не вернул кандидата
-    /// из-за строгой сверки совместимости. Обычно новые версии идут первыми.
+    /// All versions of a project with the given filters (GET /v2/project/{id}/version).
+    /// Used as a fallback when /version_files/update returns no candidate
+    /// because of strict compatibility matching. Newer versions usually come first.
     /// </summary>
     Task<IReadOnlyList<ModrinthVersion>> GetProjectVersionsAsync(
         string projectId,

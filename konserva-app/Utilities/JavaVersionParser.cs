@@ -76,39 +76,39 @@ public static partial class JavaVersionParser
             int.TryParse(parts[0], out var major) &&
             int.TryParse(parts[1], out var minor))
         {
-            // MC 26.2 (Chaos Cubed) подтверждённо требует Java SE 25.
-            // Все будущие мажорные версии (27+, 28+ и т.д.) также идут на Java 25+.
+            // MC 26.2 (Chaos Cubed) is confirmed to require Java SE 25.
+            // All future major versions (27+, 28+, etc.) also run on Java 25+.
             if (major >= 26) return 25;
 
-            // MC 1.x — классический формат версий
+            // MC 1.x — the classic version format
             if (major == 1 && minor >= 21) return 21;                   // 1.21+ (Tricky Trials) → Java 21
             if (major == 1 && minor == 20 && parts.Length >= 3 &&        // 1.20.5+ (Armored Paws) → Java 21
                 int.TryParse(parts[2], out var build) && build >= 5)
                 return 21;
-            if (major == 1 && minor >= 18) return 17;                   // 1.18+ (Caves & Cliffs Pt2) и 1.19, 1.20.0-4 → Java 17
+            if (major == 1 && minor >= 18) return 17;                   // 1.18+ (Caves & Cliffs Pt2) and 1.19, 1.20.0-4 → Java 17
             if (major == 1 && minor == 17) return 16;                    // 1.17 (Caves & Cliffs Pt1) → Java 16
         }
 
-        // Для MC версий, не подходящих под условия выше, используем Java 8.
-        // Примечание: Forge/NeoForge для старых MC (1.16 и ниже) тоже работают на Java 8 —
-        // их установщики и серверы скомпилированы под Java 8. Современные Forge/NeoForge
-        // (MC 1.18+) уже покрыты условиями minor >= 18 → 17.
+        // For MC versions that do not match the conditions above, we use Java 8.
+        // Note: Forge/NeoForge for older MC (1.16 and below) also run on Java 8 —
+        // their installers and servers are compiled for Java 8. Modern Forge/NeoForge
+        // (MC 1.18+) is already covered by the minor >= 18 → 17 condition.
         return 8;
     }
 
     /// <summary>
-    /// Извлекает требуемую версию Java из сообщения об ошибке.
-    /// Поддерживает форматы: "Java X+", "class file version XX.0", "Java X",
+    /// Extracts the required Java version from an error message.
+    /// Supported formats: "Java X+", "class file version XX.0", "Java X",
     /// "Current Java is X but we require at least Y" (Forge bootstrap).
     /// </summary>
     public static int ParseRequiredJavaVersion(string msg)
     {
-        // Формат 1: "Требуется Java X+" (наш формат)
+        // Format 1: "Java X+ required" (our own format)
         var match = RequiredJavaPlusRegex().Match(msg);
         if (match.Success)
             return int.Parse(match.Groups[1].Value);
 
-        // Формат 2: "class file version XX.0" → переводим в версию Java
+        // Format 2: "class file version XX.0" → convert to a Java version
         var classVersionMatch = ClassFileVersionRegex().Match(msg);
         if (classVersionMatch.Success)
         {
@@ -116,24 +116,24 @@ public static partial class JavaVersionParser
             return ClassFileVersionToJavaVersion(classVersion);
         }
 
-        // Формат 3: "Current Java is X but we require at least Y" (Forge bootstrap)
+        // Format 3: "Current Java is X but we require at least Y" (Forge bootstrap)
         var forgeMatch = RequireAtLeastRegex().Match(msg);
         if (forgeMatch.Success)
             return int.Parse(forgeMatch.Groups[1].Value);
 
-        // Формат 4: "Java X" (общий fallback)
+        // Format 4: "Java X" (generic fallback)
         var fallbackMatch = JavaVersionFallbackRegex().Match(msg);
         if (fallbackMatch.Success)
             return int.Parse(fallbackMatch.Groups[1].Value);
 
-        // Ни один формат не подошёл — это не ошибка несовместимости Java
-        // Возвращаем 0, чтобы вызывающий код мог отличить "не удалось распарсить"
+        // No format matched — this is not a Java incompatibility error
+        // Return 0 so the caller can distinguish "failed to parse"
         return 0;
     }
 
     /// <summary>
-    /// Извлекает фактическую версию Java из сообщения об ошибке.
-    /// Поддерживает формат: "versions up to XX.0", "найдена Java X", "found Java X",
+    /// Extracts the actual Java version from an error message.
+    /// Supported formats: "versions up to XX.0", "найдена Java X", "found Java X",
     /// "Current Java is X but we require at least Y" (Forge bootstrap).
     /// </summary>
     public static int ParseFoundJavaVersion(string msg)
@@ -151,12 +151,12 @@ public static partial class JavaVersionParser
         if (forgeMatch.Success)
             return int.Parse(forgeMatch.Groups[1].Value);
 
-        // Формат 3: "найдена Java X" (наше кастомное сообщение, русский порядок)
+        // Format 3: "найдена Java X" (our custom message, Russian word order)
         var russianMatch = FoundJavaRussianRegex().Match(msg);
         if (russianMatch.Success)
             return int.Parse(russianMatch.Groups[1].Value);
 
-        // Формат 4: "found Java X" (английский вариант)
+        // Format 4: "found Java X" (English variant)
         var englishMatch = FoundJavaEnglishRegex().Match(msg);
         if (englishMatch.Success)
             return int.Parse(englishMatch.Groups[1].Value);
@@ -165,7 +165,7 @@ public static partial class JavaVersionParser
     }
 
     /// <summary>
-    /// Переводит class file version в версию Java.
+    /// Converts a class file version to a Java version.
     /// </summary>
     public static int ClassFileVersionToJavaVersion(int classVersion) => classVersion switch
     {
@@ -194,7 +194,7 @@ public static partial class JavaVersionParser
     };
 
     /// <summary>
-    /// Извлекает путь к Java из сообщения об ошибке.
+    /// Extracts the path to Java from an error message.
     /// </summary>
     public static string ParseJavaPath(string msg)
     {

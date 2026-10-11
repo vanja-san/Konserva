@@ -7,14 +7,14 @@ using Wpf.Ui.Controls;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Extension methods для WPF UI элементов.
+/// Extension methods for WPF UI elements.
 /// </summary>
 public static class UiExtensions
 {
     #region Dispatcher helpers
 
     /// <summary>
-    /// Асинхронный Invoke для Dispatcher с поддержкой CancellationToken.
+    /// Asynchronous Invoke for Dispatcher with CancellationToken support.
     /// </summary>
     public static Task InvokeAsync(this Dispatcher dispatcher, Action action, DispatcherPriority priority = DispatcherPriority.Normal)
     {
@@ -42,7 +42,7 @@ public static class UiExtensions
     }
 
     /// <summary>
-    /// Синхронный Invoke для Dispatcher.
+    /// Synchronous Invoke for Dispatcher.
     /// </summary>
     public static void Invoke(this Dispatcher dispatcher, Action action, DispatcherPriority priority = DispatcherPriority.Normal)
     {
@@ -57,7 +57,7 @@ public static class UiExtensions
     }
 
     /// <summary>
-    /// Синхронный Invoke для DispatcherObject (Window, Page и т.д.).
+    /// Synchronous Invoke for DispatcherObject (Window, Page, etc.).
     /// </summary>
     public static void Invoke(this DispatcherObject obj, Action action, DispatcherPriority priority = DispatcherPriority.Normal)
     {
@@ -65,7 +65,7 @@ public static class UiExtensions
     }
 
     /// <summary>
-    /// Async инвок для DispatcherObject (Window, Page и т.д.) с Func<Task>.
+    /// Async invoke for DispatcherObject (Window, Page, etc.) with Func<Task>.
     /// </summary>
     public static async Task InvokeAsync(this DispatcherObject obj, Func<Task> action, DispatcherPriority priority = DispatcherPriority.Normal)
     {
@@ -73,7 +73,7 @@ public static class UiExtensions
     }
 
     /// <summary>
-    /// Async инвок для DispatcherObject (Window, Page и т.д.) с sync action.
+    /// Async invoke for DispatcherObject (Window, Page, etc.) with a sync action.
     /// </summary>
     public static async Task InvokeAsync(this DispatcherObject obj, Action action, DispatcherPriority priority = DispatcherPriority.Normal)
     {
@@ -85,7 +85,7 @@ public static class UiExtensions
     #region ComboBox helpers
 
     /// <summary>
-    /// Выбирает ComboBoxItem по значению Tag.
+    /// Selects a ComboBoxItem by its Tag value.
     /// </summary>
     public static bool SelectItemByTag(this ComboBox comboBox, string tagValue)
     {
@@ -102,7 +102,7 @@ public static class UiExtensions
     }
 
     /// <summary>
-    /// Получает значение Tag выбранного элемента.
+    /// Gets the Tag value of the selected item.
     /// </summary>
     public static string? GetSelectedTag(this ComboBox comboBox)
     {
@@ -116,7 +116,7 @@ public static class UiExtensions
     #region ProgressRing helpers
 
     /// <summary>
-    /// Показывает спиннер <see cref="SpinnerRing"/> и запускает вращение.
+    /// Shows the <see cref="SpinnerRing"/> spinner and starts spinning.
     /// </summary>
     public static void ShowIndeterminate(this SpinnerRing ring)
     {
@@ -125,7 +125,7 @@ public static class UiExtensions
     }
 
     /// <summary>
-    /// Скрывает спиннер и останавливает вращение.
+    /// Hides the spinner and stops spinning.
     /// </summary>
     public static void HideIndeterminate(this SpinnerRing ring)
     {

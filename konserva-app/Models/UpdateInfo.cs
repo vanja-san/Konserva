@@ -1,7 +1,7 @@
 namespace Konserva.Models
 {
     /// <summary>
-    /// Информация о доступном обновлении.
+    /// Information about an available update.
     /// </summary>
     public class UpdateInfo
     {
@@ -15,15 +15,15 @@ namespace Konserva.Models
         public string ChangelogUrl { get; set; } = string.Empty;
 
         /// <summary>
-        /// Ожидаемый SHA-256 ассета (64 hex-символа) из version.json.
-        /// Пустая строка означает, что манифест не содержит контрольную сумму —
-        /// в таком случае обновление не применяется (см. <see cref="Services.AppUpdater"/>).
+        /// Expected SHA-256 of the asset (64 hex characters) from version.json.
+        /// An empty string means the manifest has no checksum —
+        /// in that case the update is not applied (see <see cref="Services.AppUpdater"/>).
         /// </summary>
         public string Sha256 { get; set; } = string.Empty;
 
         /// <summary>
-        /// true, если удалось прочитать version.json (HTTP 200).
-        /// false при таймауте или другой сетевой ошибке.
+        /// true, if version.json was read successfully (HTTP 200).
+        /// false on timeout or another network error.
         /// </summary>
         public bool IsCheckSuccessful { get; set; }
     }

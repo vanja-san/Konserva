@@ -1,26 +1,26 @@
 namespace Konserva.Models;
 
 /// <summary>
-/// Кэш метаданных модов (названия, версии и обновления), чтобы не ходить
-/// в сеть при каждом открытии вкладки и после перезапуска приложения.
+/// Cache of mod metadata (names, versions and updates) to avoid going
+/// online every time the tab is opened and after application restart.
 /// </summary>
 public class ModsMetadataCacheData
 {
-    /// <summary>Время последней реальной проверки обновлений (UTC).</summary>
+    /// <summary>Time of the last actual update check (UTC).</summary>
     public DateTime LastUpdatesCheckUtc { get; set; }
 
-    /// <summary>Названия/версии модов: имя файла → метаданные.</summary>
+    /// <summary>Mod names/versions: file name → metadata.</summary>
     public Dictionary<string, ModMetadataCacheEntry> Titles { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Инвентаризация файлов на момент последней проверки: имя файла → размер.</summary>
+    /// <summary>File inventory as of the last check: file name → size.</summary>
     public Dictionary<string, long> ModFiles { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Найденные обновления: имя файла → данные обновления (без версий — их содержит "Updates").</summary>
+    /// <summary>Found updates: file name → update data (without versions — "Updates" holds those).</summary>
     public Dictionary<string, ModUpdateCacheEntry> Updates { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>
-/// Закэшированные название и версия мода, действительные для файла указанного размера.
+/// Cached mod name and version, valid for a file of the specified size.
 /// </summary>
 public class ModMetadataCacheEntry
 {
@@ -31,14 +31,14 @@ public class ModMetadataCacheEntry
     public string Version { get; set; } = string.Empty;
 
     /// <summary>
-    /// SHA-512 локального файла (нижний регистр hex, формат Modrinth).
-    /// Позволяет не пересчитывать хеши при каждом открытии вкладки.
+    /// SHA-512 of the local file (lowercase hex, Modrinth format).
+    /// Allows skipping hash recalculation every time the tab is opened.
     /// </summary>
     public string Sha512 { get; set; } = string.Empty;
 }
 
 /// <summary>
-/// Закэшированное обновление мода, действительное для файла указанного размера.
+/// Cached mod update, valid for a file of the specified size.
 /// </summary>
 public class ModUpdateCacheEntry
 {

@@ -4,20 +4,20 @@ using System.IO;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Вспомогательные операции для обновления загрузчика сервера:
-/// резервное копирование папки и удаление файлов, которые установщик
-/// пересоздаёт заново (мир, конфиги, моды и плагины не затрагиваются).
+/// Helper operations for updating the server loader:
+/// backing up the folder and deleting files that the installer
+/// recreates from scratch (the world, configs, mods and plugins are left untouched).
 /// </summary>
 public static class ServerBackup
 {
     /// <summary>
-    /// Папка резервных копий рядом с исполняемым файлом приложения
+    /// Backups folder next to the application executable
     /// </summary>
     public static string BackupsPath => Path.Combine(AppContext.BaseDirectory, "Backups");
 
     /// <summary>
-    /// Полное копирование папки сервера в папку резервных копий.
-    /// Возвращает путь созданной копии.
+    /// Full copy of the server folder into the backups folder.
+    /// Returns the path of the created copy.
     /// </summary>
     public static string CreateBackupFolder(string serverPath, string serverName)
     {
@@ -33,9 +33,9 @@ public static class ServerBackup
     }
 
     /// <summary>
-    /// Удаляет файлы и папки, которые установщик загрузчика пересоздаст сам:
-    /// сам jar загрузчика, libraries/, скрипты запуска и служебные файлы.
-    /// Возвращает список удалённых путей (относительно папки сервера).
+    /// Deletes the files and folders that the loader installer will recreate itself:
+    /// the loader jar itself, libraries/, launch scripts and service files.
+    /// Returns the list of deleted paths (relative to the server folder).
     /// </summary>
     public static IReadOnlyList<string> RemoveLoaderFiles(string serverPath, ModLoaderType loaderType)
     {
@@ -76,7 +76,7 @@ public static class ServerBackup
             }
         }
 
-        // Общие файлы, которые всегда пересоздаются установщиком
+        // Common files that the installer always recreates
         TryDelete("eula.txt");
         TryDelete("installer.log");
         TryDelete("run.bat");
@@ -84,7 +84,7 @@ public static class ServerBackup
         TryDelete(".neoforge-launch.json");
         TryDelete("libraries");
 
-        // Файлы, специфичные для загрузчика
+        // Loader-specific files
         switch (loaderType)
         {
             case ModLoaderType.Vanilla:

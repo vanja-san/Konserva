@@ -12,24 +12,24 @@ using Wpf.Ui.Controls;
 namespace Konserva.Services;
 
 /// <summary>
-/// Проверка Java, поиск пути, валидация версии, запуск процесса
+/// Java checking, path lookup, version validation, process start
 /// </summary>
 public partial class McServerProcess
 {
-    // Кэш поддержки module-path (-p) для java-установок — проверяем один раз и запоминаем
+    // Cache of module-path (-p) support per Java installation — check once and remember
     private static readonly ConcurrentDictionary<string, bool> _modulePathSupportCache = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Проверяет, поддерживает ли указанная Java опцию <c>-p</c> (module path).
-    /// Результат кэшируется.
+    /// Checks whether the specified Java supports the <c>-p</c> option (module path).
+    /// The result is cached.
     /// </summary>
     private static bool SupportsModulePath(string javaPath)
     {
         if (_modulePathSupportCache.TryGetValue(javaPath, out var cached))
             return cached;
 
-        // javaw.exe не поддерживает перенаправление stdout/stderr —
-        // используем java.exe для проверки
+        // javaw.exe does not support stdout/stderr redirection —
+        // use java.exe for the check
         var checkPath = javaPath;
         if (checkPath.EndsWith("javaw.exe", StringComparison.OrdinalIgnoreCase))
         {
@@ -63,7 +63,7 @@ public partial class McServerProcess
             var error = process.StandardError.ReadToEnd();
             process.WaitForExit(5000);
 
-            // Java 8 launcher ответит "Unrecognized option: -p"
+            // The Java 8 launcher will reply with "Unrecognized option: -p"
             var supports = !error.Contains("Unrecognized option", StringComparison.OrdinalIgnoreCase)
                         && !error.Contains("Error", StringComparison.OrdinalIgnoreCase);
 
@@ -79,9 +79,9 @@ public partial class McServerProcess
     }
 
     /// <summary>
-    /// Проверяет, является ли Java 8 сборкой с update >= 400.
-    /// Начиная с Java 8u400, конструктор ManifestEntryVerifier(Manifest) был удалён,
-    /// что приводит к NoSuchMethodError при запуске Forge (ModLauncher SecureJarHandler).
+    /// Checks whether Java is a Java 8 build with update >= 400.
+    /// Starting with Java 8u400, the ManifestEntryVerifier(Manifest) constructor was removed,
+    /// which causes a NoSuchMethodError when launching Forge (ModLauncher SecureJarHandler).
     /// </summary>
     private static bool IsBrokenJava8(JavaInstallation java)
     {
@@ -92,7 +92,7 @@ public partial class McServerProcess
         if (string.IsNullOrEmpty(version))
             return false;
 
-        // Формат "1.8.0_502" — извлекаем update (число после _)
+        // "1.8.0_502" format — extract the update number (the number after _)
         if (version.StartsWith("1.8."))
         {
             var parts = version.Split('_');
@@ -100,7 +100,7 @@ public partial class McServerProcess
                 return true;
         }
 
-        // Формат "8.0.4020.8" для некоторых сборок
+        // "8.0.4020.8" format used by some builds
         if (version.StartsWith("8."))
         {
             var segments = version.Split('.');
@@ -112,7 +112,7 @@ public partial class McServerProcess
     }
 
     /// <summary>
-    /// Получить путь к Java для сервера
+    /// Get the Java path for the server
     /// </summary>
     private string GetJavaPathForServer()
     {
@@ -144,14 +144,14 @@ public partial class McServerProcess
             var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, launchType);
             Logger.Info($"[GetJavaPathForServer] Auto-select: required Java {requiredJavaVersion}+, launch type {launchType}", "McServerProcess");
 
-            // NeoForge использует module-path (-p) — отфильтровываем Java, которые его не поддерживают.
-            // Forge использует -jar, модули не нужны.
+            // NeoForge uses module-path (-p) — filter out Java installations that do not support it.
+            // Forge uses -jar, no modules needed.
             bool needsModulePath = launchType is ServerLaunchType.NeoForge;
 
             var maxJavaVersion = GetMaxJavaVersion(Server.McVersion, launchType);
 
-            // Forge/NeoForge: только exact match (как в FluentLauncher).
-            // Forge modlauncher собран под конкретную версию Java — при несовпадении NoSuchMethodError / IllegalAccessError.
+            // Forge/NeoForge: exact match only (as in FluentLauncher).
+            // The Forge modlauncher is built for a specific Java version — a mismatch causes NoSuchMethodError / IllegalAccessError.
             bool isForgeOrNeoForge = launchType == ServerLaunchType.Forge || launchType == ServerLaunchType.NeoForge;
 
             var exactMatch = config.JavaInstallations
@@ -167,10 +167,10 @@ public partial class McServerProcess
                 return exactMatch.Path;
             }
 
-            // Forge/NeoForge: если exact match не найден — пробуем новее
+            // Forge/NeoForge: if no exact match is found — try a newer version
             if (isForgeOrNeoForge)
             {
-                // Проверяем, есть ли Java 8 >= update 400, которые мы отфильтровали
+                // Check whether there are Java 8 builds with update >= 400 that we filtered out
                 var hasBrokenJava8 = config.JavaInstallations
                     .Any(j => j.Exists && j.MajorVersion == requiredJavaVersion && IsBrokenJava8(j));
 
@@ -226,7 +226,7 @@ public partial class McServerProcess
                     return suitableJava.Path;
                 }
 
-                // Если ничего не подошло — пробуем без фильтра module-path (возможно, пользователь вручную выбрал)
+                // If nothing fits — try without the module-path filter (the user may have selected it manually)
                 AppendLog($"[WARN] {LocalizationManager.Get("Log_JavaVersionNotFound_TryDefault", requiredJavaVersion)}");
             }
         }
@@ -247,15 +247,15 @@ public partial class McServerProcess
     }
 
     /// <summary>
-    /// Получить требуемую минимальную версию Java для версии Minecraft
+    /// Get the minimum required Java version for a Minecraft version
     /// </summary>
     private static int GetRequiredJavaVersion(string mcVersion, ServerLaunchType launchType) =>
         JavaVersionParser.GetRequiredJavaVersion(mcVersion, launchType);
 
     /// <summary>
-    /// Максимальная версия Java, совместимая с данной версией Minecraft + модлоадером.
-    /// 0 = без ограничения.
-    /// Forge до 1.17 ломается на Java 17+ (module system не экспортит sun.security.util).
+    /// The maximum Java version compatible with a given Minecraft version + mod loader.
+    /// 0 = no limit.
+    /// Forge before 1.17 breaks on Java 17+ (the module system does not export sun.security.util).
     /// </summary>
     private static int GetMaxJavaVersion(string mcVersion, ServerLaunchType launchType)
     {
@@ -266,20 +266,20 @@ public partial class McServerProcess
             {
                 if (major == 1)
                 {
-                    // MC 1.16.x и ниже — Forge modlauncher несовместим с Java 17+
-                    // Java 11 тоже не имеет ManifestEntryVerifier(Manifest) — нужна Java 8 < 8u400
+                    // MC 1.16.x and below — the Forge modlauncher is incompatible with Java 17+
+                    // Java 11 also lacks ManifestEntryVerifier(Manifest) — Java 8 < 8u400 is required
                     if (minor <= 16) return 8;
 
-                    // MC 1.17 использует Java 16, максимум 17
+                    // MC 1.17 uses Java 16, maximum 17
                     if (minor == 17) return 17;
                 }
             }
         }
-        return 0; // без ограничения
+        return 0; // no limit
     }
 
     /// <summary>
-    /// Результат проверки Java
+    /// Java check result
     /// </summary>
     private sealed class JavaCheckResult
     {
@@ -292,7 +292,7 @@ public partial class McServerProcess
     }
 
     /// <summary>
-    /// Проверка доступности Java с получением версии
+    /// Java availability check with version detection
     /// </summary>
     private static JavaCheckResult CheckJava(string javaPath)
     {
@@ -399,7 +399,7 @@ public partial class McServerProcess
     }
 
     /// <summary>
-    /// Проверка наличия eula.txt
+    /// eula.txt presence check
     /// </summary>
     private void ValidateEula()
     {
@@ -415,7 +415,7 @@ public partial class McServerProcess
     }
 
     /// <summary>
-    /// Проверка совместимости версии Java
+    /// Java version compatibility check
     /// </summary>
     private void ValidateJavaVersion(JavaCheckResult javaCheckResult)
     {
@@ -435,7 +435,7 @@ public partial class McServerProcess
     }
 
     /// <summary>
-    /// Логирование ошибки версии Java
+    /// Logging the Java version error
     /// </summary>
     private void LogJavaVersionError(int required, JavaCheckResult actual)
     {
@@ -454,7 +454,7 @@ public partial class McServerProcess
     }
 
     /// <summary>
-    /// Логирование ошибки - Java не найдена
+    /// Logging the error - Java not found
     /// </summary>
     private void LogJavaNotFoundError(string javaPath, string error)
     {
@@ -472,7 +472,7 @@ public partial class McServerProcess
     }
 
     /// <summary>
-    /// Запуск процесса
+    /// Process start
     /// </summary>
     private void StartProcess(string javaPath, string javaArgs)
     {
@@ -512,7 +512,7 @@ public partial class McServerProcess
     }
 
     /// <summary>
-    /// Обработка ошибки запуска
+    /// Start failure handling
     /// </summary>
     private void HandleStartError(Exception ex)
     {

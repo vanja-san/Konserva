@@ -4,24 +4,24 @@ using System.IO;
 namespace Konserva.Services;
 
 /// <summary>
-/// Определение типа модлоадера по файлам в папке сервера.
+/// Detecting the mod loader type from the files in the server folder.
 /// </summary>
 public partial class McServerInstaller
 {
     /// <summary>
-    /// Получить тип запуска сервера
+    /// Get the server launch type
     /// </summary>
     public ServerLaunchType GetServerLaunchType(string serverPath)
     {
         if (File.Exists(Path.Combine(serverPath, "fabric-server-launch.jar")))
             return ServerLaunchType.Fabric;
 
-        // Quilt может иметь разные имена файлов
+        // Quilt may use different file names
         var quiltJars = Directory.GetFiles(serverPath, "quilt-server-*.jar");
         if (quiltJars.Length > 0)
             return ServerLaunchType.Quilt;
 
-        // Forge (старый формат forge-*.jar или новый *-shim.jar)
+        // Forge (old forge-*.jar format or the newer *-shim.jar)
         if (Directory.GetFiles(serverPath, "forge-*.jar").Length > 0)
             return ServerLaunchType.Forge;
 
@@ -31,11 +31,11 @@ public partial class McServerInstaller
         if (Directory.GetFiles(serverPath, "neoforge-*.jar").Length > 0)
             return ServerLaunchType.NeoForge;
 
-        // NeoForge 21.x+ может не иметь jar в корне — проверяем маркер конфига запуска
+        // NeoForge 21.x+ may have no jar in the root — check the launch config marker
         if (File.Exists(Path.Combine(serverPath, ".neoforge-launch.json")))
             return ServerLaunchType.NeoForge;
 
-        // Vanilla, Paper используют стандартный запуск
+        // Vanilla and Paper use the standard launch
         return ServerLaunchType.Standard;
     }
 }

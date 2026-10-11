@@ -4,7 +4,7 @@ using System.Windows.Data;
 namespace Konserva.Converters;
 
 /// <summary>
-/// Конвертер: проверяет, пуста ли строка
+/// Converter: checks whether a string is empty
 /// </summary>
 public class StringIsEmptyConverter : IValueConverter
 {

@@ -9,7 +9,7 @@ using Button = Wpf.Ui.Controls.Button;
 namespace Konserva.Pages;
 
 /// <summary>
-/// Java-секция страницы настроек (вынесена в отдельный partial-файл)
+/// Java section of the settings page (extracted into a separate partial file)
 /// </summary>
 public partial class SettingsPage
 {

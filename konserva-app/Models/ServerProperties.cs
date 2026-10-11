@@ -5,24 +5,23 @@ using System.Text;
 namespace Konserva.Models;
 
 /// <summary>
-/// Модель server.properties Minecraft сервера
+/// Model of a Minecraft server's server.properties
 /// </summary>
 public class ServerProperties
 {
-    /// <summary>
-    /// Ключи свойств, которые были найдены в файле
+    /// Property keys that were found in the file
     /// </summary>
     public HashSet<string> FoundKeys { get; } = new();
 
     /// <summary>
-    /// Исходные значения всех ключей, прочитанных из файла.
-    /// Нужны, чтобы при сохранении вернуть на место ключи, которых нет в модели
-    /// (ключи от модов, новые ключи будущих версий Minecraft, пользовательские
-    /// параметры). Раньше они молча удалялись при первом же сохранении из GUI.
+    /// Original values of all keys read from the file.
+    /// They are needed so that saving can put back the keys that are missing from the model
+    /// (keys added by mods, new keys of future Minecraft versions, custom
+    /// parameters). Previously they were silently deleted on the very first save from the GUI.
     /// </summary>
     private readonly Dictionary<string, string> _rawValues = new(StringComparer.Ordinal);
 
-    // ===== Основные настройки =====
+    // ===== Basic settings =====
     public int ServerPort { get; set; } = 25565;
     public string ServerIp { get; set; } = "";
     public int MaxPlayers { get; set; } = 20;
@@ -31,7 +30,7 @@ public class ServerProperties
     public int SimulationDistance { get; set; } = 10;
     public int PauseWhenEmptySeconds { get; set; } = 60;
 
-    // ===== Режим игры =====
+    // ===== Gameplay =====
     public string Gamemode { get; set; } = "survival";
     public bool ForceGamemode { get; set; } = false;
     public bool Hardcore { get; set; } = false;
@@ -39,7 +38,7 @@ public class ServerProperties
     public bool AllowFlight { get; set; } = false;
     public bool Pvp { get; set; } = true;
 
-    // ===== Мир =====
+    // ===== World =====
     public string LevelName { get; set; } = "world";
     public string LevelSeed { get; set; } = "";
     public string LevelType { get; set; } = "minecraft:normal";
@@ -49,7 +48,7 @@ public class ServerProperties
     public int SpawnProtection { get; set; } = 16;
     public int SpawnRadius { get; set; } = 10;
 
-    // ===== Сеть =====
+    // ===== Network =====
     public bool OnlineMode { get; set; } = true;
     public bool EnforceSecureProfile { get; set; } = true;
     public bool PreventProxyConnections { get; set; } = false;
@@ -91,7 +90,7 @@ public class ServerProperties
     public string ResourcePackPrompt { get; set; } = "";
     public bool RequireResourcePack { get; set; } = false;
 
-    // ===== Логи и мониторинг =====
+    // ===== Logs and monitoring =====
     public bool LogIps { get; set; } = true;
     public bool BroadcastConsoleToOps { get; set; } = true;
     public bool BroadcastRconToOps { get; set; } = true;
@@ -100,7 +99,7 @@ public class ServerProperties
     public bool EnableCodeOfConduct { get; set; } = false;
     public string BugReportLink { get; set; } = "";
 
-    // ===== Производительность =====
+    // ===== Performance =====
     public bool SyncChunkWrites { get; set; } = true;
     public bool UseNativeTransport { get; set; } = true;
     public int MaxChainedNeighborUpdates { get; set; } = 1000000;
@@ -111,7 +110,7 @@ public class ServerProperties
     public int OpPermissionLevel { get; set; } = 4;
     public int FunctionPermissionLevel { get; set; } = 2;
 
-    // ===== Датапаки =====
+    // ===== Data packs =====
     public string InitialEnabledPacks { get; set; } = "vanilla";
     public string InitialDisabledPacks { get; set; } = "";
 
@@ -119,7 +118,7 @@ public class ServerProperties
     public string TextFilteringConfig { get; set; } = "";
     public int TextFilteringVersion { get; set; } = 0;
 
-    // ===== Удалено в 1.21.2+ (оставлено для совместимости) =====
+    // ===== Removed in 1.21.2+ (kept for compatibility) =====
     public bool CommandBlocks { get; set; } = true;
     public bool AllowNether { get; set; } = true;
     public bool SpawnNpcs { get; set; } = true;
@@ -127,7 +126,7 @@ public class ServerProperties
     public bool SpawnMonsters { get; set; } = true;
 
     /// <summary>
-    /// Загрузить свойства из файла
+    /// Loads the properties from a file
     /// </summary>
     public static ServerProperties Load(string path)
     {
@@ -142,7 +141,7 @@ public class ServerProperties
         {
             var trimmedLine = line.Trim();
 
-            // Пропускаем комментарии и пустые строки
+            // Skip comments and empty lines
             if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#"))
                 continue;
 
@@ -153,11 +152,11 @@ public class ServerProperties
             var key = trimmedLine[..eqIndex].Trim();
             var value = trimmedLine[(eqIndex + 1)..].Trim();
 
-            // Запоминаем ключ для последующей фильтрации UI
+            // Remember the key for subsequent UI filtering
             props.FoundKeys.Add(key);
 
-            // Сохраняем исходное значение: ключ может оказаться неизвестным модели,
-            // и тогда его нужно будет вернуть в файл при сохранении без изменений.
+            // Store the original value: the key may turn out to be unknown to the model,
+            // and then it has to be written back to the file on save unchanged.
             props._rawValues[key] = value;
 
             SetProperty(props, key, value);
@@ -167,7 +166,7 @@ public class ServerProperties
     }
 
     /// <summary>
-    /// Сохранить свойства в файл (плоский формат как в vanilla Minecraft)
+    /// Saves the properties to a file (flat format as in vanilla Minecraft)
     /// </summary>
     public void Save(string path)
     {
@@ -251,7 +250,7 @@ public class ServerProperties
             ["white-list"] = WhiteList.ToString().ToLower(),
         };
 
-        // Сохраняем только те свойства, которые были в оригинальном файле
+        // Save only the properties that were present in the original file
         var props = FoundKeys.Count > 0
             ? allProps.Where(kv => FoundKeys.Contains(kv.Key))
             : allProps;
@@ -262,8 +261,8 @@ public class ServerProperties
             output[key] = value;
         }
 
-        // Возвращаем на место ключи, которых нет в модели, с их исходными значениями.
-        // Без этого сохранение из GUI стирало бы всё, что Konserva не умеет редактировать.
+        // Put back the keys that are missing from the model, with their original values.
+        // Without this, saving from the GUI would wipe everything Konserva cannot edit.
         if (FoundKeys.Count > 0)
         {
             foreach (var key in FoundKeys)
@@ -282,7 +281,7 @@ public class ServerProperties
     }
 
     /// <summary>
-    /// Установить свойство по имени
+    /// Sets a property by name
     /// </summary>
     private static void SetProperty(ServerProperties props, string key, string value)
     {
@@ -495,7 +494,7 @@ public class ServerProperties
             case "text-filtering-version":
                 props.TextFilteringVersion = ParseInt(value, 0);
                 break;
-            // Удалено в 1.21.2+ (оставлено для совместимости)
+            // Removed in 1.21.2+ (kept for compatibility)
             case "command-block-enabled":
                 props.CommandBlocks = ParseBool(value, true);
                 break;
@@ -519,7 +518,7 @@ public class ServerProperties
 
     private static bool ParseBool(string value, bool defaultValue)
     {
-        // Minecraft использует lowercase true/false
+        // Minecraft uses lowercase true/false
         if (string.Equals(value, "true", StringComparison.OrdinalIgnoreCase))
             return true;
         if (string.Equals(value, "false", StringComparison.OrdinalIgnoreCase))
@@ -528,7 +527,7 @@ public class ServerProperties
     }
 
     /// <summary>
-    /// Получить описание режима игры
+    /// Gets the game mode display name
     /// </summary>
     public string GamemodeDisplayName => Gamemode.ToLower() switch
     {
@@ -540,7 +539,7 @@ public class ServerProperties
     };
 
     /// <summary>
-    /// Получить описание сложности
+    /// Gets the difficulty display name
     /// </summary>
     public string DifficultyDisplayName => Difficulty.ToLower() switch
     {

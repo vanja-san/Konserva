@@ -4,12 +4,12 @@ using System.Security.Cryptography;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Хеширование файлов для сверки с репозиторием (Modrinth использует SHA-512).
+/// File hashing for verification against the repository (Modrinth uses SHA-512).
 /// </summary>
 public static class FileHash
 {
     /// <summary>
-    /// Возвращает SHA-512 файла в нижнем регистре hex (формат Modrinth).
+    /// Returns the SHA-512 hash of a file as a lowercase hex string (Modrinth format).
     /// </summary>
     public static async Task<string> Sha512Async(string filePath, CancellationToken ct = default)
     {

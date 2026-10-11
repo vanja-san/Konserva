@@ -4,7 +4,7 @@ using System.Windows.Data;
 namespace Konserva.Converters;
 
 /// <summary>
-/// Конвертирует bool в Opacity. true → 1.0, false → 0.55
+/// Converts bool to Opacity. true → 1.0, false → 0.55
 /// </summary>
 public class BoolToOpacityConverter : IValueConverter
 {

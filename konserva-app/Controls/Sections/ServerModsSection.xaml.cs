@@ -10,7 +10,7 @@ using WpfButton = Wpf.Ui.Controls.Button;
 namespace Konserva.Controls.Sections;
 
 /// <summary>
-/// Секция списка модов: проверка и применение обновлений, включение/отключение, удаление.
+/// Mod list section: checking and applying updates, enabling/disabling, deleting.
 /// </summary>
 public partial class ServerModsSection : System.Windows.Controls.UserControl, IDisposable
 {
@@ -24,7 +24,7 @@ public partial class ServerModsSection : System.Windows.Controls.UserControl, ID
     }
 
     /// <summary>
-    /// Инициализация секции: привязка ViewModel и сервера, загрузка списка.
+    /// Initializes the section: binds the ViewModel and the server, loads the list.
     /// </summary>
     public void Initialize(ServerDetailViewModel viewModel, Server? server)
     {
@@ -33,7 +33,7 @@ public partial class ServerModsSection : System.Windows.Controls.UserControl, ID
     }
 
     /// <summary>
-    /// Перезагружает список модов (вызывается при каждом открытии раздела).
+    /// Reloads the mod list (called every time the section is opened).
     /// </summary>
     public void Load() => LoadMods();
 
@@ -41,14 +41,14 @@ public partial class ServerModsSection : System.Windows.Controls.UserControl, ID
     {
         if (_server == null) return;
 
-        // Список из локальных файлов показываем сразу, названия/версии подтягиваются в фоне
+        // We show the list from local files right away, names/versions are resolved in the background
         _viewModel.LoadMods();
         ModsList.ItemsSource = _viewModel.Mods;
         ItemUiHelper.ReloadItemsPanel(ModsList, ModsCountBadge, _viewModel.Mods.Count, () => ItemUiHelper.UpdateToggleBtn(ToggleAllModsBtn, _viewModel.CheckAllModsDisabled, "ServerDetail_Mods_ToggleAll_Enable", "ServerDetail_Mods_ToggleAll_Disable"));
 
         await _viewModel.ResolveModTitlesAsync();
 
-        // Авто-проверка обновлений только если файлы изменились или кэш устарел (TTL)
+        // Auto update check only if the files have changed or the cache is stale (TTL)
         await _viewModel.MaybeCheckModUpdatesAutoAsync();
         UpdateModUpdateUI();
     }
@@ -134,7 +134,7 @@ public partial class ServerModsSection : System.Windows.Controls.UserControl, ID
     {
         if (_server == null) return;
 
-        // После применения обновлений не дёргаем авто-проверку — список обновим без сети
+        // After applying the updates we skip the auto check — the list is refreshed without network access
         _viewModel.LoadMods();
         ModsList.ItemsSource = _viewModel.Mods;
         ItemUiHelper.ReloadItemsPanel(ModsList, ModsCountBadge, _viewModel.Mods.Count,

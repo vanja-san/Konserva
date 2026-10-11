@@ -4,7 +4,7 @@ using System.Windows.Data;
 namespace Konserva.Converters;
 
 /// <summary>
-/// Конвертер: показывает placeholder если текст пуст
+/// Converter: shows the placeholder if the text is empty
 /// </summary>
 public class StringToPlaceholderConverter : IValueConverter
 {

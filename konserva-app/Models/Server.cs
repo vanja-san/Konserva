@@ -6,7 +6,7 @@ using ObservableObject = CommunityToolkit.Mvvm.ComponentModel.ObservableObject;
 namespace Konserva.Models;
 
 /// <summary>
-/// Статус сервера
+/// Server status
 /// </summary>
 public enum ServerStatus
 {
@@ -18,19 +18,19 @@ public enum ServerStatus
 }
 
 /// <summary>
-/// Модель сервера Minecraft
+/// Minecraft server model
 /// </summary>
 public class Server : ObservableObject
 {
     private static int _idCounter;
 
     /// <summary>
-    /// Уникальный идентификатор сервера
+    /// Unique server identifier
     /// </summary>
     public string Id { get; init; } = GenerateShortId();
 
     /// <summary>
-    /// Название сервера (1-{MaxServerNameLength} символов)
+    /// Server name (1-{MaxServerNameLength} characters)
     /// </summary>
     [Required]
     [StringLength(Constants.MaxServerNameLength, MinimumLength = 1)]
@@ -50,37 +50,37 @@ public class Server : ObservableObject
     }
 
     /// <summary>
-    /// Путь к папке сервера
+    /// Path to the server folder
     /// </summary>
     public string Path { get; set; } = string.Empty;
 
     /// <summary>
-    /// Версия Minecraft
+    /// Minecraft version
     /// </summary>
     public string McVersion { get; set; } = string.Empty;
 
     /// <summary>
-    /// Модлоадер (Vanilla, Forge, NeoForge, Fabric, Quilt)
+    /// Mod loader (Vanilla, Forge, NeoForge, Fabric, Quilt)
     /// </summary>
     public ModLoader ModLoader { get; set; } = new();
 
     /// <summary>
-    /// Настройки сервера
+    /// Server settings
     /// </summary>
     public ServerSettings Settings { get; set; } = new();
 
     /// <summary>
-    /// Последнее время игры
+    /// Last played time
     /// </summary>
     public DateTime? LastPlayed { get; set; }
 
     /// <summary>
-    /// Дата создания сервера
+    /// Server creation date
     /// </summary>
     public DateTime CreatedAt { get; init; } = SystemTime.Now;
 
     /// <summary>
-    /// Порт сервера (1-65535)
+    /// Server port (1-65535)
     /// </summary>
     [Range(1, 65535)]
     public int Port
@@ -90,16 +90,16 @@ public class Server : ObservableObject
     } = Constants.DefaultServerPort;
 
     /// <summary>
-    /// Автозапуск сервера
+    /// Auto-start the server
     /// </summary>
     public bool AutoStart { get; set; }
 
     /// <summary>
-    /// Номер сборки сервера (для Paper)
+    /// Server build number (for Paper)
     /// </summary>
     public int? ServerBuild { get; set; }
 
-    // Временные данные (не сохраняются, JsonIgnore)
+    // Transient data (not persisted, JsonIgnore)
     [JsonIgnore]
     public ServerStatus Status
     {
@@ -124,18 +124,18 @@ public class Server : ObservableObject
         $"{SystemTime.Now:yyyyMMdd}-{Interlocked.Increment(ref _idCounter):X4}";
 
     /// <summary>
-    /// Инициализация счётчика ID при загрузке существующих серверов
+    /// Initializes the ID counter when loading existing servers
     /// </summary>
-    /// <param name="existingServers">Список загруженных серверов</param>
+    /// <param name="existingServers">List of loaded servers</param>
     public static void InitializeIdCounter(IEnumerable<Server> existingServers)
     {
-        // Находим максимальный числовой ID из существующих серверов
+        // Find the maximum numeric ID among the existing servers
         var maxId = existingServers
             .Select(s => s.Id)
             .Where(id => id != null)
             .Select(id =>
             {
-                // Формат ID: yyyyMMdd-XXXX (где XXXX - шестнадцатеричное число)
+                // ID format: yyyyMMdd-XXXX (where XXXX is a hexadecimal number)
                 var parts = id.Split('-');
                 if (parts.Length == 2 && int.TryParse(parts[1], System.Globalization.NumberStyles.HexNumber, null, out var numericId))
                 {
@@ -146,39 +146,39 @@ public class Server : ObservableObject
             .DefaultIfEmpty(0)
             .Max();
 
-        // Устанавливаем счётчик на максимальное значение, чтобы новые ID были уникальными
+        // Set the counter to the maximum value so that new IDs stay unique
         Interlocked.Exchange(ref _idCounter, maxId);
     }
 
     /// <summary>
-    /// Проверка: сервер запущен
+    /// Check: whether the server is running
     /// </summary>
     public bool IsRunning => Status is ServerStatus.Running or ServerStatus.Starting;
 
     /// <summary>
-    /// Краткое описание сервера
+    /// Short server description
     /// </summary>
     public string Description => $"{McVersion} • {ModLoader.Type}{(ServerBuild.HasValue ? $" (build {ServerBuild})" : "")}";
 
     /// <summary>
-    /// Флаг: показан ли диалог ошибки запуска
+    /// Flag: whether the launch error dialog has been shown
     /// </summary>
     public bool ErrorDialogShown { get; set; }
 
     /// <summary>
-    /// Сбросить флаг ошибки
+    /// Resets the error flag
     /// </summary>
     public void ResetErrorDialog() => ErrorDialogShown = false;
 
     /// <summary>
-    /// Клонирование сервера
+    /// Clones the server
     /// </summary>
     public Server Clone() => new()
     {
         Name = Name,
         Path = Path,
         McVersion = McVersion,
-        ModLoader = ModLoader.Clone(),  // Создаём копию ModLoader
+        ModLoader = ModLoader.Clone(),  // Create a copy of ModLoader
         Settings = Settings.Clone(),
         LastPlayed = LastPlayed,
         Port = Port,
@@ -187,7 +187,7 @@ public class Server : ObservableObject
     };
 
     /// <summary>
-    /// Валидация сервера
+    /// Server validation
     /// </summary>
     public bool Validate() => !string.IsNullOrWhiteSpace(Name) &&
                                Port >= 1 && Port <= 65535 &&

@@ -4,8 +4,8 @@ using System.Windows.Controls;
 namespace Konserva.Converters;
 
 /// <summary>
-/// Отдаёт стиль выделения выбранного пункта только для MenuItem,
-/// а для Separator — null (дефолтное оформление).
+/// Returns the selected-item highlight style only for MenuItem,
+/// and null for Separator (default appearance).
 /// </summary>
 public class MenuItemSelectionStyleSelector : StyleSelector
 {

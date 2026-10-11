@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Konserva.Models;
 
 /// <summary>
-/// Версия проекта Modrinth (ответ /v2/version_files и /v2/version_files/update).
+/// Modrinth project version (response of /v2/version_files and /v2/version_files/update).
 /// </summary>
 public class ModrinthVersion
 {
@@ -20,7 +20,7 @@ public class ModrinthVersion
     [JsonPropertyName("version_type")]
     public string VersionType { get; set; } = string.Empty;
 
-    /// <summary>Совместимые версии Minecraft (например "1.20.1", "1.20").</summary>
+    /// <summary>Compatible Minecraft versions (for example "1.20.1", "1.20").</summary>
     [JsonPropertyName("game_versions")]
     public List<string> GameVersions { get; set; } = [];
 
@@ -31,14 +31,14 @@ public class ModrinthVersion
     public List<ModrinthFile> Files { get; set; } = [];
 
     /// <summary>
-    /// Основной файл версии (primary). Если primary не задан — первый в списке.
+    /// Primary file of the version (primary). If primary is not set — the first one in the list.
     /// </summary>
     public ModrinthFile? PrimaryFile =>
         Files.FirstOrDefault(f => f.Primary) ?? Files.FirstOrDefault();
 }
 
 /// <summary>
-/// Файл версии Modrinth.
+/// Modrinth version file.
 /// </summary>
 public class ModrinthFile
 {
@@ -56,7 +56,7 @@ public class ModrinthFile
 }
 
 /// <summary>
-/// Хеши файла Modrinth.
+/// Modrinth file hashes.
 /// </summary>
 public class ModrinthHashes
 {
@@ -68,7 +68,7 @@ public class ModrinthHashes
 }
 
 /// <summary>
-/// Проект Modrinth (ответ /v2/projects).
+/// Modrinth project (response of /v2/projects).
 /// </summary>
 public class ModrinthProject
 {
@@ -83,7 +83,7 @@ public class ModrinthProject
 }
 
 /// <summary>
-/// Реальные название и версия мода из репозитория (Modrinth).
+/// Actual mod name and version from the repository (Modrinth).
 /// </summary>
 public class ModMetadata
 {

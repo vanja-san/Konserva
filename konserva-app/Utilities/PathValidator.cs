@@ -4,17 +4,17 @@ using System.Text;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Валидация путей для предотвращения path traversal атак.
-/// Проверяет что путь находится внутри разрешённой базовой директории.
+/// Path validation to prevent path traversal attacks.
+/// Checks that a path lies inside the allowed base directory.
 /// </summary>
 public static class PathValidator
 {
     /// <summary>
-    /// Проверяет что путь находится внутри baseDir и не содержит escape-последовательностей.
+    /// Checks that the path is inside baseDir and contains no escape sequences.
     /// </summary>
-    /// <param name="path">Путь для проверки</param>
-    /// <param name="baseDir">Базовая директория (например, каталог приложения или Servers)</param>
-    /// <returns>true если путь безопасен</returns>
+    /// <param name="path">The path to check</param>
+    /// <param name="baseDir">The base directory (for example, the application directory or Servers)</param>
+    /// <returns>true if the path is safe</returns>
     public static bool IsPathSafe(string path, string baseDir)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -25,11 +25,11 @@ public static class PathValidator
             var fullPath = Path.GetFullPath(path);
             var fullBaseDir = Path.GetFullPath(baseDir);
 
-            // Нормализуем разделители для сравнения
+            // Normalize separators for comparison
             fullPath = fullPath.Replace(Path.DirectorySeparatorChar, '/').Replace(Path.AltDirectorySeparatorChar, '/');
             fullBaseDir = fullBaseDir.Replace(Path.DirectorySeparatorChar, '/').Replace(Path.AltDirectorySeparatorChar, '/');
 
-            // Убираем trailing slash у baseDir для корректного сравнения
+            // Remove the trailing slash of baseDir for a correct comparison
             fullBaseDir = fullBaseDir.TrimEnd('/');
 
             return fullPath.StartsWith(fullBaseDir + "/", StringComparison.OrdinalIgnoreCase) ||
@@ -42,24 +42,24 @@ public static class PathValidator
     }
 
     /// <summary>
-    /// Проверяет что путь не содержит подозрительных escape-последовательностей.
+    /// Checks that the path contains no suspicious escape sequences.
     /// </summary>
     public static bool ContainsTraversalSequences(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
             return false;
 
-        // Проверяем явные попытки выхода за пределы директории
-        // (не блокируем ~ — это допустимый символ на Windows, напр. C:\Users\ADMINI~1)
+        // Check explicit attempts to escape the directory
+        // (we do not block ~ — it is a valid character on Windows, e.g. C:\Users\ADMINI~1)
         return path.Contains("..") ||
                path.StartsWith("\\\\") ||
                path.StartsWith("//");
     }
 
     /// <summary>
-    /// Безопасно комбинирует baseDir и relativePath, проверяя что результат не выходит за пределы baseDir.
+    /// Safely combines baseDir and relativePath, verifying that the result does not escape baseDir.
     /// </summary>
-    /// <returns>Полный путь или null если relativePath пытается выйти за пределы baseDir</returns>
+    /// <returns>The full path, or null if relativePath tries to escape baseDir</returns>
     public static string? SafeCombine(string baseDir, string relativePath)
     {
         try
@@ -87,8 +87,8 @@ public static class PathValidator
     }
 
     /// <summary>
-    /// Санитизирует путь для использования в batch-файлах — экранирует специальные символы.
-    /// Важно: при enabledelayedexpansion символ ! нужно экранировать первым, т.к. он удаляется.
+    /// Sanitizes a path for use in batch files — escapes special characters.
+    /// Important: with enabledelayedexpansion the ! character must be escaped first, because it gets removed.
     /// </summary>
     public static string SanitizeForBatch(string path)
     {
@@ -100,8 +100,8 @@ public static class PathValidator
         {
             sb.Append(ch switch
             {
-                '!' => $"^{ch}",                    // При enabledelayedexpansion ! экранируется через ^!
-                '&' or '|' or '<' or '>' or '%' or '^' or '(' or ')' => $"^{ch}",  // Экранируем спецсимволы batch через ^
+                '!' => $"^{ch}",                    // With enabledelayedexpansion ! is escaped via ^!
+                '&' or '|' or '<' or '>' or '%' or '^' or '(' or ')' => $"^{ch}",  // Escape batch special characters via ^
                 _ => ch.ToString()
             });
         }

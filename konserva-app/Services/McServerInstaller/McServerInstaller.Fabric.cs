@@ -8,12 +8,12 @@ using System.Text.Json;
 namespace Konserva.Services;
 
 /// <summary>
-/// Установка Fabric сервера: получение информации, загрузка и установка
+    /// Fabric server installation: fetching information, downloading, and installing
 /// </summary>
 public partial class McServerInstaller
 {
     /// <summary>
-    /// Получить информацию о последней версии Fabric installer
+    /// Get information about the latest Fabric installer version
     /// </summary>
     public async Task<(string url, string version)?> GetFabricInstallerInfo(CancellationToken ct = default)
     {
@@ -37,7 +37,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Установить Fabric сервер автоматически
+    /// Install a Fabric server automatically
     /// </summary>
     public async Task<bool> InstallFabricServer(string mcVersion, string loaderVersion,
         string destinationPath, IProgress<string>? progress = null, CancellationToken ct = default)
@@ -49,11 +49,11 @@ public partial class McServerInstaller
             Directory.CreateDirectory(destinationPath);
             Logger.Info($"Created directory: {destinationPath}");
 
-            // Версия загрузчика приходит из UI — используем напрямую
+            // The loader version comes from the UI — use it as is
             var selectedLoaderVersion = loaderVersion;
             if (string.IsNullOrEmpty(selectedLoaderVersion) || selectedLoaderVersion == "latest")
             {
-                // Если не передали конкретную версию, получаем последнюю
+                // If no specific version was provided, fetch the latest one
                 Logger.Info("No specific loader version provided, fetching latest...");
                 var loaderVersions = await GetFabricLoaderVersions(mcVersion, ct);
                 if (loaderVersions == null || loaderVersions.Length == 0)
@@ -66,24 +66,24 @@ public partial class McServerInstaller
 
             Logger.Info($"Using Fabric loader version: {selectedLoaderVersion}");
 
-            // Получаем версию installer Fabric
+            // Get the Fabric installer version
             Logger.Info("Getting Fabric installer version...");
             var installerVersion = await RetryHelper.RetryAsync(
                 () => GetFabricInstallerVersion(ct),
                 operationName: "GetFabricInstallerVersion", ct: ct);
 
-            // Fallback, если не удалось получить версию installer
+            // Fallback if the installer version could not be obtained
             if (string.IsNullOrEmpty(installerVersion))
             {
                 Logger.Warning("Failed to get Fabric installer version, using fallback version 1.1.1");
                 installerVersion = "1.1.1";
             }
 
-            // URL с installer version обязателен — meta.fabricmc.net требует его
+            // The installer version in the URL is mandatory — meta.fabricmc.net requires it
             var primaryUrl = $"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}/{selectedLoaderVersion}/{installerVersion}/server/jar";
             var fallbackUrl = $"https://bmclapi2.bangbang93.com/fabric-meta/v2/versions/loader/{mcVersion}/{selectedLoaderVersion}/{installerVersion}/server/jar";
 
-            // Пробуем официальный API, при ошибке — BMCLAPI
+            // Try the official API first, fall back to BMCLAPI on error
             var urlsToTry = new[] { primaryUrl, fallbackUrl };
 
             foreach (var url in urlsToTry)
@@ -97,7 +97,7 @@ public partial class McServerInstaller
                 {
                     Logger.Info("Fabric server downloaded successfully");
 
-                    // Создаем eula.txt
+                    // Create eula.txt
                     progress?.Report(LocalizationManager.Get("Installer_CreatingConfig"));
                     CreateEula(destinationPath);
 
@@ -121,7 +121,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Получить версии Fabric loader для версии Minecraft
+    /// Get Fabric loader versions for a Minecraft version
     /// </summary>
     private async Task<string[]?> GetFabricLoaderVersions(string mcVersion, CancellationToken ct = default)
     {
@@ -140,7 +140,7 @@ public partial class McServerInstaller
             var responseBytes = await response.Content.ReadAsByteArrayAsync(requestCts.Token);
             Logger.Info($"Response: Success ({responseBytes.Length} bytes)");
 
-            // Распаковываем GZip если нужно
+            // Unpack GZip if necessary
             string responseContent;
             if (responseBytes.Length >= 2 && responseBytes[0] == 0x1F && responseBytes[1] == 0x8B)
             {
@@ -158,25 +158,25 @@ public partial class McServerInstaller
 
             using var doc = JsonDocument.Parse(responseContent);
 
-            // Логируем структуру для отладки
+            // Log the structure for debugging
             var array = doc.RootElement.EnumerateArray();
             if (array.MoveNext())
             {
                 var firstItem = array.Current;
                 Logger.Info($"First item JSON: {firstItem.GetRawText()[..Math.Min(Constants.LogTruncationLength, firstItem.GetRawText().Length)]}...");
 
-                // Fabric API возвращает структуру: { "loader": { "version": "x.y.z" }, ... }
-                // Возвращаем все версии
+                // Fabric API returns the structure: { "loader": { "version": "x.y.z" }, ... }
+                // Return all versions
                 array = doc.RootElement.EnumerateArray();
                 var versions = array.Select(v =>
                 {
-                    // Пробуем получить loader.version
+                    // Try to read loader.version
                     if (v.TryGetProperty("loader", out var loaderObj) &&
                         loaderObj.TryGetProperty("version", out var versionProp))
                     {
                         return versionProp.GetString()!;
                     }
-                    // Fallback на version
+                    // Fallback to version
                     if (v.TryGetProperty("version", out var vp)) return vp.GetString()!;
                     return v.ToString();
                 }).ToArray();
@@ -204,7 +204,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Получить версию Fabric installer
+    /// Get the Fabric installer version
     /// </summary>
     private async Task<string?> GetFabricInstallerVersion(CancellationToken ct = default)
     {

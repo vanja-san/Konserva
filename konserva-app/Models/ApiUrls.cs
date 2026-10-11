@@ -1,7 +1,7 @@
 namespace Konserva.Models;
 
 /// <summary>
-/// Централизованное хранение всех URL внешних API и ресурсов.
+/// Centralized storage of all external API and resource URLs.
 /// </summary>
 public static class ApiUrls
 {
@@ -12,14 +12,14 @@ public static class ApiUrls
 
     // --- Mojang ---
     public const string MojangManifest = "https://launchermeta.mojang.com/mc/game/version_manifest.json";
-    // BMCLAPI mirror для версий Minecraft
+    // BMCLAPI mirror for Minecraft versions
     public const string BmclapiManifest = "https://bmclapi2.bangbang93.com/mc/game/version_manifest.json";
 
     // --- Fabric ---
     public const string FabricMeta = "https://meta.fabricmc.net/v2";
     public const string FabricVersionsLoader = FabricMeta + "/versions/loader";
     public const string FabricInstaller = FabricMeta + "/versions/installer";
-    // BMCLAPI mirror для Fabric
+    // BMCLAPI mirror for Fabric
     public const string BmclapiFabricMeta = "https://bmclapi2.bangbang93.com/fabric-meta/v2";
     public const string BmclapiFabricVersionsLoader = BmclapiFabricMeta + "/versions/loader";
 
@@ -28,13 +28,13 @@ public static class ApiUrls
     public const string ForgePromotions = "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json";
     public const string ForgeIndex = "https://files.minecraftforge.net/net/minecraftforge/forge/index";
     public const string ForgeMavenAlt = "https://files.minecraftforge.net/maven/net/minecraftforge/forge";
-    // BMCLAPI — JSON API для списка версий по MC версии (альтернатива мёртвому Maven)
+    // BMCLAPI — JSON API for the version list by MC version (alternative to the dead Maven)
     public const string ForgeBmclapiMinecraft = "https://bmclapi2.bangbang93.com/forge/minecraft";
 
     // --- NeoForge ---
-    // BMCLAPI — JSON API для списка версий по MC версии (альтернатива Maven XML)
+    // BMCLAPI — JSON API for the version list by MC version (alternative to Maven XML)
     public const string NeoForgeBmclapiList = "https://bmclapi2.bangbang93.com/neoforge/list";
-    // Maven (оставлен как fallback через maven-metadata.xml)
+    // Maven (kept as a fallback via maven-metadata.xml)
     public const string NeoForgeMaven = "https://maven.neoforged.net";
     public const string NeoForgeReleases = NeoForgeMaven + "/releases/net/neoforged/forge";
     public const string NeoForgeApi = NeoForgeMaven + "/api/v1/installer";
@@ -45,7 +45,7 @@ public static class ApiUrls
     public const string QuiltMeta = "https://meta.quiltmc.org/v3";
     public const string QuiltVersionsLoader = QuiltMeta + "/versions/loader";
     public const string QuiltInstaller = QuiltMeta + "/versions/installer";
-    // BMCLAPI mirror для Quilt (разкомментировать, когда BMCLAPI исправит Quilt API)
+    // BMCLAPI mirror for Quilt (uncomment once BMCLAPI fixes the Quilt API)
     // public const string BmclapiQuiltMeta = "https://bmclapi2.bangbang93.com/quilt-meta/v3";
 
     // --- Paper (Downloads Service v3 на Cloudflare) ---
@@ -55,6 +55,6 @@ public static class ApiUrls
     // --- Adoptium (Java) ---
     public const string Adoptium = "https://adoptium.net";
 
-    // --- Modrinth (проверка обновлений модов по хешам, без API-ключа) ---
+    // --- Modrinth (mod update check by hashes, no API key) ---
     public const string ModrinthApiBase = "https://api.modrinth.com/v2";
 }

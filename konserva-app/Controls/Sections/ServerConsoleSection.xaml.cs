@@ -13,7 +13,7 @@ using CommunityToolkit.Mvvm.DependencyInjection;
 namespace Konserva.Controls.Sections;
 
 /// <summary>
-/// Секция консоли сервера: лог, подсветка, отправка команд.
+/// Server console section: log, highlighting, sending commands.
 /// </summary>
 public partial class ServerConsoleSection : System.Windows.Controls.UserControl
 {
@@ -28,7 +28,7 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Задаёт ID сервера для отправки команд (процесс может отсутствовать).
+    /// Sets the server ID used to send commands (the process may be missing).
     /// </summary>
     public void SetServerId(string? serverId)
     {
@@ -36,7 +36,7 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Применяет настройки консоли из конфига приложения
+    /// Applies the console settings from the application config
     /// </summary>
     public void ApplyConsoleSettings()
     {
@@ -50,14 +50,14 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Инициализация Colorizer при первом появлении TextEditor (TextView должен быть готов)
+    /// Initializes the Colorizer when the TextEditor first appears (the TextView must be ready)
     /// </summary>
     private void LogBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         if (LogBox.IsVisible && !_colorizerInitialized && LogBox.TextArea?.TextView != null)
         {
-            // Удаляем встроенный LinkElementGenerator — он создаёт VisualLineLinkText
-            // с тёмно-синим цветом по умолчанию, поверх которого наша раскраска не работает
+            // Remove the built-in LinkElementGenerator — it creates VisualLineLinkText
+            // with a dark blue default color that our coloring cannot show through
             var linkGen = LogBox.TextArea.TextView.ElementGenerators
                 .OfType<ICSharpCode.AvalonEdit.Rendering.LinkElementGenerator>()
                 .FirstOrDefault();
@@ -70,7 +70,7 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Загружает существующий лог процесса в консоль.
+    /// Loads the existing process log into the console.
     /// </summary>
     public void LoadExistingLogs(IReadOnlyList<string> logs)
     {
@@ -97,7 +97,7 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Добавляет новую строку лога в консоль.
+    /// Appends a new log line to the console.
     /// </summary>
     public async void AppendLog(string line)
     {
@@ -122,7 +122,7 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
         }
         catch (TaskCanceledException)
         {
-            // Игнорируем — приложение закрывается, диспетчер уже не работает
+            // Ignore — the application is closing, the dispatcher no longer works
         }
         catch (Exception ex)
         {
@@ -170,8 +170,8 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Показывает или скрывает область ввода команды
-    /// (поле ввода + кнопку отправки) в зависимости от статуса сервера.
+    /// Shows or hides the command input area
+    /// (the input field + the send button) depending on the server status.
     /// </summary>
     public void UpdateCommandInputVisibility(bool isRunning)
     {
@@ -179,9 +179,9 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// Клик вне области ввода (например, по логу или пустому месту) снимает
-    /// фокус с поля ввода — иначе в WPF он остаётся на последнем
-    /// фокусируемом элементе.
+    /// A click outside the input area (for example, on the log or on empty space) clears
+    /// the focus from the input field — otherwise in WPF it stays on the last
+    /// focusable element.
     /// </summary>
     private void ConsoleSection_PreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
@@ -221,7 +221,7 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
         {
             var lineText = CurrentContext.Document.GetText(line);
 
-            // 1. Таймштамп [HH:MM:SS] — серым
+            // 1. Timestamp [HH:MM:SS] — gray
             var tsMatch = TimestampRegex.Match(lineText);
             if (tsMatch.Success)
             {
@@ -231,7 +231,7 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
                     e => e.TextRunProperties.SetForegroundBrush(TimestampBrush));
             }
 
-            // 2. [STDERR] — оранжевым
+            // 2. [STDERR] — orange
             var stderrMatch = StderrTagRegex.Match(lineText);
             if (stderrMatch.Success)
             {
@@ -241,7 +241,7 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
                     e => e.TextRunProperties.SetForegroundBrush(WarnBrush));
             }
 
-            // 2a. Уровневое слово (WARNING:, ERROR:, etc.) после [STDERR]
+            // 2a. Level word (WARNING:, ERROR:, etc.) after [STDERR]
             foreach (Match slMatch in StderrLevelRegex.Matches(lineText))
             {
                 var slTag = slMatch.Groups[1].Value;
@@ -263,7 +263,7 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
                 }
             }
 
-            // 3. Уровневый блок [LEVEL] или [thread/LEVEL] — своим цветом
+            // 3. Level block [LEVEL] or [thread/LEVEL] — with its own color
             var levelMatch = LevelTagRegex.Match(lineText);
             if (levelMatch.Success)
             {
@@ -286,7 +286,7 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
                 }
             }
 
-            // 4. URL-адреса — красивым голубым (поверх стандартного тёмно-синего)
+            // 4. URLs — a nice light blue (over the default dark blue)
             foreach (Match urlMatch in UrlRegex.Matches(lineText))
             {
                 ChangeLinePart(
@@ -295,7 +295,7 @@ public partial class ServerConsoleSection : System.Windows.Controls.UserControl
                     e => e.TextRunProperties.SetForegroundBrush(InfoBrush));
             }
 
-            // 5. Строки без спецтегов — проверяем старт/стоп целиком
+            // 5. Lines without special tags — we check the whole start/stop line
             if (!tsMatch.Success && !levelMatch.Success && !stderrMatch.Success)
             {
                 var text = lineText.AsSpan();

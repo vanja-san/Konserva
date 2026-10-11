@@ -5,7 +5,7 @@ using System.Windows.Data;
 namespace Konserva.Converters;
 
 /// <summary>
-/// Конвертирует пустую строку в Visibility.Collapsed
+/// Converts an empty string to Visibility.Collapsed
 /// </summary>
 public class EmptyToVisibilityConverter : IValueConverter
 {

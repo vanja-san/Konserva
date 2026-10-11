@@ -9,21 +9,21 @@ using System.Text.Json;
 namespace Konserva.Services;
 
 /// <summary>
-/// Установка Forge сервера: получение URL, загрузка установщика, запуск
+/// Forge server installation: resolving the URL, downloading the installer, running it
 /// </summary>
 public partial class McServerInstaller
 {
     /// <summary>
-    /// Получить URL Forge installer
+    /// Get the Forge installer URL
     /// </summary>
     public async Task<string?> GetForgeInstallerUrl(string mcVersion, string forgeVersion, CancellationToken ct = default)
     {
         try
         {
-            // Forge использует формат: forge-{mc_version}-{forge_version}-installer.jar
+            // Forge uses the format: forge-{mc_version}-{forge_version}-installer.jar
             // URL: https://maven.minecraftforge.net/net/minecraftforge/forge/{mc_version}-{forge_version}/forge-{mc_version}-{forge_version}-installer.jar
 
-            // Если версия "latest" или "recommended", нужно получить конкретную версию
+            // If the version is "latest" or "recommended", we need to resolve a concrete version
             var actualVersion = forgeVersion;
             if (forgeVersion == "latest" || forgeVersion == "recommended")
             {
@@ -37,7 +37,7 @@ public partial class McServerInstaller
                     using var doc = JsonDocument.Parse(manifest);
                     var promos = doc.RootElement.GetProperty("promos");
 
-                    // Получаем версию для {mc_version}-latest или {mc_version}-recommended
+                    // Resolve the version for {mc_version}-latest or {mc_version}-recommended
                     var promoKey = $"{mcVersion}-{forgeVersion}";
                     if (promos.TryGetProperty(promoKey, out var promoVersion))
                     {
@@ -47,7 +47,7 @@ public partial class McServerInstaller
                     else
                     {
                         Logger.Warning($"Promo '{promoKey}' not found, using version list", "McServerInstaller");
-                        // Fallback - парсим HTML
+                        // Fallback - parse HTML
                         var htmlUrl = $"https://files.minecraftforge.net/net/minecraftforge/forge/index_{mcVersion}.html";
                         var html = await GetHttpClient().GetStringAsync(htmlUrl, ct);
                         var matches = ForgeVersionRegex().Matches(html);
@@ -61,7 +61,7 @@ public partial class McServerInstaller
                 catch (Exception ex)
                 {
                     Logger.Warning($"Failed to resolve Forge version: {ex.Message}", "McServerInstaller");
-                    // Используем последнюю известную версию для популярных MC
+                    // Use the last known version for popular MC releases
                     actualVersion = mcVersion switch
                     {
                         "1.21.1" => "52.1.9",
@@ -76,11 +76,11 @@ public partial class McServerInstaller
                 }
             }
 
-            // Формируем правильный Maven путь: {mc_version}-{forge_version}
-            // forgeVersion уже содержит полную версию (например "52.1.9"), не нужно дублировать mcVersion
+            // Build the correct Maven path: {mc_version}-{forge_version}
+            // forgeVersion already contains the full version (for example "52.1.9"), so mcVersion must not be duplicated
             var mavenPath = $"{mcVersion}-{actualVersion}";
 
-            // Проверяем, не начинается ли actualVersion с mcVersion (чтобы избежать дублирования)
+            // Check whether actualVersion already starts with mcVersion (to avoid duplication)
             if (actualVersion.StartsWith(mcVersion + "-"))
             {
                 mavenPath = actualVersion;
@@ -121,7 +121,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Установить Forge сервер автоматически
+    /// Install a Forge server automatically
     /// </summary>
     public async Task<bool> InstallForgeServer(string mcVersion, string forgeVersion,
         string destinationPath, IProgress<string>? progress = null, CancellationToken ct = default)
@@ -134,7 +134,7 @@ public partial class McServerInstaller
             if (string.IsNullOrEmpty(installerUrl))
                 return false;
 
-            // 1. Скачиваем installer
+            // 1. Download the installer
             var downloadsDir = Constants.DownloadsPath;
             Directory.CreateDirectory(downloadsDir);
             var installerPath = Path.Combine(downloadsDir, "forge-installer.jar");
@@ -143,11 +143,11 @@ public partial class McServerInstaller
             if (!downloadResult.success)
                 return false;
 
-            // 2. Запускаем installer
+            // 2. Run the installer
             progress?.Report(string.Format(LocalizationManager.Get("Installer_RunningInstaller"), "Forge"));
             var success = await RunForgeInstaller(installerPath, destinationPath, ct, progress);
 
-            // 3. Удаляем installer
+            // 3. Delete the installer
             if (success && File.Exists(installerPath))
             {
                 try { File.Delete(installerPath); }
@@ -158,7 +158,7 @@ public partial class McServerInstaller
             {
                 await WaitForFileStabilityAsync(destinationPath, "forge", ct, progress);
 
-                // Копируем forge universal jar из libraries в корень
+                // Copy the forge universal jar from libraries to the root
                 try
                 {
                     var librariesPath = Path.Combine(destinationPath, "libraries");
@@ -199,7 +199,7 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Запустить Forge installer
+    /// Run the Forge installer
     /// </summary>
     private async Task<bool> RunForgeInstaller(string installerPath, string destinationPath, CancellationToken ct, IProgress<string>? progress = null)
     {
@@ -237,7 +237,7 @@ public partial class McServerInstaller
                 return false;
             }
 
-            // При отмене убиваем процесс, чтобы ReadLine() завершился
+            // On cancellation we kill the process so that ReadLine() completes
             using var cancellationRegistration = ct.Register(() =>
             {
                 try { if (!process.HasExited) process.Kill(); }
@@ -246,8 +246,8 @@ public partial class McServerInstaller
 
             Logger.Info($"Installer process started, PID: {process.Id}");
 
-            // Читаем вывод ПОСТРОЧНО СИНХРОННО — это гарантирует что мы не пропустим
-            // момент завершения. WaitForExit ненадёжен на Windows.
+            // Read the output LINE BY LINE SYNCHRONOUSLY — this guarantees that we do not miss
+            // the completion moment. WaitForExit is unreliable on Windows.
             var outputLines = new List<string>();
             var errorLines = new List<string>();
             var startTime = SystemTime.Now;
@@ -255,7 +255,7 @@ public partial class McServerInstaller
             int patchCount = 0;
             int libraryCount = 0;
 
-            // Читаем stdout построчно — блокирует пока есть вывод
+            // Read stdout line by line — blocks while there is output
             var lastReportedLibraryCount = 0;
             await Task.Run(() =>
             {
@@ -267,7 +267,7 @@ public partial class McServerInstaller
                     lock (outputLines) outputLines.Add(line);
                     Logger.Info($"[Forge] {line}", "McServerInstaller");
 
-                    // Считаем для статуса
+                    // Count for the status report
                     if (line.Contains("Considering library"))
                         libraryCount++;
                     if (line.Contains("Patching "))
@@ -275,7 +275,7 @@ public partial class McServerInstaller
                     if (line.Contains("installed successfully"))
                         installedSuccessfully = true;
 
-                    // Сообщаем прогресс раз в 50 библиотек
+                    // Report progress once every 50 libraries
                     if (libraryCount > 0 && libraryCount - lastReportedLibraryCount >= 50)
                     {
                         lastReportedLibraryCount = libraryCount;
@@ -284,7 +284,7 @@ public partial class McServerInstaller
                 }
             }, ct);
 
-            // Читаем stderr
+            // Read stderr
             await Task.Run(() =>
             {
                 string? line;
@@ -296,14 +296,14 @@ public partial class McServerInstaller
                 }
             }, ct);
 
-            // Ждём завершения процесса (после Kill() вернётся сразу)
+            // Wait for the process to finish (returns immediately after Kill())
             process.WaitForExit();
 
             var elapsed = SystemTime.Now - startTime;
             Logger.Info($"Installer exited with code: {process.ExitCode} after {elapsed.TotalSeconds:F1}s", "McServerInstaller");
             Logger.Info($"Forge stats: {libraryCount} libraries, {patchCount} patches, installedSuccessfully={installedSuccessfully}", "McServerInstaller");
 
-            // Проверяем успешность
+            // Verify success
             var hasForgeJar = Directory.GetFiles(destinationPath, "forge-*.jar").Length > 0;
             var hasNeoForgeJar = Directory.GetFiles(destinationPath, "neoforge-*.jar").Length > 0;
             var hasRunBat = File.Exists(Path.Combine(destinationPath, "run.bat"));
@@ -320,7 +320,7 @@ public partial class McServerInstaller
         }
         catch (OperationCanceledException)
         {
-            // Убиваем процесс, если он ещё работает (страховка — ct.Register уже вызвал Kill)
+            // Kill the process if it is still running (safety net — ct.Register already called Kill)
             if (process != null) { try { if (!process.HasExited) process.Kill(); } catch { } }
             throw;
         }

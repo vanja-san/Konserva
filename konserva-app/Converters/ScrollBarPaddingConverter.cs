@@ -5,16 +5,16 @@ using System.Windows.Data;
 namespace Konserva.Converters;
 
 /// <summary>
-/// Конвертирует ComputedVerticalScrollBarVisibility в Thickness для ScrollViewer.Padding.
+/// Converts ComputedVerticalScrollBarVisibility into a Thickness for ScrollViewer.Padding.
 ///
-/// Когда скроллбар видим — правый паддинг уменьшается до MinRightPadding,
-/// чтобы скроллбар был у края окна, но контент не прилипал к треку.
-/// Когда скроллбар скрыт — используется NormalRightPadding для симметрии с левым отступом.
+/// When the scrollbar is visible the right padding is reduced to MinRightPadding,
+/// so the scrollbar sits at the window edge but the content does not stick to the track.
+/// When the scrollbar is hidden NormalRightPadding is used for symmetry with the left margin.
 ///
-/// Параметр: "нормальный_отступ" или "нормальный_отступ|минимальный_отступ"
-/// По умолчанию: NormalRightPadding=16, MinRightPadding=6
+/// Parameter: "normal_padding" or "normal_padding|min_padding"
+/// Defaults: NormalRightPadding=16, MinRightPadding=6
 ///
-/// Использование:
+/// Usage:
 /// <ScrollViewer Padding="{Binding ComputedVerticalScrollBarVisibility,
 ///     RelativeSource={RelativeSource Self},
 ///     Converter={StaticResource ScrollBarPadding},

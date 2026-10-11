@@ -3,8 +3,8 @@ using System.Text.Json.Serialization;
 namespace Konserva.Models;
 
 /// <summary>
-/// Манифест версии из version.json (раздаётся через raw.githubusercontent.com).
-/// Не использует GitHub API — нет rate limit.
+/// Version manifest from version.json (hosted on raw.githubusercontent.com).
+/// Does not use the GitHub API — no rate limit.
 /// </summary>
 public class VersionManifest
 {
@@ -25,7 +25,7 @@ public class VersionManifest
 }
 
 /// <summary>
-/// Информация о файле для скачивания.
+/// Information about a file for download.
 /// </summary>
 public class VersionDownload
 {
@@ -39,8 +39,8 @@ public class VersionDownload
     public string AssetName { get; set; } = string.Empty;
 
     /// <summary>
-    /// SHA-256 ассета в виде 64 hex-символов. Обязателен: без него
-    /// <see cref="Services.AppUpdater"/> отказывается применять обновление.
+    /// SHA-256 of the asset as 64 hex characters. Required: without it
+    /// <see cref="Services.AppUpdater"/> refuses to apply the update.
     /// </summary>
     [JsonPropertyName("sha256")]
     public string Sha256 { get; set; } = string.Empty;

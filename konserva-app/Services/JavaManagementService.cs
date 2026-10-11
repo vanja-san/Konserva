@@ -13,20 +13,20 @@ using System.Text;
 namespace Konserva.Services;
 
 /// <summary>
-/// Сервис управления Java установками
+/// Service for managing Java installations
 /// </summary>
 public class JavaManagementService(IConfigService configService) : IJavaManagementService
 {
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
     private static extern uint GetFinalPathNameByHandle(SafeFileHandle hFile, [Out] StringBuilder lpszFilePath, uint cchFilePath, uint dwFlags);
     /// <summary>
-    /// Проверяет является ли ошибка ошибкой Java-совместимости и показывает snackbar.
-    /// Общий метод для ServersPage, ServerDetailPage и MainWindow.
+    /// Checks whether the error is a Java compatibility error and shows a snackbar.
+    /// Shared method for ServersPage, ServerDetailPage and MainWindow.
     /// </summary>
     public static void HandleServerStartError(Server server, string errorMessage, IConfigService? configService = null)
     {
-        // Несовместимость модов (Fabric "Incompatible mods found!" и аналогичные) —
-        // показываем понятное локализованное окно вместо сырых строк из консоли.
+        // Mod incompatibility (Fabric "Incompatible mods found!" and similar) —
+        // show a clear localized dialog instead of the raw console lines.
         var modInfo = ModIncompatibilityParser.TryParse(errorMessage);
         if (modInfo != null)
         {
@@ -37,9 +37,9 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         var requiredVersion = JavaVersionParser.ParseRequiredJavaVersion(errorMessage);
         var foundVersion = JavaVersionParser.ParseFoundJavaVersion(errorMessage);
 
-        // Считаем ошибкой Java-совместимости, если удалось извлечь требуемую версию,
-        // сообщение содержит явный паттерн несовместимости,
-        // или это Java-краш без явного указания версии (например, InvocationTargetException)
+        // Treat it as a Java compatibility error if the required version could be extracted,
+        // the message contains an explicit incompatibility pattern,
+        // or it is a Java crash without an explicit version mention (e.g. InvocationTargetException)
         bool isJavaVersionError = requiredVersion > 0 ||
                                   errorMessage.Contains("Требуется Java", StringComparison.OrdinalIgnoreCase) ||
                                   errorMessage.Contains("class file version", StringComparison.OrdinalIgnoreCase) ||
@@ -48,7 +48,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
 
         if (isJavaVersionError)
         {
-            // Если не удалось извлечь версию из сообщения — вычисляем требуемую по версии Minecraft
+            // If the version could not be extracted from the message — derive the required one from the Minecraft version
             if (requiredVersion <= 0)
             {
                 requiredVersion = JavaVersionParser.GetRequiredJavaVersion(
@@ -56,9 +56,9 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
                     GetLaunchType(server.ModLoader.Type));
             }
 
-            // Forge modloader: NoSuchMethodError на ManifestEntryVerifier —
-            // свежие сборки Java 8 (≥ 8u400) удалили конструктор ManifestEntryVerifier(Manifest).
-            // Нужна старая сборка: Zulu JRE 8u302b08 или аналогичная.
+            // Forge modloader: NoSuchMethodError on ManifestEntryVerifier —
+            // recent Java 8 builds (≥ 8u400) removed the ManifestEntryVerifier(Manifest) constructor.
+            // An older build is needed: Zulu JRE 8u302b08 or similar.
             if (errorMessage.Contains("NoSuchMethodError", StringComparison.OrdinalIgnoreCase) &&
                 errorMessage.Contains("ManifestEntryVerifier", StringComparison.OrdinalIgnoreCase))
             {
@@ -69,15 +69,15 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
                 Logger.Warning("═══════════════════════════════════════════════════════════════", "JavaManagementService");
             }
 
-            // Ошибка от нашего собственного пре-стартового детекта сломанной Java 8 (≥ 8u400):
-            // снекбар уже был показан в GetJavaPathForServer, второй показывать не нужно.
+            // Error from our own pre-start detection of a broken Java 8 (≥ 8u400):
+            // the snackbar was already shown in GetJavaPathForServer, no need to show a second one.
             if (errorMessage.Contains("8u400", StringComparison.OrdinalIgnoreCase))
             {
                 Logger.Info("[HandleServerStartError] Broken Java 8 (≥ 8u400) snackbar already shown, skipping generic error.", "JavaManagementService");
                 return;
             }
 
-            // Получаем все установленные Java
+            // Get all installed Java
             var cfg = configService ?? Ioc.Default.GetService<IConfigService>()!;
             var allJava = cfg?.GetConfig().JavaInstallations.Where(j => j.Exists).ToList();
 
@@ -89,14 +89,14 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         }
         else
         {
-            // Не Java-ошибка (или неизвестный формат) — делегируем стандартному обработчику
+            // Not a Java error (or an unknown format) — delegate to the standard handler
             _ = UiHelper.ShowError(errorMessage);
         }
     }
 
     /// <summary>
-    /// Показывает локализованное окно о несовместимости модов
-    /// (недостающие зависимости и подробности из вывода модлоадера).
+    /// Shows the localized mod incompatibility dialog
+    /// (missing dependencies and details from the mod loader output).
     /// </summary>
     private static void ShowModIncompatibilityDialog(ModIncompatibilityInfo info)
     {
@@ -108,23 +108,24 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Определяет, является ли сообщение об ошибке Java-крашем, даже если в нём нет
-    /// явного упоминания требуемой версии (например, <see cref="System.TypeInitializationException"/>,
+    /// Determines whether the error message is a Java crash, even if it has no
+    /// explicit mention of the required version (e.g. <see cref="System.TypeInitializationException"/>,
     /// <see cref="System.Reflection.TargetInvocationException"/>).
-    /// Используется только как fallback для <see cref="HandleServerStartError"/> — если
-    /// не удалось извлечь версию из текста, но это явно Java-краш, то считаем ошибкой
-    /// Java-совместимости, чтобы показать информативный snackbar со списком Java.
+    /// Used only as a fallback for <see cref="HandleServerStartError"/> — if the
+    /// version could not be extracted from the text but it is clearly a Java crash,
+    /// we treat it as a Java compatibility error in order to show an informative
+    /// snackbar with the list of Java installations.
     /// </summary>
     private static bool IsJavaCrashError(string message)
     {
         if (string.IsNullOrEmpty(message))
             return false;
 
-        // Паттерны, которые точно указывают на внутреннюю ошибку Java/JVM,
-        // а не на problems с classpath, jar-файлами или аргументами.
-        // "Could not find or load main class", "Unable to access jarfile" и т.п.
-        // НЕ включены — они могут быть вызваны разными причинами (не только версией Java),
-        // и для них нужно показывать исходный текст ошибки, а не snackbar о несовместимости.
+        // Patterns that definitely indicate an internal Java/JVM error,
+        // rather than problems with the classpath, jar files or arguments.
+        // "Could not find or load main class", "Unable to access jarfile" and similar
+        // are NOT included — they can be caused by many things (not only by the Java version),
+        // and for those the raw error text must be shown instead of the incompatibility snackbar.
         var javaCrashPatterns = new[]
         {
             "InvocationTargetException",
@@ -134,8 +135,8 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
             "java.lang.UnsupportedClassVersionError",
         };
 
-        // Forge modlauncher: NoSuchMethodError на ManifestEntryVerifier —
-        // свежие сборки Java 8 (≥ 8u400) удалили конструктор, нужен Zulu 8u302b08 или older
+        // Forge modlauncher: NoSuchMethodError on ManifestEntryVerifier —
+        // recent Java 8 builds (≥ 8u400) removed the constructor, Zulu 8u302b08 or older is needed
         if (message.Contains("NoSuchMethodError", StringComparison.OrdinalIgnoreCase) &&
             message.Contains("ManifestEntryVerifier", StringComparison.OrdinalIgnoreCase))
         {
@@ -146,7 +147,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Преобразует ModLoaderType в ServerLaunchType для вычисления требуемой версии Java.
+    /// Converts ModLoaderType into ServerLaunchType to compute the required Java version.
     /// </summary>
     private static ServerLaunchType GetLaunchType(ModLoaderType modLoaderType) => modLoaderType switch
     {
@@ -158,22 +159,22 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     };
 
     /// <summary>
-    /// Поиск установленных Java на компьютере.
-    /// Только PATH (where java) + реестр Windows — без сканирования файловой системы.
+    /// Searches for installed Java runtimes on the machine.
+    /// Only PATH (where java) + the Windows registry — no file system scanning.
     /// </summary>
     public List<JavaInstallation> FindInstalledJava()
     {
         var javaInstallations = new List<JavaInstallation>();
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // 1. Все java.exe из PATH (покрывает Scoop, Chocolatey, ручные установки)
+        // 1. All java.exe from PATH (covers Scoop, Chocolatey, manual installations)
         foreach (var java in FindAllJavaInPath())
         {
             if (seenPaths.Add(ResolveRealPath(java.Path)))
                 javaInstallations.Add(java);
         }
 
-        // 2. Из реестра Windows (64-bit и 32-bit view)
+        // 2. From the Windows registry (64-bit and 32-bit views)
         foreach (var path in FindJavaInRegistry())
         {
             if (seenPaths.Add(ResolveRealPath(path)))
@@ -189,7 +190,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Поиск всех Java в PATH через реестр (всегда свежий, без перезапуска).
+    /// Searches for all Java installations in PATH via the registry (always fresh, no restart needed).
     /// </summary>
     private List<JavaInstallation> FindAllJavaInPath()
     {
@@ -200,7 +201,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         {
             var pathDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // Системный PATH (HKLM)
+            // System PATH (HKLM)
             var systemPath = Registry.GetValue(
                 @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
                 "Path", "") as string;
@@ -211,7 +212,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
                         pathDirs.Add(Environment.ExpandEnvironmentVariables(dir));
             }
 
-            // Пользовательский PATH (HKCU)
+            // User PATH (HKCU)
             var userPath = Registry.GetValue(
                 @"HKEY_CURRENT_USER\Environment",
                 "Path", "") as string;
@@ -222,8 +223,8 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
                         pathDirs.Add(Environment.ExpandEnvironmentVariables(dir));
             }
 
-            // Ищем javaw.exe (предпочтительно) или java.exe в каждой директории PATH.
-            // Если есть javaw.exe — java.exe в той же папке не проверяем (дубликат).
+            // Look for javaw.exe (preferred) or java.exe in each PATH directory.
+            // If javaw.exe exists — java.exe in the same folder is not checked (duplicate).
             foreach (var dir in pathDirs)
             {
                 if (!Directory.Exists(dir)) continue;
@@ -253,18 +254,18 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Стандартные пути к Java
+    /// Standard Java paths
     /// </summary>
     /// <summary>
-    /// Поиск Java в реестре Windows.
-    /// Проверяет 64-bit и 32-bit (Wow6432Node) view для каждого ключа.
+    /// Searches for Java in the Windows registry.
+    /// Checks the 64-bit and 32-bit (Wow6432Node) views for every key.
     /// </summary>
     private static List<string> FindJavaInRegistry()
     {
         var paths = new List<string>();
         var seenRealPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // (registryHive, subKey) пары для поиска JavaHome
+        // (registryHive, subKey) pairs used to look up JavaHome
         var registryRoots = new[]
         {
             (RegistryHive.LocalMachine, @"SOFTWARE\JavaSoft"),
@@ -289,7 +290,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
                 }
                 catch
                 {
-                    // Hive недоступен — пропускаем
+                    // Hive is unavailable — skip it
                 }
             }
         }
@@ -298,13 +299,13 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Рекурсивно собирает все JavaHome из указанной ветки реестра
+    /// Recursively collects all JavaHome values from the given registry branch
     /// </summary>
     private static void CollectJavaHomes(RegistryKey key, List<string> paths, HashSet<string> seenRealPaths)
     {
         try
         {
-            // Пробуем получить JavaHome в текущем ключе
+            // Try to read JavaHome from the current key
             var javaHome = key.GetValue("JavaHome") as string;
             if (!string.IsNullOrEmpty(javaHome))
             {
@@ -313,7 +314,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
                     paths.Add(javaPath);
             }
 
-            // Рекурсивно обходим подразделы
+            // Recurse into subkeys
             foreach (var subKeyName in key.GetSubKeyNames())
             {
                 try
@@ -324,26 +325,26 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
                 }
                 catch
                 {
-                    // Подраздел недоступен — пропускаем
+                    // Subkey is unavailable — skip it
                 }
             }
         }
         catch
         {
-            // Ключ недоступен — пропускаем
+            // Key is unavailable — skip it
         }
     }
 
 
 
     /// <summary>
-    /// Получение информации о Java
+    /// Getting information about a Java installation
     /// </summary>
     public JavaInstallation? GetJavaInfo(string javaPath)
     {
         try
         {
-            // Проверяем существование файла (с .exe или без)
+            // Check that the file exists (with or without .exe)
             if (!File.Exists(javaPath) && !File.Exists(javaPath + ".exe"))
             {
                 Logger.Warning($"Java file not found: {javaPath}", "JavaManagementService");
@@ -352,12 +353,12 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
 
             var actualPath = File.Exists(javaPath) ? javaPath : javaPath + ".exe";
 
-            // Предпочитаем javaw.exe (без консольного окна) для запуска сервера
+            // Prefer javaw.exe (no console window) for launching the server
             actualPath = ResolvePreferredJavaPath(actualPath);
 
             Logger.Info($"Checking Java: {actualPath}", "JavaManagementService");
 
-            // Для javaw.exe используем java.exe для получения версии
+            // For javaw.exe use java.exe to get the version
             var versionCheckPath = actualPath;
             if (actualPath.EndsWith("javaw.exe", StringComparison.OrdinalIgnoreCase))
             {
@@ -400,11 +401,11 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
 
             Logger.Info($"Java version output: {versionOutput.Trim()}", "JavaManagementService");
 
-            // Парсим версию
+            // Parse the version
             var version = JavaVersionParser.ParseVersion(versionOutput);
             var majorVersion = JavaVersionParser.ParseMajorVersion(versionOutput);
 
-            // Получаем имя
+            // Get the name
             var name = GetJavaName(actualPath, majorVersion);
             Logger.Info($"Found Java {majorVersion} ({version}) - {name}", "JavaManagementService");
 
@@ -425,7 +426,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Получение имени Java по пути
+    /// Gets the Java display name from a path
     /// </summary>
     private static string GetJavaName(string path, int majorVersion)
     {
@@ -445,8 +446,8 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Если рядом с java.exe есть javaw.exe — возвращает путь к javaw.exe.
-    /// Иначе возвращает исходный путь.
+    /// If javaw.exe exists next to java.exe — returns the path to javaw.exe.
+    /// Otherwise returns the original path.
     /// </summary>
     private static string ResolvePreferredJavaPath(string javaPath)
     {
@@ -468,8 +469,8 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Ищет java.exe или javaw.exe в указанной bin-папке.
-    /// Возвращает null, если ни один не найден.
+    /// Looks for java.exe or javaw.exe in the given bin folder.
+    /// Returns null if neither is found.
     /// </summary>
     private static string? FindJavaExeInBin(string binDir)
     {
@@ -483,8 +484,8 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Разрешает все junction/symlink в пути через Win32 GetFinalPathNameByHandle.
-    /// Надёжно работает для Scoop current → version и любых других перенаправлений.
+    /// Resolves all junctions/symlinks in a path via Win32 GetFinalPathNameByHandle.
+    /// Works reliably for Scoop current → version and any other redirections.
     /// </summary>
     private static string ResolveRealPath(string path)
     {
@@ -503,7 +504,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         }
         catch
         {
-            // не удалось открыть файл — fallback на обычную нормализацию
+            // could not open the file — fall back to plain normalization
         }
 
         try { return Path.GetFullPath(path); }
@@ -511,7 +512,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Добавление Java в конфигурацию
+    /// Adding a Java installation to the configuration
     /// </summary>
     public JavaInstallation? AddJava(string javaPath)
     {
@@ -521,11 +522,11 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
 
         var config = configService.GetConfig();
 
-        // Проверка на дубликат (case-insensitive для Windows)
+        // Duplicate check (case-insensitive for Windows)
         if (config.JavaInstallations.Any(j => string.Equals(j.Path, java.Path, StringComparison.OrdinalIgnoreCase)))
             return config.JavaInstallations.First(j => string.Equals(j.Path, java.Path, StringComparison.OrdinalIgnoreCase));
 
-        // Если это первая Java, делаем её стандартной
+        // If this is the first Java, make it the default one
         if (config.JavaInstallations.Count == 0)
             java.IsDefault = true;
 
@@ -539,7 +540,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Удаление Java из конфигурации
+    /// Removing a Java installation from the configuration
     /// </summary>
     public bool RemoveJava(string javaId)
     {
@@ -550,7 +551,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
 
         config.JavaInstallations.Remove(java);
 
-        // Если удалили Java по умолчанию, выбираем другую
+        // If the default Java was removed, pick another one
         if (config.DefaultJavaId == javaId)
         {
             var newDefault = config.JavaInstallations.FirstOrDefault();
@@ -563,7 +564,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Установка Java по умолчанию
+    /// Setting the default Java installation
     /// </summary>
     public bool SetDefaultJava(string javaId)
     {
@@ -572,7 +573,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         if (java == null)
             return false;
 
-        // Обновляем IsDefault у всех
+        // Update IsDefault for all of them
         foreach (var j in config.JavaInstallations)
         {
             j.IsDefault = j.Id == javaId;
@@ -661,7 +662,7 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
     }
 
     /// <summary>
-    /// Получение требуемой версии Java
+    /// Getting the required Java version
     /// </summary>
     private static int GetRequiredJavaVersion(string mcVersion, ServerLaunchType launchType)
     {

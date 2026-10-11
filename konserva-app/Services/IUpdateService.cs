@@ -3,38 +3,38 @@ using Konserva.Models;
 namespace Konserva.Services;
 
 /// <summary>
-/// Сервис фоновой проверки обновлений.
-/// Управляет жизненным циклом авто-проверки: старт, стоп, принудительная проверка.
+/// Background update check service.
+/// Manages the auto-check lifecycle: start, stop, forced check.
 /// </summary>
 public interface IUpdateService
 {
     /// <summary>
-    /// Событие: найдено обновление.
+    /// Event: an update was found.
     /// </summary>
     event Action<UpdateInfo>? UpdateAvailable;
 
     /// <summary>
-    /// Событие: началась проверка обновлений (для UI — показать ProgressRing).
+    /// Event: the update check has started (for the UI — show a ProgressRing).
     /// </summary>
     event Action? CheckStarted;
 
     /// <summary>
-    /// Событие: проверка обновлений завершена (для UI — скрыть ProgressRing).
+    /// Event: the update check has finished (for the UI — hide the ProgressRing).
     /// </summary>
     event Action<UpdateInfo>? CheckCompleted;
 
     /// <summary>
-    /// Запускает фоновый цикл авто-проверки обновлений.
+    /// Starts the background auto-check loop.
     /// </summary>
     void Start();
 
     /// <summary>
-    /// Останавливает фоновый цикл авто-проверки.
+    /// Stops the background auto-check loop.
     /// </summary>
     void Stop();
 
     /// <summary>
-    /// Принудительная проверка обновлений (вне очереди, для UI).
+    /// Forced update check (out of queue, used by the UI).
     /// </summary>
     Task<UpdateInfo> ForceCheckAsync();
 }

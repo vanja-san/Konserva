@@ -16,7 +16,7 @@ public enum RequirementKind
 }
 
 /// <summary>
-/// Требование к версии зависимости (из вывода Fabric: "version 0.160.0 or later" и т.п.)
+/// A dependency version requirement (from Fabric output: "version 0.160.0 or later", etc.)
 /// </summary>
 public sealed record DependencyRequirement(
     RequirementKind Kind,
@@ -33,7 +33,7 @@ public enum SuggestionKind
 }
 
 /// <summary>
-/// Рекомендованное действие из блока "A potential solution has been determined"
+/// A recommended action from the "A potential solution has been determined" block
 /// </summary>
 public sealed record DependencySuggestion(
     SuggestionKind Kind,
@@ -54,7 +54,7 @@ public enum IssueKind
 }
 
 /// <summary>
-/// Структурированное описание проблемы мода из блока "More details"
+/// Structured description of a mod problem from the "More details" block
 /// </summary>
 public sealed record ModIssue(
     IssueKind Kind,
@@ -68,7 +68,7 @@ public sealed record ModIssue(
     string Raw);
 
 /// <summary>
-/// Структурированные данные об ошибке несовместимости модов (Fabric "Incompatible mods found!" и т.п.)
+/// Structured data about a mod incompatibility error (Fabric "Incompatible mods found!", etc.)
 /// </summary>
 public sealed record ModIncompatibilityInfo(
     string Header,
@@ -78,15 +78,15 @@ public sealed record ModIncompatibilityInfo(
     IReadOnlyList<string> RawDetails);
 
 /// <summary>
-/// Парсер ошибок несовместимости модов из вывода сервера.
-/// Поддерживает формат Fabric Loader (FormattedException): блок решений
-/// ("Install X, version ...", "Replace ...", "Remove ...") и блок подробностей
+/// Parser for mod incompatibility errors from the server output.
+/// Supports the Fabric Loader (FormattedException) format: the solutions block
+/// ("Install X, version ...", "Replace ...", "Remove ...") and the details block
 /// ("Mod 'X' (id) v requires ...").
 /// </summary>
 public static partial class ModIncompatibilityParser
 {
     /// <summary>
-    /// Признак того, что текст содержит известный паттерн несовместимости модов
+    /// Indicates whether the text contains a known mod incompatibility pattern
     /// </summary>
     public static bool IsModIncompatibility(string? text)
     {
@@ -98,8 +98,8 @@ public static partial class ModIncompatibilityParser
     }
 
     /// <summary>
-    /// Пытается извлечь структурированные данные об ошибке несовместимости модов.
-    /// Возвращает null, если это не ошибка несовместимости модов.
+    /// Tries to extract structured data about a mod incompatibility error.
+    /// Returns null if this is not a mod incompatibility error.
     /// </summary>
     public static ModIncompatibilityInfo? TryParse(string? text)
     {
@@ -117,15 +117,15 @@ public static partial class ModIncompatibilityParser
         var rawSolutions = new List<string>();
         var issues = new List<ModIssue>();
         var rawDetails = new List<string>();
-        var section = 0; // 0 = до блока, 1 = решения, 2 = подробности
+        var section = 0; // 0 = before the block, 1 = solutions, 2 = details
 
         foreach (var line in lines)
         {
-            // Стек вызовов — конец блока
+            // Call stack — end of the block
             if (line.StartsWith("at ", System.StringComparison.Ordinal))
                 break;
 
-            // Заголовок блока
+            // Block header
             if (header == null &&
                 (line.Contains("Incompatible mods found", System.StringComparison.OrdinalIgnoreCase)
                  || line.Contains("Some of your mods are incompatible with the game or each other", System.StringComparison.OrdinalIgnoreCase)))
@@ -301,9 +301,9 @@ public static partial class ModIncompatibilityParser
     }
 
     /// <summary>
-    /// Разбор текста требования к версии ("version 0.160.0 or later", "any version",
-    /// "any version between 26.2 (inclusive) and 26.3- (exclusive)" и т.п.).
-    /// Если формат не распознан — возвращает Unrecognized-требование с исходным текстом.
+    /// Parsing of a version requirement text ("version 0.160.0 or later", "any version",
+    /// "any version between 26.2 (inclusive) and 26.3- (exclusive)", etc.).
+    /// If the format is not recognized — returns an Unrecognized requirement with the original text.
     /// </summary>
     public static DependencyRequirement ParseVersionRequirement(string? text)
     {
@@ -367,7 +367,7 @@ public static partial class ModIncompatibilityParser
     [GeneratedRegex(@"wrong version is present:\s*(?<present>\S+)", RegexOptions.IgnoreCase)]
     private static partial Regex WrongVersionRegex();
 
-    // "a specific version of 'Minecraft' (minecraft) (1.16.5)" или "'Minecraft' (minecraft)"
+    // "a specific version of 'Minecraft' (minecraft) (1.16.5)" or "'Minecraft' (minecraft)"
     [GeneratedRegex(@"'(?<name>.*?)'\s*\((?<id>[^)]+)\)", RegexOptions.IgnoreCase)]
     private static partial Regex QuotedDependencyRegex();
 

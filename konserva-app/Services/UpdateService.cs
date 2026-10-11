@@ -4,8 +4,8 @@ using Konserva.Utilities;
 namespace Konserva.Services;
 
 /// <summary>
-/// Реализация сервиса проверки обновлений.
-/// Использует in-memory троттлинг + ETag conditional requests для экономии лимита GitHub API.
+/// Implementation of the update check service.
+/// Uses in-memory throttling + ETag conditional requests to save on the GitHub API rate limit.
 /// </summary>
 public sealed class UpdateService : IUpdateService, IDisposable
 {
@@ -14,8 +14,8 @@ public sealed class UpdateService : IUpdateService, IDisposable
     private CancellationTokenSource? _cts;
     private bool _disposed;
 
-    // In-memory троттлинг: защита от частых перезапусков при разработке.
-    // Не сериализуется — сбрасывается при каждом запуске приложения.
+    // In-memory throttling: protection against frequent restarts during development.
+    // Not serialized — it is reset on every application launch.
     private DateTime _lastFetchTimeUtc = DateTime.MinValue;
     private static readonly TimeSpan MinFetchInterval = TimeSpan.FromMinutes(15);
 
@@ -64,12 +64,12 @@ public sealed class UpdateService : IUpdateService, IDisposable
     }
 
     /// <summary>
-    /// Выполняет HTTP-запрос к version.json на raw.githubusercontent.com.
-    /// При успехе обновляет LastUpdateCheck в конфиге и _lastFetchTimeUtc в памяти.
+    /// Performs an HTTP request to version.json on raw.githubusercontent.com.
+    /// On success updates LastUpdateCheck in the config and _lastFetchTimeUtc in memory.
     /// </summary>
     private async Task<UpdateInfo> FetchAndSaveAsync(bool force = false)
     {
-        // In-memory троттлинг: не чаще раза в 15 мин (лишняя экономия трафика)
+        // In-memory throttling: no more than once every 15 min (extra traffic saving)
         if (!force && (DateTime.UtcNow - _lastFetchTimeUtc) < MinFetchInterval)
         {
             Logger.Info("Skipped — last fetch < 15 min ago", "UpdateService");
@@ -101,7 +101,7 @@ public sealed class UpdateService : IUpdateService, IDisposable
     {
         try
         {
-            // Стартовая проверка (in-memory throttle не даст вызвать чаще 15 мин)
+            // Startup check (the in-memory throttle prevents it from running more often than every 15 min)
             CheckStarted?.Invoke();
             var updateInfo = await FetchAndSaveAsync();
             CheckCompleted?.Invoke(updateInfo);
@@ -127,7 +127,7 @@ public sealed class UpdateService : IUpdateService, IDisposable
                     config = _config.GetConfig();
                     var intervalHours = Math.Clamp(config.UpdateCheckIntervalHours, 1, 168);
 
-                    // Пересоздаём таймер только при изменении интервала
+                    // Recreate the timer only when the interval changes
                     if (intervalHours != lastInterval)
                     {
                         timer?.Dispose();
@@ -151,7 +151,7 @@ public sealed class UpdateService : IUpdateService, IDisposable
         }
         catch (OperationCanceledException)
         {
-            // Ожидаемая отмена при Stop()
+            // Expected cancellation on Stop()
         }
     }
 

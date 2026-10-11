@@ -3,12 +3,12 @@ using System.IO;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Резервное копирование модов перед обновлением (в папку сервера backups/mods).
+/// Backup of mods before an update (into the server's backups/mods folder).
 /// </summary>
 public static class ModBackup
 {
     /// <summary>
-    /// Путь к папке бэкапов модов сервера.
+    /// Path to the server's mod backup folder.
     /// </summary>
     public static string GetBackupDirectory(string serverPath)
     {
@@ -16,7 +16,7 @@ public static class ModBackup
     }
 
     /// <summary>
-    /// Возвращает папку для бэкапов модов сервера и создаёт её при необходимости.
+    /// Returns the server's mod backup folder and creates it if necessary.
     /// </summary>
     public static string CreateBackupDirectory(string serverPath)
     {

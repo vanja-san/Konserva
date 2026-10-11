@@ -1,20 +1,20 @@
 namespace Konserva.Models;
 
 /// <summary>
-/// Канал обновлений, который учитывается при поиске новой версии мода.
-/// Соответствует version_type Modrinth (release / beta / alpha).
+/// Update channel taken into account when looking for a new mod version.
+/// Corresponds to Modrinth's version_type (release / beta / alpha).
 /// </summary>
 public enum ModUpdateChannel
 {
-    /// <summary>Только стабильные релизы (тестовые версии не предлагаются).</summary>
+    /// <summary>Only stable releases (test versions are not offered).</summary>
     Release,
 
-    /// <summary>Только бета-версии.</summary>
+    /// <summary>Only beta versions.</summary>
     BetaOnly,
 
-    /// <summary>Только альфа-версии.</summary>
+    /// <summary>Only alpha versions.</summary>
     AlphaOnly,
 
-    /// <summary>Все версии: релизы, беты и альфы.</summary>
+    /// <summary>All versions: releases, betas and alphas.</summary>
     All
 }

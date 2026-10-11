@@ -4,13 +4,13 @@ using System.IO.Compression;
 namespace Konserva.Services;
 
 /// <summary>
-/// Поиск jar-файла сервера и проверка манифеста.
+/// Locating the server jar file and validating its manifest.
 /// </summary>
 public partial class McServerInstaller
 {
     /// <summary>
-    /// Проверяет, есть ли в jar-файле Main-Class в манифесте.
-    /// Это обязательное условие для запуска через java -jar.
+    /// Checks whether the jar file has a Main-Class in its manifest.
+    /// This is a mandatory condition for launching via java -jar.
     /// </summary>
     public static bool HasMainClass(string jarPath)
     {
@@ -42,8 +42,8 @@ public partial class McServerInstaller
     }
 
     /// <summary>
-    /// Найти исполняемый jar-файл сервера для запуска через -jar.
-    /// Modern Forge (47.x+) и NeoForge возвращают пустую строку — они используют @args файлы.
+    /// Find the executable server jar file to launch via -jar.
+    /// Modern Forge (47.x+) and NeoForge return an empty string — they use @args files.
     /// </summary>
     public string FindServerJar(string serverPath)
     {
@@ -67,17 +67,17 @@ public partial class McServerInstaller
         if (File.Exists(paperJar))
             return paperJar;
 
-        // Legacy Forge (forge-*.jar с Main-Class в манифесте)
+        // Legacy Forge (forge-*.jar with a Main-Class in the manifest)
         var forgeJars = Directory.GetFiles(serverPath, "forge-*.jar");
         if (forgeJars.Length > 0 && HasMainClass(forgeJars[0]))
             return forgeJars[0];
 
-        // Legacy Forge shim (альтернативный формат)
+        // Legacy Forge shim (alternative format)
         var shimJars = Directory.GetFiles(serverPath, "*-shim.jar");
         if (shimJars.Length > 0 && HasMainClass(shimJars[0]))
             return shimJars[0];
 
-        // Modern Forge/NeoForge используют @args файлы, а не -jar
+        // Modern Forge/NeoForge use @args files instead of -jar
         return string.Empty;
     }
 }

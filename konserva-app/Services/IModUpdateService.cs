@@ -3,21 +3,21 @@ using Konserva.Models;
 namespace Konserva.Services;
 
 /// <summary>
-/// Проверка обновлений модов через репозиторий (v1 — Modrinth).
+/// Mod update checking through the repository (v1 — Modrinth).
 /// </summary>
 public interface IModUpdateService
 {
     /// <summary>
-    /// Проверяет обновления для указанных jar-файлов.
-    /// Возвращает словарь: путь к локальному файлу → найденное обновление.
-    /// Файлы без доступного обновления в результат не попадают.
+    /// Checks for updates for the given jar files.
+    /// Returns a dictionary: local file path → found update.
+    /// Files without an available update are not included in the result.
     /// </summary>
-    /// <param name="jarPaths">Пути к локальным jar-файлам модов.</param>
-    /// <param name="loader">Загрузчик сервера.</param>
-    /// <param name="gameVersion">Версия Minecraft сервера.</param>
-    /// <param name="channel">Канал обновлений (release/beta/alpha).</param>
-    /// <param name="progress">Отчёт о прогрессе (имя обрабатываемого файла).</param>
-    /// <param name="precomputedHashes">Уже посчитанные SHA-512: путь → хеш. Позволяет не хешировать файлы повторно.</param>
+    /// <param name="jarPaths">Paths to local mod jar files.</param>
+    /// <param name="loader">Server loader.</param>
+    /// <param name="gameVersion">Minecraft server version.</param>
+    /// <param name="channel">Update channel (release/beta/alpha).</param>
+    /// <param name="progress">Progress report (name of the file being processed).</param>
+    /// <param name="precomputedHashes">Already computed SHA-512 hashes: path → hash. Avoids hashing the files again.</param>
     Task<IReadOnlyDictionary<string, ModUpdateInfo>> CheckForUpdatesAsync(
         IReadOnlyCollection<string> jarPaths,
         ModLoaderType loader,
@@ -28,12 +28,12 @@ public interface IModUpdateService
         IReadOnlyDictionary<string, string>? precomputedHashes = null);
 
     /// <summary>
-    /// Скачивает новую версию, проверяет её SHA-512, делает резервную копию
-    /// старого файла и заменяет его на месте (имя и состояние .disabled сохраняются).
+    /// Downloads the new version, verifies its SHA-512, makes a backup
+    /// of the old file and replaces it in place (the name and .disabled state are preserved).
     /// </summary>
-    /// <param name="update">Найденное обновление.</param>
-    /// <param name="backupDirectory">Папка для резервных копий (обычно из ModBackup).</param>
-    /// <param name="progress">Отчёт о прогрессе (текст этапа).</param>
+    /// <param name="update">The found update.</param>
+    /// <param name="backupDirectory">Folder for backups (usually from ModBackup).</param>
+    /// <param name="progress">Progress report (stage text).</param>
     Task<ModUpdateApplyResult> ApplyUpdateAsync(
         ModUpdateInfo update,
         string backupDirectory,
@@ -41,13 +41,13 @@ public interface IModUpdateService
         CancellationToken ct = default);
 
     /// <summary>
-    /// Реальные название и версия для указанных jar-файлов по данным репозитория.
-    /// Возвращает словарь: путь к локальному файлу → название и версия проекта.
-    /// Файлы, не найденные в репозитории, в результат не попадают.
+    /// Resolves the real name and version for the given jar files from repository data.
+    /// Returns a dictionary: local file path → project name and version.
+    /// Files not found in the repository are not included in the result.
     /// </summary>
-    /// <param name="jarPaths">Пути к локальным jar-файлам модов.</param>
-    /// <param name="progress">Отчёт о прогрессе (имя обрабатываемого файла).</param>
-    /// <param name="precomputedHashes">Уже посчитанные SHA-512: путь → хеш. Позволяет не хешировать файлы повторно.</param>
+    /// <param name="jarPaths">Paths to local mod jar files.</param>
+    /// <param name="progress">Progress report (name of the file being processed).</param>
+    /// <param name="precomputedHashes">Already computed SHA-512 hashes: path → hash. Avoids hashing the files again.</param>
     Task<IReadOnlyDictionary<string, ModMetadata>> ResolveModMetadataAsync(
         IReadOnlyCollection<string> jarPaths,
         IProgress<string>? progress = null,

@@ -6,13 +6,13 @@ using System.Windows.Media;
 namespace Konserva.Converters;
 
 /// <summary>
-/// Конвертирует boolean в кисть (зеленый или прозрачный)
+/// Converts a boolean to a brush (green or transparent)
 /// </summary>
 public class BoolToGreenBrushConverter : IValueConverter
 {
     private static readonly Brush TransparentBrush = Brushes.Transparent;
 
-    // Резервный цвет, если ресурса темы нет (например, в юнит-тестах).
+    // Fallback color used when the theme resource is missing (for example, in unit tests).
     private static readonly SolidColorBrush FallbackGreen = CreateFallback();
 
     private static SolidColorBrush CreateFallback()
@@ -26,8 +26,8 @@ public class BoolToGreenBrushConverter : IValueConverter
     {
         if (value is bool boolValue)
         {
-            // Читаем ресурс темы на каждый вызов: static-кэш «замерзал» цвет
-            // на момент первого обращения и не реагировал на смену темы.
+            // Read the theme resource on every call: a static cache "froze" the color
+            // at the time of the first access and did not react to a theme switch.
             return boolValue
                 ? (Application.Current?.TryFindResource("SystemFillColorSuccessBrush") as SolidColorBrush
                    ?? FallbackGreen)

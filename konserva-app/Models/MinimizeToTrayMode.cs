@@ -1,27 +1,27 @@
 namespace Konserva.Models;
 
 /// <summary>
-/// Режим сворачивания в системный трей
+/// Minimize-to-system-tray mode
 /// </summary>
 public enum MinimizeToTrayMode
 {
     /// <summary>
-    /// Не сворачивать в трей
+    /// Do not minimize to tray
     /// </summary>
     None,
 
     /// <summary>
-    /// Только при закрытии окна
+    /// Only when the window is closed
     /// </summary>
     OnClose,
 
     /// <summary>
-    /// Только при сворачивании окна
+    /// Only when the window is minimized
     /// </summary>
     OnMinimize,
 
     /// <summary>
-    /// При любом действии (и закрытии, и сворачивании)
+    /// On any action (both closing and minimizing)
     /// </summary>
     Always
 }

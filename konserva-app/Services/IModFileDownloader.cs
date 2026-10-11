@@ -1,7 +1,7 @@
 namespace Konserva.Services;
 
 /// <summary>
-/// Загрузка файлов модов напрямую с CDN репозитория.
+/// Downloading of mod files directly from the repository CDN.
 /// </summary>
 public interface IModFileDownloader
 {

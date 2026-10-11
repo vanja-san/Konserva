@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Retry helper — выполняет action до maxAttempts раз с задержкой delayMs между попытками.
+/// Retry helper — runs an action up to maxAttempts times with a delayMs between attempts.
 /// </summary>
 public static class RetryHelper
 {
@@ -34,13 +34,13 @@ public static class RetryHelper
 
 /// <summary>
 /// Extension methods for fire-and-forget Task handling.
-/// Вместо <c>_ = Task.Run(...)</c> используйте <c>task.SafeFireAndForget()</c>,
-/// чтобы гарантированно логировать исключения.
+/// Instead of <c>_ = Task.Run(...)</c> use <c>task.SafeFireAndForget()</c>
+/// so that exceptions are guaranteed to be logged.
 /// </summary>
 public static class TaskExtensions
 {
     /// <summary>
-    /// Запускает Task в fire-and-forget режиме с логированием необработанных исключений.
+    /// Starts a Task in fire-and-forget mode with logging of unhandled exceptions.
     /// </summary>
     public static void SafeFireAndForget(
         this Task task,
@@ -68,7 +68,7 @@ public static class TaskExtensions
         }
         catch (OperationCanceledException)
         {
-            // Отмена — ожидаемое поведение
+            // Cancellation — expected behavior
         }
         catch (Exception ex)
         {
