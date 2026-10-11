@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.DependencyInjection;
 using Konserva.Controls.Sections;
+using Konserva.Dialogs;
 using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
@@ -492,7 +493,7 @@ public partial class ServerDetailPage : Page, IDisposable
         }
 
         Logger.Info($"[OnServerStartError] Received error for server {server.Name}: {errorMessage}", "ServerDetailPage");
-        JavaManagementService.HandleServerStartError(server, errorMessage);
+        ServerStartErrorPresenter.Show(server, errorMessage);
     }
 
     private async void StartStop_Click(object sender, RoutedEventArgs e)

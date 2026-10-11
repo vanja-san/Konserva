@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.DependencyInjection;
+using Konserva.Dialogs;
 using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Services;
@@ -66,7 +67,7 @@ public partial class ServersPage : Page, IDisposable
     private void OnServerStartError(Server server, string errorMessage)
     {
         Logger.Info($"[ServersPage.OnServerStartError] Error for server {server.Name}: {errorMessage}", "ServersPage");
-        JavaManagementService.HandleServerStartError(server, errorMessage);
+        ServerStartErrorPresenter.Show(server, errorMessage);
     }
 
     private void OnNavigateToServer(Server server)
