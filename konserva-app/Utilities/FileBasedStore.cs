@@ -5,8 +5,8 @@ using System.Text.Json;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Универсальное хранилище данных на основе файла с синхронным и асинхронным доступом.
-/// Предоставляет потокобезопасное чтение/запись с JSON-сериализацией.
+/// Generic file-based data store with synchronous and asynchronous access.
+/// Provides thread-safe reads/writes with JSON serialization.
 /// </summary>
 public class FileBasedStore<T> where T : class
 {
@@ -18,7 +18,7 @@ public class FileBasedStore<T> where T : class
     private DateTime _lastWriteTime;
 
     /// <summary>
-    /// Создаёт хранилище для указанного файла
+    /// Creates a store for the specified file
     /// </summary>
     public FileBasedStore(string filePath, JsonSerializerOptions? jsonOptions = null)
     {
@@ -34,7 +34,7 @@ public class FileBasedStore<T> where T : class
     }
 
     /// <summary>
-    /// Загрузить данные из файла (синхронно)
+    /// Load data from the file (synchronously)
     /// </summary>
     public T? Load()
     {
@@ -55,7 +55,7 @@ public class FileBasedStore<T> where T : class
     }
 
     /// <summary>
-    /// Загрузить данные из файла (асинхронно)
+    /// Load data from the file (asynchronously)
     /// </summary>
     public async Task<T?> LoadAsync(CancellationToken ct = default)
     {
@@ -77,7 +77,7 @@ public class FileBasedStore<T> where T : class
     }
 
     /// <summary>
-    /// Сохранить данные в файл (синхронно)
+    /// Save data to the file (synchronously)
     /// </summary>
     public void Save(T data)
     {
@@ -95,7 +95,7 @@ public class FileBasedStore<T> where T : class
     }
 
     /// <summary>
-    /// Сохранить данные в файл (асинхронно)
+    /// Save data to the file (asynchronously)
     /// </summary>
     public async Task SaveAsync(T data, CancellationToken ct = default)
     {
@@ -113,7 +113,7 @@ public class FileBasedStore<T> where T : class
     }
 
     /// <summary>
-    /// Доступ к кэшированным данным без блокировки
+    /// Access to the cached data without locking
     /// </summary>
     public T? PeekCache()
     {
@@ -129,7 +129,7 @@ public class FileBasedStore<T> where T : class
     }
 
     /// <summary>
-    /// Выполнить действие над данными с сохранением
+    /// Perform an action on the data and persist the result
     /// </summary>
     public void Update(Action<T> updateAction)
     {
@@ -172,7 +172,34 @@ public class FileBasedStore<T> where T : class
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Failed to load {typeof(T).Name} from {_filePath}: {ex.Message}", "FileBasedStore");
+            Logger.Error($"Failed to load {typeof(T).Name} from {_filePath}: {ex.Message}", ex, "FileBasedStore");
+
+            // Falling back to an empty result here would make the caller believe the data is
+            // simply gone. Try the last-known-good copy before giving up.
+            return LoadFromBackup();
+        }
+    }
+
+    /// <summary>
+    /// Restores the previous good copy of the file (kept as <c>&lt;name&gt;.bak</c>).
+    /// </summary>
+    private T? LoadFromBackup()
+    {
+        var backupPath = _filePath + ".bak";
+        if (!File.Exists(backupPath))
+            return null;
+
+        try
+        {
+            using var fileStream = new FileStream(backupPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(fileStream);
+            var data = JsonSerializer.Deserialize<T>(reader.ReadToEnd(), _jsonOptions);
+            Logger.Warning($"Recovered {typeof(T).Name} from backup: {backupPath}", "FileBasedStore");
+            return data;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Backup {backupPath} is unreadable too: {ex.Message}", ex, "FileBasedStore");
             return null;
         }
     }
@@ -196,33 +223,89 @@ public class FileBasedStore<T> where T : class
         }
     }
 
+    /// <summary>
+    /// Writes the data atomically: a temporary file next to the target is written and then
+    /// moved into place. <see cref="FileMode.Create"/> would truncate the target first, so a
+    /// crash or a full disk mid-write left a truncated file that deserialized to nothing —
+    /// silently emptying the whole server list.
+    /// </summary>
     private void SaveToFile(T data)
     {
+        var tempPath = _filePath + ".tmp";
         try
         {
             var json = JsonSerializer.Serialize(data, _jsonOptions);
-            using var fileStream = new FileStream(_filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
-            using var writer = new StreamWriter(fileStream);
-            writer.Write(json);
+            using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var writer = new StreamWriter(fileStream))
+            {
+                writer.Write(json);
+            }
+
+            // Keep the previous good copy as a recovery point before replacing it.
+            TryBackupCurrent();
+            File.Move(tempPath, _filePath, overwrite: true);
         }
         catch (Exception ex)
         {
             Logger.Error($"Failed to save {typeof(T).Name} to {_filePath}: {ex.Message}", ex, "FileBasedStore");
+            TryDeleteTemp(tempPath);
         }
     }
 
+    /// <inheritdoc cref="SaveToFile"/>
     private async Task SaveToFileAsync(T data, CancellationToken ct)
     {
+        var tempPath = _filePath + ".tmp";
         try
         {
             var json = JsonSerializer.Serialize(data, _jsonOptions);
-            await using var fileStream = new FileStream(_filePath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, useAsync: true);
-            using var writer = new StreamWriter(fileStream);
-            await writer.WriteAsync(json.AsMemory(), ct);
+            await using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+            using (var writer = new StreamWriter(fileStream))
+            {
+                await writer.WriteAsync(json.AsMemory(), ct);
+            }
+
+            // Keep the previous good copy as a recovery point before replacing it.
+            TryBackupCurrent();
+            File.Move(tempPath, _filePath, overwrite: true);
         }
         catch (Exception ex)
         {
             Logger.Error($"Failed to save {typeof(T).Name} to {_filePath}: {ex.Message}", ex, "FileBasedStore");
+            TryDeleteTemp(tempPath);
+        }
+    }
+
+    /// <summary>
+    /// Copies the current file aside as <c>&lt;name&gt;.bak</c> so a corrupted write
+    /// can be recovered on the next load. Skipped when the current file is unreadable —
+    /// a bad copy would only replace one broken source with another.
+    /// </summary>
+    private void TryBackupCurrent()
+    {
+        if (!File.Exists(_filePath))
+            return;
+
+        try
+        {
+            File.Copy(_filePath, _filePath + ".bak", overwrite: true);
+        }
+        catch
+        {
+            // A missing backup is not a failure of the save itself.
+        }
+    }
+
+    private static void TryDeleteTemp(string tempPath)
+    {
+        try
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+        catch
+        {
+            // Leftover temp files are harmless — the next write overwrites them.
         }
     }
 

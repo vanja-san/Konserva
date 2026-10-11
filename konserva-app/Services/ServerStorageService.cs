@@ -42,16 +42,18 @@ public class ServerStorageService : IServerStorageService, IDisposable
 
     public void UpdateServer(Server server)
     {
-        // Берём кэш напрямую, чтобы не перезагружать весь файл
-        var servers = _store.PeekCache() ?? LoadServers();
-        var index = servers.FindIndex(s => s.Id == server.Id);
-        if (index < 0)
-            return;
+        // Performed through FileBasedStore.Update so the read-modify-write cycle runs
+        // under the store lock. PeekCache() releases the lock before the caller mutates
+        // the list, which let two server threads overwrite each other's updates.
+        _store.Update(servers =>
+        {
+            var index = servers.FindIndex(s => s.Id == server.Id);
+            if (index < 0)
+                return;
 
-        // Заменяем весь объект — не нужно вручную копировать каждое свойство
-        servers[index] = server;
-
-        _store.Save(servers);
+            // Replace the whole object — no need to copy every property manually
+            servers[index] = server;
+        });
     }
 
     public void DeleteServer(string serverId)
@@ -85,7 +87,7 @@ public class ServerStorageService : IServerStorageService, IDisposable
     {
         if (server == null) return;
 
-        // Fire-and-forget с обработкой необработанных исключений
+        // Fire-and-forget with unobserved exception handling
         _ = TryDeleteServerFolderAsync(server, serversPath).ContinueWith(t =>
         {
             if (t.IsFaulted && t.Exception != null)
@@ -103,14 +105,14 @@ public class ServerStorageService : IServerStorageService, IDisposable
             return;
         }
 
-        // Проверяем что путь не содержит escape-последовательностей
+        // Check that the path does not contain traversal sequences
         if (PathValidator.ContainsTraversalSequences(server.Path))
         {
             Logger.Warning($"Server path contains suspicious sequences: {server.Path}", "ServerStorageService");
             return;
         }
 
-        // Проверяем что путь находится внутри директории Servers
+        // Check that the path is inside the Servers directory
         if (!PathValidator.IsPathSafe(server.Path, serversPath))
         {
             Logger.Warning($"Server path is outside allowed directory: {server.Path}", "ServerStorageService");

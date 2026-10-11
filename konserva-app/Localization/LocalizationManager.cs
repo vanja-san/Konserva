@@ -155,7 +155,23 @@ public static class LocalizationManager
     public static string Get(string key, params object[] args)
     {
         var format = Get(key);
-        return string.Format(format, args);
+
+        // Get() falls back to the key itself when a translation is missing, so formatting
+        // it would either throw FormatException (key contains no placeholder but args do
+        // not match) or, worse, splice the arguments into the raw key. An untranslated
+        // string is a cosmetic bug — it must never take down the caller.
+        if (args.Length == 0 || string.Equals(format, key, StringComparison.Ordinal))
+            return format;
+
+        try
+        {
+            return string.Format(CultureInfo.CurrentCulture, format, args);
+        }
+        catch (FormatException)
+        {
+            Logger.Warning($"Malformed translation format for key '{key}'", "LocalizationManager");
+            return format;
+        }
     }
 
     public static void SetLanguage(string culture)

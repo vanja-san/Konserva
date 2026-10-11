@@ -5,7 +5,7 @@ using System.Threading.Channels;
 namespace Konserva.Utilities;
 
 /// <summary>
-/// Уровень логирования
+/// Logging level
 /// </summary>
 public enum LogLevel
 {
@@ -17,7 +17,7 @@ public enum LogLevel
 }
 
 /// <summary>
-/// Запись лога
+/// Log record
 /// </summary>
 public sealed record LogEntry(
     LogLevel Level,
@@ -28,51 +28,60 @@ public sealed record LogEntry(
 );
 
 /// <summary>
-/// Асинхронный логгер с использованием Channels (.NET 10)
+/// Asynchronous logger built on Channels (.NET 10)
 /// </summary>
 public sealed class Logger : IAsyncDisposable
 {
     private static readonly Encoding Utf8NoBom = new UTF8Encoding(false);
-    // Channel для асинхронной записи логов
+    // Channel for asynchronous log writing.
+    // SingleWriter must stay false: entries are written from the UI thread, the server
+    // stdout/stderr readers, and the timers, so the single-writer contract was never true.
     private static readonly Channel<LogEntry> _logChannel =
-        Channel.CreateUnbounded<LogEntry>(new UnboundedChannelOptions
+        Channel.CreateBounded<LogEntry>(new BoundedChannelOptions(10_000)
         {
             SingleReader = true,
-            SingleWriter = true
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.DropOldest
         });
 
     private static readonly string _logFilePath;
     private static readonly string _logDir;
     private static volatile bool _initialized;
+    private static readonly Lock _initLock = new();
     private static CancellationTokenSource? _cts;
     private static Task? _writeTask;
     private static readonly string? _sessionLogFileName;
 
-    // Счётчик ожидающих записи и сигнал для FlushAsync
+    // Throttles directory enumeration: without it every single log line triggered a
+    // Directory.GetFiles + Task.Run hop, which dominated the cost of logging itself.
+    private static long _lastRotationTicks;
+    private static readonly TimeSpan RotationInterval = TimeSpan.FromMinutes(5);
+
+    // Counter of pending writes and the signal for FlushAsync
     private static int _pendingLogEntries;
     private static TaskCompletionSource _flushTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    // Кэш последних логов (thread-safe)
+    // Cache of recent logs (thread-safe)
     private static readonly System.Collections.Concurrent.ConcurrentQueue<LogEntry> _recentLogs = new();
     private const int MaxRecentLogs = 500;
 
     static Logger()
     {
-        // Определяем путь к логам в папке приложения
+        // Determine the log path inside the application folder
         var exeDir = AppContext.BaseDirectory;
         _logDir = Path.Combine(exeDir, "Logs");
         Directory.CreateDirectory(_logDir);
 
-        // Очистка старых логов — оставляем максимум 2 файла
+        // Cleanup of old logs — keep at most 2 files
         CleanupOldLogs();
 
-        // Имя файла сессии: logs-21.01.26-11.22.log
+        // Session file name: logs-21.01.26-11.22.log
         _sessionLogFileName = $"logs-{SystemTime.Now:dd.MM.yy-HH.mm}.log";
         _logFilePath = Path.Combine(_logDir, _sessionLogFileName);
     }
 
     /// <summary>
-    /// Удаляет старые логи — оставляет максимум 2 файла
+    /// Deletes old logs — keeps at most 2 files
     /// </summary>
     private static void CleanupOldLogs()
     {
@@ -82,7 +91,7 @@ public sealed class Logger : IAsyncDisposable
                 .OrderByDescending(f => File.GetLastWriteTime(f))
                 .ToList();
 
-            // Удаляем все кроме 2 самых новых
+            // Delete all except the 2 newest ones
             foreach (var file in logFiles.Skip(2))
             {
                 try
@@ -102,16 +111,21 @@ public sealed class Logger : IAsyncDisposable
     }
 
     /// <summary>
-    /// Инициализация логгера
+    /// Logger initialization
     /// </summary>
     public static void Initialize()
     {
-        if (_initialized)
-            return;
+        // Two threads (UI + a process reader) can both observe _initialized == false;
+        // without the lock both would start a reader on the same channel.
+        lock (_initLock)
+        {
+            if (_initialized)
+                return;
 
-        _initialized = true;
-        _cts = new CancellationTokenSource();
-        _writeTask = ProcessLogQueueAsync(_cts.Token);
+            _initialized = true;
+            _cts = new CancellationTokenSource();
+            _writeTask = ProcessLogQueueAsync(_cts.Token);
+        }
 
         Info("Logger initialized", "System");
         Info($".NET Runtime: {Environment.Version}", "System");
@@ -119,7 +133,7 @@ public sealed class Logger : IAsyncDisposable
     }
 
     /// <summary>
-    /// Фоновая обработка очереди логов
+    /// Background processing of the log queue
     /// </summary>
     private static async Task ProcessLogQueueAsync(CancellationToken ct)
     {
@@ -127,16 +141,16 @@ public sealed class Logger : IAsyncDisposable
         {
             await foreach (var entry in _logChannel.Reader.ReadAllAsync(ct))
             {
-                // Сохраняем в кэш последних логов
+                // Store in the recent logs cache
                 CacheLogEntry(entry);
 
-                // Записываем в файл
+                // Write to the file
                 await WriteToFileAsync(entry);
 
-                // Выводим в Debug
+                // Output to Debug
                 System.Diagnostics.Debug.WriteLine(FormatLogEntry(entry));
 
-                // Сигналим FlushAsync когда все ожидающие записи обработаны
+                // Signal FlushAsync once all pending entries are processed
                 if (Interlocked.Decrement(ref _pendingLogEntries) == 0)
                 {
                     var previous = Interlocked.Exchange(ref _flushTcs, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
@@ -146,7 +160,7 @@ public sealed class Logger : IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
-            // Нормальное завершение
+            // Normal shutdown
         }
         catch (Exception ex)
         {
@@ -155,7 +169,7 @@ public sealed class Logger : IAsyncDisposable
     }
 
     /// <summary>
-    /// Кэширование записи лога
+    /// Caching of a log entry
     /// </summary>
     private static void CacheLogEntry(LogEntry entry)
     {
@@ -163,12 +177,12 @@ public sealed class Logger : IAsyncDisposable
 
         while (_recentLogs.Count > MaxRecentLogs && _recentLogs.TryDequeue(out _))
         {
-            // Удаляем старые записи
+            // Remove old entries
         }
     }
 
     /// <summary>
-    /// Запись лога в файл
+    /// Writing a log entry to the file
     /// </summary>
     private static async Task WriteToFileAsync(LogEntry entry)
     {
@@ -177,8 +191,7 @@ public sealed class Logger : IAsyncDisposable
             var logLine = FormatLogEntry(entry) + Environment.NewLine;
             await File.AppendAllTextAsync(_logFilePath, logLine, Utf8NoBom);
 
-            // Периодическая ротация логов
-            await RotateLogsIfNeededAsync();
+            RotateLogsIfNeeded();
         }
         catch (Exception ex)
         {
@@ -187,7 +200,52 @@ public sealed class Logger : IAsyncDisposable
     }
 
     /// <summary>
-    /// Форматирование записи лога
+    /// Log rotation (deletion of old files), throttled to at most once per
+    /// <see cref="RotationInterval"/>. Called for every entry, so an unconditional
+    /// directory enumeration here would run per log line.
+    /// </summary>
+    private static void RotateLogsIfNeeded()
+    {
+        var nowTicks = DateTime.UtcNow.Ticks;
+        var lastTicks = Interlocked.Read(ref _lastRotationTicks);
+
+        if (nowTicks - lastTicks < RotationInterval.Ticks)
+            return;
+
+        // Claim this slot; a concurrent writer that wins the race skips the rotation.
+        if (Interlocked.CompareExchange(ref _lastRotationTicks, nowTicks, lastTicks) != lastTicks)
+            return;
+
+        try
+        {
+            const int maxSessionLogs = 50; // Keep no more than 50 session files
+
+            var logFiles = Directory.GetFiles(_logDir, "logs-*.log")
+                .Select(f => new { File = f, Time = File.GetLastWriteTime(f) })
+                .OrderByDescending(f => f.Time)
+                .ToList();
+
+            // Delete old files, keeping at most maxSessionLogs
+            foreach (var oldFile in logFiles.Skip(maxSessionLogs))
+            {
+                try
+                {
+                    File.Delete(oldFile.File);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to rotate log file {oldFile.File}: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to rotate logs: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Formatting of a log entry
     /// </summary>
     private static string FormatLogEntry(LogEntry entry)
     {
@@ -209,23 +267,23 @@ public sealed class Logger : IAsyncDisposable
     }
 
     /// <summary>
-    /// Ротация логов (удаление старых)
+    /// Log rotation (deletion of old files)
     /// </summary>
     private static async Task RotateLogsIfNeededAsync()
     {
         try
         {
-            const int maxSessionLogs = 50; // Хранить не более 50 файлов сессии
+            const int maxSessionLogs = 50; // Keep no more than 50 session files
 
             await Task.Run(() =>
             {
-                // Получаем все файлы логов и сортируем по времени
+                // Get all log files and sort them by time
                 var logFiles = Directory.GetFiles(_logDir, "logs-*.log")
                     .Select(f => new { File = f, Time = File.GetLastWriteTime(f) })
                     .OrderByDescending(f => f.Time)
                     .ToList();
 
-                // Удаляем старые файлы, оставляя максимум maxSessionLogs
+                // Delete old files, keeping at most maxSessionLogs
                 foreach (var oldFile in logFiles.Skip(maxSessionLogs))
                 {
                     try
@@ -248,31 +306,31 @@ public sealed class Logger : IAsyncDisposable
     #region Public Logging Methods
 
     /// <summary>
-    /// Логирование информационного сообщения
+    /// Logging of an informational message
     /// </summary>
     public static void Info(string message, string? category = null) =>
         Log(LogLevel.Info, message, null, category);
 
     /// <summary>
-    /// Логирование предупреждения
+    /// Logging of a warning
     /// </summary>
     public static void Warning(string message, string? category = null) =>
         Log(LogLevel.Warning, message, null, category);
 
     /// <summary>
-    /// Логирование ошибки
+    /// Logging of an error
     /// </summary>
     public static void Error(string message, Exception? ex = null, string? category = null) =>
         Log(LogLevel.Error, message, ex, category);
 
     /// <summary>
-    /// Логирование критической ошибки
+    /// Logging of a critical error
     /// </summary>
     public static void Critical(string message, Exception? ex = null, string? category = null) =>
         Log(LogLevel.Critical, message, ex, category);
 
     /// <summary>
-    /// Логирование отладочной информации
+    /// Logging of debug information
     /// </summary>
     public static void Debug(string message, string? category = null)
     {
@@ -282,7 +340,7 @@ public sealed class Logger : IAsyncDisposable
     }
 
     /// <summary>
-    /// Базовая запись лога
+    /// Core log writing
     /// </summary>
     private static void Log(LogLevel level, string message, Exception? ex, string? category)
     {
@@ -293,7 +351,7 @@ public sealed class Logger : IAsyncDisposable
 
         Interlocked.Increment(ref _pendingLogEntries);
 
-        // Отправляем запись в channel, если очередь заполнена - пропускаем
+        // Push the entry to the channel; if the queue is full, skip it
         if (!_logChannel.Writer.TryWrite(entry))
         {
             Interlocked.Decrement(ref _pendingLogEntries);
@@ -306,24 +364,24 @@ public sealed class Logger : IAsyncDisposable
     #region Public Utility Methods
 
     /// <summary>
-    /// Получить последние записи лога
+    /// Get the most recent log entries
     /// </summary>
     public static IEnumerable<LogEntry> GetRecentLogs(int count = 100) =>
         _recentLogs.TakeLast(count);
 
     /// <summary>
-    /// Получить последние строки лога в форматированном виде
+    /// Get the most recent log lines in formatted form
     /// </summary>
     public static IEnumerable<string> GetRecentLogLines(int count = 100) =>
         _recentLogs.TakeLast(count).Select(FormatLogEntry);
 
     /// <summary>
-    /// Дождаться записи всех логов
+    /// Wait for all logs to be written
     /// </summary>
     public static async Task FlushAsync()
     {
-        // Захватываем TCS до проверки pending, чтобы избежать race:
-        // если pending обнулится между проверкой и ожиданием — TCS уже будет завершён
+        // Capture the TCS before checking pending to avoid a race:
+        // if pending drops to zero between the check and the wait — the TCS will already be completed
         var tcs = _flushTcs;
         if (Volatile.Read(ref _pendingLogEntries) <= 0)
             return;
@@ -332,13 +390,13 @@ public sealed class Logger : IAsyncDisposable
     }
 
     /// <summary>
-    /// Очистить кэш логов
+    /// Clear the log cache
     /// </summary>
     public static void ClearCache()
     {
         while (_recentLogs.TryDequeue(out _))
         {
-            // Очищаем
+            // Clearing
         }
     }
 
@@ -346,13 +404,19 @@ public sealed class Logger : IAsyncDisposable
 
     #region IAsyncDisposable
 
-    public async ValueTask DisposeAsync()
+    /// <summary>
+    /// Stops the background writer and flushes whatever is still queued.
+    /// Every member of this class is static, so this is the only way to shut it down —
+    /// the instance <see cref="IAsyncDisposable"/> implementation exists solely to satisfy
+    /// the interface and is never invoked.
+    /// </summary>
+    public static async Task ShutdownAsync()
     {
         if (_cts != null)
         {
             await _cts.CancelAsync();
 
-            // Дожидаемся завершения записи
+            // Wait for writing to finish
             if (_writeTask != null)
             {
                 try
@@ -366,10 +430,13 @@ public sealed class Logger : IAsyncDisposable
             }
 
             _cts.Dispose();
+            _cts = null;
         }
 
         _logChannel.Writer.Complete();
     }
+
+    public ValueTask DisposeAsync() => new(ShutdownAsync());
 
     #endregion
 }

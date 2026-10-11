@@ -13,7 +13,7 @@ using System.Windows;
 namespace Konserva;
 
 /// <summary>
-/// Главный класс приложения
+/// Main application class
 /// </summary>
 public partial class App : Application
 {
@@ -24,14 +24,14 @@ public partial class App : Application
     private static CancellationTokenSource? _pipeCts;
 
     /// <summary>
-    /// Провайдер DI для доступа к сервисам.
-    /// Используйте Ioc.Default.GetService&lt;T&gt;() в остальных частях приложения.
+    /// DI provider for accessing services.
+    /// Use Ioc.Default.GetService&lt;T&gt;() in the rest of the application.
     /// </summary>
     public static IServiceProvider Services { get; private set; } = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        // Single-instance проверка
+        // Single-instance check
         _instanceMutex = new Mutex(true, MutexName, out bool createdNew);
         if (!createdNew)
         {
@@ -41,14 +41,14 @@ public partial class App : Application
             return;
         }
 
-        // 1. Сначала инициализируем логгер
+        // 1. Initialize the logger first
         Logger.Initialize();
 
         base.OnStartup(e);
 
         Logger.Info("Application starting...", "App");
 
-        // 2. Инициализация локализации
+        // 2. Localization initialization
         try
         {
             LocalizationManager.Initialize();
@@ -59,12 +59,12 @@ public partial class App : Application
             Logger.Error($"Failed to initialize localization: {ex.Message}", ex, "App");
         }
 
-        // 3. Создаём файлы локализации если не существуют (уже сделано в Initialize)
+        // 3. Create the localization files if they do not exist (already done in Initialize)
 
-        // 4. Регистрируем провайдер кодировок для поддержки OEM кодировок (866 и др.)
+        // 4. Register the encoding provider to support OEM encodings (866, etc.)
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-        // 5. Перехват глобальных исключений
+        // 5. Hooking up global exception handling
         AppDomain.CurrentDomain.UnhandledException += (s, args) =>
         {
             var ex = args.ExceptionObject as Exception;
@@ -76,7 +76,7 @@ public partial class App : Application
             args.SetObserved();
         };
 
-        // 6. Запускаем асинхронную инициализацию
+        // 6. Start asynchronous initialization
         StartupAsync().SafeFireAndForget(errorMessage: "App startup failed");
     }
 
@@ -86,25 +86,25 @@ public partial class App : Application
         {
             Logger.Info("Services initializing...", "App");
 
-            // Настройка DI
+            // DI setup
             var services = ConfigureServices();
             Services = services.BuildServiceProvider();
             Ioc.Default.ConfigureServices(Services);
 
             Logger.Info("DI container built", "App");
 
-            // Инициализация сервисов
+            // Service initialization
             await InitializeServicesAsync();
 
             Logger.Info("Services initialized successfully", "App");
 
-            // Применяем язык из конфига
+            // Apply the language from the config
             try
             {
                 var config = Services.GetRequiredService<IConfigService>().GetConfig();
-                var language = config.Language ?? "System"; // По умолчанию - язык системы
+                var language = config.Language ?? "System"; // Defaults to the system language
 
-                // Определяем фактический язык
+                // Determine the actual language
                 string actualLanguage;
                 if (language == "System")
                 {
@@ -124,11 +124,11 @@ public partial class App : Application
                 Logger.Error($"Failed to apply language from config: {ex.Message}", ex, "App");
             }
 
-            // Показываем главное окно (создаётся через DI)
+            // Show the main window (created via DI)
             var mainWindow = Services.GetRequiredService<MainWindow>();
             mainWindow.Show();
 
-            // Запускаем pipe-сервер для single-instance IPC
+            // Start the pipe server for single-instance IPC
             StartPipeServer();
 
             Logger.Info("Application started successfully", "App");
@@ -140,17 +140,17 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Настройка Dependency Injection
+    /// Dependency Injection setup
     /// </summary>
     private static IServiceCollection ConfigureServices()
     {
         var services = new ServiceCollection();
 
-        // Базовые сервисы
+        // Base services
         services.AddSingleton<IDispatcher, WpfDispatcher>();
         services.AddSingleton<IModLoaderService, ModLoaderService>();
 
-        // Сервисы (Singleton)
+        // Services (singleton)
         services.AddSingleton<IConfigService, ConfigService>();
         services.AddSingleton<IServerStorageService, ServerStorageService>();
         services.AddSingleton<IServerManager, McServerManager>();
@@ -188,49 +188,51 @@ public partial class App : Application
         });
         services.AddSingleton<IModUpdateService, ModUpdateService>();
 
-        // ServersViewModel держит подписку на событие singleton'а IServerManager,
-        // поэтому обязан быть singleton'ом: иначе каждое посещение страницы
-        // списка серверов оставляло бы после себя «висящий» ViewModel.
+        // ServersViewModel holds a subscription to an event of the IServerManager singleton,
+        // so it must be a singleton as well: otherwise every visit to the server list page
+        // would leave a "dangling" ViewModel behind.
         services.AddSingleton<ServersViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<ServerDetailViewModel>();
         services.AddTransient<CreateServerViewModel>();
         services.AddSingleton<MainWindow>();
 
-        // HttpClient для API с retry политикой
+        // HttpClient for the API with a retry policy
         services.AddHttpClientWithDefaults<IMcVersionsApi, McVersionsApi>(options =>
         {
             options.Timeout = TimeSpan.FromSeconds(30);
             options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
         });
 
-        // HttpClient для UpdateChecker (проверка обновлений GitHub)
+        // HttpClient for UpdateChecker (GitHub update check)
         services.AddHttpClientWithDefaults("UpdateChecker", options =>
         {
             options.Timeout = TimeSpan.FromSeconds(15);
-            // User-Agent будет переопределён в UpdateChecker.CheckAsync() актуальной версией
+            // The User-Agent will be overridden with the current version in UpdateChecker.CheckAsync()
             options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva");
             options.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.v3+json");
         }, retryCount: 2);
 
-        // HttpClient для AppUpdater (скачивание обновлений).
-        // Без retry: частично скачанный архив нельзя повторно докачать тем же запросом,
-        // а проверка целостности всё равно отклонит битый файл.
+        // HttpClient for AppUpdater (update downloads).
+        // No retry: a partially downloaded archive cannot be resumed with the same request,
+        // and the integrity check would reject a corrupted file anyway.
+        // No redirects: the expected SHA-256 comes from the same unsigned manifest as the URL,
+        // so an https->http downgrade would defeat the integrity check entirely.
         services.AddHttpClient("AppUpdater", options =>
         {
             options.Timeout = TimeSpan.FromMinutes(10);
             options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
         })
-            .ConfigurePrimaryHttpMessageHandler(HttpClientDefaults.CreateDefaultHandler);
+            .ConfigurePrimaryHttpMessageHandler(HttpClientDefaults.CreateStrictHandler);
 
-        // HttpClient для McServerInstaller (скачивание серверов) с retry политикой
+        // HttpClient for McServerInstaller (server downloads) with a retry policy
         services.AddHttpClientWithDefaults("McServerInstaller", options =>
         {
             options.Timeout = TimeSpan.FromMinutes(5);
             options.DefaultRequestHeaders.UserAgent.ParseAdd("Konserva/1.0");
         });
 
-        // HttpClient для Modrinth API (обновления модов)
+        // HttpClient for the Modrinth API (mod updates)
         services.AddHttpClientWithDefaults("ModrinthApi", options =>
         {
             options.Timeout = TimeSpan.FromSeconds(30);
@@ -238,11 +240,11 @@ public partial class App : Application
         }, retryCount: 2);
 
         return services;
-        // конец ConfigureServices()
+        // end of ConfigureServices()
     }
 
     /// <summary>
-    /// Инициализация сервисов
+    /// Service initialization
     /// </summary>
     private static Task InitializeServicesAsync()
     {
@@ -251,13 +253,13 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Обработка ошибки запуска
+    /// Startup error handling
     /// </summary>
     private static async Task HandleStartupErrorAsync(Exception ex)
     {
         Logger.Critical("Startup error", ex, "App");
 
-        // MessageBox должен быть на UI потоке (StartupAsync выполняется в фоне)
+        // The MessageBox must be on the UI thread (StartupAsync runs in the background)
         await Current.Dispatcher.InvokeAsync(() =>
         {
             MessageBox.Show(
@@ -275,7 +277,7 @@ public partial class App : Application
     {
         try
         {
-            // Отправляем сигнал через named pipe — первый экземпляр поднимет окно
+            // Send a signal through the named pipe — the first instance will raise the window
             using var pipeClient = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
             pipeClient.Connect(1000);
             var data = "bringtofront"u8.ToArray();
@@ -309,7 +311,7 @@ public partial class App : Application
 
                     if (command == "bringtofront")
                     {
-                        // Переключаемся на UI-поток и поднимаем окно
+                        // Switch to the UI thread and raise the window
                         await Current.Dispatcher.InvokeAsync(() =>
                         {
                             var window = Current.MainWindow;
@@ -323,7 +325,7 @@ public partial class App : Application
                             window.Show();
                             window.Activate();
 
-                            // Topmost toggle — гарантирует вывод на передний план
+                            // Topmost toggle — guarantees bringing the window to the front
                             window.Topmost = true;
                             window.Topmost = false;
 
@@ -345,21 +347,21 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        // Останавливаем pipe-сервер
+        // Stop the pipe server
         _pipeCts?.Cancel();
         _pipeCts?.Dispose();
         _pipeCts = null;
 
-        // Освобождаем mutex
+        // Release the mutex
         _instanceMutex?.ReleaseMutex();
         _instanceMutex?.Dispose();
         _instanceMutex = null;
-        // Дожидаемся остановки серверов (иначе Java процессы останутся в фоне и заблокируют порт)
+        // Wait for the servers to stop (otherwise Java processes stay in the background and block the port)
         try
         {
-            // CleanupAsync запускается на пуле потоков (без SynchronizationContext),
-            // чтобы исключить deadlock при синхронном ожидании на UI-потоке.
-            // Таймаут 30с — если остановка серверов зависнет, приложение всё равно закроется.
+            // CleanupAsync runs on the thread pool (without a SynchronizationContext),
+            // to rule out a deadlock when waiting synchronously on the UI thread.
+            // 30s timeout — even if stopping the servers hangs, the application still closes.
             var cleanupTask = Task.Run(CleanupAsync);
             if (!cleanupTask.Wait(TimeSpan.FromSeconds(30)))
             {
@@ -367,7 +369,7 @@ public partial class App : Application
             }
             else
             {
-                cleanupTask.GetAwaiter().GetResult(); // проброс исключений
+                cleanupTask.GetAwaiter().GetResult(); // rethrow exceptions
             }
         }
         catch (Exception ex)
@@ -379,13 +381,13 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Очистка ресурсов
+    /// Resource cleanup
     /// </summary>
     private static async Task CleanupAsync()
     {
         try
         {
-            // Остановка всех серверов
+            // Stop all servers
             if (Services.GetRequiredService<IServerManager>() is McServerManager serverManager)
             {
                 var servers = serverManager.GetServers();
@@ -395,7 +397,7 @@ public partial class App : Application
                 {
                     Logger.Info($"Stopping {runningServers.Count} server(s) on shutdown", "App");
 
-                    // Пытаемся остановить все серверы с таймаутом
+                    // Try to stop all servers with a timeout
                     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
                     var stopTasks = runningServers.Select(s =>
                         serverManager.StopServerAsync(s.Id, cts.Token));
@@ -409,21 +411,25 @@ public partial class App : Application
                         Logger.Warning("Timeout stopping servers, force killing remaining", "App");
                     }
 
-                    // Принудительно убиваем оставшиеся Java процессы из папок серверов
+                    // Force-kill the remaining Java processes from the server folders
                     foreach (var server in runningServers)
                     {
                         McServerManager.KillZombieProcesses(server.Path);
                     }
                 }
 
-                // Dispose всех процессов
+                // Dispose of all processes
                 foreach (var process in serverManager.GetProcesses())
                 {
                     process?.Dispose();
                 }
+
+                // Write out any server state still sitting in the coalescing queue —
+                // otherwise the last status change is lost on exit.
+                serverManager.FlushPendingWrites();
             }
 
-            // Очистка DI контейнера
+            // Dispose of the DI container
             if (Services is IAsyncDisposable asyncDisposable)
             {
                 await asyncDisposable.DisposeAsync();
@@ -432,6 +438,10 @@ public partial class App : Application
             {
                 disposable.Dispose();
             }
+
+            // Flush the log channel last: without it the records describing this shutdown
+            // are exactly the ones that never reach the disk.
+            await Logger.ShutdownAsync();
         }
         catch (Exception ex)
         {
@@ -457,6 +467,6 @@ public partial class App : Application
             MessageBoxImage.Error);
 
         e.Handled = true;
-        // Не закрываем приложение - даём пользователю возможность сохранить данные
+        // Do not close the app — give the user a chance to save their data
     }
 }
