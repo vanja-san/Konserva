@@ -278,10 +278,4 @@ public partial class ServersViewModel : ObservableObject, IDisposable
 
         ApplyFilters();
     }
-
-    private void OnServerStartError(Server server, string errorMessage)
-    {
-        Logger.Info($"[ServersViewModel] Error for server {server.Name}: {errorMessage}", "ServersViewModel");
-        // UI-обработка выполняется в ServersPage.OnServerStartError через HandleServerStartError
-    }
 }

@@ -1,4 +1,4 @@
-﻿using Konserva.Localization;
+using Konserva.Localization;
 using Konserva.Models;
 using Konserva.Utilities;
 using System;
@@ -16,7 +16,7 @@ namespace Konserva.Services;
 /// </summary>
 public partial class McServerProcess
 {
-    // Cache of module-path (-p) support per Java installation вЂ” check once and remember
+    // Cache of module-path (-p) support per Java installation  —  check once and remember
     private static readonly ConcurrentDictionary<string, bool> _modulePathSupportCache = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -28,7 +28,6 @@ public partial class McServerProcess
         if (_modulePathSupportCache.TryGetValue(javaPath, out var cached))
             return cached;
 
-        // javaw.exe does not support stdout/stderr redirection вЂ”
         // use java.exe for the check
         var checkPath = javaPath;
         if (checkPath.EndsWith("javaw.exe", StringComparison.OrdinalIgnoreCase))
@@ -56,24 +55,36 @@ public partial class McServerProcess
             using var process = Process.Start(startInfo);
             if (process == null)
             {
-                _modulePathSupportCache[javaPath] = false;
+                // Not cached: the launcher may simply have been unavailable this once.
+                Logger.Warning($"[SupportsModulePath] Could not start {checkPath} — result not cached", "McServerProcess");
                 return false;
             }
 
             var error = process.StandardError.ReadToEnd();
-            process.WaitForExit(5000);
+
+            if (!process.WaitForExit(5000))
+            {
+                // Timed out: an unverified "true" would hand NeoForge a launcher that
+                // cannot handle -p. Do not cache an unknown result.
+                try { process.Kill(); } catch { /* already gone */ }
+                Logger.Warning($"[SupportsModulePath] {checkPath} timed out — result not cached", "McServerProcess");
+                return false;
+            }
 
             // The Java 8 launcher will reply with "Unrecognized option: -p"
             var supports = !error.Contains("Unrecognized option", StringComparison.OrdinalIgnoreCase)
                         && !error.Contains("Error", StringComparison.OrdinalIgnoreCase);
 
             _modulePathSupportCache[javaPath] = supports;
-            Logger.Info($"[SupportsModulePath] {javaPath} в†’ {(supports ? "РґР°" : "РЅРµС‚")}", "McServerProcess");
+            Logger.Info($"[SupportsModulePath] {javaPath}: {(supports ? "yes" : "no")}", "McServerProcess");
             return supports;
         }
-        catch
+        catch (Exception ex)
         {
-            _modulePathSupportCache[javaPath] = false;
+            // A transient failure (file locked by an antivirus, resource exhaustion) used to
+            // be cached as "unsupported" for the whole session, so NeoForge then reported
+            // "no suitable Java found" for a perfectly working installation.
+            Logger.Warning($"[SupportsModulePath] {checkPath} check failed, result not cached: {ex.Message}", "McServerProcess");
             return false;
         }
     }
@@ -92,7 +103,7 @@ public partial class McServerProcess
         if (string.IsNullOrEmpty(version))
             return false;
 
-        // "1.8.0_502" format вЂ” extract the update number (the number after _)
+        // "1.8.0_502" format  —  extract the update number (the number after _)
         if (version.StartsWith("1.8."))
         {
             var parts = version.Split('_');
@@ -149,14 +160,14 @@ public partial class McServerProcess
             var requiredJavaVersion = GetRequiredJavaVersion(Server.McVersion, launchType);
             Logger.Info($"[GetJavaPathForServer] Auto-select: required Java {requiredJavaVersion}+, launch type {launchType}", "McServerProcess");
 
-            // NeoForge uses module-path (-p) вЂ” filter out Java installations that do not support it.
+            // NeoForge uses module-path (-p)  —  filter out Java installations that do not support it.
             // Forge uses -jar, no modules needed.
             bool needsModulePath = launchType is ServerLaunchType.NeoForge;
 
             var maxJavaVersion = GetMaxJavaVersion(Server.McVersion, launchType);
 
             // Forge/NeoForge: exact match only (as in FluentLauncher).
-            // The Forge modlauncher is built for a specific Java version вЂ” a mismatch causes NoSuchMethodError / IllegalAccessError.
+            // The Forge modlauncher is built for a specific Java version  —  a mismatch causes NoSuchMethodError / IllegalAccessError.
             bool isForgeOrNeoForge = launchType == ServerLaunchType.Forge || launchType == ServerLaunchType.NeoForge;
 
             var exactMatch = javaInstallations
@@ -172,7 +183,7 @@ public partial class McServerProcess
                 return exactMatch.Path;
             }
 
-            // Forge/NeoForge: if no exact match is found вЂ” try a newer version
+            // Forge/NeoForge: if no exact match is found  —  try a newer version
             if (isForgeOrNeoForge)
             {
                 // Check whether there are Java 8 builds with update >= 400 that we filtered out
@@ -231,7 +242,7 @@ public partial class McServerProcess
                     return suitableJava.Path;
                 }
 
-                // If nothing fits вЂ” try without the module-path filter (the user may have selected it manually)
+                // If nothing fits  —  try without the module-path filter (the user may have selected it manually)
                 AppendLog($"[WARN] {LocalizationManager.Get("Log_JavaVersionNotFound_TryDefault", requiredJavaVersion)}");
             }
         }
@@ -271,8 +282,8 @@ public partial class McServerProcess
             {
                 if (major == 1)
                 {
-                    // MC 1.16.x and below вЂ” the Forge modlauncher is incompatible with Java 17+
-                    // Java 11 also lacks ManifestEntryVerifier(Manifest) вЂ” Java 8 < 8u400 is required
+                    // MC 1.16.x and below  —  the Forge modlauncher is incompatible with Java 17+
+                    // Java 11 also lacks ManifestEntryVerifier(Manifest)  —  Java 8 < 8u400 is required
                     if (minor <= 16) return 8;
 
                     // MC 1.17 uses Java 16, maximum 17
@@ -319,17 +330,17 @@ public partial class McServerProcess
 
                 using var process = Process.Start(startInfo);
                 if (process == null)
-                    return new JavaCheckResult { Success = false, Error = "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ РїСЂРѕС†РµСЃСЃ java" };
+                    return new JavaCheckResult { Success = false, Error = "Не удалось запустить процесс java" };
 
                 versionOutput = process.StandardError.ReadToEnd();
                 if (!process.WaitForExit(Constants.JavaCheckTimeoutMs))
                 {
                     try { process.Kill(); } catch { }
-                    return new JavaCheckResult { Success = false, Error = "РџСЂРѕРІРµСЂРєР° Java Р·Р°РІРёСЃР»Р° (С‚Р°Р№РјР°СѓС‚)" };
+                    return new JavaCheckResult { Success = false, Error = "Проверка Java зависла (таймаут)" };
                 }
 
                 if (process.ExitCode != 0)
-                    return new JavaCheckResult { Success = false, Error = $"java РІРµСЂРЅСѓР»Р° РєРѕРґ РѕС€РёР±РєРё {process.ExitCode}" };
+                    return new JavaCheckResult { Success = false, Error = $"java вернула код выхода {process.ExitCode}" };
 
                 try
                 {
@@ -356,7 +367,7 @@ public partial class McServerProcess
             else
             {
                 if (!File.Exists(javaPath) && !File.Exists(javaPath + ".exe"))
-                    return new JavaCheckResult { Success = false, Error = $"Р¤Р°Р№Р» РЅРµ РЅР°Р№РґРµРЅ: {javaPath}" };
+                return new JavaCheckResult { Success = false, Error = $"Не удалось запустить: {javaPath}" };
 
                 actualJavaPath = File.Exists(javaPath) ? javaPath : javaPath + ".exe";
 
@@ -371,17 +382,17 @@ public partial class McServerProcess
 
                 using var process = Process.Start(startInfo);
                 if (process == null)
-                    return new JavaCheckResult { Success = false, Error = "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ РїСЂРѕС†РµСЃСЃ" };
+                    return new JavaCheckResult { Success = false, Error = "Не удалось запустить процесс" };
 
                 versionOutput = process.StandardError.ReadToEnd();
                 if (!process.WaitForExit(Constants.JavaCheckTimeoutMs))
                 {
                     try { process.Kill(); } catch { }
-                    return new JavaCheckResult { Success = false, Error = "РџСЂРѕРІРµСЂРєР° Java Р·Р°РІРёСЃР»Р° (С‚Р°Р№РјР°СѓС‚)" };
+                    return new JavaCheckResult { Success = false, Error = "Проверка Java зависла (таймаут)" };
                 }
 
                 if (process.ExitCode != 0)
-                    return new JavaCheckResult { Success = false, Error = $"Java РІРµСЂРЅСѓР»Р° РєРѕРґ РѕС€РёР±РєРё {process.ExitCode}" };
+                    return new JavaCheckResult { Success = false, Error = $"Java вернула код выхода {process.ExitCode}" };
             }
 
             var version = JavaVersionParser.ParseVersion(versionOutput);
@@ -410,11 +421,11 @@ public partial class McServerProcess
     {
         var eulaPath = Path.Combine(Server.Path, "eula.txt");
         if (!File.Exists(eulaPath))
-            throw new FileNotFoundException("Р¤Р°Р№Р» eula.txt РЅРµ РЅР°Р№РґРµРЅ. РЎРµСЂРІРµСЂ РЅРµ Р±С‹Р» СѓСЃС‚Р°РЅРѕРІР»РµРЅ РєРѕСЂСЂРµРєС‚РЅРѕ.");
+            throw new FileNotFoundException("Файл eula.txt не найден. Сервер не был установлен корректно.");
 
         var eulaContent = File.ReadAllText(eulaPath, Encoding.UTF8);
         if (!eulaContent.Contains("eula=true", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("EULA РЅРµ РїСЂРёРЅСЏС‚Р°! РР·РјРµРЅРёС‚Рµ eula.txt Рё СѓСЃС‚Р°РЅРѕРІРёС‚Рµ eula=true");
+            throw new InvalidOperationException("EULA не принята! Откройте файл eula.txt и установите eula=true");
 
         AppendLog($" {LocalizationManager.Get("Log_EulaAccepted")}");
     }
@@ -505,7 +516,7 @@ public partial class McServerProcess
         };
 
         if (!_process.Start())
-            throw new InvalidOperationException($"РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ РїСЂРѕС†РµСЃСЃ: {javaPath} {utf8Args}");
+            throw new InvalidOperationException($"Не удалось запустить процесс: {javaPath} {utf8Args}");
 
         _process.OutputDataReceived += OnOutput;
         _process.ErrorDataReceived += OnError;

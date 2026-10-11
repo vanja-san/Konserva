@@ -52,16 +52,6 @@ public static class Constants
     /// </summary>
     public const int LogTruncationLength = 200;
 
-    /// <summary>
-    /// Timeout for waiting on the server install check (5 sec)
-    /// </summary>
-    public const int ServerInstallCheckTimeoutMs = 5000;
-
-    /// <summary>
-    /// Base delay for retries (1 sec)
-    /// </summary>
-    public const int RetryBaseDelayMs = 1000;
-
     #endregion
 
     #region RAM limits (MB)
@@ -89,11 +79,6 @@ public static class Constants
     #endregion
 
     #region Path limits
-
-    /// <summary>
-    /// Maximum path length (260 characters on Windows)
-    /// </summary>
-    public const int MaxPathLength = 260;
 
     /// <summary>
     /// Base servers directory (relative to the application directory)

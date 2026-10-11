@@ -405,17 +405,6 @@ public partial class ServerDetailViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Обновляет процесс из менеджера и возвращает его
-    /// </summary>
-    public McServerProcess? RefreshProcess()
-    {
-        if (_serverId == null) return null;
-
-        Process = _serverManager.GetProcess(_serverId);
-        return Process;
-    }
-
-    /// <summary>
     /// Обновляет статус сервера
     /// </summary>
     public void UpdateServerStatus(ServerStatus status)

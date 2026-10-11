@@ -672,12 +672,4 @@ public class JavaManagementService(IConfigService configService) : IJavaManageme
         Logger.Info($"ScanAndAddJava: found {foundJava.Count} total, config has {config.JavaInstallations.Count} after cleanup", "JavaManagementService");
         return [.. config.JavaInstallations];
     }
-
-    /// <summary>
-    /// Getting the required Java version
-    /// </summary>
-    private static int GetRequiredJavaVersion(string mcVersion, ServerLaunchType launchType)
-    {
-        return JavaVersionParser.GetRequiredJavaVersion(mcVersion, launchType);
-    }
 }

@@ -1,4 +1,4 @@
-using Konserva.Utilities;
+﻿using Konserva.Utilities;
 using System.IO;
 using System.Text;
 
@@ -52,8 +52,8 @@ public class ServerProperties
     public bool OnlineMode { get; set; } = true;
     public bool EnforceSecureProfile { get; set; } = true;
     public bool PreventProxyConnections { get; set; } = false;
-    public int NetworkCompressionThreshold { get; set; } = 256;
-    public int MaxTickTime { get; set; } = 60000;
+    public int NetworkCompressionThreshold { get; set; } = Constants.NetworkCompressionThreshold;
+    public int MaxTickTime { get; set; } = Constants.MaxTickTimeMs;
     public int PlayerIdleTimeout { get; set; } = 0;
     public int RateLimit { get; set; } = 0;
     public bool EnableStatus { get; set; } = true;
@@ -360,10 +360,10 @@ public class ServerProperties
                 props.PreventProxyConnections = ParseBool(value, false);
                 break;
             case "network-compression-threshold":
-                props.NetworkCompressionThreshold = ParseInt(value, 256);
+                props.NetworkCompressionThreshold = ParseInt(value, Constants.NetworkCompressionThreshold);
                 break;
             case "max-tick-time":
-                props.MaxTickTime = ParseInt(value, 60000);
+                props.MaxTickTime = ParseInt(value, Constants.MaxTickTimeMs);
                 break;
             case "player-idle-timeout":
                 props.PlayerIdleTimeout = ParseInt(value, 0);

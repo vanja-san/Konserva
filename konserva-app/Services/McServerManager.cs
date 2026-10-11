@@ -840,28 +840,6 @@ public class McServerManager(IDispatcher dispatcher, IServerStorageService stora
     }
 
     /// <summary>
-    /// Removes the UPnP port forwarding rule for the server (synchronous call).
-    /// </summary>
-    private void TryDeleteUpnpMappingForServer(string id)
-    {
-        if (_portForwarding == null)
-            return;
-
-        try
-        {
-            var server = GetServer(id);
-            if (server == null || !server.Settings.EnableUpnp)
-                return;
-
-            _ = TryDeleteUpnpMappingAsync(server.Port);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning($"UPnP delete mapping error (sync): {ex.Message}", "McServerManager");
-        }
-    }
-
-    /// <summary>
     /// Removes the UPnP port forwarding rule for the server (asynchronous call).
     /// </summary>
     private async Task TryDeleteUpnpMappingForServerAsync(string id)

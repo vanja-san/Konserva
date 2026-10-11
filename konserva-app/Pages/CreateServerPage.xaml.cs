@@ -592,26 +592,9 @@ public partial class CreateServerPage : Page
 
         if (dialog.ShowDialog() == true)
         {
+            _viewModel.SaveServersPath(dialog.FolderName);
             ServerPathBox.Text = dialog.FolderName;
-            SaveServersPath(dialog.FolderName);
             UpdateCreateButtonState();
-        }
-    }
-
-    private void SaveServersPath(string path)
-    {
-        try
-        {
-            var config = _configService?.GetConfig();
-            if (config != null)
-            {
-                config.ServersDirectory = path;
-                _configService?.SaveConfig(config);
-            }
-        }
-        catch
-        {
-            // Ignore save errors
         }
     }
 
@@ -631,58 +614,20 @@ public partial class CreateServerPage : Page
             {
                 var serverPath = dialog.FolderName;
 
-                var existingServer = Ioc.Default.GetService<IServerManager>()!.GetServers()
-                    .FirstOrDefault(s => s.Path.Equals(serverPath, StringComparison.OrdinalIgnoreCase));
+                // The import logic lives in the ViewModel: the page previously carried a
+                // near-identical copy (duplicate check, jar discovery, launch-type mapping,
+                // version.json parsing), which left the ViewModel half unused and untestable.
+                var imported = _viewModel.ImportServer(serverPath, out var importError);
 
-                if (existingServer != null)
+                if (imported == null)
                 {
-                    await UiHelper.ShowWarning(string.Format(LocalizationManager.Get("CreateServer_Import_Duplicate"), existingServer.Name));
+                    await UiHelper.ShowWarning(importError ?? LocalizationManager.Get("CreateServer_Import_Error"));
                     return;
                 }
-
-                var jarFile = Directory.GetFiles(serverPath, "*.jar").FirstOrDefault();
-                if (jarFile == null)
-                {
-                    await UiHelper.ShowWarning(LocalizationManager.Get("CreateServer_Import_NoJar"));
-                    return;
-                }
-
-                var launchType = _installer.GetServerLaunchType(serverPath);
-                var modLoader = launchType switch
-                {
-                    ServerLaunchType.Forge => new ModLoader { Type = ModLoaderType.Forge },
-                    ServerLaunchType.NeoForge => new ModLoader { Type = ModLoaderType.NeoForge },
-                    ServerLaunchType.Fabric => new ModLoader { Type = ModLoaderType.Fabric },
-                    ServerLaunchType.Quilt => new ModLoader { Type = ModLoaderType.Quilt },
-                    ServerLaunchType.Standard => new ModLoader { Type = ModLoaderType.Vanilla },
-                    _ => new ModLoader { Type = ModLoaderType.Vanilla }
-                };
-
-                var mcVersion = LocalizationManager.Get("Common_Unknown");
-                var versionFile = Path.Combine(serverPath, "version.json");
-                if (File.Exists(versionFile))
-                {
-                    try
-                    {
-                        var json = File.ReadAllText(versionFile);
-                        var jsonDoc = System.Text.Json.JsonDocument.Parse(json);
-                        if (jsonDoc.RootElement.TryGetProperty("id", out var idElement))
-                        {
-                            mcVersion = idElement.GetString() ?? "Unknown";
-                        }
-                    }
-                    catch
-                    {
-                        // Suppress version.json parse errors
-                    }
-                }
-
-                var serverName = Path.GetFileName(serverPath);
-                _ = Ioc.Default.GetService<IServerManager>()!.CreateServer(serverName, mcVersion, modLoader, serverPath);
 
                 Ioc.Default.GetService<MainWindow>()?.ShowSnackbar(
                     LocalizationManager.Get("CreateServer_Import_Success_Title"),
-                    string.Format(LocalizationManager.Get("CreateServer_Import_Success"), serverName),
+                    string.Format(LocalizationManager.Get("CreateServer_Import_Success"), imported.Name),
                     Wpf.Ui.Controls.ControlAppearance.Success);
 
                 NavigateBackToServers();
@@ -785,14 +730,6 @@ public partial class CreateServerPage : Page
 
             var serverName = ServerNameBox.Text.Trim();
 
-            var existingServers = Ioc.Default.GetService<IServerManager>()!.GetServers();
-            if (existingServers.Any(s => s.Name.Equals(serverName, StringComparison.OrdinalIgnoreCase)))
-            {
-                await UiHelper.ShowWarning(string.Format(LocalizationManager.Get("CreateServer_Error_DuplicateName"), serverName));
-                ServerNameBox.Focus();
-                return;
-            }
-
             var serverPath = ServerPathBox.Text.Trim();
             var pathValidationResult = _viewModel.ValidateServerPath(serverPath);
             if (!pathValidationResult.IsValid)
@@ -819,14 +756,19 @@ public partial class CreateServerPage : Page
                 loaderVersion = loaderItem.Content?.ToString() ?? string.Empty;
             }
 
-            var modLoader = new ModLoader
-            {
-                Type = modLoaderType,
-                Version = mcVersion,
-                LoaderVersion = loaderVersion
-            };
+            // Hand the selection to the ViewModel, which owns the duplicate-name check
+            // and the ModLoader construction. The page used to repeat both.
+            _viewModel.SelectedMcVersion = mcVersion;
+            _viewModel.SelectedModLoader = modLoaderType.ToString();
+            _viewModel.SelectedLoaderVersion = loaderVersion;
 
-            var server = Ioc.Default.GetService<IServerManager>()!.CreateServer(serverName, mcVersion, modLoader, serverPath);
+            var server = _viewModel.CreateServer(serverName, serverPath, out var createError);
+            if (server == null)
+            {
+                await UiHelper.ShowWarning(createError ?? LocalizationManager.Get("CreateServer_Error_CreateFailed"));
+                ServerNameBox.Focus();
+                return;
+            }
 
             SetInstallingState(true);
 

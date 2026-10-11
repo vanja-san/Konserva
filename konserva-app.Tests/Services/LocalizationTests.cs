@@ -15,16 +15,12 @@ namespace Konserva.Tests.Services;
 public class LocalizationTests : IDisposable
 {
     private readonly string _testI18nPath;
-    private readonly string _originalI18nPath;
 
     public LocalizationTests()
     {
         // Создаём временную папку для тестовых файлов локализации
         _testI18nPath = Path.Combine(Path.GetTempPath(), $"konserva_i18n_test_{Guid.NewGuid()}", "i18n");
         Directory.CreateDirectory(_testI18nPath);
-        
-        // Сохраняем оригинальный путь
-        _originalI18nPath = Path.Combine(AppContext.BaseDirectory, "i18n");
     }
 
     [Fact]

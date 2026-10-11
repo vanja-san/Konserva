@@ -473,8 +473,8 @@ public partial class ServerPropertiesEditor : UserControl
             _properties.EnforceSecureProfile = GetBoolValue(EnforceSecureProfileBox);
             _properties.PreventProxyConnections = GetBoolValue(PreventProxyConnectionsBox);
             _properties.RateLimit = GetIntValue(RateLimitBox, 0);
-            _properties.NetworkCompressionThreshold = GetIntValue(NetworkCompressionBox, 256);
-            _properties.MaxTickTime = GetIntValue(MaxTickTimeBox, 60000);
+            _properties.NetworkCompressionThreshold = GetIntValue(NetworkCompressionBox, Constants.NetworkCompressionThreshold);
+            _properties.MaxTickTime = GetIntValue(MaxTickTimeBox, Constants.MaxTickTimeMs);
             _properties.PlayerIdleTimeout = GetIntValue(PlayerIdleTimeoutBox, 0);
             _properties.AcceptsTransfers = GetBoolValue(AcceptsTransfersBox);
             _properties.StatusHeartbeatInterval = GetIntValue(StatusHeartbeatIntervalBox, 0);
