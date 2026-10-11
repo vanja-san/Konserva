@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version number (e.g., 1.2.1)'
+        description: 'Version to release, e.g. 1.20.0 (must match <Version> in konserva-app.csproj)'
         required: true
-        default: '1.2.1'
       create_release:
         description: 'Create GitHub Release after build'
         required: true
