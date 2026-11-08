@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release, e.g. 1.20.0 (must match <Version> in konserva-app.csproj)'
+        description: 'Version to release, e.g. 1.x.x (must match <Version> in konserva-app.csproj)'
         required: true
       create_release:
         description: 'Create GitHub Release after build'
@@ -45,59 +45,118 @@ jobs:
       shell: pwsh
       run: |
         $outputFile = "CHANGELOG_RELEASE.md"
-
-        # Find previous tag to compare against
         $currentTag = "v${{ inputs.version }}"
+        $repo = "${{ github.repository }}"
 
-        # Get all tags sorted by version, pick the one before currentTag
-        $allTags = git tag --sort=-version:refname
-        if ($LASTEXITCODE -ne 0 -and -not $allTags) {
-          $previousTag = $null
+        # ── Найти предыдущий тег (новейший, не равный currentTag) ─────────────
+        $allTags = @(git tag --sort=-version:refname)
+        $previousTag = $null
+        if ($allTags.Count -gt 0) {
+          $prevCandidates = @($allTags | Where-Object { $_ -ne $currentTag })
+          if ($prevCandidates.Count -gt 0) { $previousTag = $prevCandidates[0] }
+        }
+
+        # ── Собрать коммиты ───────────────────────────────────────────────────
+        if ($previousTag) {
+          Write-Host "Collecting commits: $previousTag..HEAD"
+          $range = "$previousTag..HEAD"
+          $commits = git log $range --pretty=format:"%h|%s" --no-merges
         } else {
-          # Find the tag just before currentTag in the sorted list
-          $foundCurrent = $false
-          $previousTag = $null
-          foreach ($tag in $allTags) {
-            if ($tag -eq $currentTag) {
-              $foundCurrent = $true
-              continue
+          Write-Host "No previous tag — taking the last 30 commits"
+          $commits = git log HEAD --pretty=format:"%h|%s" --no-merges -n 30
+        }
+
+        # ── Распарсить и разложить по категориям ─────────────────────────────
+        $categories = [ordered]@{
+          "🚀 Features"     = @()
+          "🐛 Bug Fixes"    = @()
+          "⚡ Performance"  = @()
+          "🔨 Refactoring"  = @()
+          "📚 Docs"         = @()
+          "📝 Other"        = @()
+        }
+
+        if ($commits) {
+          foreach ($line in $commits) {
+            if (-not $line.Trim()) { continue }
+            $parts = $line -split '\|', 2
+            if ($parts.Length -lt 2) { continue }
+            $hash = $parts[0]
+            $msg  = $parts[1]
+
+            $category = "📝 Other"
+            $cleanMsg = $msg
+
+            if     ($msg -match '^feat(\([^)]+\))?!?:\s*(.+)$')     { $category = "🚀 Features";    $cleanMsg = $Matches[2] }
+            elseif ($msg -match '^fix(\([^)]+\))?!?:\s*(.+)$')      { $category = "🐛 Bug Fixes";   $cleanMsg = $Matches[2] }
+            elseif ($msg -match '^perf(\([^)]+\))?!?:\s*(.+)$')     { $category = "⚡ Performance";  $cleanMsg = $Matches[2] }
+            elseif ($msg -match '^refactor(\([^)]+\))?!?:\s*(.+)$') { $category = "🔨 Refactoring";  $cleanMsg = $Matches[2] }
+            elseif ($msg -match '^docs(\([^)]+\))?!?:\s*(.+)$')     { $category = "📚 Docs";         $cleanMsg = $Matches[2] }
+            elseif ($msg -match '^(chore|style|test|ci|build)(\([^)]+\))?!?:\s*(.+)$') {
+              continue   # сервисные коммиты в changelog не попадают
             }
-            if ($foundCurrent) {
-              $previousTag = $tag
-              break
-            }
-          }
-          # If currentTag not in list yet (not created), use the first tag
-          if (-not $previousTag -and $allTags.Count -gt 0) {
-            $previousTag = $allTags[0]
+
+            $commitUrl = "https://github.com/$repo/commit/$hash"
+            $categories[$category] += "- $cleanMsg ([$hash]($commitUrl))"
           }
         }
 
-        if (-not $previousTag) {
-          $previousTag = $currentTag
+        # ── Собрать markdown ──────────────────────────────────────────────────
+        $sb = [System.Text.StringBuilder]::new()
+
+        [void]$sb.AppendLine("## 📝 What's Changed")
+        [void]$sb.AppendLine()
+
+        $hasChanges = $false
+        foreach ($cat in $categories.Keys) {
+          if ($categories[$cat].Count -eq 0) { continue }
+          $hasChanges = $true
+          [void]$sb.AppendLine("### $cat")
+          [void]$sb.AppendLine()
+          foreach ($item in $categories[$cat]) {
+            [void]$sb.AppendLine($item)
+          }
+          [void]$sb.AppendLine()
         }
 
-        # Start changelog file
-        $changelog = ""
+        if (-not $hasChanges) {
+          [void]$sb.AppendLine("_No changes since the previous release._")
+          [void]$sb.AppendLine()
+        }
 
-        # Add full changelog link - compare previous tag to current
-        $changelog += "**📋 [FULL CHANGELOG](https://github.com/${{ github.repository }}/compare/${previousTag}...${currentTag})**`n`n"
-        
-        # Add file description section
-        $changelog += "## 📦 Download Files`n`n"
-        $changelog += "| Feature | Full (~60 MB) | Deps (~10 MB) |`n"
-        $changelog += "|---------|---------------|-------------|`n"
-        $changelog += "| .NET Runtime | ✅ Built-in | ⚠️ Required |`n"
-        $changelog += "| Size | ~60 MB | ~10 MB |`n"
-        $changelog += "| Setup | None | Install .NET 10 |`n`n"
-        $changelog += "**Download .NET 10 Runtime:** https://dotnet.microsoft.com/download/dotnet/10.0`n"
+        # ── Блок скачивания ───────────────────────────────────────────────────
+        [void]$sb.AppendLine("## 📦 Download Files")
+        [void]$sb.AppendLine()
+        [void]$sb.AppendLine("| Feature | Full (~60 MB) | Deps (~10 MB) |")
+        [void]$sb.AppendLine("|---------|---------------|-------------|")
+        [void]$sb.AppendLine("| .NET Runtime | ✅ Built-in | ⚠️ Required |")
+        [void]$sb.AppendLine("| Size | ~60 MB | ~10 MB |")
+        [void]$sb.AppendLine("| Setup | None | Install .NET 10 |")
+        [void]$sb.AppendLine()
+        [void]$sb.AppendLine("**Download .NET 10 Runtime:** https://dotnet.microsoft.com/download/dotnet/10.0")
+        [void]$sb.AppendLine()
 
-        # Write changelog
-        $changelog | Out-File -FilePath $outputFile -Encoding utf8
+        # ── Full Changelog (в самом низу) ─────────────────────────────────────
+        if ($previousTag) {
+          [void]$sb.AppendLine("---")
+          [void]$sb.AppendLine()
+          [void]$sb.AppendLine("**📋 [Full Changelog](https://github.com/$repo/compare/${previousTag}...${currentTag})**")
+          Write-Host "Full Changelog: $previousTag...$currentTag"
+        } else {
+          [void]$sb.AppendLine("---")
+          [void]$sb.AppendLine()
+          [void]$sb.AppendLine("**📋 [Full Changelog](https://github.com/$repo/commits/${currentTag})**")
+          Write-Host "Full Changelog: initial release"
+        }
 
-        Write-Host "Changelog generated successfully!"
+        # ── Записать файл ─────────────────────────────────────────────────────
+        [System.IO.File]::WriteAllText(
+            (Join-Path $PWD $outputFile),
+            $sb.ToString(),
+            [System.Text.UTF8Encoding]::new($false))
+
+        Write-Host "`n===== Generated changelog ====="
         Get-Content $outputFile -Raw
-
         exit 0
 
     - name: Restore dependencies

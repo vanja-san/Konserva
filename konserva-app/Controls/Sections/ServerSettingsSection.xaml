@@ -374,25 +374,32 @@
                     </Grid>
 
                     <!--  Row 1: result + check buttons  -->
-                    <StackPanel
+                    <Grid
                         Grid.Row="1"
                         Margin="0,0,0,8"
-                        HorizontalAlignment="Right"
-                        Orientation="Horizontal">
+                        ColumnDefinitions="*,Auto,Auto,Auto">
+                        <!--  Статус: занимает всю оставшуюся ширину, переносится, прижат вправо  -->
                         <ui:TextBlock
                             x:Name="UpnpCheckResultText"
+                            Grid.Column="0"
                             Margin="0,0,12,0"
+                            HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             FontWeight="SemiBold"
+                            TextAlignment="Right"
+                            TextWrapping="Wrap"
                             Visibility="Collapsed" />
                         <ui:SymbolIcon
                             x:Name="UpnpCheckResultIcon"
+                            Grid.Column="1"
                             Margin="0,0,12,0"
+                            VerticalAlignment="Center"
                             Filled="True"
                             FontSize="20"
                             Visibility="Collapsed" />
                         <ui:Button
                             x:Name="CheckUpnpButton"
+                            Grid.Column="2"
                             Margin="0,0,8,0"
                             Click="CheckUpnpButton_Click">
                             <StackPanel Orientation="Horizontal">
@@ -410,6 +417,7 @@
                         </ui:Button>
                         <ui:Button
                             x:Name="CheckPortButton"
+                            Grid.Column="3"
                             Appearance="Primary"
                             Click="CheckPortButton_Click">
                             <StackPanel Orientation="Horizontal">
@@ -425,7 +433,7 @@
                                     Text="{loc:Loc ServerDetail_Upnp_CheckPort}" />
                             </StackPanel>
                         </ui:Button>
-                    </StackPanel>
+                    </Grid>
 
                     <!--  Row 2: address  -->
                     <Grid
@@ -491,13 +499,13 @@
                         </StackPanel>
                         <StackPanel
                             Grid.Column="1"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center">
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal">
                             <ui:Button
                                 x:Name="DeleteModBackupsButton"
+                                Click="DeleteModBackupsButton_Click"
                                 Cursor="Hand"
                                 Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
-                                Click="DeleteModBackupsButton_Click"
                                 ToolTip="{loc:Loc ServerDetail_Settings_ModBackup_Clear}">
                                 <ui:Button.Template>
                                     <ControlTemplate TargetType="ui:Button">

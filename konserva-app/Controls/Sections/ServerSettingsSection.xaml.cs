@@ -678,26 +678,54 @@ public partial class ServerSettingsSection : System.Windows.Controls.UserControl
             CheckPortText.Text = LocalizationManager.Get("ServerDetail_Upnp_Checking");
 
             var port = _server.Port;
-            var isForwarded = await _viewModel.CheckPortMappingAsync(port);
+            var result = await _viewModel.CheckPortMappingAsync(port);
 
             CheckPortProgress.Visibility = Visibility.Collapsed;
             CheckPortButton.IsEnabled = true;
             CheckPortText.Text = LocalizationManager.Get("ServerDetail_Upnp_CheckPort");
 
-            if (isForwarded)
+            var source = result.ConfirmedBy switch
             {
-                UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_Port_Open");
-                UpnpCheckResultText.Foreground = SuccessBrush;
-                UpdateServerAddressDisplay();
-            }
-            else
-            {
-                UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_Port_Closed");
-                UpnpCheckResultText.Foreground = ErrorBrush;
+                "UPnP" => LocalizationManager.Get("ServerDetail_Upnp_Source_Upnp"),
+                "TCP" => LocalizationManager.Get("ServerDetail_Upnp_Source_Tcp"),
+                "Shodan" => LocalizationManager.Get("ServerDetail_Upnp_Source_Shodan"),
+                "UPnP+Shodan" => LocalizationManager.Get("ServerDetail_Upnp_Source_Both"),
+                _ => null
+            };
 
-                // Hide the address if the port is closed
-                UpnpAddressText.Visibility = Visibility.Collapsed;
-                CopyAddressButton.Visibility = Visibility.Collapsed;
+            switch (result.Status)
+            {
+                case MappingCheckResult.Open:
+                    UpnpCheckResultText.Text = source == null
+                        ? LocalizationManager.Get("ServerDetail_Upnp_Port_Open")
+                        : string.Format(LocalizationManager.Get("ServerDetail_Upnp_Port_Open_Source"), source);
+                    UpnpCheckResultText.Foreground = SuccessBrush;
+                    UpdateServerAddressDisplay();
+                    break;
+
+                case MappingCheckResult.Closed:
+                    UpnpCheckResultText.Text = source == null
+                        ? LocalizationManager.Get("ServerDetail_Upnp_Port_Closed")
+                        : string.Format(LocalizationManager.Get("ServerDetail_Upnp_Port_Closed_Source"), source);
+                    UpnpCheckResultText.Foreground = ErrorBrush;
+                    UpnpAddressText.Visibility = Visibility.Collapsed;
+                    CopyAddressButton.Visibility = Visibility.Collapsed;
+                    break;
+
+                case MappingCheckResult.ServerNotRunning:
+                    UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_ServerNotRunning");
+                    UpnpCheckResultText.Foreground = WarningBrush;
+                    UpnpAddressText.Visibility = Visibility.Collapsed;
+                    CopyAddressButton.Visibility = Visibility.Collapsed;
+                    break;
+
+                case MappingCheckResult.Unknown:
+                default:
+                    UpnpCheckResultText.Text = LocalizationManager.Get("ServerDetail_Upnp_Port_Unknown");
+                    UpnpCheckResultText.Foreground = WarningBrush;
+                    UpnpAddressText.Visibility = Visibility.Collapsed;
+                    CopyAddressButton.Visibility = Visibility.Collapsed;
+                    break;
             }
 
             UpnpCheckResultText.Visibility = Visibility.Visible;

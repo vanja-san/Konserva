@@ -1205,9 +1205,11 @@ public partial class ServerDetailViewModel : ObservableObject
         return await _portForwardingService.IsAvailableAsync();
     }
 
-    public async Task<bool> CheckPortMappingAsync(int port)
+    public async Task<PortCheckResult> CheckPortMappingAsync(int port)
     {
-        if (_portForwardingService == null) return false;
+        if (_portForwardingService == null)
+            return PortCheckResult.Unknown();
+
         return await _portForwardingService.CheckMappingAsync(port);
     }
 

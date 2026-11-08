@@ -1,41 +1,43 @@
 namespace Konserva.Services;
 
 /// <summary>
-/// Service for automatic port forwarding via UPnP/NAT-PMP.
+/// Статус проверки проброса порта.
 /// </summary>
+public enum MappingCheckResult
+{
+    /// <summary>Правило на роутере есть и/или порт доступен снаружи.</summary>
+    Open,
+
+    /// <summary>Правила нет и/или порт снаружи недоступен.</summary>
+    Closed,
+
+    /// <summary>Не удалось достоверно определить.</summary>
+    Unknown,
+
+    /// <summary>Сервер не слушает порт — проверять нечего.</summary>
+    ServerNotRunning
+}
+
+/// <summary>
+/// Результат проверки с указанием источника, подтвердившего статус.
+/// <see cref="ConfirmedBy"/>: "UPnP", "TCP", "Shodan", "localhost".
+/// </summary>
+public sealed record PortCheckResult(MappingCheckResult Status, string? ConfirmedBy)
+{
+    public static PortCheckResult Unknown() => new(MappingCheckResult.Unknown, null);
+}
+
 public interface IPortForwardingService
 {
-    /// <summary>
-    /// Checks whether a UPnP router is available on the network.
-    /// </summary>
     Task<bool> IsAvailableAsync();
-
-    /// <summary>
-    /// Creates a port forwarding rule (TCP) on the router.
-    /// </summary>
-    /// <param name="port">Port to forward.</param>
-    /// <param name="description">Rule description (shown in the router admin UI).</param>
     Task<bool> CreateMappingAsync(int port, string description);
-
-    /// <summary>
-    /// Removes a port forwarding rule (TCP) from the router.
-    /// </summary>
     Task<bool> DeleteMappingAsync(int port);
 
     /// <summary>
-    /// Checks whether a port forwarding rule (TCP) exists on the router.
+    /// Каскадная проверка порта: localhost → UPnP → TCP hairpin → Shodan.
     /// </summary>
-    /// <param name="port">Port to check.</param>
-    /// <returns>true if the forwarding rule exists.</returns>
-    Task<bool> CheckMappingAsync(int port);
+    Task<PortCheckResult> CheckMappingAsync(int port);
 
-    /// <summary>
-    /// Gets the external (public) IP address through the UPnP router.
-    /// </summary>
     Task<string?> GetExternalIpAsync();
-
-    /// <summary>
-    /// Returns the last known external IP without querying the router.
-    /// </summary>
     string? TryGetCachedExternalIp();
 }
