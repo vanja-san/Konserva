@@ -1,167 +1,84 @@
-# Konserva - Тесты
+# Konserva — Tests
 
-## 🧪 Запуск тестов
+The test project targets `net10.0-windows` and uses xUnit v3, Moq and
+FluentAssertions. Tests never start the application or a Minecraft server.
+
+## Running
 
 ```bash
-# Запустить все тесты
+# All tests
 dotnet test
 
-# Запустить с подробным выводом
-dotnet test --verbosity normal
+# Unit tests only — pure logic, no I/O
+dotnet test --filter "Category=Unit"
 
-# Запустить с покрытием кода
+# Integration tests only — filesystem, registry, HTTP
+dotnet test --filter "Category=Integration"
+
+# One test class
+dotnet test --filter "FullyQualifiedName~AppUpdaterTests"
+
+# With coverage
 dotnet test --collect:"XPlat Code Coverage"
-
-# Запустить конкретный тест по имени
-dotnet test --filter "FullyQualifiedName~McServerInstallerTests"
-
-# Запустить тесты из определённого файла
-dotnet test --filter "FullyQualifiedName~ServerTests"
-
-# Запустить в режиме watch (автоматический перезапуск при изменениях)
-dotnet watch test
-
-# Запустить только E2E тесты
-dotnet test --filter "FullyQualifiedName~E2E"
 ```
 
-## 📁 Структура тестов
+Categories are declared as an xUnit `Category` trait on each test class. There is
+no `E2E` category: no end-to-end tests exist. Add the trait when the first one
+appears.
+
+## Structure
 
 ```
 konserva-app.Tests/
-├── Services/
-│   ├── McServerInstallerTests.cs    # Тесты установщика серверов
-│   ├── McServerProcessTests.cs      # Тесты процесса сервера
-│   └── ConfigServiceTests.cs        # Тесты конфигурации
-├── Models/
-│   └── ServerTests.cs               # Тесты моделей
-├── Utilities/
-│   └── JavaVersionParserTests.cs    # Тесты утилит
-├── E2E/
-│   ├── ServerLifecycleE2ETests.cs   # E2E: Жизненный цикл сервера
-│   └── SettingsE2ETests.cs          # E2E: Настройки приложения
-├── Fixtures/
-│   └── TestConfigFixture.cs         # Общие ресурсы для тестов
-└── konserva-app.Tests.csproj
+├── CollectionDefinition.cs        # Shared xUnit collections
+├── Converters/                    # Value converter tests
+├── Fixtures/                      # TestConfigFixture and shared setup
+├── Localization/                  # String table and parity tests
+├── Models/                        # Model and API URL tests
+├── Regression/                    # Regression tests for fixed defects
+├── Services/                      # Service tests (installer, process, updates, ...)
+├── Utilities/                     # Parser, hash and helper tests
+└── ViewModels/                    # ViewModel tests
 ```
 
-## 📊 Типы тестов
+The suite currently contains 513 tests. `Directory.Build.props` enables
+`TreatWarningsAsErrors`, so the test project must build without warnings.
 
-| Тип | Количество | Описание |
-|-----|------------|----------|
-| **Unit** | ~40 | Тестирование отдельных методов/классов |
-| **Integration** | ~16 | Взаимодействие между сервисами |
-| **E2E** | ~15 | Полные сценарии работы приложения |
-| **ВСЕГО** | **~71** | |
+## Writing tests
 
-## 📝 Написание тестов
-
-### Простой тест
 ```csharp
 [Fact]
 public void MyTest_ReturnsTrue()
 {
-    // Arrange
     var service = new MyService();
-    
-    // Act
+
     var result = service.DoSomething();
-    
-    // Assert
+
     result.Should().BeTrue();
 }
 ```
 
-### Параметризованный тест
-```csharp
-[Theory]
-[InlineData("input1", "expected1")]
-[InlineData("input2", "expected2")]
-public void MyTest_VariousInputs_ReturnsExpected(
-    string input, 
-    string expected)
-{
-    var result = MyService.Process(input);
-    result.Should().Be(expected);
-}
-```
+Data-driven tests use `[Theory]` with `[InlineData]`. WPF code that needs an STA
+thread uses `[StaFact]`. Tests that touch the real filesystem belong in the
+`Integration` category; keep `Unit` tests free of I/O.
 
-### WPF тест (STA поток)
-```csharp
-[StaFact]
-public void WpfComponent_Initialization_Works()
-{
-    var window = new MainWindow();
-    window.Should().NotBeNull();
-}
-```
+## Coverage
 
-### Тест с фикстурой
-```csharp
-public class MyTests : IClassFixture<TestConfigFixture>
-{
-    private readonly TestConfigFixture _fixture;
-    
-    public MyTests(TestConfigFixture fixture)
-    {
-        _fixture = fixture;
-    }
-    
-    [Fact]
-    public void Test_WithFixture()
-    {
-        var configPath = _fixture.ConfigPath;
-        // Используем configPath в тесте
-    }
-}
-```
-
-## 🔧 Покрытие кода
-
-После запуска тестов с покрытием:
 ```bash
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
-Отчёт будет в:
-```
-konserva-app.Tests/TestResults/**/coverage.cobertura.xml
-```
+The report is written to `konserva-app.Tests/TestResults/**/coverage.cobertura.xml`.
+For an HTML report:
 
-Для просмотра отчёта в формате HTML:
 ```bash
-# Установите tool (если ещё не установлен)
-dotnet tool install --global dotnet-reportgenerator-globaltool
-
-# Сгенерируйте HTML отчёт
-reportgenerator -reports:"konserva-app.Tests/TestResults/**/coverage.cobertura.xml" 
-                -targetdir:"TestResults/CoverageReport" 
+reportgenerator -reports:"konserva-app.Tests/TestResults/**/coverage.cobertura.xml" `
+                -targetdir:"TestResults/CoverageReport" `
                 -reporttypes:Html
 ```
 
-## 🚀 CI/CD Интеграция
+## CI
 
-Тесты автоматически запускаются в GitHub Actions при каждом commit.
-
-Файл workflow: `.github/workflows/build.yml`
-
-```yaml
-- name: Run Tests
-  run: dotnet test --no-restore --verbosity normal
-```
-
-## 📊 Статистика
-
-| Тип тестов | Количество |
-|------------|------------|
-| Unit тесты | 20+ |
-| Интеграционные | 0 |
-| E2E | 0 |
-
-## 🎯 Планы
-
-- [ ] Добавить тесты для McServerProcess
-- [ ] Добавить тесты для ConfigService
-- [ ] Добавить тесты для ServerStorageService
-- [ ] Добавить интеграционные тесты API
-- [ ] Добавить E2E тесты создания сервера
+`.github/workflows/ci.yml` runs on every push and pull request to `master`:
+restore, build, `dotnet test` with OpenCover coverage, then uploads the
+coverage report as an artifact.

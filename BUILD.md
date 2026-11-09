@@ -247,9 +247,12 @@ dotnet build --configuration Release -v n
 ## Version Management
 
 Update version in:
-1. `konserva-app/konserva-app.csproj` — `<Version>` property
-2. `konserva-app/AssemblyInfo.cs` — version attributes
+1. `konserva-app/konserva-app.csproj` — `<Version>`, `<AssemblyVersion>`, `<FileVersion>` and `<InformationalVersion>`
+2. `konserva-app/app.manifest` — `assemblyIdentity version`
 3. README.md / README.ru.md — version badge
+
+`.github/version.json` is written by the release workflow after the archives are built,
+so it must not be bumped by hand: its URLs and SHA-256 hashes have to match real assets.
 
 ## Publishing to GitHub Releases
 
