@@ -3,6 +3,7 @@ using Konserva.Utilities;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Windows;
@@ -17,6 +18,7 @@ namespace Konserva.Services
         private readonly HttpClient _client;
         private readonly SemaphoreSlim _lock = new(1, 1);
         private static readonly string UpdateLogPath = Path.Combine(AppContext.BaseDirectory, "Logs", "Update.log");
+        private const int MaxRedirects = 5;
 
         public AppUpdater(HttpClient httpClient)
         {
@@ -246,40 +248,41 @@ exit
             }
         }
 
-/// <summary>
-    /// Downloads a file from the given URL. All resources are released before returning.
-    /// </summary>
-    private async Task DownloadFileAsync(string url, string destPath, string currentVersion, IProgress<double>? progress)
-    {
-        // The URL arrives from version.json. Only HTTPS is accepted: the reference SHA-256
-        // travels in the same unsigned document, so an http:// URL would let an on-path
-        // attacker serve both the payload and a matching checksum.
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+        /// <summary>
+        /// Downloads a file from the given URL, following HTTPS redirects. All resources
+        /// are released before returning.
+        /// </summary>
+        private async Task DownloadFileAsync(string url, string destPath, string currentVersion, IProgress<double>? progress)
         {
-            throw new InvalidOperationException($"Refusing to download the update over a non-HTTPS URL: {url}");
-        }
+            // The URL arrives from version.json. Only HTTPS is accepted: the reference SHA-256
+            // travels in the same unsigned document, so an http:// URL would let an on-path
+            // attacker serve both the payload and a matching checksum.
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+            {
+                throw new InvalidOperationException($"Refusing to download the update over a non-HTTPS URL: {url}");
+            }
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-        request.Headers.UserAgent.ParseAdd($"Konserva/{currentVersion}");
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
 
-        using var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
-        response.EnsureSuccessStatusCode();
+            // GitHub Releases answers with 302 to its asset CDN, so redirects are followed
+            // manually: the handler refuses them automatically, which keeps every hop
+            // visible and lets us reject an https -> http downgrade.
+            using var response = await SendWithRedirectsAsync(uri, currentVersion, cts.Token);
+            response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? -1;
             var canReportProgress = totalBytes != -1;
 
-            // Copy into a separate scope — the stream is closed before the method returns
-            using (var contentStream = await response.Content.ReadAsStreamAsync())
+            using (var contentStream = await response.Content.ReadAsStreamAsync(cts.Token))
             using (var fileStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
             {
                 var buffer = new byte[81920];
                 long totalRead = 0;
                 int bytesRead;
 
-                while ((bytesRead = await contentStream.ReadAsync(buffer)) > 0)
+                while ((bytesRead = await contentStream.ReadAsync(buffer, cts.Token)) > 0)
                 {
-                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cts.Token);
                     totalRead += bytesRead;
 
                     if (canReportProgress)
@@ -289,9 +292,57 @@ exit
                     }
                 }
 
-                await fileStream.FlushAsync();
+                await fileStream.FlushAsync(cts.Token);
             }
         }
+
+        /// <summary>
+        /// Sends the request and follows at most <see cref="MaxRedirects"/> redirects,
+        /// requiring every hop to stay on HTTPS.
+        /// </summary>
+        private async Task<HttpResponseMessage> SendWithRedirectsAsync(Uri uri, string currentVersion, CancellationToken ct)
+        {
+            for (var redirects = 0; ; redirects++)
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                request.Headers.UserAgent.ParseAdd($"Konserva/{currentVersion}");
+
+                var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+                if (!IsRedirect(response.StatusCode))
+                    return response;
+
+                if (redirects >= MaxRedirects)
+                {
+                    response.Dispose();
+                    throw new HttpRequestException($"Too many redirects while downloading the update (limit {MaxRedirects})");
+                }
+
+                var location = response.Headers.Location;
+                if (location == null)
+                {
+                    response.Dispose();
+                    throw new HttpRequestException("Redirect response has no Location header");
+                }
+
+                var nextUri = location.IsAbsoluteUri ? location : new Uri(uri, location);
+                if (nextUri.Scheme != Uri.UriSchemeHttps)
+                {
+                    response.Dispose();
+                    throw new InvalidOperationException($"Refusing to follow a non-HTTPS update redirect: {nextUri}");
+                }
+
+                response.Dispose();
+                uri = nextUri;
+            }
+        }
+
+        private static bool IsRedirect(HttpStatusCode statusCode) =>
+            statusCode is HttpStatusCode.MovedPermanently
+                or HttpStatusCode.Found
+                or HttpStatusCode.SeeOther
+                or HttpStatusCode.TemporaryRedirect
+                or HttpStatusCode.PermanentRedirect;
 
         /// <summary>
         /// Logs a message to Update.log.

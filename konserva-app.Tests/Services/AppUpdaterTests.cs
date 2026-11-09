@@ -175,6 +175,72 @@ public class AppUpdaterTests : IDisposable
             .Should().BeTrue("проверка SHA-256 и размера должна была пройти и дойти до распаковки");
     }
 
+    [Fact]
+    public async Task ApplyAsync_FollowsHttpsRedirect()
+    {
+        // GitHub Releases answers with 302 to its asset CDN; refusing it broke every update.
+        var payload = CreateZipBytes();
+        using var handler = new SequenceHandler(
+            _ => new HttpResponseMessage(HttpStatusCode.Found)
+            {
+                Headers = { Location = new Uri("https://cdn.example.com/update.zip") }
+            },
+            _ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(payload)
+            });
+
+        using var httpClient = new HttpClient(handler);
+        var updater = new AppUpdater(httpClient);
+        var info = new Konserva.Models.UpdateInfo
+        {
+            NewVersion = "99.0.0",
+            CurrentVersion = "1.0.0",
+            DownloadUrl = "https://example.com/update.zip",
+            AssetName = "update.zip",
+            // A wrong hash stops the flow before the batch script is launched.
+            Sha256 = new string('a', 64)
+        };
+
+        var result = await updater.ApplyAsync(info);
+
+        result.Should().BeFalse();
+        handler.Requests.Should().HaveCount(2);
+        handler.Requests[1].Should().Be(new Uri("https://cdn.example.com/update.zip"));
+    }
+
+    [Fact]
+    public async Task ApplyAsync_RefusesNonHttpsRedirect()
+    {
+        var payload = CreateZipBytes();
+        using var handler = new SequenceHandler(
+            _ => new HttpResponseMessage(HttpStatusCode.Found)
+            {
+                Headers = { Location = new Uri("http://cdn.example.com/update.zip") }
+            },
+            _ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(payload)
+            });
+
+        using var httpClient = new HttpClient(handler);
+        var updater = new AppUpdater(httpClient);
+        var info = new Konserva.Models.UpdateInfo
+        {
+            NewVersion = "99.0.0",
+            CurrentVersion = "1.0.0",
+            DownloadUrl = "https://example.com/update.zip",
+            AssetName = "update.zip",
+            Sha256 = Sha256Of(payload)
+        };
+
+        var result = await updater.ApplyAsync(info);
+
+        result.Should().BeFalse();
+        handler.Requests.Should().ContainSingle(
+            "an https -> http downgrade must be rejected before the CDN is contacted");
+    }
+
     public void Dispose()
     {
         try
@@ -195,6 +261,29 @@ public class AppUpdaterTests : IDisposable
         catch
         {
             // Уборка не должна ронять тест
+        }
+    }
+
+    /// <summary>
+    /// Returns queued responses in order and records every requested URI.
+    /// </summary>
+    private sealed class SequenceHandler(params Func<HttpRequestMessage, HttpResponseMessage>[] responses)
+        : HttpMessageHandler
+    {
+        private readonly Queue<Func<HttpRequestMessage, HttpResponseMessage>> _responses = new(responses);
+
+        public List<Uri> Requests { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Requests.Add(request.RequestUri!);
+
+            if (_responses.Count == 0)
+                throw new InvalidOperationException("No response queued for this request");
+
+            return Task.FromResult(_responses.Dequeue()(request));
         }
     }
 }

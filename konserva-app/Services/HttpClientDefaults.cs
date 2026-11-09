@@ -25,13 +25,14 @@ internal static class HttpClientDefaults
     }
 
     /// <summary>
-    /// Creates a handler that refuses to follow redirects at all.
+    /// Creates a handler that refuses to follow redirects automatically.
     /// <para>
-    /// Used for the self-update download: the reference checksum arrives in the same
-    /// unsigned manifest as the URL, so a redirect that downgrades https:// to http://
-    /// would let an on-path attacker serve both the payload and a matching hash.
-    /// Ordinary API clients keep following redirects — several of the version APIs
-    /// legitimately redirect to a CDN.
+    /// Used for the self-update download. AppUpdater follows redirects itself, because
+    /// GitHub Releases redirects to its asset CDN and every hop must be checked to stay
+    /// on HTTPS: the reference checksum arrives in the same unsigned manifest as the URL,
+    /// so an https:// -> http:// downgrade would let an on-path attacker serve both the
+    /// payload and a matching hash. Ordinary API clients keep following redirects —
+    /// several of the version APIs legitimately redirect to a CDN.
     /// </para>
     /// </summary>
     public static SocketsHttpHandler CreateStrictHandler()
