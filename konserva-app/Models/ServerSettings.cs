@@ -147,7 +147,7 @@ public class ServerSettings : ObservableObject
         JavaId = JavaId,
         JavaAutoSelect = JavaAutoSelect,
         JavaArgs = [.. JavaArgs],
-AutoRestart = AutoRestart,
+        AutoRestart = AutoRestart,
         AutoRestartDelay = AutoRestartDelay,
         EnableUpnp = EnableUpnp,
         EnableUpdateNotification = EnableUpdateNotification,
